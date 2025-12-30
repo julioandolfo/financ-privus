@@ -1,9 +1,12 @@
 # Rewrite Engine
 RewriteEngine On
 
+# Define o diretório base
+RewriteBase /
+
 # Permite acesso direto a arquivos estáticos (assets, imagens, CSS, JS, etc)
 RewriteCond %{REQUEST_FILENAME} -f
-RewriteRule ^(assets|images|css|js|fonts)/.*$ - [L]
+RewriteRule ^(assets|images|css|js|fonts|test-.*\.php)/.*$ - [L]
 
 # Redireciona tudo para index.php exceto arquivos existentes
 RewriteCond %{REQUEST_FILENAME} !-f

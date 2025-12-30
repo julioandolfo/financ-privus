@@ -72,8 +72,20 @@ class App
             $method = $route['method'];
             $params = $route['params'] ?? [];
             
+            // Verifica se a classe existe, senão tenta carregar
             if (!class_exists($controller)) {
-                throw new Exception("Controller {$controller} não encontrado");
+                // Tenta carregar o controller explicitamente
+                $controllerFile = str_replace('App\\Controllers\\', '', $controller);
+                $controllerPath = dirname(__DIR__) . '/controllers/' . $controllerFile . '.php';
+                
+                if (file_exists($controllerPath)) {
+                    require_once $controllerPath;
+                }
+                
+                // Verifica novamente após tentar carregar
+                if (!class_exists($controller)) {
+                    throw new Exception("Controller {$controller} não encontrado. Tentou carregar: {$controllerPath}");
+                }
             }
             
             $controllerInstance = new $controller();

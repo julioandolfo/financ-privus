@@ -154,22 +154,23 @@ class Request
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
         $uri = parse_url($uri, PHP_URL_PATH);
         
-        // Se estiver acessando via /public/index.php, remove /public
-        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-        if (strpos($scriptName, '/public') !== false) {
-            // Remove /public do início da URI se existir
-            if (strpos($uri, '/public') === 0) {
-                $uri = substr($uri, 7);
-            }
-            // Remove o diretório do script da URI
-            $scriptDir = dirname($scriptName);
-            if ($scriptDir !== '/' && strpos($uri, $scriptDir) === 0) {
-                $uri = substr($uri, strlen($scriptDir));
-            }
+        // Remove /public do início da URI se existir
+        if (strpos($uri, '/public') === 0) {
+            $uri = substr($uri, 7); // Remove '/public'
         }
         
-        // Garante que começa com /
+        // Remove o diretório base do script da URI
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        $scriptDir = dirname($scriptName);
+        
+        // Se o script está em /public, remove esse caminho da URI
+        if ($scriptDir !== '/' && $scriptDir !== '.' && strpos($uri, $scriptDir) === 0) {
+            $uri = substr($uri, strlen($scriptDir));
+        }
+        
+        // Garante que começa com / e remove barras duplicadas
         $uri = '/' . ltrim($uri, '/');
+        $uri = preg_replace('#/+#', '/', $uri); // Remove barras duplicadas
         
         return $uri;
     }
