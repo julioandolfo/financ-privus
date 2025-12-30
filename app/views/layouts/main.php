@@ -54,23 +54,9 @@
         }
     </script>
     <?php
-    // Calcula o caminho base para assets dinamicamente
-    // Usa REQUEST_URI ou SCRIPT_NAME para determinar o caminho base
-    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
-    $basePath = dirname($scriptName);
-    
-    // Normaliza o caminho
-    if ($basePath === '/' || $basePath === '\\' || $basePath === '.') {
-        $basePath = '';
-    } else {
-        // Remove barras duplicadas e normaliza
-        $basePath = rtrim(str_replace('\\', '/', $basePath), '/');
-    }
-    
-    // Monta o caminho do asset
-    $assetPath = ($basePath ? $basePath . '/' : '') . 'assets/js/theme.js';
-    // Remove barras duplicadas
-    $assetPath = preg_replace('#/+#', '/', $assetPath);
+    // Usa caminho absoluto para assets (o .htaccess redireciona /assets/ para public/assets/)
+    $assetPath = '/assets/js/theme.js';
+    $masksPath = '/assets/js/masks.js';
     ?>
     <script>
         // Aplica tema imediatamente antes do conteúdo ser renderizado (evita flash)
@@ -83,11 +69,6 @@
         })();
     </script>
     <script src="<?= htmlspecialchars($assetPath) ?>"></script>
-    <?php
-    // Calcula caminho para masks.js
-    $masksPath = ($basePath ? $basePath . '/' : '') . 'assets/js/masks.js';
-    $masksPath = preg_replace('#/+#', '/', $masksPath);
-    ?>
     <script src="<?= htmlspecialchars($masksPath) ?>"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>

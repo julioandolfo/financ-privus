@@ -22,18 +22,7 @@
     </script>
     
     <!-- Theme Manager -->
-    <?php
-    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
-    $basePath = dirname($scriptName);
-    if ($basePath === '/' || $basePath === '\\' || $basePath === '.') {
-        $basePath = '';
-    } else {
-        $basePath = rtrim(str_replace('\\', '/', $basePath), '/');
-    }
-    $assetPath = ($basePath ? $basePath . '/' : '') . 'assets/js/theme.js';
-    $assetPath = preg_replace('#/+#', '/', $assetPath);
-    ?>
-    <script src="<?= htmlspecialchars($assetPath) ?>"></script>
+    <script src="/assets/js/theme.js"></script>
 </head>
 <body class="h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300 flex items-center justify-center p-4">
     <div class="w-full max-w-md">
