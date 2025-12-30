@@ -1,19 +1,17 @@
-# Redireciona todas as requisições para public/
+# Redireciona todas as requisições internamente para public/
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteBase /
     
-    # Se acessar /public/ diretamente, redireciona para a raiz
+    # Se acessar /public/ diretamente na URL, redireciona para a raiz SEM mostrar /public
     RewriteCond %{THE_REQUEST} ^[A-Z]+\ /public/
     RewriteRule ^public/(.*)$ /$1 [R=301,L]
     
-    # Permite acesso direto a arquivos PHP na raiz (se existirem)
-    RewriteCond %{REQUEST_FILENAME} -f
-    RewriteRule ^(.+\.php)$ - [L]
-    
-    # Redireciona para public/index.php se não for arquivo/diretório
+    # Redireciona INTERNAMENTE para public/ (não aparece na URL)
+    RewriteCond %{REQUEST_URI} !^/public/
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ public/index.php [L,QSA]
+    RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
 
 # Bloqueia acesso a arquivos sensíveis
