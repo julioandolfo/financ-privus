@@ -32,8 +32,8 @@ if (!file_exists($envLoaderFile)) {
     require_once $envLoaderFile;
     
     try {
-        $envLoader = new \includes\EnvLoader(APP_ROOT);
-        $envLoader->load();
+        // EnvLoader::load() é um método estático
+        EnvLoader::load(APP_ROOT . '/.env');
         echo "<p class='success'>✓ .env carregado via EnvLoader</p>";
         
         // Mostra as variáveis de banco
