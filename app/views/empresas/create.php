@@ -95,6 +95,195 @@
                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                 </div>
 
+                <!-- Telefone e Email -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="telefone" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            Telefone
+                        </label>
+                        <input type="text" 
+                               id="telefone" 
+                               name="telefone" 
+                               data-mask="telefone"
+                               value="<?= htmlspecialchars($this->session->get('old')['telefone'] ?? '') ?>"
+                               placeholder="(00) 00000-0000"
+                               maxlength="15"
+                               class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            Email
+                        </label>
+                        <input type="email" 
+                               id="email" 
+                               name="email" 
+                               value="<?= htmlspecialchars($this->session->get('old')['email'] ?? '') ?>"
+                               placeholder="contato@empresa.com.br"
+                               class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    </div>
+                </div>
+
+                <!-- Site e Inscrições -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="site" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            Site
+                        </label>
+                        <input type="url" 
+                               id="site" 
+                               name="site" 
+                               value="<?= htmlspecialchars($this->session->get('old')['site'] ?? '') ?>"
+                               placeholder="https://www.empresa.com.br"
+                               class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    </div>
+                    <div>
+                        <label for="inscricao_estadual" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            Inscrição Estadual
+                        </label>
+                        <input type="text" 
+                               id="inscricao_estadual" 
+                               name="inscricao_estadual" 
+                               data-mask="number"
+                               value="<?= htmlspecialchars($this->session->get('old')['inscricao_estadual'] ?? '') ?>"
+                               class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    </div>
+                    <div>
+                        <label for="inscricao_municipal" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            Inscrição Municipal
+                        </label>
+                        <input type="text" 
+                               id="inscricao_municipal" 
+                               name="inscricao_municipal" 
+                               data-mask="number"
+                               value="<?= htmlspecialchars($this->session->get('old')['inscricao_municipal'] ?? '') ?>"
+                               class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    </div>
+                </div>
+
+                <!-- Endereço -->
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Endereço</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label for="cep" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                CEP
+                            </label>
+                            <input type="text" 
+                                   id="cep" 
+                                   name="cep" 
+                                   data-mask="cep"
+                                   value="<?= htmlspecialchars($this->session->get('old')['cep'] ?? '') ?>"
+                                   placeholder="00000-000"
+                                   maxlength="9"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="logradouro" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Logradouro
+                            </label>
+                            <input type="text" 
+                                   id="logradouro" 
+                                   name="logradouro" 
+                                   value="<?= htmlspecialchars($this->session->get('old')['logradouro'] ?? '') ?>"
+                                   placeholder="Rua, Avenida, etc."
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-4">
+                        <div>
+                            <label for="numero" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Número
+                            </label>
+                            <input type="text" 
+                                   id="numero" 
+                                   name="numero" 
+                                   value="<?= htmlspecialchars($this->session->get('old')['numero'] ?? '') ?>"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="complemento" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Complemento
+                            </label>
+                            <input type="text" 
+                                   id="complemento" 
+                                   name="complemento" 
+                                   value="<?= htmlspecialchars($this->session->get('old')['complemento'] ?? '') ?>"
+                                   placeholder="Apto, Sala, etc."
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        </div>
+                        <div>
+                            <label for="bairro" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Bairro
+                            </label>
+                            <input type="text" 
+                                   id="bairro" 
+                                   name="bairro" 
+                                   value="<?= htmlspecialchars($this->session->get('old')['bairro'] ?? '') ?>"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                        <div>
+                            <label for="cidade" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Cidade
+                            </label>
+                            <input type="text" 
+                                   id="cidade" 
+                                   name="cidade" 
+                                   value="<?= htmlspecialchars($this->session->get('old')['cidade'] ?? '') ?>"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        </div>
+                        <div>
+                            <label for="estado" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Estado (UF)
+                            </label>
+                            <select id="estado" 
+                                    name="estado" 
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                <option value="">Selecione</option>
+                                <option value="AC" <?= ($this->session->get('old')['estado'] ?? '') === 'AC' ? 'selected' : '' ?>>Acre</option>
+                                <option value="AL" <?= ($this->session->get('old')['estado'] ?? '') === 'AL' ? 'selected' : '' ?>>Alagoas</option>
+                                <option value="AP" <?= ($this->session->get('old')['estado'] ?? '') === 'AP' ? 'selected' : '' ?>>Amapá</option>
+                                <option value="AM" <?= ($this->session->get('old')['estado'] ?? '') === 'AM' ? 'selected' : '' ?>>Amazonas</option>
+                                <option value="BA" <?= ($this->session->get('old')['estado'] ?? '') === 'BA' ? 'selected' : '' ?>>Bahia</option>
+                                <option value="CE" <?= ($this->session->get('old')['estado'] ?? '') === 'CE' ? 'selected' : '' ?>>Ceará</option>
+                                <option value="DF" <?= ($this->session->get('old')['estado'] ?? '') === 'DF' ? 'selected' : '' ?>>Distrito Federal</option>
+                                <option value="ES" <?= ($this->session->get('old')['estado'] ?? '') === 'ES' ? 'selected' : '' ?>>Espírito Santo</option>
+                                <option value="GO" <?= ($this->session->get('old')['estado'] ?? '') === 'GO' ? 'selected' : '' ?>>Goiás</option>
+                                <option value="MA" <?= ($this->session->get('old')['estado'] ?? '') === 'MA' ? 'selected' : '' ?>>Maranhão</option>
+                                <option value="MT" <?= ($this->session->get('old')['estado'] ?? '') === 'MT' ? 'selected' : '' ?>>Mato Grosso</option>
+                                <option value="MS" <?= ($this->session->get('old')['estado'] ?? '') === 'MS' ? 'selected' : '' ?>>Mato Grosso do Sul</option>
+                                <option value="MG" <?= ($this->session->get('old')['estado'] ?? '') === 'MG' ? 'selected' : '' ?>>Minas Gerais</option>
+                                <option value="PA" <?= ($this->session->get('old')['estado'] ?? '') === 'PA' ? 'selected' : '' ?>>Pará</option>
+                                <option value="PB" <?= ($this->session->get('old')['estado'] ?? '') === 'PB' ? 'selected' : '' ?>>Paraíba</option>
+                                <option value="PR" <?= ($this->session->get('old')['estado'] ?? '') === 'PR' ? 'selected' : '' ?>>Paraná</option>
+                                <option value="PE" <?= ($this->session->get('old')['estado'] ?? '') === 'PE' ? 'selected' : '' ?>>Pernambuco</option>
+                                <option value="PI" <?= ($this->session->get('old')['estado'] ?? '') === 'PI' ? 'selected' : '' ?>>Piauí</option>
+                                <option value="RJ" <?= ($this->session->get('old')['estado'] ?? '') === 'RJ' ? 'selected' : '' ?>>Rio de Janeiro</option>
+                                <option value="RN" <?= ($this->session->get('old')['estado'] ?? '') === 'RN' ? 'selected' : '' ?>>Rio Grande do Norte</option>
+                                <option value="RS" <?= ($this->session->get('old')['estado'] ?? '') === 'RS' ? 'selected' : '' ?>>Rio Grande do Sul</option>
+                                <option value="RO" <?= ($this->session->get('old')['estado'] ?? '') === 'RO' ? 'selected' : '' ?>>Rondônia</option>
+                                <option value="RR" <?= ($this->session->get('old')['estado'] ?? '') === 'RR' ? 'selected' : '' ?>>Roraima</option>
+                                <option value="SC" <?= ($this->session->get('old')['estado'] ?? '') === 'SC' ? 'selected' : '' ?>>Santa Catarina</option>
+                                <option value="SP" <?= ($this->session->get('old')['estado'] ?? '') === 'SP' ? 'selected' : '' ?>>São Paulo</option>
+                                <option value="SE" <?= ($this->session->get('old')['estado'] ?? '') === 'SE' ? 'selected' : '' ?>>Sergipe</option>
+                                <option value="TO" <?= ($this->session->get('old')['estado'] ?? '') === 'TO' ? 'selected' : '' ?>>Tocantins</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Observações -->
+                <div>
+                    <label for="observacoes" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Observações
+                    </label>
+                    <textarea id="observacoes" 
+                              name="observacoes" 
+                              rows="4"
+                              class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"><?= htmlspecialchars($this->session->get('old')['observacoes'] ?? '') ?></textarea>
+                </div>
+
                 <!-- Ativo -->
                 <div class="flex items-center gap-3">
                     <input type="checkbox" 

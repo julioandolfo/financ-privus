@@ -56,15 +56,39 @@ class EmpresaController extends Controller
     {
         $data = $request->all();
         
+        // Processa campos extras para configuracoes JSON
+        $configuracoes = [];
+        if (!empty($data['telefone'])) $configuracoes['telefone'] = $data['telefone'];
+        if (!empty($data['email'])) $configuracoes['email'] = $data['email'];
+        if (!empty($data['site'])) $configuracoes['site'] = $data['site'];
+        if (!empty($data['inscricao_estadual'])) $configuracoes['inscricao_estadual'] = $data['inscricao_estadual'];
+        if (!empty($data['inscricao_municipal'])) $configuracoes['inscricao_municipal'] = $data['inscricao_municipal'];
+        if (!empty($data['cep'])) $configuracoes['endereco']['cep'] = $data['cep'];
+        if (!empty($data['logradouro'])) $configuracoes['endereco']['logradouro'] = $data['logradouro'];
+        if (!empty($data['numero'])) $configuracoes['endereco']['numero'] = $data['numero'];
+        if (!empty($data['complemento'])) $configuracoes['endereco']['complemento'] = $data['complemento'];
+        if (!empty($data['bairro'])) $configuracoes['endereco']['bairro'] = $data['bairro'];
+        if (!empty($data['cidade'])) $configuracoes['endereco']['cidade'] = $data['cidade'];
+        if (!empty($data['estado'])) $configuracoes['endereco']['estado'] = $data['estado'];
+        if (!empty($data['observacoes'])) $configuracoes['observacoes'] = $data['observacoes'];
+        
+        if (!empty($configuracoes)) {
+            $data['configuracoes'] = $configuracoes;
+        }
+        
+        // Limpa CNPJ (remove formatação)
+        if (!empty($data['cnpj'])) {
+            $data['cnpj'] = preg_replace('/\D/', '', $data['cnpj']);
+        }
+        
         // Validação
         $errors = $this->empresa->validate($data);
         
         if (!empty($errors)) {
-            return $this->render('empresas/create', [
-                'title' => 'Nova Empresa',
-                'errors' => $errors,
-                'data' => $data
-            ]);
+            $this->session->set('errors', $errors);
+            $this->session->set('old', $data);
+            $response->redirect('/empresas/create');
+            return;
         }
         
         try {
@@ -73,11 +97,9 @@ class EmpresaController extends Controller
             $_SESSION['success'] = 'Empresa cadastrada com sucesso!';
             $response->redirect('/empresas');
         } catch (\Exception $e) {
-            return $this->render('empresas/create', [
-                'title' => 'Nova Empresa',
-                'error' => 'Erro ao cadastrar empresa: ' . $e->getMessage(),
-                'data' => $data
-            ]);
+            $this->session->set('error', 'Erro ao cadastrar empresa: ' . $e->getMessage());
+            $this->session->set('old', $data);
+            $response->redirect('/empresas/create');
         }
     }
     
@@ -142,15 +164,39 @@ class EmpresaController extends Controller
         
         $data = $request->all();
         
+        // Processa campos extras para configuracoes JSON
+        $configuracoes = [];
+        if (!empty($data['telefone'])) $configuracoes['telefone'] = $data['telefone'];
+        if (!empty($data['email'])) $configuracoes['email'] = $data['email'];
+        if (!empty($data['site'])) $configuracoes['site'] = $data['site'];
+        if (!empty($data['inscricao_estadual'])) $configuracoes['inscricao_estadual'] = $data['inscricao_estadual'];
+        if (!empty($data['inscricao_municipal'])) $configuracoes['inscricao_municipal'] = $data['inscricao_municipal'];
+        if (!empty($data['cep'])) $configuracoes['endereco']['cep'] = $data['cep'];
+        if (!empty($data['logradouro'])) $configuracoes['endereco']['logradouro'] = $data['logradouro'];
+        if (!empty($data['numero'])) $configuracoes['endereco']['numero'] = $data['numero'];
+        if (!empty($data['complemento'])) $configuracoes['endereco']['complemento'] = $data['complemento'];
+        if (!empty($data['bairro'])) $configuracoes['endereco']['bairro'] = $data['bairro'];
+        if (!empty($data['cidade'])) $configuracoes['endereco']['cidade'] = $data['cidade'];
+        if (!empty($data['estado'])) $configuracoes['endereco']['estado'] = $data['estado'];
+        if (!empty($data['observacoes'])) $configuracoes['observacoes'] = $data['observacoes'];
+        
+        if (!empty($configuracoes)) {
+            $data['configuracoes'] = $configuracoes;
+        }
+        
+        // Limpa CNPJ (remove formatação)
+        if (!empty($data['cnpj'])) {
+            $data['cnpj'] = preg_replace('/\D/', '', $data['cnpj']);
+        }
+        
         // Validação
         $errors = $this->empresa->validate($data, $id);
         
         if (!empty($errors)) {
-            return $this->render('empresas/edit', [
-                'title' => 'Editar Empresa',
-                'errors' => $errors,
-                'empresa' => array_merge($empresa, $data)
-            ]);
+            $this->session->set('errors', $errors);
+            $this->session->set('old', $data);
+            $response->redirect('/empresas/edit/' . $id);
+            return;
         }
         
         try {
@@ -159,11 +205,9 @@ class EmpresaController extends Controller
             $_SESSION['success'] = 'Empresa atualizada com sucesso!';
             $response->redirect('/empresas');
         } catch (\Exception $e) {
-            return $this->render('empresas/edit', [
-                'title' => 'Editar Empresa',
-                'error' => 'Erro ao atualizar empresa: ' . $e->getMessage(),
-                'empresa' => array_merge($empresa, $data)
-            ]);
+            $this->session->set('error', 'Erro ao atualizar empresa: ' . $e->getMessage());
+            $this->session->set('old', $data);
+            $response->redirect('/empresas/edit/' . $id);
         }
     }
     

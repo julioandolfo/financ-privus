@@ -23,25 +23,78 @@ class MaskManager {
     applyMasks() {
         // CNPJ
         document.querySelectorAll('[data-mask="cnpj"]').forEach(input => {
+            input.addEventListener('keydown', (e) => this.blockNonNumericCNPJ(e));
             input.addEventListener('input', (e) => this.maskCNPJ(e));
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                const numbers = paste.replace(/\D/g, '').substring(0, 14);
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.value = numbers;
+                this.maskCNPJ({ target: input });
+            });
             input.addEventListener('blur', (e) => this.validateCNPJ(e));
+            // Aplica máscara se já houver valor
+            if (input.value) {
+                this.maskCNPJ({ target: input });
+            }
         });
 
         // CPF
         document.querySelectorAll('[data-mask="cpf"]').forEach(input => {
+            input.addEventListener('keydown', (e) => this.blockNonNumeric(e));
             input.addEventListener('input', (e) => this.maskCPF(e));
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                const numbers = paste.replace(/\D/g, '').substring(0, 11);
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.value = numbers;
+                this.maskCPF({ target: input });
+            });
             input.addEventListener('blur', (e) => this.validateCPF(e));
+            if (input.value) {
+                this.maskCPF({ target: input });
+            }
         });
 
         // Telefone
         document.querySelectorAll('[data-mask="telefone"]').forEach(input => {
+            input.addEventListener('keydown', (e) => this.blockNonNumeric(e));
             input.addEventListener('input', (e) => this.maskTelefone(e));
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                const numbers = paste.replace(/\D/g, '').substring(0, 11);
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.value = numbers;
+                this.maskTelefone({ target: input });
+            });
+            if (input.value) {
+                this.maskTelefone({ target: input });
+            }
         });
 
         // CEP
         document.querySelectorAll('[data-mask="cep"]').forEach(input => {
+            input.addEventListener('keydown', (e) => this.blockNonNumeric(e));
             input.addEventListener('input', (e) => this.maskCEP(e));
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                const numbers = paste.replace(/\D/g, '').substring(0, 8);
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.value = numbers;
+                this.maskCEP({ target: input });
+            });
             input.addEventListener('blur', (e) => this.validateCEP(e));
+            if (input.value) {
+                this.maskCEP({ target: input });
+            }
         });
 
         // Apenas números
@@ -59,13 +112,41 @@ class MaskManager {
      * Máscara de CNPJ: 00.000.000/0000-00
      */
     maskCNPJ(e) {
+        // Remove tudo que não é número
         let value = e.target.value.replace(/\D/g, '');
-        if (value.length <= 14) {
+        
+        // Limita a 14 dígitos
+        if (value.length > 14) {
+            value = value.substring(0, 14);
+        }
+        
+        // Aplica a máscara
+        if (value.length > 0) {
             value = value.replace(/^(\d{2})(\d)/, '$1.$2');
             value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
             value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
             value = value.replace(/(\d{4})(\d)/, '$1-$2');
-            e.target.value = value;
+        }
+        
+        e.target.value = value;
+    }
+    
+    /**
+     * Bloqueia caracteres não numéricos no CNPJ
+     */
+    blockNonNumericCNPJ(e) {
+        // Permite: backspace, delete, tab, escape, enter, home, end, setas
+        if ([8, 9, 27, 13, 46, 35, 36, 37, 38, 39, 40].indexOf(e.keyCode) !== -1 ||
+            // Permite Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+            (e.keyCode === 65 && e.ctrlKey === true) ||
+            (e.keyCode === 67 && e.ctrlKey === true) ||
+            (e.keyCode === 86 && e.ctrlKey === true) ||
+            (e.keyCode === 88 && e.ctrlKey === true)) {
+            return;
+        }
+        // Bloqueia se não for número
+        if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+            e.preventDefault();
         }
     }
 
@@ -209,6 +290,25 @@ class MaskManager {
         if (cep.length === 8) {
             // Opcional: buscar CEP via API
             // this.buscarCEP(cep, e.target);
+        }
+    }
+
+    /**
+     * Bloqueia caracteres não numéricos (genérico)
+     */
+    blockNonNumeric(e) {
+        // Permite: backspace, delete, tab, escape, enter, home, end, setas
+        if ([8, 9, 27, 13, 46, 35, 36, 37, 38, 39, 40].indexOf(e.keyCode) !== -1 ||
+            // Permite Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+            (e.keyCode === 65 && e.ctrlKey === true) ||
+            (e.keyCode === 67 && e.ctrlKey === true) ||
+            (e.keyCode === 86 && e.ctrlKey === true) ||
+            (e.keyCode === 88 && e.ctrlKey === true)) {
+            return;
+        }
+        // Bloqueia se não for número
+        if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+            e.preventDefault();
         }
     }
 
