@@ -11,6 +11,10 @@
     RewriteCond %{REQUEST_URI} ^/assets/
     RewriteRule ^assets/(.*)$ public/assets/$1 [L]
     
+    # Permite acesso a uploads em public/uploads/
+    RewriteCond %{REQUEST_URI} ^/uploads/
+    RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
+    
     # Se for um arquivo que existe em public/, serve ele
     RewriteCond %{REQUEST_URI} !^/index\.php
     RewriteCond %{DOCUMENT_ROOT}/public/$1 -f

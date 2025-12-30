@@ -27,9 +27,15 @@
             <!-- Header do Card -->
             <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6">
                 <div class="flex items-center gap-4">
-                    <div class="w-20 h-20 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center text-blue-600 dark:text-blue-400 text-3xl font-bold shadow-lg">
-                        <?= strtoupper(substr($usuario['nome'], 0, 1)) ?>
-                    </div>
+                    <?php if (!empty($usuario['avatar'])): ?>
+                        <img src="<?= htmlspecialchars($usuario['avatar']) ?>" 
+                             alt="Avatar" 
+                             class="w-20 h-20 rounded-full object-cover border-4 border-white dark:border-gray-800 shadow-lg">
+                    <?php else: ?>
+                        <div class="w-20 h-20 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center text-blue-600 dark:text-blue-400 text-3xl font-bold shadow-lg">
+                            <?= strtoupper(substr($usuario['nome'], 0, 1)) ?>
+                        </div>
+                    <?php endif; ?>
                     <div class="flex-1">
                         <h2 class="text-3xl font-bold text-white"><?= htmlspecialchars($usuario['nome']) ?></h2>
                         <p class="text-blue-100"><?= htmlspecialchars($usuario['email']) ?></p>

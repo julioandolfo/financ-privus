@@ -167,11 +167,20 @@ $menuItems = [
     </nav>
 
     <!-- Footer Sidebar -->
-    <div class="border-t border-gray-200 dark:border-slate-700 p-4">
-        <div class="flex items-center gap-3 px-2 py-2 rounded-lg bg-gray-50 dark:bg-slate-800">
-            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold">
-                <?= strtoupper(substr($_SESSION['usuario_nome'] ?? 'U', 0, 1)) ?>
-            </div>
+    <div class="border-t border-gray-200 dark:border-slate-700 p-4 space-y-2">
+        <a href="<?= $basePath ?>/minha-conta" 
+           class="flex items-center gap-3 px-2 py-2 rounded-lg bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors <?= $isActive('/minha-conta') ? 'bg-blue-50 dark:bg-blue-900/20' : '' ?>">
+            <?php 
+            $avatar = $_SESSION['usuario_avatar'] ?? null;
+            if ($avatar): ?>
+                <img src="<?= htmlspecialchars($avatar) ?>" 
+                     alt="Avatar" 
+                     class="w-10 h-10 rounded-full object-cover border-2 border-blue-500 dark:border-blue-400">
+            <?php else: ?>
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold">
+                    <?= strtoupper(substr($_SESSION['usuario_nome'] ?? 'U', 0, 1)) ?>
+                </div>
+            <?php endif; ?>
             <div class="flex-1 min-w-0">
                 <div class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                     <?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?>
@@ -180,7 +189,10 @@ $menuItems = [
                     <?= htmlspecialchars($_SESSION['usuario_email'] ?? '') ?>
                 </div>
             </div>
-        </div>
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+        </a>
     </div>
 </aside>
 

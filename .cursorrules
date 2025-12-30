@@ -66,6 +66,9 @@ Este é um sistema financeiro empresarial desenvolvido em PHP puro com arquitetu
 - **Campos obrigatórios**: Marcados com `*` e atributo `required`
 - **Validação**: HTML5 (`pattern`, `minlength`, `maxlength`) + validação server-side
 - **Máscaras**: Usar `data-mask="cnpj"`, `data-mask="cpf"`, etc. (suportado por `masks.js`)
+- **Busca CEP**: Adicionar `data-cep` e `data-cep-prefix` no campo CEP para busca automática
+  - Formato com array: `data-cep-prefix="endereco["` para `name="endereco[cep]"`
+  - Formato direto: `data-cep-prefix=""` para `name="cep"`
 - **Erros**: Exibidos abaixo do campo usando `$this->session->get('errors')['campo']`
 - **Old values**: Recuperados via `$this->session->get('old')['campo']`
 - **Limpar sessão**: Sempre limpar `old` e `errors` no final da view com `$this->session->delete()`
@@ -215,6 +218,10 @@ $this->session->delete('errors');
 - **Caminho absoluto**: Usar `/assets/js/{arquivo}.js` (não caminho relativo)
 - **Máscaras**: `masks.js` com funções para CPF, CNPJ, telefone, CEP, etc.
 - **Tema**: `theme.js` gerencia tema light/dark/system
+- **CEP**: `cep.js` integração com API ViaCEP para busca automática de endereços
+  - Adicionar `data-cep` e `data-cep-prefix` no campo CEP
+  - Suporta formatos: `endereco[cep]` e `cep` (sem prefixo)
+  - Preenche automaticamente: logradouro, bairro, cidade, estado
 
 ### CSS
 - **Framework**: TailwindCSS via CDN (desenvolvimento)

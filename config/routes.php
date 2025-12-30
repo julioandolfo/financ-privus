@@ -31,6 +31,10 @@ return [
     'POST /usuarios/{id}' => ['handler' => 'UsuarioController@update', 'middleware' => ['AuthMiddleware']],
     'POST /usuarios/{id}/delete' => ['handler' => 'UsuarioController@destroy', 'middleware' => ['AuthMiddleware']],
     
+    // Minha Conta (protegido)
+    'GET /minha-conta' => ['handler' => 'UsuarioController@minhaConta', 'middleware' => ['AuthMiddleware']],
+    'POST /minha-conta' => ['handler' => 'UsuarioController@atualizarMinhaConta', 'middleware' => ['AuthMiddleware']],
+    
     // Fornecedores (protegido)
     'GET /fornecedores' => ['handler' => 'FornecedorController@index', 'middleware' => ['AuthMiddleware']],
     'GET /fornecedores/create' => ['handler' => 'FornecedorController@create', 'middleware' => ['AuthMiddleware']],

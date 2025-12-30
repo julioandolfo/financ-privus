@@ -70,6 +70,7 @@ class AuthController extends Controller
         $_SESSION['usuario_id'] = $usuario['id'];
         $_SESSION['usuario_nome'] = $usuario['nome'];
         $_SESSION['usuario_email'] = $usuario['email'];
+        $_SESSION['usuario_avatar'] = $usuario['avatar'] ?? null;
         $_SESSION['usuario_empresa_id'] = $usuario['empresa_id'];
         
         // Carrega empresas consolidadas padrão se existir

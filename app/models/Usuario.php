@@ -116,10 +116,29 @@ class Usuario extends Model
             $params['senha'] = password_hash($data['senha'], PASSWORD_DEFAULT);
         }
         
+        // Se avatar foi fornecido, atualiza
+        if (isset($data['avatar'])) {
+            $sql .= ", avatar = :avatar";
+            $params['avatar'] = $data['avatar'];
+        }
+        
         $sql .= " WHERE id = :id";
         
         $stmt = $this->db->prepare($sql);
         return $stmt->execute($params);
+    }
+    
+    /**
+     * Atualiza apenas o avatar do usuário
+     */
+    public function updateAvatar($id, $avatarPath)
+    {
+        $sql = "UPDATE {$this->table} SET avatar = :avatar WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            'id' => $id,
+            'avatar' => $avatarPath
+        ]);
     }
     
     /**
