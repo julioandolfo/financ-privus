@@ -66,7 +66,24 @@ class UsuarioController extends Controller
             $data = $request->all();
             
             // Validações usando o Model
-            $errors = $this->usuarioModel->validate($data);
+            $modelErrors = $this->usuarioModel->validate($data);
+            $errors = [];
+            
+            // Converte array de erros do model para formato de chave-valor
+            if (!empty($modelErrors)) {
+                foreach ($modelErrors as $error) {
+                    if (strpos($error, 'Nome') !== false || strpos($error, 'nome') !== false) {
+                        $errors['nome'] = $error;
+                    } elseif (strpos($error, 'Email') !== false || strpos($error, 'email') !== false) {
+                        $errors['email'] = $error;
+                    } elseif (strpos($error, 'Senha') !== false || strpos($error, 'senha') !== false) {
+                        $errors['senha'] = $error;
+                    } else {
+                        $errors['geral'] = $error;
+                    }
+                }
+            }
+            
             if (!empty($errors)) {
                 $_SESSION['errors'] = $errors;
                 $_SESSION['old'] = $data;

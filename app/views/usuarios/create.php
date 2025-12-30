@@ -15,7 +15,7 @@
 
         <!-- Formulário -->
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
-            <form method="POST" action="<?= $this->baseUrl('/usuarios/store') ?>" class="space-y-6">
+            <form method="POST" action="<?= $this->baseUrl('/usuarios') ?>" class="space-y-6">
                 <!-- Nome -->
                 <div>
                     <label for="nome" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">

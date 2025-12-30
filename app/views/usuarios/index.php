@@ -87,7 +87,7 @@
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="flex items-center justify-center gap-2">
-                                            <a href="<?= $this->baseUrl('/usuarios/show/' . $usuario['id']) ?>" 
+                                            <a href="<?= $this->baseUrl('/usuarios/' . $usuario['id']) ?>" 
                                                class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" 
                                                title="Visualizar">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
