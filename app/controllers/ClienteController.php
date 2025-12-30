@@ -4,26 +4,26 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
-use App\Models\Fornecedor;
+use App\Models\Cliente;
 use App\Models\Empresa;
 
-class FornecedorController extends Controller
+class ClienteController extends Controller
 {
-    private $fornecedorModel;
+    private $clienteModel;
     private $empresaModel;
 
     public function index(Request $request, Response $response)
     {
         try {
-            $this->fornecedorModel = new Fornecedor();
-            $fornecedores = $this->fornecedorModel->findAll();
+            $this->clienteModel = new Cliente();
+            $clientes = $this->clienteModel->findAll();
             
-            return $this->render('fornecedores/index', [
-                'title' => 'Gerenciar Fornecedores',
-                'fornecedores' => $fornecedores
+            return $this->render('clientes/index', [
+                'title' => 'Gerenciar Clientes',
+                'clientes' => $clientes
             ]);
         } catch (\Exception $e) {
-            $_SESSION['error'] = 'Erro ao carregar fornecedores: ' . $e->getMessage();
+            $_SESSION['error'] = 'Erro ao carregar clientes: ' . $e->getMessage();
             $response->redirect('/');
         }
     }
@@ -34,13 +34,13 @@ class FornecedorController extends Controller
             $this->empresaModel = new Empresa();
             $empresas = $this->empresaModel->findAll();
             
-            return $this->render('fornecedores/create', [
-                'title' => 'Novo Fornecedor',
+            return $this->render('clientes/create', [
+                'title' => 'Novo Cliente',
                 'empresas' => $empresas
             ]);
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Erro ao carregar formulário: ' . $e->getMessage();
-            $response->redirect('/fornecedores');
+            $response->redirect('/clientes');
         }
     }
 
@@ -51,7 +51,6 @@ class FornecedorController extends Controller
             
             // Processa endereço se fornecido
             if (isset($data['endereco']) && is_array($data['endereco'])) {
-                // Remove campos vazios do endereço
                 $endereco = array_filter($data['endereco'], function($value) {
                     return !empty($value);
                 });
@@ -63,7 +62,7 @@ class FornecedorController extends Controller
             if (!empty($errors)) {
                 $this->session->set('errors', $errors);
                 $this->session->set('old', $data);
-                $response->redirect('/fornecedores/create');
+                $response->redirect('/clientes/create');
                 return;
             }
             
@@ -80,81 +79,81 @@ class FornecedorController extends Controller
             // Converte ativo para boolean
             $data['ativo'] = isset($data['ativo']) ? 1 : 0;
             
-            // Cria fornecedor
-            $this->fornecedorModel = new Fornecedor();
-            $id = $this->fornecedorModel->create($data);
+            // Cria cliente
+            $this->clienteModel = new Cliente();
+            $id = $this->clienteModel->create($data);
             
-            $_SESSION['success'] = 'Fornecedor criado com sucesso!';
-            $response->redirect('/fornecedores');
+            $_SESSION['success'] = 'Cliente criado com sucesso!';
+            $response->redirect('/clientes');
             
         } catch (\Exception $e) {
-            $_SESSION['error'] = 'Erro ao criar fornecedor: ' . $e->getMessage();
+            $_SESSION['error'] = 'Erro ao criar cliente: ' . $e->getMessage();
             $this->session->set('old', $data ?? []);
-            $response->redirect('/fornecedores/create');
+            $response->redirect('/clientes/create');
         }
     }
 
     public function show(Request $request, Response $response, $id)
     {
         try {
-            $this->fornecedorModel = new Fornecedor();
-            $fornecedor = $this->fornecedorModel->findById($id);
+            $this->clienteModel = new Cliente();
+            $cliente = $this->clienteModel->findById($id);
             
-            if (!$fornecedor) {
-                $_SESSION['error'] = 'Fornecedor não encontrado!';
-                $response->redirect('/fornecedores');
+            if (!$cliente) {
+                $_SESSION['error'] = 'Cliente não encontrado!';
+                $response->redirect('/clientes');
                 return;
             }
             
             // Busca empresa
             $this->empresaModel = new Empresa();
-            $fornecedor['empresa'] = $this->empresaModel->findById($fornecedor['empresa_id']);
+            $cliente['empresa'] = $this->empresaModel->findById($cliente['empresa_id']);
             
             // Decodifica endereço JSON
-            if ($fornecedor['endereco']) {
-                $fornecedor['endereco'] = json_decode($fornecedor['endereco'], true);
+            if ($cliente['endereco']) {
+                $cliente['endereco'] = json_decode($cliente['endereco'], true);
             }
             
-            return $this->render('fornecedores/show', [
-                'title' => 'Detalhes do Fornecedor',
-                'fornecedor' => $fornecedor
+            return $this->render('clientes/show', [
+                'title' => 'Detalhes do Cliente',
+                'cliente' => $cliente
             ]);
             
         } catch (\Exception $e) {
-            $_SESSION['error'] = 'Erro ao carregar fornecedor: ' . $e->getMessage();
-            $response->redirect('/fornecedores');
+            $_SESSION['error'] = 'Erro ao carregar cliente: ' . $e->getMessage();
+            $response->redirect('/clientes');
         }
     }
 
     public function edit(Request $request, Response $response, $id)
     {
         try {
-            $this->fornecedorModel = new Fornecedor();
-            $fornecedor = $this->fornecedorModel->findById($id);
+            $this->clienteModel = new Cliente();
+            $cliente = $this->clienteModel->findById($id);
             
-            if (!$fornecedor) {
-                $_SESSION['error'] = 'Fornecedor não encontrado!';
-                $response->redirect('/fornecedores');
+            if (!$cliente) {
+                $_SESSION['error'] = 'Cliente não encontrado!';
+                $response->redirect('/clientes');
                 return;
             }
             
             // Decodifica endereço JSON
-            if ($fornecedor['endereco']) {
-                $fornecedor['endereco'] = json_decode($fornecedor['endereco'], true);
+            if ($cliente['endereco']) {
+                $cliente['endereco'] = json_decode($cliente['endereco'], true);
             }
             
             $this->empresaModel = new Empresa();
             $empresas = $this->empresaModel->findAll();
             
-            return $this->render('fornecedores/edit', [
-                'title' => 'Editar Fornecedor',
-                'fornecedor' => $fornecedor,
+            return $this->render('clientes/edit', [
+                'title' => 'Editar Cliente',
+                'cliente' => $cliente,
                 'empresas' => $empresas
             ]);
             
         } catch (\Exception $e) {
-            $_SESSION['error'] = 'Erro ao carregar fornecedor: ' . $e->getMessage();
-            $response->redirect('/fornecedores');
+            $_SESSION['error'] = 'Erro ao carregar cliente: ' . $e->getMessage();
+            $response->redirect('/clientes');
         }
     }
 
@@ -165,7 +164,6 @@ class FornecedorController extends Controller
             
             // Processa endereço se fornecido
             if (isset($data['endereco']) && is_array($data['endereco'])) {
-                // Remove campos vazios do endereço
                 $endereco = array_filter($data['endereco'], function($value) {
                     return !empty($value);
                 });
@@ -177,7 +175,7 @@ class FornecedorController extends Controller
             if (!empty($errors)) {
                 $this->session->set('errors', $errors);
                 $this->session->set('old', $data);
-                $response->redirect("/fornecedores/edit/{$id}");
+                $response->redirect("/clientes/edit/{$id}");
                 return;
             }
             
@@ -194,33 +192,33 @@ class FornecedorController extends Controller
             // Converte ativo para boolean
             $data['ativo'] = isset($data['ativo']) ? 1 : 0;
             
-            // Atualiza fornecedor
-            $this->fornecedorModel = new Fornecedor();
-            $this->fornecedorModel->update($id, $data);
+            // Atualiza cliente
+            $this->clienteModel = new Cliente();
+            $this->clienteModel->update($id, $data);
             
-            $_SESSION['success'] = 'Fornecedor atualizado com sucesso!';
-            $response->redirect('/fornecedores');
+            $_SESSION['success'] = 'Cliente atualizado com sucesso!';
+            $response->redirect('/clientes');
             
         } catch (\Exception $e) {
-            $_SESSION['error'] = 'Erro ao atualizar fornecedor: ' . $e->getMessage();
+            $_SESSION['error'] = 'Erro ao atualizar cliente: ' . $e->getMessage();
             $this->session->set('old', $data ?? []);
-            $response->redirect("/fornecedores/edit/{$id}");
+            $response->redirect("/clientes/edit/{$id}");
         }
     }
 
     public function destroy(Request $request, Response $response, $id)
     {
         try {
-            $this->fornecedorModel = new Fornecedor();
-            $this->fornecedorModel->delete($id);
+            $this->clienteModel = new Cliente();
+            $this->clienteModel->delete($id);
             
-            $_SESSION['success'] = 'Fornecedor excluído com sucesso!';
+            $_SESSION['success'] = 'Cliente excluído com sucesso!';
             
         } catch (\Exception $e) {
-            $_SESSION['error'] = 'Erro ao excluir fornecedor: ' . $e->getMessage();
+            $_SESSION['error'] = 'Erro ao excluir cliente: ' . $e->getMessage();
         }
         
-        $response->redirect('/fornecedores');
+        $response->redirect('/clientes');
     }
 
     private function validate($data, $id = null)
@@ -246,20 +244,20 @@ class FornecedorController extends Controller
         if (!empty($data['cpf_cnpj'])) {
             $cpfCnpj = preg_replace('/[^0-9]/', '', $data['cpf_cnpj']);
             
-            $this->fornecedorModel = new Fornecedor();
+            $this->clienteModel = new Cliente();
             
             if ($data['tipo'] === 'fisica') {
-                if (!$this->fornecedorModel->validarCPF($cpfCnpj)) {
+                if (!$this->clienteModel->validarCPF($cpfCnpj)) {
                     $errors['cpf_cnpj'] = 'CPF inválido';
                 }
             } else {
-                if (!$this->fornecedorModel->validarCNPJ($cpfCnpj)) {
+                if (!$this->clienteModel->validarCNPJ($cpfCnpj)) {
                     $errors['cpf_cnpj'] = 'CNPJ inválido';
                 }
             }
             
             // Verifica se CPF/CNPJ já existe
-            $existing = $this->fornecedorModel->findByCpfCnpj($cpfCnpj, $data['empresa_id']);
+            $existing = $this->clienteModel->findByCpfCnpj($cpfCnpj, $data['empresa_id']);
             if ($existing && (!$id || $existing['id'] != $id)) {
                 $errors['cpf_cnpj'] = 'Este CPF/CNPJ já está cadastrado para esta empresa';
             }
