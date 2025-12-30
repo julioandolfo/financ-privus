@@ -1,7 +1,7 @@
 <div class="max-w-3xl mx-auto">
     <!-- Header -->
     <div class="mb-8">
-        <a href="<?= $this->baseUrl('/centros-custo') ?>" 
+        <a href="<?= baseUrl('/centros-custo') ?>" 
            class="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4 transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -15,9 +15,9 @@
 
     <!-- Formulário -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
-        <form method="POST" action="<?= $this->baseUrl('/centros-custo/' . $centroCusto['id']) ?>" class="space-y-6">
+        <form method="POST" action="<?= baseUrl('/centros-custo/' . $centroCusto['id']) ?>" class="space-y-6">
             <?php
-            $old = $this->session->get('old') ?? [];
+            $old = $session->get('old') ?? [];
             ?>
 
             <!-- Empresa -->
@@ -27,7 +27,7 @@
                 </label>
                 <select id="empresa_id" 
                         name="empresa_id" 
-                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['empresa_id']) ? 'border-red-500' : '' ?>" 
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($session(\->get('errors') ?? [])['empresa_id']) ? 'border-red-500' : '' ?>" 
                         required>
                     <option value="">Selecione uma empresa</option>
                     <?php foreach ($empresas as $empresa): ?>
@@ -36,8 +36,8 @@
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <?php if (isset($this->session->get('errors')['empresa_id'])): ?>
-                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['empresa_id'] ?></p>
+                <?php if (isset($session(\->get('errors') ?? [])['empresa_id'])): ?>
+                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $session(\->get('errors') ?? [])['empresa_id'] ?></p>
                 <?php endif; ?>
             </div>
 
@@ -53,10 +53,10 @@
                            value="<?= htmlspecialchars($old['codigo'] ?? $centroCusto['codigo']) ?>"
                            maxlength="20"
                            pattern="[A-Z0-9._-]+"
-                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['codigo']) ? 'border-red-500' : '' ?>" 
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($session(\->get('errors') ?? [])['codigo']) ? 'border-red-500' : '' ?>" 
                            required>
-                    <?php if (isset($this->session->get('errors')['codigo'])): ?>
-                        <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['codigo'] ?></p>
+                    <?php if (isset($session(\->get('errors') ?? [])['codigo'])): ?>
+                        <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $session(\->get('errors') ?? [])['codigo'] ?></p>
                     <?php endif; ?>
                 </div>
                 <div class="md:col-span-2">
@@ -69,10 +69,10 @@
                            value="<?= htmlspecialchars($old['nome'] ?? $centroCusto['nome']) ?>"
                            minlength="3"
                            maxlength="255"
-                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['nome']) ? 'border-red-500' : '' ?>" 
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($session(\->get('errors') ?? [])['nome']) ? 'border-red-500' : '' ?>" 
                            required>
-                    <?php if (isset($this->session->get('errors')['nome'])): ?>
-                        <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['nome'] ?></p>
+                    <?php if (isset($session(\->get('errors') ?? [])['nome'])): ?>
+                        <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $session(\->get('errors') ?? [])['nome'] ?></p>
                     <?php endif; ?>
                 </div>
             </div>
@@ -84,7 +84,7 @@
                 </label>
                 <select id="centro_pai_id" 
                         name="centro_pai_id" 
-                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['centro_pai_id']) ? 'border-red-500' : '' ?>">
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($session(\->get('errors') ?? [])['centro_pai_id']) ? 'border-red-500' : '' ?>">
                     <option value="">Nenhum (Centro Principal)</option>
                     <?php foreach ($centrosPai as $centroPai): ?>
                         <option value="<?= $centroPai['id'] ?>" <?= (($old['centro_pai_id'] ?? $centroCusto['centro_pai_id']) == $centroPai['id']) ? 'selected' : '' ?>>
@@ -92,8 +92,8 @@
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <?php if (isset($this->session->get('errors')['centro_pai_id'])): ?>
-                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['centro_pai_id'] ?></p>
+                <?php if (isset($session(\->get('errors') ?? [])['centro_pai_id'])): ?>
+                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $session(\->get('errors') ?? [])['centro_pai_id'] ?></p>
                 <?php endif; ?>
             </div>
 
@@ -116,7 +116,7 @@
                         class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
                     Salvar Alterações
                 </button>
-                <a href="<?= $this->baseUrl('/centros-custo') ?>" 
+                <a href="<?= baseUrl('/centros-custo') ?>" 
                    class="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl text-center transition-all">
                     Cancelar
                 </a>
@@ -127,7 +127,7 @@
 
 <?php 
 // Limpa old e errors após exibição
-$this->session->delete('old');
-$this->session->delete('errors');
+$session->delete('old');
+$session->delete('errors');
 ?>
 

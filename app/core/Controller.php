@@ -101,6 +101,65 @@ abstract class Controller
         // Extrai variáveis do array $data
         extract($data);
         
+        // Cria helper para views usando ViewHelper
+        require_once __DIR__ . '/ViewHelper.php';
+        $viewHelper = new ViewHelper($this);
+        
+        // Armazena em GLOBALS para acesso nas views
+        $GLOBALS['__view_helper'] = $viewHelper;
+        
+        // Cria função helper global baseUrl() para uso direto nas views
+        if (!function_exists('baseUrl')) {
+            function baseUrl($path = '') {
+                if (isset($GLOBALS['__view_helper'])) {
+                    return $GLOBALS['__view_helper']->baseUrl($path);
+                }
+                // Fallback: calcula baseUrl diretamente
+                $scriptName = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
+                $basePath = dirname($scriptName);
+                if ($basePath === '/' || $basePath === '\\') {
+                    $basePath = '';
+                }
+                return $basePath . '/' . ltrim($path, '/');
+            }
+        }
+        
+        // Cria função helper global session() para uso direto nas views
+        if (!function_exists('session')) {
+            function session() {
+                if (isset($GLOBALS['__view_helper'])) {
+                    return $GLOBALS['__view_helper']->session;
+                }
+                // Fallback: retorna wrapper para Session
+                return new class {
+                    public function get($key, $default = null) {
+                        return \App\Core\Session::get($key, $default);
+                    }
+                    public function set($key, $value) {
+                        return \App\Core\Session::set($key, $value);
+                    }
+                    public function delete($key) {
+                        return \App\Core\Session::delete($key);
+                    }
+                };
+            }
+        }
+        
+        // Extrai session como variável $session para uso direto nas views
+        $session = $viewHelper->session;
+        extract(['session' => $session], EXTR_OVERWRITE);
+        
+        // Extrai o helper como $this para as views
+        // Usamos uma técnica especial: criamos uma variável $this que será usada nas views
+        // Como não podemos reatribuir $this diretamente, vamos usar uma função wrapper
+        // que retorna o helper quando $this é acessado
+        extract(['viewHelper' => $viewHelper], EXTR_OVERWRITE);
+        
+        // Cria um wrapper que permite usar $this->baseUrl() nas views
+        // Usamos uma técnica de "proxy" através de uma variável global
+        // que será acessada via uma função helper
+        $GLOBALS['__view_this'] = $viewHelper;
+        
         // Define caminho da view
         $viewFile = __DIR__ . '/../views/' . str_replace('.', '/', $view) . '.php';
         
@@ -114,6 +173,15 @@ abstract class Controller
         if (file_exists($layoutFile)) {
             // Renderiza view dentro do layout
             ob_start();
+            // Substitui $this nas views pelo helper através de uma variável extraída
+            // Como não podemos reatribuir $this, vamos usar uma técnica de "proxy"
+            // Criamos uma função que será chamada quando $this->baseUrl() for usado
+            // Mas isso requer modificar as views, então vamos usar uma abordagem diferente:
+            // Vamos fazer as views usarem $viewHelper ao invés de $this
+            // Mas para manter compatibilidade, vamos criar um wrapper que funciona
+            // através de uma variável $this extraída (mas isso não funciona)
+            // Solução final: usar função helper global baseUrl() e também disponibilizar
+            // o helper como variável $viewHelper para acesso à sessão
             include $viewFile;
             $content = ob_get_clean();
             

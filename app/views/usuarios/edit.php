@@ -1,7 +1,7 @@
 <div class="max-w-3xl mx-auto">
         <!-- Header -->
         <div class="mb-8">
-            <a href="<?= $this->baseUrl('/usuarios') ?>" 
+            <a href="<?= baseUrl('/usuarios') ?>" 
                class="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -15,7 +15,7 @@
 
         <!-- Formulário -->
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
-            <form method="POST" action="<?= $this->baseUrl('/usuarios/' . $usuario['id']) ?>" class="space-y-6">
+            <form method="POST" action="<?= baseUrl('/usuarios/' . $usuario['id']) ?>" class="space-y-6">
                 <!-- Nome -->
                 <div>
                     <label for="nome" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -24,11 +24,11 @@
                     <input type="text" 
                            id="nome" 
                            name="nome" 
-                           value="<?= htmlspecialchars($this->session->get('old')['nome'] ?? $usuario['nome']) ?>"
-                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['nome']) ? 'border-red-500' : '' ?>" 
+                           value="<?= htmlspecialchars($session->get('old')['nome'] ?? $usuario['nome']) ?>"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($session(\->get('errors') ?? [])['nome']) ? 'border-red-500' : '' ?>" 
                            required>
-                    <?php if (isset($this->session->get('errors')['nome'])): ?>
-                        <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['nome'] ?></p>
+                    <?php if (isset($session(\->get('errors') ?? [])['nome'])): ?>
+                        <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $session(\->get('errors') ?? [])['nome'] ?></p>
                     <?php endif; ?>
                 </div>
 
@@ -40,12 +40,12 @@
                     <input type="email" 
                            id="email" 
                            name="email" 
-                           value="<?= htmlspecialchars($this->session->get('old')['email'] ?? $usuario['email']) ?>"
+                           value="<?= htmlspecialchars($session->get('old')['email'] ?? $usuario['email']) ?>"
                            pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
-                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['email']) ? 'border-red-500' : '' ?>" 
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($session(\->get('errors') ?? [])['email']) ? 'border-red-500' : '' ?>" 
                            required>
-                    <?php if (isset($this->session->get('errors')['email'])): ?>
-                        <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['email'] ?></p>
+                    <?php if (isset($session(\->get('errors') ?? [])['email'])): ?>
+                        <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $session(\->get('errors') ?? [])['email'] ?></p>
                     <?php else: ?>
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Digite um email válido</p>
                     <?php endif; ?>
@@ -61,7 +61,7 @@
                                id="senha" 
                                name="senha" 
                                minlength="6"
-                               class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['senha']) ? 'border-red-500' : '' ?>">
+                               class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($session(\->get('errors') ?? [])['senha']) ? 'border-red-500' : '' ?>">
                         <button type="button" 
                                 onclick="togglePassword('senha')"
                                 class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
@@ -75,8 +75,8 @@
                             </svg>
                         </button>
                     </div>
-                    <?php if (isset($this->session->get('errors')['senha'])): ?>
-                        <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['senha'] ?></p>
+                    <?php if (isset($session(\->get('errors') ?? [])['senha'])): ?>
+                        <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $session(\->get('errors') ?? [])['senha'] ?></p>
                     <?php else: ?>
                         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Mínimo de 6 caracteres se preencher</p>
                     <?php endif; ?>
@@ -92,7 +92,7 @@
                             class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                         <option value="">Selecione uma empresa</option>
                         <?php foreach ($empresas as $empresa): ?>
-                            <option value="<?= $empresa['id'] ?>" <?= (($this->session->get('old')['empresa_id'] ?? $usuario['empresa_id']) == $empresa['id']) ? 'selected' : '' ?>>
+                            <option value="<?= $empresa['id'] ?>" <?= (($session->get('old')['empresa_id'] ?? $usuario['empresa_id']) == $empresa['id']) ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($empresa['nome_fantasia']) ?>
                             </option>
                         <?php endforeach; ?>
@@ -105,7 +105,7 @@
                            id="ativo" 
                            name="ativo" 
                            value="1"
-                           <?= ($this->session->get('old')['ativo'] ?? $usuario['ativo']) ? 'checked' : '' ?>
+                           <?= ($session->get('old')['ativo'] ?? $usuario['ativo']) ? 'checked' : '' ?>
                            class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2">
                     <label for="ativo" class="text-sm font-semibold text-gray-700 dark:text-gray-300">
                         Usuário Ativo
@@ -158,7 +158,7 @@
                             class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
                         Salvar Alterações
                     </button>
-                    <a href="<?= $this->baseUrl('/usuarios') ?>" 
+                    <a href="<?= baseUrl('/usuarios') ?>" 
                        class="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl text-center transition-all">
                         Cancelar
                     </a>
@@ -199,7 +199,7 @@ function toggleAllPermissions(modulo) {
 
 <?php 
 // Limpa old e errors após exibição
-$this->session->delete('old');
-$this->session->delete('errors');
+$session->delete('old');
+$session->delete('errors');
 ?>
 

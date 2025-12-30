@@ -9,7 +9,7 @@
                 Organize centros de custo em estrutura hierárquica
             </p>
         </div>
-        <a href="<?= $this->baseUrl('/centros-custo/create') ?>" 
+        <a href="<?= baseUrl('/centros-custo/create') ?>" 
            class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -20,7 +20,7 @@
 
     <!-- Filtros -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
-        <form method="GET" action="<?= $this->baseUrl('/centros-custo') ?>" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <form method="GET" action="<?= baseUrl('/centros-custo') ?>" class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
                 <label for="empresa_id" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Empresa
@@ -67,7 +67,7 @@
                 </div>
                 <h3 class="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">Nenhum centro de custo cadastrado</h3>
                 <p class="text-gray-500 dark:text-gray-400 mb-6">Comece criando seu primeiro centro de custo</p>
-                <a href="<?= $this->baseUrl('/centros-custo/create') ?>" 
+                <a href="<?= baseUrl('/centros-custo/create') ?>" 
                    class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -106,7 +106,7 @@
                                 </div>
                                 
                                 <div class="flex items-center gap-2">
-                                    <a href="<?= $this->baseUrl('/centros-custo/' . $centroCusto['id']) ?>" 
+                                    <a href="<?= baseUrl('/centros-custo/' . $centroCusto['id']) ?>" 
                                        class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" 
                                        title="Visualizar">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,14 +114,14 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                         </svg>
                                     </a>
-                                    <a href="<?= $this->baseUrl('/centros-custo/' . $centroCusto['id'] . '/edit') ?>" 
+                                    <a href="<?= baseUrl('/centros-custo/' . $centroCusto['id'] . '/edit') ?>" 
                                        class="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-colors" 
                                        title="Editar">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
                                     </a>
-                                    <form method="POST" action="<?= $this->baseUrl('/centros-custo/' . $centroCusto['id'] . '/delete') ?>" 
+                                    <form method="POST" action="<?= baseUrl('/centros-custo/' . $centroCusto['id'] . '/delete') ?>" 
                                           onsubmit="return confirm('Tem certeza que deseja excluir este centro de custo?')" 
                                           class="inline">
                                         <button type="submit" 
@@ -189,7 +189,7 @@
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="flex items-center justify-center gap-2">
-                                            <a href="<?= $this->baseUrl('/centros-custo/' . $centroCusto['id']) ?>" 
+                                            <a href="<?= baseUrl('/centros-custo/' . $centroCusto['id']) ?>" 
                                                class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" 
                                                title="Visualizar">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,14 +197,14 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                 </svg>
                                             </a>
-                                            <a href="<?= $this->baseUrl('/centros-custo/' . $centroCusto['id'] . '/edit') ?>" 
+                                            <a href="<?= baseUrl('/centros-custo/' . $centroCusto['id'] . '/edit') ?>" 
                                                class="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-colors" 
                                                title="Editar">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                 </svg>
                                             </a>
-                                            <form method="POST" action="<?= $this->baseUrl('/centros-custo/' . $centroCusto['id'] . '/delete') ?>" 
+                                            <form method="POST" action="<?= baseUrl('/centros-custo/' . $centroCusto['id'] . '/delete') ?>" 
                                                   onsubmit="return confirm('Tem certeza que deseja excluir este centro de custo?')" 
                                                   class="inline">
                                                 <button type="submit" 

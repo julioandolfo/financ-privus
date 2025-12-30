@@ -9,7 +9,7 @@
                 Gerencie os clientes do sistema
             </p>
         </div>
-        <a href="<?= $this->baseUrl('/clientes/create') ?>" 
+        <a href="<?= baseUrl('/clientes/create') ?>" 
            class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -29,7 +29,7 @@
                 </div>
                 <h3 class="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">Nenhum cliente cadastrado</h3>
                 <p class="text-gray-500 dark:text-gray-400 mb-6">Comece criando seu primeiro cliente</p>
-                <a href="<?= $this->baseUrl('/clientes/create') ?>" 
+                <a href="<?= baseUrl('/clientes/create') ?>" 
                    class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -102,7 +102,7 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center justify-center gap-2">
-                                        <a href="<?= $this->baseUrl('/clientes/' . $cliente['id']) ?>" 
+                                        <a href="<?= baseUrl('/clientes/' . $cliente['id']) ?>" 
                                            class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" 
                                            title="Visualizar">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,14 +110,14 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                             </svg>
                                         </a>
-                                        <a href="<?= $this->baseUrl('/clientes/' . $cliente['id'] . '/edit') ?>" 
+                                        <a href="<?= baseUrl('/clientes/' . $cliente['id'] . '/edit') ?>" 
                                            class="p-2 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-colors" 
                                            title="Editar">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                             </svg>
                                         </a>
-                                        <form method="POST" action="<?= $this->baseUrl('/clientes/' . $cliente['id'] . '/delete') ?>" 
+                                        <form method="POST" action="<?= baseUrl('/clientes/' . $cliente['id'] . '/delete') ?>" 
                                               onsubmit="return confirm('Tem certeza que deseja excluir este cliente?')" 
                                               class="inline">
                                             <button type="submit" 

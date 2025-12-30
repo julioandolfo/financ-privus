@@ -1,7 +1,7 @@
 <div class="max-w-4xl mx-auto">
         <!-- Header -->
         <div class="mb-8">
-            <a href="<?= $this->baseUrl('/usuarios') ?>" 
+            <a href="<?= baseUrl('/usuarios') ?>" 
                class="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -12,7 +12,7 @@
                 <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
                     👤 Detalhes do Usuário
                 </h1>
-                <a href="<?= $this->baseUrl('/usuarios/edit/' . $usuario['id']) ?>" 
+                <a href="<?= baseUrl('/usuarios/edit/' . $usuario['id']) ?>" 
                    class="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -82,7 +82,7 @@
                         </label>
                         <div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
                             <?php if (!empty($usuario['empresa'])): ?>
-                                <a href="<?= $this->baseUrl('/empresas/show/' . $usuario['empresa']['id']) ?>" 
+                                <a href="<?= baseUrl('/empresas/show/' . $usuario['empresa']['id']) ?>" 
                                    class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:underline">
                                     <?= htmlspecialchars($usuario['empresa']['nome_fantasia']) ?>
                                 </a>
@@ -134,7 +134,7 @@
             <!-- Footer com Ações -->
             <div class="bg-gray-50 dark:bg-gray-900/50 px-8 py-4 border-t border-gray-200 dark:border-gray-700">
                 <div class="flex justify-between items-center">
-                    <form method="POST" action="<?= $this->baseUrl('/usuarios/delete/' . $usuario['id']) ?>" 
+                    <form method="POST" action="<?= baseUrl('/usuarios/delete/' . $usuario['id']) ?>" 
                           onsubmit="return confirm('⚠️ Tem certeza que deseja excluir este usuário?\n\nEsta ação não pode ser desfeita!')">
                         <button type="submit" 
                                 class="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
@@ -145,7 +145,7 @@
                         </button>
                     </form>
                     
-                    <a href="<?= $this->baseUrl('/usuarios/edit/' . $usuario['id']) ?>" 
+                    <a href="<?= baseUrl('/usuarios/edit/' . $usuario['id']) ?>" 
                        class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
