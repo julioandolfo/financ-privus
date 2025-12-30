@@ -31,34 +31,61 @@ require_once APP_ROOT . '/app/core/Session.php';
 use App\Core\Session;
 Session::start();
 
-// Autoloader simples (substituir por Composer depois)
+// Autoloader melhorado para produção
 spl_autoload_register(function ($class) {
-    $prefix = 'App\\';
-    $baseDir = APP_ROOT . '/app/';
-    
-    $len = strlen($prefix);
-    if (strncmp($prefix, $class, $len) !== 0) {
-        // Tenta carregar classes do namespace includes
-        if (strncmp('includes\\', $class, 9) === 0) {
-            $relativeClass = substr($class, 9);
-            $file = APP_ROOT . '/includes/' . str_replace('\\', '/', $relativeClass) . '.php';
-            if (file_exists($file)) {
-                require $file;
-            }
+    // Namespace App\Controllers
+    if (strpos($class, 'App\\Controllers\\') === 0) {
+        $relativeClass = str_replace('App\\Controllers\\', '', $class);
+        $file = APP_ROOT . '/app/controllers/' . str_replace('\\', '/', $relativeClass) . '.php';
+        if (file_exists($file)) {
+            require_once $file;
+            return;
         }
-        return;
     }
     
-    $relativeClass = substr($class, $len);
-    $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
-    
-    if (file_exists($file)) {
-        require $file;
-    } else {
-        // Debug: mostra caminho tentado se APP_DEBUG estiver ativo
-        if (defined('APP_DEBUG') && APP_DEBUG) {
-            error_log("Autoloader: Arquivo não encontrado - Tentou carregar: {$file} para classe: {$class}");
+    // Namespace App\Models
+    if (strpos($class, 'App\\Models\\') === 0) {
+        $relativeClass = str_replace('App\\Models\\', '', $class);
+        $file = APP_ROOT . '/app/models/' . str_replace('\\', '/', $relativeClass) . '.php';
+        if (file_exists($file)) {
+            require_once $file;
+            return;
         }
+    }
+    
+    // Namespace App\Middleware
+    if (strpos($class, 'App\\Middleware\\') === 0) {
+        $relativeClass = str_replace('App\\Middleware\\', '', $class);
+        $file = APP_ROOT . '/app/middleware/' . str_replace('\\', '/', $relativeClass) . '.php';
+        if (file_exists($file)) {
+            require_once $file;
+            return;
+        }
+    }
+    
+    // Namespace App\Core (já carregado explicitamente, mas mantido para compatibilidade)
+    if (strpos($class, 'App\\Core\\') === 0) {
+        $relativeClass = str_replace('App\\Core\\', '', $class);
+        $file = APP_ROOT . '/app/core/' . str_replace('\\', '/', $relativeClass) . '.php';
+        if (file_exists($file)) {
+            require_once $file;
+            return;
+        }
+    }
+    
+    // Namespace includes
+    if (strpos($class, 'includes\\') === 0) {
+        $relativeClass = str_replace('includes\\', '', $class);
+        $file = APP_ROOT . '/includes/' . str_replace('\\', '/', $relativeClass) . '.php';
+        if (file_exists($file)) {
+            require_once $file;
+            return;
+        }
+    }
+    
+    // Debug: log se não encontrou
+    if (defined('APP_DEBUG') && APP_DEBUG) {
+        error_log("Autoloader: Classe não encontrada - {$class}");
     }
 });
 
