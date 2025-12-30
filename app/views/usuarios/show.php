@@ -12,7 +12,7 @@
                 <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
                     👤 Detalhes do Usuário
                 </h1>
-                <a href="<?= $this->baseUrl('/usuarios/edit/' . $usuario['id']) ?>" 
+                <a href="<?= $this->baseUrl('/usuarios/' . $usuario['id'] . '/edit') ?>" 
                    class="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -135,6 +135,49 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Permissões -->
+                <?php if (!empty($permissoes)): ?>
+                    <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Permissões de Acesso</h3>
+                        <div class="space-y-4">
+                            <?php foreach ($modulos as $moduloKey => $moduloNome): ?>
+                                <?php if (isset($permissoes[$moduloKey]) && !empty($permissoes[$moduloKey]['acoes'])): ?>
+                                    <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50 dark:bg-gray-900/50">
+                                        <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3"><?= htmlspecialchars($moduloNome) ?></h4>
+                                        <div class="flex flex-wrap gap-2">
+                                            <?php foreach ($permissoes[$moduloKey]['acoes'] as $acaoKey => $acaoData): ?>
+                                                <?php if ($acaoData['permitido']): ?>
+                                                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700">
+                                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                                        </svg>
+                                                        <?= htmlspecialchars($acoes[$acaoKey] ?? $acaoKey) ?>
+                                                    </span>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php 
+                        $temPermissoes = false;
+                        foreach ($permissoes as $modulo) {
+                            if (!empty($modulo['acoes'])) {
+                                foreach ($modulo['acoes'] as $acao) {
+                                    if ($acao['permitido']) {
+                                        $temPermissoes = true;
+                                        break 2;
+                                    }
+                                }
+                            }
+                        }
+                        if (!$temPermissoes): ?>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 italic">Nenhuma permissão configurada</p>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <!-- Footer com Ações -->
@@ -151,7 +194,7 @@
                         </button>
                     </form>
                     
-                    <a href="<?= $this->baseUrl('/usuarios/edit/' . $usuario['id']) ?>" 
+                    <a href="<?= $this->baseUrl('/usuarios/' . $usuario['id'] . '/edit') ?>" 
                        class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />

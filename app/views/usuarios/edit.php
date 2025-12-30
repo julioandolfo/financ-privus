@@ -25,6 +25,9 @@
                            id="nome" 
                            name="nome" 
                            value="<?= htmlspecialchars($this->session->get('old')['nome'] ?? $usuario['nome']) ?>"
+                           data-mask="letters"
+                           minlength="3"
+                           maxlength="255"
                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['nome']) ? 'border-red-500' : '' ?>" 
                            required>
                     <?php if (isset($this->session->get('errors')['nome'])): ?>
