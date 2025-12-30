@@ -159,6 +159,9 @@
                         <a href="/empresas" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">
                             Empresas
                         </a>
+                        <a href="/usuarios" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">
+                            Usuários
+                        </a>
                         <span class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                             <?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?>
                         </span>
