@@ -21,26 +21,24 @@ echo "APP_ROOT: " . APP_ROOT . " - " . (is_dir(APP_ROOT) ? '✓' : '✗') . "\n"
 echo "PUBLIC_ROOT: " . PUBLIC_ROOT . " - " . (is_dir(PUBLIC_ROOT) ? '✓' : '✗') . "\n";
 echo "</pre>";
 
-// Carrega .env
+// Carrega .env usando EnvLoader real
 echo "<h2>2. Carregando .env</h2>";
-$envFile = APP_ROOT . '/.env';
-if (file_exists($envFile)) {
-    echo "<p class='success'>✓ .env encontrado</p>";
+require_once APP_ROOT . '/includes/EnvLoader.php';
+
+try {
+    $envLoader = new includes\EnvLoader(APP_ROOT);
+    $envLoader->load();
+    echo "<p class='success'>✓ .env carregado via EnvLoader</p>";
     
-    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        $line = trim($line);
-        if (empty($line) || strpos($line, '#') === 0) continue;
-        
-        $parts = explode('=', $line, 2);
-        if (count($parts) === 2) {
-            list($key, $value) = $parts;
-            $_ENV[$key] = $value;
-            putenv("$key=$value");
-        }
-    }
-} else {
-    echo "<p class='error'>✗ .env não encontrado</p>";
+    // Mostra as variáveis de banco
+    echo "<pre>";
+    echo "DB_HOST: " . (getenv('DB_HOST') ?: $_ENV['DB_HOST'] ?? 'não definido') . "\n";
+    echo "DB_NAME: " . (getenv('DB_NAME') ?: $_ENV['DB_NAME'] ?? 'não definido') . "\n";
+    echo "DB_USER: " . (getenv('DB_USER') ?: $_ENV['DB_USER'] ?? 'não definido') . "\n";
+    echo "DB_PASS: " . (getenv('DB_PASS') || isset($_ENV['DB_PASS']) ? '*********' : 'não definido') . "\n";
+    echo "</pre>";
+} catch (Exception $e) {
+    echo "<p class='error'>✗ Erro ao carregar .env: " . $e->getMessage() . "</p>";
 }
 
 // Testa autoloader
