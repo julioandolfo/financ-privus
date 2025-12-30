@@ -1,5 +1,5 @@
 # Dependências
-/vendor/
+# /vendor/  # Comentado temporariamente para incluir no Git (necessário para cPanel)
 /node_modules/
 
 # Arquivos de ambiente
