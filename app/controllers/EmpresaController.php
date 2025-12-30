@@ -15,7 +15,7 @@ class EmpresaController extends Controller
     
     public function __construct()
     {
-        // Não chama parent::__construct() pois Controller não tem construtor
+        parent::__construct();
         $this->empresa = new Empresa();
     }
     

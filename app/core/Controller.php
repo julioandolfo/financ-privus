@@ -8,6 +8,7 @@ abstract class Controller
 {
     protected $request;
     protected $response;
+    protected $session;
     protected $viewPath;
     
     /**
@@ -51,6 +52,45 @@ abstract class Controller
     public function setResponse(Response $response)
     {
         $this->response = $response;
+    }
+    
+    /**
+     * Inicializa session se não estiver inicializada
+     */
+    public function __construct()
+    {
+        // Inicializa sessão
+        Session::start();
+        
+        // Cria wrapper para acessar métodos de Session
+        $this->session = new class {
+            public function set($key, $value) {
+                return Session::set($key, $value);
+            }
+            public function get($key, $default = null) {
+                return Session::get($key, $default);
+            }
+            public function has($key) {
+                return Session::has($key);
+            }
+            public function remove($key) {
+                return Session::remove($key);
+            }
+            public function delete($key) {
+                return Session::delete($key);
+            }
+            public function clear() {
+                return Session::clear();
+            }
+        };
+    }
+    
+    /**
+     * Renderiza uma view (alias para render)
+     */
+    protected function view($view, $data = [], $layout = 'main')
+    {
+        return $this->render($view, $data, $layout);
     }
     
     /**
@@ -116,6 +156,14 @@ abstract class Controller
     {
         // TODO: Implementar validação
         return $this->request->all();
+    }
+    
+    /**
+     * Retorna o objeto de sessão
+     */
+    protected function getSession()
+    {
+        return $this->session;
     }
     
     /**

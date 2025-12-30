@@ -17,6 +17,7 @@ class AuthController extends Controller
     
     public function __construct()
     {
+        parent::__construct();
         $this->usuario = new Usuario();
         $this->empresa = new Empresa();
     }

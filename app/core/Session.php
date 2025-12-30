@@ -68,6 +68,14 @@ class Session
     }
     
     /**
+     * Alias para remove (para compatibilidade)
+     */
+    public static function delete($key)
+    {
+        return self::remove($key);
+    }
+    
+    /**
      * Limpa toda a sessão
      */
     public static function clear()
