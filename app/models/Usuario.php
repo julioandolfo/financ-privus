@@ -20,6 +20,17 @@ class Usuario extends Model
     }
     
     /**
+     * Retorna todos os usuários
+     */
+    public function findAll()
+    {
+        $sql = "SELECT * FROM {$this->table} ORDER BY id DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    /**
      * Retorna um usuário por email
      */
     public function findByEmail($email)
