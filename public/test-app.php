@@ -23,22 +23,30 @@ echo "</pre>";
 
 // Carrega .env usando EnvLoader real
 echo "<h2>2. Carregando .env</h2>";
-require_once APP_ROOT . '/includes/EnvLoader.php';
 
-try {
-    $envLoader = new includes\EnvLoader(APP_ROOT);
-    $envLoader->load();
-    echo "<p class='success'>✓ .env carregado via EnvLoader</p>";
+// Inclui o arquivo EnvLoader
+$envLoaderFile = APP_ROOT . '/includes/EnvLoader.php';
+if (!file_exists($envLoaderFile)) {
+    echo "<p class='error'>✗ EnvLoader.php não encontrado!</p>";
+} else {
+    require_once $envLoaderFile;
     
-    // Mostra as variáveis de banco
-    echo "<pre>";
-    echo "DB_HOST: " . (getenv('DB_HOST') ?: $_ENV['DB_HOST'] ?? 'não definido') . "\n";
-    echo "DB_NAME: " . (getenv('DB_NAME') ?: $_ENV['DB_NAME'] ?? 'não definido') . "\n";
-    echo "DB_USER: " . (getenv('DB_USER') ?: $_ENV['DB_USER'] ?? 'não definido') . "\n";
-    echo "DB_PASS: " . (getenv('DB_PASS') || isset($_ENV['DB_PASS']) ? '*********' : 'não definido') . "\n";
-    echo "</pre>";
-} catch (Exception $e) {
-    echo "<p class='error'>✗ Erro ao carregar .env: " . $e->getMessage() . "</p>";
+    try {
+        $envLoader = new \includes\EnvLoader(APP_ROOT);
+        $envLoader->load();
+        echo "<p class='success'>✓ .env carregado via EnvLoader</p>";
+        
+        // Mostra as variáveis de banco
+        echo "<pre>";
+        echo "DB_HOST: " . (getenv('DB_HOST') ?: ($_ENV['DB_HOST'] ?? 'não definido')) . "\n";
+        echo "DB_NAME: " . (getenv('DB_NAME') ?: ($_ENV['DB_NAME'] ?? 'não definido')) . "\n";
+        echo "DB_USER: " . (getenv('DB_USER') ?: ($_ENV['DB_USER'] ?? 'não definido')) . "\n";
+        echo "DB_PASS: " . (getenv('DB_PASS') || isset($_ENV['DB_PASS']) ? '*********' : 'não definido') . "\n";
+        echo "</pre>";
+    } catch (Exception $e) {
+        echo "<p class='error'>✗ Erro ao carregar .env: " . $e->getMessage() . "</p>";
+        echo "<pre class='error'>" . $e->getTraceAsString() . "</pre>";
+    }
 }
 
 // Testa autoloader
