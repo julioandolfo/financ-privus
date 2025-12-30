@@ -1,22 +1,23 @@
-# Redireciona tudo para public/
+# Redireciona todas as requisições para public/
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Redireciona para public/ se não for um arquivo ou diretório existente
-    RewriteCond %{REQUEST_URI} !^/public/
+    # Se acessar /public/ diretamente, redireciona para a raiz
+    RewriteCond %{THE_REQUEST} ^[A-Z]+\ /public/
+    RewriteRule ^public/(.*)$ /$1 [R=301,L]
+    
+    # Redireciona internamente para public/ se não for arquivo/diretório na raiz
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ public/$1 [L]
-    
-    # Se for um arquivo/diretório que existe, permite acesso direto
-    RewriteCond %{REQUEST_FILENAME} -f [OR]
-    RewriteCond %{REQUEST_FILENAME} -d
-    RewriteRule ^ - [L]
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
 </IfModule>
 
 # Bloqueia acesso a arquivos sensíveis
-<FilesMatch "^\.env|^\.git|composer\.(json|lock)|package\.json">
+<FilesMatch "^\.env|^\.git|composer\.(json|lock)|package\.json|README\.md">
     Order allow,deny
     Deny from all
 </FilesMatch>
+
+# Impede listagem de diretórios
+Options -Indexes
 
