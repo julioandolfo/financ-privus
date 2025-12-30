@@ -26,9 +26,12 @@ if (file_exists($envFile)) {
             continue;
         }
         
-        list($key, $value) = explode('=', $line, 2);
-        $_ENV[$key] = $value;
-        putenv("$key=$value");
+        $parts = explode('=', $line, 2);
+        if (count($parts) === 2) {
+            list($key, $value) = $parts;
+            $_ENV[$key] = $value;
+            putenv("$key=$value");
+        }
     }
     
     echo "<p>Variáveis carregadas do .env:</p>";
