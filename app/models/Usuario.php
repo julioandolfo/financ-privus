@@ -230,5 +230,15 @@ class Usuario extends Model
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+    
+    /**
+     * Exclui um usuário (soft delete - marca como inativo)
+     */
+    public function delete($id)
+    {
+        $sql = "UPDATE {$this->table} SET ativo = 0 WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute(['id' => $id]);
+    }
 }
 

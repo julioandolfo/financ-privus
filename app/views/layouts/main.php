@@ -80,22 +80,29 @@
     </style>
 </head>
 <body class="h-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300">
+    <?php if (isset($_SESSION['usuario_id'])): ?>
+        <!-- Sidebar -->
+        <?php include __DIR__ . '/../components/sidebar.php'; ?>
+    <?php endif; ?>
+
     <!-- Navbar Moderna -->
-    <nav class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200/50 dark:border-slate-700/50 shadow-sm sticky top-0 z-50 transition-colors duration-300">
+    <nav class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-gray-200/50 dark:border-slate-700/50 shadow-sm sticky top-0 z-40 transition-colors duration-300 <?= isset($_SESSION['usuario_id']) ? 'lg:ml-64' : '' ?>">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <a href="/" class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
-                            Sistema Financeiro
-                        </a>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Empresarial</p>
-                    </div>
+                    <?php if (!isset($_SESSION['usuario_id'])): ?>
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <a href="/" class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
+                                Sistema Financeiro
+                            </a>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Empresarial</p>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <div class="flex items-center space-x-4">
                     <!-- Toggle de Tema com Dropdown -->
@@ -156,15 +163,6 @@
                         </div>
                     </div>
                     <?php if (isset($_SESSION['usuario_id'])): ?>
-                        <a href="/empresas" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">
-                            Empresas
-                        </a>
-                        <a href="/usuarios" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">
-                            Usuários
-                        </a>
-                        <span class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                            <?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?>
-                        </span>
                         <form method="POST" action="/logout" class="inline">
                             <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-red-600 to-red-700 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-md hover:shadow-lg">
                                 Sair
@@ -183,8 +181,55 @@
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-4rem)]">
+    <main class="<?= isset($_SESSION['usuario_id']) ? 'lg:ml-64' : '' ?> min-h-[calc(100vh-4rem)] py-8 px-4 sm:px-6 lg:px-8">
         <!-- Alertas com animação -->
+        <?php if (isset($success)): ?>
+            <div class="mb-6 animate-slide-up bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-l-4 border-green-500 dark:border-green-400 text-green-800 dark:text-green-200 p-4 rounded-lg shadow-md">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="font-medium"><?= htmlspecialchars($success) ?></span>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <?php if (isset($error)): ?>
+            <div class="mb-6 animate-slide-up bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-l-4 border-red-500 dark:border-red-400 text-red-800 dark:text-red-200 p-4 rounded-lg shadow-md">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="font-medium"><?= htmlspecialchars($error) ?></span>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <!-- Alertas com animação -->
+        <?php if (isset($_SESSION['success'])): ?>
+            <div class="mb-6 animate-slide-up bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-l-4 border-green-500 dark:border-green-400 text-green-800 dark:text-green-200 p-4 rounded-lg shadow-md">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="font-medium"><?= htmlspecialchars($_SESSION['success']) ?></span>
+                </div>
+            </div>
+            <?php unset($_SESSION['success']); ?>
+        <?php endif; ?>
+
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="mb-6 animate-slide-up bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-l-4 border-red-500 dark:border-red-400 text-red-800 dark:text-red-200 p-4 rounded-lg shadow-md">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="font-medium"><?= htmlspecialchars($_SESSION['error']) ?></span>
+                </div>
+            </div>
+            <?php unset($_SESSION['error']); ?>
+        <?php endif; ?>
+
         <?php if (isset($success)): ?>
             <div class="mb-6 animate-slide-up bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-l-4 border-green-500 dark:border-green-400 text-green-800 dark:text-green-200 p-4 rounded-lg shadow-md">
                 <div class="flex items-center">
