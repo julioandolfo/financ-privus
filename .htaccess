@@ -1,17 +1,25 @@
-# Redireciona todas as requisições internamente para public/
+# Redireciona todas as requisições para public/ ou index.php
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
     
-    # Se acessar /public/ diretamente na URL, redireciona para a raiz SEM mostrar /public
+    # Se acessar /public/ diretamente na URL, redireciona para a raiz (limpa URL)
     RewriteCond %{THE_REQUEST} ^[A-Z]+\ /public/
     RewriteRule ^public/(.*)$ /$1 [R=301,L]
     
-    # Redireciona INTERNAMENTE para public/ (não aparece na URL)
-    RewriteCond %{REQUEST_URI} !^/public/
+    # Permite acesso a arquivos estáticos em public/assets/
+    RewriteCond %{REQUEST_URI} ^/assets/
+    RewriteRule ^assets/(.*)$ public/assets/$1 [L]
+    
+    # Se for um arquivo que existe em public/, serve ele
+    RewriteCond %{REQUEST_URI} !^/index\.php
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -f
+    RewriteRule ^(.*)$ public/$1 [L]
+    
+    # Tudo o mais vai para index.php na raiz (que carrega public/index.php)
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ public/$1 [L]
+    RewriteRule ^ index.php [L]
 </IfModule>
 
 # Bloqueia acesso a arquivos sensíveis
