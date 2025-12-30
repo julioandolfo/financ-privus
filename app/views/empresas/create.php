@@ -26,8 +26,12 @@
                                id="codigo" 
                                name="codigo" 
                                value="<?= htmlspecialchars($this->session->get('old')['codigo'] ?? '') ?>"
+                               pattern="[A-Za-z0-9_-]+"
+                               minlength="2"
+                               maxlength="20"
                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
                                required>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Apenas letras, números, hífen e underscore (2-20 caracteres)</p>
                     </div>
 
                     <!-- CNPJ -->
@@ -38,9 +42,12 @@
                         <input type="text" 
                                id="cnpj" 
                                name="cnpj" 
+                               data-mask="cnpj"
                                value="<?= htmlspecialchars($this->session->get('old')['cnpj'] ?? '') ?>"
                                placeholder="00.000.000/0000-00"
+                               maxlength="18"
                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Digite apenas números</p>
                     </div>
                 </div>
 
@@ -53,8 +60,11 @@
                            id="razao_social" 
                            name="razao_social" 
                            value="<?= htmlspecialchars($this->session->get('old')['razao_social'] ?? '') ?>"
+                           minlength="3"
+                           maxlength="255"
                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
                            required>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Mínimo 3 caracteres</p>
                 </div>
 
                 <!-- Nome Fantasia -->
@@ -66,8 +76,11 @@
                            id="nome_fantasia" 
                            name="nome_fantasia" 
                            value="<?= htmlspecialchars($this->session->get('old')['nome_fantasia'] ?? '') ?>"
+                           minlength="3"
+                           maxlength="255"
                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
                            required>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Mínimo 3 caracteres</p>
                 </div>
 
                 <!-- Grupo Empresarial -->
@@ -109,6 +122,25 @@
             </form>
         </div>
 </div>
+
+<script>
+// Validação de CNPJ em tempo real
+document.addEventListener('DOMContentLoaded', function() {
+    const cnpjField = document.getElementById('cnpj');
+    if (cnpjField) {
+        cnpjField.addEventListener('blur', function() {
+            const cnpj = this.value.replace(/\D/g, '');
+            if (cnpj.length === 14 && window.maskManager && !window.maskManager.isValidCNPJ(cnpj)) {
+                this.setCustomValidity('CNPJ inválido');
+                this.classList.add('border-red-500');
+            } else {
+                this.setCustomValidity('');
+                this.classList.remove('border-red-500');
+            }
+        });
+    }
+});
+</script>
 
 <?php 
 // Limpa old após exibição
