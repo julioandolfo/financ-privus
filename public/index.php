@@ -38,6 +38,14 @@ spl_autoload_register(function ($class) {
     
     $len = strlen($prefix);
     if (strncmp($prefix, $class, $len) !== 0) {
+        // Tenta carregar classes do namespace includes
+        if (strncmp('includes\\', $class, 9) === 0) {
+            $relativeClass = substr($class, 9);
+            $file = APP_ROOT . '/includes/' . str_replace('\\', '/', $relativeClass) . '.php';
+            if (file_exists($file)) {
+                require $file;
+            }
+        }
         return;
     }
     
@@ -46,6 +54,11 @@ spl_autoload_register(function ($class) {
     
     if (file_exists($file)) {
         require $file;
+    } else {
+        // Debug: mostra caminho tentado se APP_DEBUG estiver ativo
+        if (defined('APP_DEBUG') && APP_DEBUG) {
+            error_log("Autoloader: Arquivo não encontrado - Tentou carregar: {$file} para classe: {$class}");
+        }
     }
 });
 
@@ -55,6 +68,23 @@ require_once APP_ROOT . '/config/constants.php';
 
 // Define base path para assets
 define('ASSET_PATH', '/assets');
+
+// Carrega classes necessárias explicitamente (necessário para produção)
+$requiredFiles = [
+    APP_ROOT . '/app/core/Request.php',
+    APP_ROOT . '/app/core/Response.php',
+    APP_ROOT . '/app/core/Router.php',
+    APP_ROOT . '/app/core/Database.php',
+    APP_ROOT . '/app/core/Controller.php',
+    APP_ROOT . '/app/core/App.php'
+];
+
+foreach ($requiredFiles as $file) {
+    if (!file_exists($file)) {
+        throw new Exception("Arquivo necessário não encontrado: {$file}. APP_ROOT: " . APP_ROOT);
+    }
+    require_once $file;
+}
 
 // Inicia aplicação
 use App\Core\App;
