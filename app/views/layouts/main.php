@@ -155,15 +155,26 @@
                             </button>
                         </div>
                     </div>
-                    <a href="/empresas" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">
-                        Empresas
-                    </a>
-                    <a href="/login" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">
-                        Login
-                    </a>
-                    <a href="/login" class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg">
-                        Entrar
-                    </a>
+                    <?php if (isset($_SESSION['usuario_id'])): ?>
+                        <a href="/empresas" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">
+                            Empresas
+                        </a>
+                        <span class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?>
+                        </span>
+                        <form method="POST" action="/logout" class="inline">
+                            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-red-600 to-red-700 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-md hover:shadow-lg">
+                                Sair
+                            </button>
+                        </form>
+                    <?php else: ?>
+                        <a href="/login" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">
+                            Login
+                        </a>
+                        <a href="/login" class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg">
+                            Entrar
+                        </a>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

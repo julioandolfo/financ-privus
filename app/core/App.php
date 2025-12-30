@@ -98,8 +98,42 @@ class App
             $controllerInstance->setRequest($this->request);
             $controllerInstance->setResponse($this->response);
             
+            // Prepara parâmetros para o método
+            $reflection = new \ReflectionMethod($controllerInstance, $method);
+            $methodParams = $reflection->getParameters();
+            
+            $callParams = [];
+            if (count($methodParams) > 0) {
+                // Se o primeiro parâmetro é Request, adiciona
+                $firstParamType = $methodParams[0]->getType();
+                if ($firstParamType && $firstParamType->getName() === 'App\\Core\\Request') {
+                    $callParams[] = $this->request;
+                    // Se o segundo é Response, adiciona
+                    if (count($methodParams) > 1) {
+                        $secondParamType = $methodParams[1]->getType();
+                        if ($secondParamType && $secondParamType->getName() === 'App\\Core\\Response') {
+                            $callParams[] = $this->response;
+                            // Adiciona parâmetros da rota
+                            $callParams = array_merge($callParams, $params);
+                        } else {
+                            // Adiciona parâmetros da rota
+                            $callParams = array_merge($callParams, $params);
+                        }
+                    } else {
+                        // Adiciona parâmetros da rota
+                        $callParams = array_merge($callParams, $params);
+                    }
+                } else {
+                    // Método não espera Request/Response, passa apenas parâmetros da rota
+                    $callParams = $params;
+                }
+            } else {
+                // Método não tem parâmetros
+                $callParams = [];
+            }
+            
             // Chama método do controller
-            call_user_func_array([$controllerInstance, $method], $params);
+            call_user_func_array([$controllerInstance, $method], $callParams);
             
         } catch (Throwable $e) {
             $this->handleException($e);
@@ -113,8 +147,17 @@ class App
     {
         $routes = require __DIR__ . '/../../config/routes.php';
         
-        foreach ($routes as $route => $handler) {
-            $this->router->addRoute($route, $handler);
+        foreach ($routes as $route => $config) {
+            // Suporta formato antigo (string) e novo (array)
+            if (is_string($config)) {
+                $handler = $config;
+                $middleware = [];
+            } else {
+                $handler = $config['handler'] ?? '';
+                $middleware = $config['middleware'] ?? [];
+            }
+            
+            $this->router->addRoute($route, $handler, $middleware);
         }
     }
     
