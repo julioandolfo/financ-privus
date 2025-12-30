@@ -146,6 +146,41 @@
                     </label>
                 </div>
 
+                <!-- Permissões -->
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Permissões de Acesso</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        Selecione quais ações o usuário pode realizar em cada módulo do sistema.
+                    </p>
+                    
+                    <div class="space-y-4">
+                        <?php foreach ($modulos as $moduloKey => $moduloNome): ?>
+                            <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-semibold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($moduloNome) ?></h4>
+                                    <button type="button" 
+                                            onclick="toggleAllPermissions('<?= $moduloKey ?>')"
+                                            class="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                                        Selecionar Todas
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <?php foreach ($acoes as $acaoKey => $acaoNome): ?>
+                                        <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                                            <input type="checkbox" 
+                                                   name="permissoes[]" 
+                                                   value="<?= $moduloKey ?>_<?= $acaoKey ?>"
+                                                   class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                   data-modulo="<?= $moduloKey ?>">
+                                            <span class="text-sm text-gray-700 dark:text-gray-300"><?= htmlspecialchars($acaoNome) ?></span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
                 <!-- Botões -->
                 <div class="flex gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
                     <button type="submit" 
@@ -198,6 +233,16 @@ document.addEventListener('DOMContentLoaded', function() {
         senhaConfirm.addEventListener('input', validatePasswordMatch);
     }
 });
+
+// Toggle todas as permissões de um módulo
+function toggleAllPermissions(modulo) {
+    const checkboxes = document.querySelectorAll(`input[data-modulo="${modulo}"]`);
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    
+    checkboxes.forEach(cb => {
+        cb.checked = !allChecked;
+    });
+}
 </script>
 
 <?php 

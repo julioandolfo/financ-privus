@@ -24,10 +24,10 @@ class Cliente extends Model
      */
     public function findAll($empresaId = null)
     {
-        $sql = "SELECT * FROM {$this->table}";
+        $sql = "SELECT * FROM {$this->table} WHERE ativo = 1";
         
         if ($empresaId) {
-            $sql .= " WHERE empresa_id = :empresa_id";
+            $sql .= " AND empresa_id = :empresa_id";
         }
         
         $sql .= " ORDER BY nome_razao_social ASC";
@@ -40,7 +40,7 @@ class Cliente extends Model
             $stmt->execute();
         }
         
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
     
     /**

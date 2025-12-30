@@ -6,6 +6,7 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Models\Usuario;
 use App\Models\Empresa;
+use App\Models\Permissao;
 
 class UsuarioController extends Controller
 {
@@ -45,10 +46,13 @@ class UsuarioController extends Controller
     {
         try {
             $empresas = $this->empresaModel->findAll();
+            $permissaoModel = new Permissao();
             
             return $this->render('usuarios/create', [
                 'title' => 'Novo Usuário',
-                'empresas' => $empresas
+                'empresas' => $empresas,
+                'modulos' => Permissao::MODULOS,
+                'acoes' => Permissao::ACOES
             ]);
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Erro ao carregar formulário: ' . $e->getMessage();
@@ -72,6 +76,22 @@ class UsuarioController extends Controller
             
             // Cria usuário (o Model já faz hash da senha)
             $id = $this->usuarioModel->create($data);
+            
+            // Salva permissões se fornecidas
+            if (!empty($data['permissoes']) && is_array($data['permissoes'])) {
+                $permissaoModel = new Permissao();
+                $permissoes = [];
+                
+                foreach ($data['permissoes'] as $permissaoStr) {
+                    list($modulo, $acao) = explode('_', $permissaoStr, 2);
+                    $permissoes[] = [
+                        'modulo' => $modulo,
+                        'acao' => $acao
+                    ];
+                }
+                
+                $permissaoModel->saveBatch($id, $permissoes, $data['empresa_id'] ?? null);
+            }
             
             $_SESSION['success'] = 'Usuário criado com sucesso!';
             $response->redirect('/usuarios');
@@ -123,11 +143,16 @@ class UsuarioController extends Controller
             }
             
             $empresas = $this->empresaModel->findAll();
+            $permissaoModel = new Permissao();
+            $permissoesFormatadas = $permissaoModel->getFormattedPermissions($id, $usuario['empresa_id']);
             
             return $this->render('usuarios/edit', [
                 'title' => 'Editar Usuário',
                 'usuario' => $usuario,
-                'empresas' => $empresas
+                'empresas' => $empresas,
+                'modulos' => Permissao::MODULOS,
+                'acoes' => Permissao::ACOES,
+                'permissoes' => $permissoesFormatadas
             ]);
             
         } catch (\Exception $e) {
@@ -166,6 +191,22 @@ class UsuarioController extends Controller
             
             // Atualiza usuário
             $this->usuarioModel->update($id, $data);
+            
+            // Salva permissões se fornecidas
+            if (!empty($data['permissoes']) && is_array($data['permissoes'])) {
+                $permissaoModel = new Permissao();
+                $permissoes = [];
+                
+                foreach ($data['permissoes'] as $permissaoStr) {
+                    list($modulo, $acao) = explode('_', $permissaoStr, 2);
+                    $permissoes[] = [
+                        'modulo' => $modulo,
+                        'acao' => $acao
+                    ];
+                }
+                
+                $permissaoModel->saveBatch($id, $permissoes, $data['empresa_id'] ?? $usuario['empresa_id'] ?? null);
+            }
             
             $_SESSION['success'] = 'Usuário atualizado com sucesso!';
             $response->redirect('/usuarios');
