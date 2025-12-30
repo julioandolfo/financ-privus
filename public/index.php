@@ -69,13 +69,15 @@ require_once APP_ROOT . '/config/constants.php';
 // Define base path para assets
 define('ASSET_PATH', '/assets');
 
-// Carrega classes necessárias explicitamente (necessário para produção)
+// Carrega classes core explicitamente (necessário para produção)
 $requiredFiles = [
     APP_ROOT . '/app/core/Request.php',
     APP_ROOT . '/app/core/Response.php',
     APP_ROOT . '/app/core/Router.php',
     APP_ROOT . '/app/core/Database.php',
+    APP_ROOT . '/app/core/Model.php',
     APP_ROOT . '/app/core/Controller.php',
+    APP_ROOT . '/app/core/Session.php',
     APP_ROOT . '/app/core/App.php'
 ];
 
@@ -85,6 +87,49 @@ foreach ($requiredFiles as $file) {
     }
     require_once $file;
 }
+
+// Melhora o autoloader para garantir que carregue controllers e models
+spl_autoload_register(function ($class) {
+    // Namespace App\Controllers
+    if (strpos($class, 'App\\Controllers\\') === 0) {
+        $relativeClass = str_replace('App\\Controllers\\', '', $class);
+        $file = APP_ROOT . '/app/controllers/' . str_replace('\\', '/', $relativeClass) . '.php';
+        if (file_exists($file)) {
+            require_once $file;
+            return;
+        }
+    }
+    
+    // Namespace App\Models
+    if (strpos($class, 'App\\Models\\') === 0) {
+        $relativeClass = str_replace('App\\Models\\', '', $class);
+        $file = APP_ROOT . '/app/models/' . str_replace('\\', '/', $relativeClass) . '.php';
+        if (file_exists($file)) {
+            require_once $file;
+            return;
+        }
+    }
+    
+    // Namespace App\Middleware
+    if (strpos($class, 'App\\Middleware\\') === 0) {
+        $relativeClass = str_replace('App\\Middleware\\', '', $class);
+        $file = APP_ROOT . '/app/middleware/' . str_replace('\\', '/', $relativeClass) . '.php';
+        if (file_exists($file)) {
+            require_once $file;
+            return;
+        }
+    }
+    
+    // Namespace includes
+    if (strpos($class, 'includes\\') === 0) {
+        $relativeClass = str_replace('includes\\', '', $class);
+        $file = APP_ROOT . '/includes/' . str_replace('\\', '/', $relativeClass) . '.php';
+        if (file_exists($file)) {
+            require_once $file;
+            return;
+        }
+    }
+});
 
 // Inicia aplicação
 use App\Core\App;

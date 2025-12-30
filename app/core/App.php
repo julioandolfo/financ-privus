@@ -78,13 +78,27 @@ class App
                 $controllerFile = str_replace('App\\Controllers\\', '', $controller);
                 $controllerPath = dirname(__DIR__) . '/controllers/' . $controllerFile . '.php';
                 
+                // Debug
+                if (defined('APP_DEBUG') && APP_DEBUG) {
+                    error_log("Tentando carregar controller: {$controller} de {$controllerPath}");
+                }
+                
                 if (file_exists($controllerPath)) {
                     require_once $controllerPath;
+                } else {
+                    // Lista arquivos no diretório para debug
+                    $controllersDir = dirname($controllerPath);
+                    $files = is_dir($controllersDir) ? scandir($controllersDir) : [];
+                    $errorMsg = "Controller {$controller} não encontrado.\n";
+                    $errorMsg .= "Tentou carregar: {$controllerPath}\n";
+                    $errorMsg .= "Diretório existe: " . (is_dir($controllersDir) ? 'SIM' : 'NÃO') . "\n";
+                    $errorMsg .= "Arquivos no diretório: " . implode(', ', array_filter($files, function($f) { return $f !== '.' && $f !== '..'; }));
+                    throw new Exception($errorMsg);
                 }
                 
                 // Verifica novamente após tentar carregar
                 if (!class_exists($controller)) {
-                    throw new Exception("Controller {$controller} não encontrado. Tentou carregar: {$controllerPath}");
+                    throw new Exception("Controller {$controller} não foi carregado corretamente de {$controllerPath}");
                 }
             }
             
