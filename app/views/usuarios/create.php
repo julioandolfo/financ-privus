@@ -1,5 +1,4 @@
-<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-8">
-    <div class="container mx-auto px-4 max-w-3xl">
+<div class="max-w-3xl mx-auto">
         <!-- Header -->
         <div class="mb-8">
             <a href="<?= $this->baseUrl('/usuarios') ?>" 
@@ -109,7 +108,6 @@
                 </div>
             </form>
         </div>
-    </div>
 </div>
 
 <?php 

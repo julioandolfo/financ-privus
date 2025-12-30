@@ -72,6 +72,16 @@
     // Remove barras duplicadas
     $assetPath = preg_replace('#/+#', '/', $assetPath);
     ?>
+    <script>
+        // Aplica tema imediatamente antes do conteúdo ser renderizado (evita flash)
+        (function() {
+            const theme = localStorage.getItem('theme') || 'system';
+            const effectiveTheme = theme === 'system' 
+                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                : theme;
+            document.documentElement.classList.add(effectiveTheme);
+        })();
+    </script>
     <script src="<?= htmlspecialchars($assetPath) ?>"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
@@ -183,29 +193,6 @@
 
     <main class="<?= isset($_SESSION['usuario_id']) ? 'lg:ml-64' : '' ?> min-h-[calc(100vh-4rem)] py-8 px-4 sm:px-6 lg:px-8">
         <!-- Alertas com animação -->
-        <?php if (isset($success)): ?>
-            <div class="mb-6 animate-slide-up bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-l-4 border-green-500 dark:border-green-400 text-green-800 dark:text-green-200 p-4 rounded-lg shadow-md">
-                <div class="flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                    </svg>
-                    <span class="font-medium"><?= htmlspecialchars($success) ?></span>
-                </div>
-            </div>
-        <?php endif; ?>
-
-        <?php if (isset($error)): ?>
-            <div class="mb-6 animate-slide-up bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-l-4 border-red-500 dark:border-red-400 text-red-800 dark:text-red-200 p-4 rounded-lg shadow-md">
-                <div class="flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                    </svg>
-                    <span class="font-medium"><?= htmlspecialchars($error) ?></span>
-                </div>
-            </div>
-        <?php endif; ?>
-
-        <!-- Alertas com animação -->
         <?php if (isset($_SESSION['success'])): ?>
             <div class="mb-6 animate-slide-up bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-l-4 border-green-500 dark:border-green-400 text-green-800 dark:text-green-200 p-4 rounded-lg shadow-md">
                 <div class="flex items-center">
@@ -216,6 +203,15 @@
                 </div>
             </div>
             <?php unset($_SESSION['success']); ?>
+        <?php elseif (isset($success)): ?>
+            <div class="mb-6 animate-slide-up bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-l-4 border-green-500 dark:border-green-400 text-green-800 dark:text-green-200 p-4 rounded-lg shadow-md">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="font-medium"><?= htmlspecialchars($success) ?></span>
+                </div>
+            </div>
         <?php endif; ?>
 
         <?php if (isset($_SESSION['error'])): ?>
@@ -228,20 +224,7 @@
                 </div>
             </div>
             <?php unset($_SESSION['error']); ?>
-        <?php endif; ?>
-
-        <?php if (isset($success)): ?>
-            <div class="mb-6 animate-slide-up bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-l-4 border-green-500 dark:border-green-400 text-green-800 dark:text-green-200 p-4 rounded-lg shadow-md">
-                <div class="flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                    </svg>
-                    <span class="font-medium"><?= htmlspecialchars($success) ?></span>
-                </div>
-            </div>
-        <?php endif; ?>
-
-        <?php if (isset($error)): ?>
+        <?php elseif (isset($error)): ?>
             <div class="mb-6 animate-slide-up bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-l-4 border-red-500 dark:border-red-400 text-red-800 dark:text-red-200 p-4 rounded-lg shadow-md">
                 <div class="flex items-center">
                     <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
