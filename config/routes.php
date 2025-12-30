@@ -57,5 +57,14 @@ return [
     'GET /categorias/{id}/edit' => ['handler' => 'CategoriaController@edit', 'middleware' => ['AuthMiddleware']],
     'POST /categorias/{id}' => ['handler' => 'CategoriaController@update', 'middleware' => ['AuthMiddleware']],
     'POST /categorias/{id}/delete' => ['handler' => 'CategoriaController@destroy', 'middleware' => ['AuthMiddleware']],
+    
+    // Centros de Custo (protegido)
+    'GET /centros-custo' => ['handler' => 'CentroCustoController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /centros-custo/create' => ['handler' => 'CentroCustoController@create', 'middleware' => ['AuthMiddleware']],
+    'POST /centros-custo' => ['handler' => 'CentroCustoController@store', 'middleware' => ['AuthMiddleware']],
+    'GET /centros-custo/{id}' => ['handler' => 'CentroCustoController@show', 'middleware' => ['AuthMiddleware']],
+    'GET /centros-custo/{id}/edit' => ['handler' => 'CentroCustoController@edit', 'middleware' => ['AuthMiddleware']],
+    'POST /centros-custo/{id}' => ['handler' => 'CentroCustoController@update', 'middleware' => ['AuthMiddleware']],
+    'POST /centros-custo/{id}/delete' => ['handler' => 'CentroCustoController@destroy', 'middleware' => ['AuthMiddleware']],
 ];
 
