@@ -40,7 +40,11 @@ class Database
                 $options
             );
         } catch (PDOException $e) {
-            throw new \Exception("Erro ao conectar ao banco de dados: " . $e->getMessage());
+            $errorMsg = "Erro ao conectar ao banco de dados: " . $e->getMessage();
+            $errorMsg .= "\nHost: " . $config['host'];
+            $errorMsg .= "\nDatabase: " . $config['database'];
+            $errorMsg .= "\nUsername: " . $config['username'];
+            throw new \Exception($errorMsg);
         }
     }
     

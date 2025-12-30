@@ -89,7 +89,7 @@ class App
             // Chama método do controller
             call_user_func_array([$controllerInstance, $method], $params);
             
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             $this->handleException($e);
         }
     }
@@ -109,21 +109,41 @@ class App
     /**
      * Trata exceções
      */
-    private function handleException(Exception $e)
+    private function handleException(Throwable $e)
     {
+        // Garante que o diretório de logs existe
+        $logDir = dirname(__DIR__) . '/../storage/logs';
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0755, true);
+        }
+        
+        // Log do erro
+        $errorLog = $logDir . '/error.log';
+        $errorMessage = date('Y-m-d H:i:s') . " - Erro: " . $e->getMessage() . "\n";
+        $errorMessage .= "Arquivo: " . $e->getFile() . ":" . $e->getLine() . "\n";
+        $errorMessage .= "URI: " . ($_SERVER['REQUEST_URI'] ?? 'N/A') . "\n";
+        $errorMessage .= "Trace:\n" . $e->getTraceAsString() . "\n\n";
+        @file_put_contents($errorLog, $errorMessage, FILE_APPEND);
+        
         if (defined('APP_DEBUG') && APP_DEBUG) {
+            echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Erro</title>";
+            echo "<style>body{font-family:monospace;padding:20px;background:#f5f5f5;}pre{background:#fff;padding:15px;border:1px solid #ddd;border-radius:5px;overflow:auto;}</style>";
+            echo "</head><body><h1 style='color:#d32f2f;'>Erro na Aplicação</h1>";
             echo "<pre>";
-            echo "Erro: " . $e->getMessage() . "\n";
-            echo "Arquivo: " . $e->getFile() . "\n";
-            echo "Linha: " . $e->getLine() . "\n";
-            echo $e->getTraceAsString();
-            echo "</pre>";
+            echo "<strong>Erro:</strong> " . htmlspecialchars($e->getMessage()) . "\n\n";
+            echo "<strong>Arquivo:</strong> " . htmlspecialchars($e->getFile()) . "\n";
+            echo "<strong>Linha:</strong> " . $e->getLine() . "\n\n";
+            echo "<strong>URI:</strong> " . htmlspecialchars($_SERVER['REQUEST_URI'] ?? 'N/A') . "\n";
+            echo "<strong>Método:</strong> " . htmlspecialchars($_SERVER['REQUEST_METHOD'] ?? 'N/A') . "\n\n";
+            echo "<strong>Stack Trace:</strong>\n";
+            echo htmlspecialchars($e->getTraceAsString());
+            echo "</pre></body></html>";
         } else {
             $this->response->setStatusCode(500);
             $this->response->send('Erro interno do servidor');
         }
         
-        // Log do erro
+        // Log também no error_log do PHP
         error_log($e->getMessage() . " em " . $e->getFile() . ":" . $e->getLine());
     }
 }

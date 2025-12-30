@@ -11,8 +11,8 @@ return [
     'charset' => 'UTF-8',
     
     // URLs
-    'base_url' => $_ENV['BASE_URL'] ?? 'http://localhost/financeiro/public',
-    'asset_url' => $_ENV['ASSET_URL'] ?? 'http://localhost/financeiro/public/assets',
+    'base_url' => $_ENV['BASE_URL'] ?? 'https://financeiro.privus.com.br',
+    'asset_url' => $_ENV['ASSET_URL'] ?? 'https://financeiro.privus.com.br/assets',
     
     // Sessão
     'session_name' => 'financeiro_session',
