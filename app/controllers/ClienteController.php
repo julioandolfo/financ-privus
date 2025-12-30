@@ -221,7 +221,7 @@ class ClienteController extends Controller
         $response->redirect('/clientes');
     }
 
-    private function validate($data, $id = null)
+    protected function validate($data, $id = null)
     {
         $errors = [];
         

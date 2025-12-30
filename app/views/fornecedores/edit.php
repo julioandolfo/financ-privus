@@ -1,7 +1,7 @@
 <div class="max-w-3xl mx-auto">
     <!-- Header -->
     <div class="mb-8">
-        <a href="<?= baseUrl('/fornecedores') ?>" 
+        <a href="<?= $this->baseUrl('/fornecedores') ?>" 
            class="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4 transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -15,9 +15,9 @@
 
     <!-- Formulário -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
-        <form method="POST" action="<?= baseUrl('/fornecedores/' . $fornecedor['id']) ?>" class="space-y-6">
+        <form method="POST" action="<?= $this->baseUrl('/fornecedores/' . $fornecedor['id']) ?>" class="space-y-6">
             <?php
-            $old = $session->get('old') ?? [];
+            $old = $this->session->get('old') ?? [];
             $endereco = $old['endereco'] ?? $fornecedor['endereco'] ?? [];
             ?>
 
@@ -28,7 +28,7 @@
                 </label>
                 <select id="empresa_id" 
                         name="empresa_id" 
-                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($session(\->get('errors') ?? [])['empresa_id']) ? 'border-red-500' : '' ?>" 
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['empresa_id']) ? 'border-red-500' : '' ?>" 
                         required>
                     <option value="">Selecione uma empresa</option>
                     <?php foreach ($empresas as $empresa): ?>
@@ -37,8 +37,8 @@
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <?php if (isset($session(\->get('errors') ?? [])['empresa_id'])): ?>
-                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $session(\->get('errors') ?? [])['empresa_id'] ?></p>
+                <?php if (isset($this->session->get('errors')['empresa_id'])): ?>
+                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['empresa_id'] ?></p>
                 <?php endif; ?>
             </div>
 
@@ -73,8 +73,8 @@
                         </div>
                     </label>
                 </div>
-                <?php if (isset($session(\->get('errors') ?? [])['tipo'])): ?>
-                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $session(\->get('errors') ?? [])['tipo'] ?></p>
+                <?php if (isset($this->session->get('errors')['tipo'])): ?>
+                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['tipo'] ?></p>
                 <?php endif; ?>
             </div>
 
@@ -89,10 +89,10 @@
                        value="<?= htmlspecialchars($old['nome_razao_social'] ?? $fornecedor['nome_razao_social']) ?>"
                        minlength="3"
                        maxlength="255"
-                       class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($session(\->get('errors') ?? [])['nome_razao_social']) ? 'border-red-500' : '' ?>" 
+                       class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['nome_razao_social']) ? 'border-red-500' : '' ?>" 
                        required>
-                <?php if (isset($session(\->get('errors') ?? [])['nome_razao_social'])): ?>
-                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $session(\->get('errors') ?? [])['nome_razao_social'] ?></p>
+                <?php if (isset($this->session->get('errors')['nome_razao_social'])): ?>
+                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['nome_razao_social'] ?></p>
                 <?php endif; ?>
             </div>
 
@@ -117,10 +117,10 @@
                        id="cpf_cnpj" 
                        name="cpf_cnpj" 
                        value="<?= htmlspecialchars($cpfCnpj) ?>"
-                       class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($session(\->get('errors') ?? [])['cpf_cnpj']) ? 'border-red-500' : '' ?>" 
+                       class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['cpf_cnpj']) ? 'border-red-500' : '' ?>" 
                        required>
-                <?php if (isset($session(\->get('errors') ?? [])['cpf_cnpj'])): ?>
-                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $session(\->get('errors') ?? [])['cpf_cnpj'] ?></p>
+                <?php if (isset($this->session->get('errors')['cpf_cnpj'])): ?>
+                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['cpf_cnpj'] ?></p>
                 <?php else: ?>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" id="cpf_cnpj_hint">Digite apenas números</p>
                 <?php endif; ?>
@@ -136,9 +136,9 @@
                            id="email" 
                            name="email" 
                            value="<?= htmlspecialchars($old['email'] ?? $fornecedor['email'] ?? '') ?>"
-                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($session(\->get('errors') ?? [])['email']) ? 'border-red-500' : '' ?>">
-                    <?php if (isset($session(\->get('errors') ?? [])['email'])): ?>
-                        <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $session(\->get('errors') ?? [])['email'] ?></p>
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['email']) ? 'border-red-500' : '' ?>">
+                    <?php if (isset($this->session->get('errors')['email'])): ?>
+                        <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['email'] ?></p>
                     <?php endif; ?>
                 </div>
                 <div>
@@ -278,7 +278,7 @@
                         class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
                     Salvar Alterações
                 </button>
-                <a href="<?= baseUrl('/fornecedores') ?>" 
+                <a href="<?= $this->baseUrl('/fornecedores') ?>" 
                    class="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl text-center transition-all">
                     Cancelar
                 </a>
@@ -330,7 +330,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <?php 
 // Limpa old e errors após exibição
-$session->delete('old');
-$session->delete('errors');
+$this->session->delete('old');
+$this->session->delete('errors');
 ?>
 

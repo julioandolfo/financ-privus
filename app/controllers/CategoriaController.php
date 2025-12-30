@@ -234,7 +234,7 @@ class CategoriaController extends Controller
         $response->redirect('/categorias');
     }
 
-    private function validate($data, $id = null)
+    protected function validate($data, $id = null)
     {
         $errors = [];
         

@@ -223,7 +223,7 @@ class FornecedorController extends Controller
         $response->redirect('/fornecedores');
     }
 
-    private function validate($data, $id = null)
+    protected function validate($data, $id = null)
     {
         $errors = [];
         

@@ -1,7 +1,7 @@
 <div class="max-w-3xl mx-auto">
         <!-- Header -->
         <div class="mb-8">
-            <a href="<?= baseUrl('/empresas') ?>" 
+            <a href="<?= $this->baseUrl('/empresas') ?>" 
                class="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mb-4 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -15,7 +15,7 @@
 
         <!-- Formulário -->
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
-            <form method="POST" action="<?= baseUrl('/empresas') ?>" class="space-y-6">
+            <form method="POST" action="<?= $this->baseUrl('/empresas') ?>" class="space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Código -->
                     <div>
@@ -25,7 +25,7 @@
                         <input type="text" 
                                id="codigo" 
                                name="codigo" 
-                               value="<?= htmlspecialchars($session->get('old')['codigo'] ?? '') ?>"
+                               value="<?= htmlspecialchars($this->session->get('old')['codigo'] ?? '') ?>"
                                pattern="[A-Za-z0-9_-]+"
                                minlength="2"
                                maxlength="20"
@@ -43,7 +43,7 @@
                                id="cnpj" 
                                name="cnpj" 
                                data-mask="cnpj"
-                               value="<?= htmlspecialchars($session->get('old')['cnpj'] ?? '') ?>"
+                               value="<?= htmlspecialchars($this->session->get('old')['cnpj'] ?? '') ?>"
                                placeholder="00.000.000/0000-00"
                                maxlength="18"
                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
@@ -59,7 +59,7 @@
                     <input type="text" 
                            id="razao_social" 
                            name="razao_social" 
-                           value="<?= htmlspecialchars($session->get('old')['razao_social'] ?? '') ?>"
+                           value="<?= htmlspecialchars($this->session->get('old')['razao_social'] ?? '') ?>"
                            minlength="3"
                            maxlength="255"
                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
@@ -75,7 +75,7 @@
                     <input type="text" 
                            id="nome_fantasia" 
                            name="nome_fantasia" 
-                           value="<?= htmlspecialchars($session->get('old')['nome_fantasia'] ?? '') ?>"
+                           value="<?= htmlspecialchars($this->session->get('old')['nome_fantasia'] ?? '') ?>"
                            minlength="3"
                            maxlength="255"
                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
@@ -91,7 +91,7 @@
                     <input type="number" 
                            id="grupo_empresarial_id" 
                            name="grupo_empresarial_id" 
-                           value="<?= htmlspecialchars($session->get('old')['grupo_empresarial_id'] ?? '') ?>"
+                           value="<?= htmlspecialchars($this->session->get('old')['grupo_empresarial_id'] ?? '') ?>"
                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                 </div>
 
@@ -105,7 +105,7 @@
                                id="telefone" 
                                name="telefone" 
                                data-mask="telefone"
-                               value="<?= htmlspecialchars($session->get('old')['telefone'] ?? '') ?>"
+                               value="<?= htmlspecialchars($this->session->get('old')['telefone'] ?? '') ?>"
                                placeholder="(00) 00000-0000"
                                maxlength="15"
                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
@@ -117,7 +117,7 @@
                         <input type="email" 
                                id="email" 
                                name="email" 
-                               value="<?= htmlspecialchars($session->get('old')['email'] ?? '') ?>"
+                               value="<?= htmlspecialchars($this->session->get('old')['email'] ?? '') ?>"
                                placeholder="contato@empresa.com.br"
                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     </div>
@@ -132,7 +132,7 @@
                         <input type="url" 
                                id="site" 
                                name="site" 
-                               value="<?= htmlspecialchars($session->get('old')['site'] ?? '') ?>"
+                               value="<?= htmlspecialchars($this->session->get('old')['site'] ?? '') ?>"
                                placeholder="https://www.empresa.com.br"
                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     </div>
@@ -144,7 +144,7 @@
                                id="inscricao_estadual" 
                                name="inscricao_estadual" 
                                data-mask="number"
-                               value="<?= htmlspecialchars($session->get('old')['inscricao_estadual'] ?? '') ?>"
+                               value="<?= htmlspecialchars($this->session->get('old')['inscricao_estadual'] ?? '') ?>"
                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     </div>
                     <div>
@@ -155,7 +155,7 @@
                                id="inscricao_municipal" 
                                name="inscricao_municipal" 
                                data-mask="number"
-                               value="<?= htmlspecialchars($session->get('old')['inscricao_municipal'] ?? '') ?>"
+                               value="<?= htmlspecialchars($this->session->get('old')['inscricao_municipal'] ?? '') ?>"
                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     </div>
                 </div>
@@ -172,7 +172,7 @@
                                    id="cep" 
                                    name="cep" 
                                    data-mask="cep"
-                                   value="<?= htmlspecialchars($session->get('old')['cep'] ?? '') ?>"
+                                   value="<?= htmlspecialchars($this->session->get('old')['cep'] ?? '') ?>"
                                    placeholder="00000-000"
                                    maxlength="9"
                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
@@ -184,7 +184,7 @@
                             <input type="text" 
                                    id="logradouro" 
                                    name="logradouro" 
-                                   value="<?= htmlspecialchars($session->get('old')['logradouro'] ?? '') ?>"
+                                   value="<?= htmlspecialchars($this->session->get('old')['logradouro'] ?? '') ?>"
                                    placeholder="Rua, Avenida, etc."
                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                         </div>
@@ -197,7 +197,7 @@
                             <input type="text" 
                                    id="numero" 
                                    name="numero" 
-                                   value="<?= htmlspecialchars($session->get('old')['numero'] ?? '') ?>"
+                                   value="<?= htmlspecialchars($this->session->get('old')['numero'] ?? '') ?>"
                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                         </div>
                         <div class="md:col-span-2">
@@ -207,7 +207,7 @@
                             <input type="text" 
                                    id="complemento" 
                                    name="complemento" 
-                                   value="<?= htmlspecialchars($session->get('old')['complemento'] ?? '') ?>"
+                                   value="<?= htmlspecialchars($this->session->get('old')['complemento'] ?? '') ?>"
                                    placeholder="Apto, Sala, etc."
                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                         </div>
@@ -218,7 +218,7 @@
                             <input type="text" 
                                    id="bairro" 
                                    name="bairro" 
-                                   value="<?= htmlspecialchars($session->get('old')['bairro'] ?? '') ?>"
+                                   value="<?= htmlspecialchars($this->session->get('old')['bairro'] ?? '') ?>"
                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                         </div>
                     </div>
@@ -230,7 +230,7 @@
                             <input type="text" 
                                    id="cidade" 
                                    name="cidade" 
-                                   value="<?= htmlspecialchars($session->get('old')['cidade'] ?? '') ?>"
+                                   value="<?= htmlspecialchars($this->session->get('old')['cidade'] ?? '') ?>"
                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                         </div>
                         <div>
@@ -241,33 +241,33 @@
                                     name="estado" 
                                     class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                                 <option value="">Selecione</option>
-                                <option value="AC" <?= ($session->get('old')['estado'] ?? '') === 'AC' ? 'selected' : '' ?>>Acre</option>
-                                <option value="AL" <?= ($session->get('old')['estado'] ?? '') === 'AL' ? 'selected' : '' ?>>Alagoas</option>
-                                <option value="AP" <?= ($session->get('old')['estado'] ?? '') === 'AP' ? 'selected' : '' ?>>Amapá</option>
-                                <option value="AM" <?= ($session->get('old')['estado'] ?? '') === 'AM' ? 'selected' : '' ?>>Amazonas</option>
-                                <option value="BA" <?= ($session->get('old')['estado'] ?? '') === 'BA' ? 'selected' : '' ?>>Bahia</option>
-                                <option value="CE" <?= ($session->get('old')['estado'] ?? '') === 'CE' ? 'selected' : '' ?>>Ceará</option>
-                                <option value="DF" <?= ($session->get('old')['estado'] ?? '') === 'DF' ? 'selected' : '' ?>>Distrito Federal</option>
-                                <option value="ES" <?= ($session->get('old')['estado'] ?? '') === 'ES' ? 'selected' : '' ?>>Espírito Santo</option>
-                                <option value="GO" <?= ($session->get('old')['estado'] ?? '') === 'GO' ? 'selected' : '' ?>>Goiás</option>
-                                <option value="MA" <?= ($session->get('old')['estado'] ?? '') === 'MA' ? 'selected' : '' ?>>Maranhão</option>
-                                <option value="MT" <?= ($session->get('old')['estado'] ?? '') === 'MT' ? 'selected' : '' ?>>Mato Grosso</option>
-                                <option value="MS" <?= ($session->get('old')['estado'] ?? '') === 'MS' ? 'selected' : '' ?>>Mato Grosso do Sul</option>
-                                <option value="MG" <?= ($session->get('old')['estado'] ?? '') === 'MG' ? 'selected' : '' ?>>Minas Gerais</option>
-                                <option value="PA" <?= ($session->get('old')['estado'] ?? '') === 'PA' ? 'selected' : '' ?>>Pará</option>
-                                <option value="PB" <?= ($session->get('old')['estado'] ?? '') === 'PB' ? 'selected' : '' ?>>Paraíba</option>
-                                <option value="PR" <?= ($session->get('old')['estado'] ?? '') === 'PR' ? 'selected' : '' ?>>Paraná</option>
-                                <option value="PE" <?= ($session->get('old')['estado'] ?? '') === 'PE' ? 'selected' : '' ?>>Pernambuco</option>
-                                <option value="PI" <?= ($session->get('old')['estado'] ?? '') === 'PI' ? 'selected' : '' ?>>Piauí</option>
-                                <option value="RJ" <?= ($session->get('old')['estado'] ?? '') === 'RJ' ? 'selected' : '' ?>>Rio de Janeiro</option>
-                                <option value="RN" <?= ($session->get('old')['estado'] ?? '') === 'RN' ? 'selected' : '' ?>>Rio Grande do Norte</option>
-                                <option value="RS" <?= ($session->get('old')['estado'] ?? '') === 'RS' ? 'selected' : '' ?>>Rio Grande do Sul</option>
-                                <option value="RO" <?= ($session->get('old')['estado'] ?? '') === 'RO' ? 'selected' : '' ?>>Rondônia</option>
-                                <option value="RR" <?= ($session->get('old')['estado'] ?? '') === 'RR' ? 'selected' : '' ?>>Roraima</option>
-                                <option value="SC" <?= ($session->get('old')['estado'] ?? '') === 'SC' ? 'selected' : '' ?>>Santa Catarina</option>
-                                <option value="SP" <?= ($session->get('old')['estado'] ?? '') === 'SP' ? 'selected' : '' ?>>São Paulo</option>
-                                <option value="SE" <?= ($session->get('old')['estado'] ?? '') === 'SE' ? 'selected' : '' ?>>Sergipe</option>
-                                <option value="TO" <?= ($session->get('old')['estado'] ?? '') === 'TO' ? 'selected' : '' ?>>Tocantins</option>
+                                <option value="AC" <?= ($this->session->get('old')['estado'] ?? '') === 'AC' ? 'selected' : '' ?>>Acre</option>
+                                <option value="AL" <?= ($this->session->get('old')['estado'] ?? '') === 'AL' ? 'selected' : '' ?>>Alagoas</option>
+                                <option value="AP" <?= ($this->session->get('old')['estado'] ?? '') === 'AP' ? 'selected' : '' ?>>Amapá</option>
+                                <option value="AM" <?= ($this->session->get('old')['estado'] ?? '') === 'AM' ? 'selected' : '' ?>>Amazonas</option>
+                                <option value="BA" <?= ($this->session->get('old')['estado'] ?? '') === 'BA' ? 'selected' : '' ?>>Bahia</option>
+                                <option value="CE" <?= ($this->session->get('old')['estado'] ?? '') === 'CE' ? 'selected' : '' ?>>Ceará</option>
+                                <option value="DF" <?= ($this->session->get('old')['estado'] ?? '') === 'DF' ? 'selected' : '' ?>>Distrito Federal</option>
+                                <option value="ES" <?= ($this->session->get('old')['estado'] ?? '') === 'ES' ? 'selected' : '' ?>>Espírito Santo</option>
+                                <option value="GO" <?= ($this->session->get('old')['estado'] ?? '') === 'GO' ? 'selected' : '' ?>>Goiás</option>
+                                <option value="MA" <?= ($this->session->get('old')['estado'] ?? '') === 'MA' ? 'selected' : '' ?>>Maranhão</option>
+                                <option value="MT" <?= ($this->session->get('old')['estado'] ?? '') === 'MT' ? 'selected' : '' ?>>Mato Grosso</option>
+                                <option value="MS" <?= ($this->session->get('old')['estado'] ?? '') === 'MS' ? 'selected' : '' ?>>Mato Grosso do Sul</option>
+                                <option value="MG" <?= ($this->session->get('old')['estado'] ?? '') === 'MG' ? 'selected' : '' ?>>Minas Gerais</option>
+                                <option value="PA" <?= ($this->session->get('old')['estado'] ?? '') === 'PA' ? 'selected' : '' ?>>Pará</option>
+                                <option value="PB" <?= ($this->session->get('old')['estado'] ?? '') === 'PB' ? 'selected' : '' ?>>Paraíba</option>
+                                <option value="PR" <?= ($this->session->get('old')['estado'] ?? '') === 'PR' ? 'selected' : '' ?>>Paraná</option>
+                                <option value="PE" <?= ($this->session->get('old')['estado'] ?? '') === 'PE' ? 'selected' : '' ?>>Pernambuco</option>
+                                <option value="PI" <?= ($this->session->get('old')['estado'] ?? '') === 'PI' ? 'selected' : '' ?>>Piauí</option>
+                                <option value="RJ" <?= ($this->session->get('old')['estado'] ?? '') === 'RJ' ? 'selected' : '' ?>>Rio de Janeiro</option>
+                                <option value="RN" <?= ($this->session->get('old')['estado'] ?? '') === 'RN' ? 'selected' : '' ?>>Rio Grande do Norte</option>
+                                <option value="RS" <?= ($this->session->get('old')['estado'] ?? '') === 'RS' ? 'selected' : '' ?>>Rio Grande do Sul</option>
+                                <option value="RO" <?= ($this->session->get('old')['estado'] ?? '') === 'RO' ? 'selected' : '' ?>>Rondônia</option>
+                                <option value="RR" <?= ($this->session->get('old')['estado'] ?? '') === 'RR' ? 'selected' : '' ?>>Roraima</option>
+                                <option value="SC" <?= ($this->session->get('old')['estado'] ?? '') === 'SC' ? 'selected' : '' ?>>Santa Catarina</option>
+                                <option value="SP" <?= ($this->session->get('old')['estado'] ?? '') === 'SP' ? 'selected' : '' ?>>São Paulo</option>
+                                <option value="SE" <?= ($this->session->get('old')['estado'] ?? '') === 'SE' ? 'selected' : '' ?>>Sergipe</option>
+                                <option value="TO" <?= ($this->session->get('old')['estado'] ?? '') === 'TO' ? 'selected' : '' ?>>Tocantins</option>
                             </select>
                         </div>
                     </div>
@@ -281,7 +281,7 @@
                     <textarea id="observacoes" 
                               name="observacoes" 
                               rows="4"
-                              class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"><?= htmlspecialchars($session->get('old')['observacoes'] ?? '') ?></textarea>
+                              class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"><?= htmlspecialchars($this->session->get('old')['observacoes'] ?? '') ?></textarea>
                 </div>
 
                 <!-- Ativo -->
@@ -290,7 +290,7 @@
                            id="ativo" 
                            name="ativo" 
                            value="1"
-                           <?= ($session->get('old')['ativo'] ?? '1') ? 'checked' : '' ?>
+                           <?= ($this->session->get('old')['ativo'] ?? '1') ? 'checked' : '' ?>
                            class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2">
                     <label for="ativo" class="text-sm font-semibold text-gray-700 dark:text-gray-300">
                         Empresa Ativa
@@ -303,7 +303,7 @@
                             class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
                         Criar Empresa
                     </button>
-                    <a href="<?= baseUrl('/empresas') ?>" 
+                    <a href="<?= $this->baseUrl('/empresas') ?>" 
                        class="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl text-center transition-all">
                         Cancelar
                     </a>
@@ -333,5 +333,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <?php 
 // Limpa old após exibição
-$session->delete('old');
+$this->session->delete('old');
 ?>

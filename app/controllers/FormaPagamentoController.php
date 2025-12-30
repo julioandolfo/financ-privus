@@ -195,7 +195,7 @@ class FormaPagamentoController extends Controller
         $response->redirect('/formas-pagamento');
     }
 
-    private function validate($data, $id = null)
+    protected function validate($data, $id = null)
     {
         $errors = [];
         

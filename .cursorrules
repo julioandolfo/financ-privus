@@ -1,0 +1,296 @@
+# Regras e Padrões do Sistema Financeiro Empresarial
+
+## 📋 VISÃO GERAL DO PROJETO
+
+Este é um sistema financeiro empresarial desenvolvido em PHP puro com arquitetura MVC customizada. O sistema gerencia empresas, usuários, fornecedores, clientes, contas a pagar/receber, fluxo de caixa, relatórios financeiros e integrações.
+
+## 🏗️ ARQUITETURA
+
+### Estrutura de Diretórios
+```
+/
+├── app/
+│   ├── core/           # Classes base (App, Router, Controller, Model, Database, Session, Request, Response)
+│   ├── controllers/    # Controllers (um por módulo)
+│   ├── models/         # Models (um por entidade)
+│   ├── views/          # Views organizadas por módulo
+│   │   ├── layouts/    # Layouts principais (main.php, auth.php)
+│   │   └── components/ # Componentes reutilizáveis (sidebar.php)
+│   └── middleware/     # Middlewares (AuthMiddleware, etc)
+├── config/             # Configurações (routes.php, database.php, constants.php)
+├── includes/           # Classes auxiliares (Migration, MigrationManager, EnvLoader)
+├── migrations/         # Migrations do banco de dados
+├── public/             # Arquivos públicos (index.php, assets/)
+└── .env                # Variáveis de ambiente
+```
+
+### Padrão MVC Customizado
+- **Models**: Estendem `App\Core\Model`, contêm lógica de negócio e acesso a dados
+- **Controllers**: Estendem `App\Core\Controller`, recebem `Request` e `Response` como parâmetros
+- **Views**: PHP puro com HTML/TailwindCSS, acessam dados via `$this->session` e variáveis extraídas
+
+## 📝 CONVENÇÕES DE NOMENCLATURA
+
+### Classes
+- **Controllers**: `{Nome}Controller.php` (ex: `EmpresaController.php`, `UsuarioController.php`)
+- **Models**: `{Nome}.php` no singular (ex: `Empresa.php`, `Usuario.php`, `Fornecedor.php`)
+- **Migrations**: `{numero}_{descricao}.php` (ex: `001_create_empresas.php`)
+
+### Métodos
+- **Controllers**: `index`, `create`, `store`, `show`, `edit`, `update`, `destroy`
+- **Models**: `findAll()`, `findById()`, `create()`, `update()`, `delete()`
+- **Validação**: Método `validate()` sempre `protected`, nunca `private`
+
+### Rotas
+- **Padrão RESTful**: `/recurso`, `/recurso/create`, `/recurso/{id}`, `/recurso/{id}/edit`, `/recurso/{id}/delete`
+- **Rotas no arquivo**: `config/routes.php` com formato `'METHOD /rota' => ['handler' => 'Controller@method', 'middleware' => ['AuthMiddleware']]`
+
+## 🎨 PADRÕES DE VIEWS
+
+### Estrutura de Views
+```php
+<div class="max-w-{tamanho} mx-auto">
+    <!-- Header com título e botão de ação -->
+    <!-- Formulário ou Tabela -->
+    <!-- Botões de ação -->
+</div>
+```
+
+### Tema Dark/Light
+- **Sempre usar**: Classes Tailwind com variantes `dark:` para tema escuro
+- **Exemplo**: `bg-white dark:bg-gray-800`, `text-gray-900 dark:text-gray-100`
+- **Background**: Definido no `main.php`, views NÃO devem ter `min-h-screen` ou backgrounds próprios
+- **Tema aplicado**: Via `theme.js` que adiciona classe `dark` no `<html>`
+
+### Formulários
+- **Campos obrigatórios**: Marcados com `*` e atributo `required`
+- **Validação**: HTML5 (`pattern`, `minlength`, `maxlength`) + validação server-side
+- **Máscaras**: Usar `data-mask="cnpj"`, `data-mask="cpf"`, etc. (suportado por `masks.js`)
+- **Erros**: Exibidos abaixo do campo usando `$this->session->get('errors')['campo']`
+- **Old values**: Recuperados via `$this->session->get('old')['campo']`
+- **Limpar sessão**: Sempre limpar `old` e `errors` no final da view com `$this->session->delete()`
+
+### Tabelas
+- **Header**: Gradiente `bg-gradient-to-r from-blue-600 to-indigo-600`
+- **Linhas**: Hover com `hover:bg-gray-50 dark:hover:bg-gray-700/50`
+- **Ações**: Ícones SVG com cores semânticas (azul=ver, amarelo=editar, vermelho=excluir)
+
+## 🔐 SEGURANÇA E VALIDAÇÃO
+
+### Validação de Dados
+- **Client-side**: HTML5 validation + JavaScript (`masks.js`)
+- **Server-side**: Método `validate()` no Controller (sempre `protected`)
+- **Mensagens de erro**: Armazenadas em `$this->session->set('errors', $errors)`
+- **Dados antigos**: Armazenados em `$this->session->set('old', $data)`
+
+### Autenticação
+- **Middleware**: `AuthMiddleware` aplicado em todas as rotas protegidas
+- **Sessão**: Gerenciada por `App\Core\Session`
+- **Verificação**: `isset($_SESSION['usuario_id'])` ou `$this->isAuthenticated()`
+
+### Permissões
+- **Model**: `App\Models\Permissao` com métodos `hasPermission()`, `saveBatch()`
+- **Estrutura**: `usuario_id`, `modulo`, `acao` (visualizar, criar, editar, excluir), `empresa_id`
+- **Módulos**: Definidos em `Permissao::MODULOS` e `Permissao::ACOES`
+- **Formulário**: Checkboxes organizados por módulo e ação
+
+## 💾 BANCO DE DADOS
+
+### Migrations
+- **Classe base**: `includes\Migration`
+- **Métodos obrigatórios**: `up()` e `down()`
+- **Métodos auxiliares**: `createTable()`, `addColumn()`, `addIndex()`, `execute()`
+- **Nomenclatura**: `{numero}_{descricao}.php` (ex: `004_create_permissoes.php`)
+- **Execução**: Via `php migrate.php up` ou `php migrate.php status`
+
+### Soft Delete
+- **Padrão**: Usar campo `ativo BOOLEAN DEFAULT 1`
+- **Exclusão**: `UPDATE tabela SET ativo = 0 WHERE id = :id`
+- **Queries**: Sempre filtrar por `WHERE ativo = 1` em `findAll()`
+
+### Relacionamentos
+- **Foreign Keys**: Sempre definir `ON DELETE CASCADE` ou `ON DELETE SET NULL`
+- **JSON**: Usar tipo `JSON` para campos complexos (ex: `endereco`, `configuracoes`)
+- **Índices**: Criar índices para campos frequentemente consultados
+
+## 🎯 PADRÕES DE CÓDIGO
+
+### Controllers
+```php
+<?php
+namespace App\Controllers;
+
+use App\Core\Controller;
+use App\Core\Request;
+use App\Core\Response;
+use App\Models\{Model};
+
+class {Nome}Controller extends Controller
+{
+    private ${model}Model;
+    
+    public function index(Request $request, Response $response)
+    {
+        // Buscar dados
+        // Renderizar view
+    }
+    
+    protected function validate($data, $id = null)
+    {
+        $errors = [];
+        // Validações
+        return $errors;
+    }
+}
+```
+
+### Models
+```php
+<?php
+namespace App\Models;
+
+use App\Core\Model;
+use App\Core\Database;
+use PDO;
+
+class {Nome} extends Model
+{
+    protected $table = '{tabela}';
+    protected $db;
+    
+    public function __construct()
+    {
+        parent::__construct();
+        $this->db = Database::getInstance()->getConnection();
+    }
+    
+    public function findAll($empresaId = null)
+    {
+        // Query com filtro opcional
+        // Retornar array vazio se não houver resultados: ?: []
+    }
+}
+```
+
+### Views
+```php
+<?php
+// Sempre usar htmlspecialchars() para output
+<?= htmlspecialchars($variavel) ?>
+
+// Acessar sessão
+<?= $this->session->get('old')['campo'] ?? '' ?>
+<?= isset($this->session->get('errors')['campo']) ? 'border-red-500' : '' ?>
+
+// Limpar sessão no final
+<?php 
+$this->session->delete('old');
+$this->session->delete('errors');
+?>
+```
+
+## 🎨 PADRÕES DE UI/UX
+
+### Cores e Estilos
+- **Primária**: Azul (`blue-600`) para Indigo (`indigo-600`)
+- **Sucesso**: Verde (`green-600`)
+- **Erro**: Vermelho (`red-600`)
+- **Aviso**: Amarelo (`amber-600`)
+- **Gradientes**: Usar `bg-gradient-to-r from-{cor1} to-{cor2}`
+
+### Componentes
+- **Cards**: `bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700`
+- **Botões primários**: `bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700`
+- **Inputs**: `px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700`
+- **Focus**: `focus:ring-2 focus:ring-blue-500 focus:border-transparent`
+
+### Ícones
+- **Usar SVG inline**: Sempre incluir `fill="none" stroke="currentColor" viewBox="0 0 24 24"`
+- **Tamanhos padrão**: `w-5 h-5` para ícones pequenos, `w-6 h-6` para médios
+
+## 📦 ASSETS E SCRIPTS
+
+### JavaScript
+- **Localização**: `public/assets/js/`
+- **Caminho absoluto**: Usar `/assets/js/{arquivo}.js` (não caminho relativo)
+- **Máscaras**: `masks.js` com funções para CPF, CNPJ, telefone, CEP, etc.
+- **Tema**: `theme.js` gerencia tema light/dark/system
+
+### CSS
+- **Framework**: TailwindCSS via CDN (desenvolvimento)
+- **Fontes**: Inter via Google Fonts
+- **Customização**: Via `tailwind.config` no `<head>`
+
+## 🔄 FLUXO DE DADOS
+
+### Request → Controller → Model → Database
+1. **Request**: Dados chegam via `Request::all()` ou `Request::get()`
+2. **Validação**: Controller chama `validate()` antes de processar
+3. **Model**: Controller instancia Model e chama métodos (`create()`, `update()`, etc)
+4. **Database**: Model usa PDO com prepared statements
+5. **Response**: Controller redireciona ou renderiza view
+
+### Sessão e Flash Messages
+- **Sucesso**: `$_SESSION['success']` ou `$this->session->set('success', 'mensagem')`
+- **Erro**: `$_SESSION['error']` ou `$this->session->set('error', 'mensagem')`
+- **Exibição**: No layout `main.php` antes do conteúdo
+- **Limpeza**: Após exibir, usar `unset($_SESSION['success'])` ou `$this->session->delete()`
+
+## 🌳 ESTRUTURAS HIERÁRQUICAS
+
+### Categorias Financeiras e Centros de Custo
+- **Campo pai**: `categoria_pai_id` ou `centro_pai_id` (FK para mesma tabela)
+- **Métodos**: `buildTree()`, `getPath()`, `canBeParent()` (evita loops)
+- **Views**: Suportar visualização em lista (`flat`) e árvore (`tree`)
+- **Validação**: Impedir que um item seja pai de si mesmo ou de seus descendentes
+
+## 📋 CHECKLIST PARA NOVOS MÓDULOS
+
+Ao criar um novo módulo, garantir:
+
+- [ ] **Migration**: Criar migration com estrutura da tabela
+- [ ] **Model**: Criar Model com métodos CRUD básicos
+- [ ] **Controller**: Criar Controller com métodos `index`, `create`, `store`, `show`, `edit`, `update`, `destroy`
+- [ ] **Views**: Criar `index.php`, `create.php`, `edit.php`, `show.php`
+- [ ] **Rotas**: Adicionar rotas em `config/routes.php` com middleware `AuthMiddleware`
+- [ ] **Sidebar**: Adicionar link no `sidebar.php` se necessário
+- [ ] **Validação**: Implementar método `validate()` como `protected`
+- [ ] **Permissões**: Adicionar módulo em `Permissao::MODULOS` se necessário
+- [ ] **Soft Delete**: Usar campo `ativo` e filtrar em `findAll()`
+- [ ] **Tema Dark**: Garantir suporte completo ao tema dark
+- [ ] **Máscaras**: Aplicar máscaras apropriadas nos campos (CPF, CNPJ, telefone, etc)
+
+## ⚠️ REGRAS IMPORTANTES
+
+1. **NUNCA** usar `private` para métodos `validate()` - sempre `protected`
+2. **SEMPRE** usar `htmlspecialchars()` para output de dados do usuário
+3. **SEMPRE** usar prepared statements (PDO) - nunca concatenar SQL
+4. **SEMPRE** filtrar por `ativo = 1` em queries `findAll()`
+5. **SEMPRE** retornar array vazio `?: []` quando não houver resultados
+6. **SEMPRE** limpar `old` e `errors` da sessão após exibir nas views
+7. **NUNCA** colocar `min-h-screen` ou backgrounds nas views individuais
+8. **SEMPRE** usar caminhos absolutos para assets (`/assets/js/...`)
+9. **SEMPRE** incluir validação client-side (HTML5) e server-side
+10. **SEMPRE** usar `Request` e `Response` como parâmetros nos métodos do Controller
+
+## 🚀 COMANDOS ÚTEIS
+
+```bash
+# Executar migrations
+php migrate.php up
+php migrate.php status
+
+# Verificar tabelas no banco
+php check_tables.php
+```
+
+## 📚 REFERÊNCIAS
+
+- **Documentação completa**: `DOCUMENTACAO_COMPLETA.md`
+- **Análise de implementação**: `ANALISE_IMPLEMENTACAO.md`
+- **Changelog**: `CHANGELOG.md`
+
+---
+
+**Última atualização**: Baseado na implementação dos módulos Empresas, Usuários, Fornecedores, Clientes, Categorias Financeiras, Centros de Custo e Formas de Pagamento.
+

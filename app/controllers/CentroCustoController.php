@@ -229,7 +229,7 @@ class CentroCustoController extends Controller
         $response->redirect('/centros-custo');
     }
 
-    private function validate($data, $id = null)
+    protected function validate($data, $id = null)
     {
         $errors = [];
         
