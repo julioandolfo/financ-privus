@@ -73,10 +73,23 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        body { 
+            font-family: 'Inter', sans-serif;
+        }
+        html {
+            min-height: 100%;
+            height: auto;
+        }
+        body {
+            min-height: 100vh;
+            background-image: linear-gradient(to bottom right, rgb(248 250 252), rgb(239 246 255), rgb(238 242 255));
+        }
+        .dark body {
+            background-image: linear-gradient(to bottom right, rgb(15 23 42), rgb(30 41 59), rgb(15 23 42));
+        }
     </style>
 </head>
-<body class="h-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300">
+<body class="min-h-screen transition-colors duration-300">
     <?php if (isset($_SESSION['usuario_id'])): ?>
         <!-- Sidebar -->
         <?php include __DIR__ . '/../components/sidebar.php'; ?>
@@ -178,7 +191,7 @@
         </div>
     </nav>
 
-    <main class="<?= isset($_SESSION['usuario_id']) ? 'lg:ml-64' : '' ?> min-h-[calc(100vh-4rem)] py-8 px-4 sm:px-6 lg:px-8">
+    <main class="<?= isset($_SESSION['usuario_id']) ? 'lg:ml-64' : '' ?> min-h-[calc(100vh-4rem)] py-8 px-4 sm:px-6 lg:px-8 relative z-10">
         <!-- Alertas com animação -->
         <?php if (isset($_SESSION['success'])): ?>
             <div class="mb-6 animate-slide-up bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-l-4 border-green-500 dark:border-green-400 text-green-800 dark:text-green-200 p-4 rounded-lg shadow-md">
