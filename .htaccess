@@ -6,10 +6,14 @@
     RewriteCond %{THE_REQUEST} ^[A-Z]+\ /public/
     RewriteRule ^public/(.*)$ /$1 [R=301,L]
     
-    # Redireciona internamente para public/ se não for arquivo/diretório na raiz
+    # Permite acesso direto a arquivos PHP na raiz (se existirem)
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^(.+\.php)$ - [L]
+    
+    # Redireciona para public/index.php se não for arquivo/diretório
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ public/$1 [L,QSA]
+    RewriteRule ^(.*)$ public/index.php [L,QSA]
 </IfModule>
 
 # Bloqueia acesso a arquivos sensíveis

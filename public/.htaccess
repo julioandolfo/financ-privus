@@ -1,17 +1,22 @@
 # Rewrite Engine
-RewriteEngine On
-
-# Define o diretório base
-RewriteBase /
-
-# Permite acesso direto a arquivos estáticos (assets, imagens, CSS, JS, etc)
-RewriteCond %{REQUEST_FILENAME} -f
-RewriteRule ^(assets|images|css|js|fonts|test-.*\.php)/.*$ - [L]
-
-# Redireciona tudo para index.php exceto arquivos existentes
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ index.php [QSA,L]
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Permite acesso direto a arquivos estáticos
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map|txt|pdf)$ [NC]
+    RewriteRule ^ - [L]
+    
+    # Permite acesso direto a arquivos PHP específicos (para debug)
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteCond %{REQUEST_URI} (test-.*\.php|info\.php)$ [NC]
+    RewriteRule ^ - [L]
+    
+    # Redireciona tudo para index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L]
+</IfModule>
 
 # Segurança
 <FilesMatch "\.(htaccess|htpasswd|ini|log|sh|sql)$">
