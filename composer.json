@@ -1,0 +1,26 @@
+{
+    "name": "financeiro/empresarial",
+    "description": "Sistema Financeiro Empresarial Multi-Empresa",
+    "type": "project",
+    "require": {
+        "php": ">=8.0",
+        "ext-pdo": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Config\\": "config/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}
+
