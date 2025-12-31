@@ -93,6 +93,21 @@ return [
     'GET /produtos/{id}/edit' => ['handler' => 'ProdutoController@edit', 'middleware' => ['AuthMiddleware']],
     'POST /produtos/{id}' => ['handler' => 'ProdutoController@update', 'middleware' => ['AuthMiddleware']],
     'POST /produtos/{id}/delete' => ['handler' => 'ProdutoController@destroy', 'middleware' => ['AuthMiddleware']],
+    'POST /produtos/{id}/upload-foto' => ['handler' => 'ProdutoController@uploadFoto', 'middleware' => ['AuthMiddleware']],
+    'POST /produtos/fotos/{id}/delete' => ['handler' => 'ProdutoController@deleteFoto', 'middleware' => ['AuthMiddleware']],
+    'POST /produtos/fotos/{id}/principal' => ['handler' => 'ProdutoController@setFotoPrincipal', 'middleware' => ['AuthMiddleware']],
+    'POST /produtos/{id}/variacoes' => ['handler' => 'ProdutoController@addVariacao', 'middleware' => ['AuthMiddleware']],
+    'POST /produtos/variacoes/{id}' => ['handler' => 'ProdutoController@updateVariacao', 'middleware' => ['AuthMiddleware']],
+    'POST /produtos/variacoes/{id}/delete' => ['handler' => 'ProdutoController@deleteVariacao', 'middleware' => ['AuthMiddleware']],
+    'GET /produtos/gerar-codigo-barras' => ['handler' => 'ProdutoController@gerarCodigoBarras', 'middleware' => ['AuthMiddleware']],
+    
+    // Categorias de Produtos (protegido)
+    'GET /categorias-produtos' => ['handler' => 'CategoriaProdutoController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /categorias-produtos/create' => ['handler' => 'CategoriaProdutoController@create', 'middleware' => ['AuthMiddleware']],
+    'POST /categorias-produtos' => ['handler' => 'CategoriaProdutoController@store', 'middleware' => ['AuthMiddleware']],
+    'GET /categorias-produtos/{id}/edit' => ['handler' => 'CategoriaProdutoController@edit', 'middleware' => ['AuthMiddleware']],
+    'POST /categorias-produtos/{id}' => ['handler' => 'CategoriaProdutoController@update', 'middleware' => ['AuthMiddleware']],
+    'POST /categorias-produtos/{id}/delete' => ['handler' => 'CategoriaProdutoController@destroy', 'middleware' => ['AuthMiddleware']],
     
     // Pedidos Vinculados (protegido)
     'GET /pedidos' => ['handler' => 'PedidoVinculadoController@index', 'middleware' => ['AuthMiddleware']],

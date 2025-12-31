@@ -6,17 +6,26 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Models\Produto;
 use App\Models\Empresa;
+use App\Models\CategoriaProduto;
+use App\Models\ProdutoFoto;
+use App\Models\ProdutoVariacao;
 
 class ProdutoController extends Controller
 {
     private $produtoModel;
     private $empresaModel;
+    private $categoriaModel;
+    private $fotoModel;
+    private $variacaoModel;
     
     public function __construct()
     {
         parent::__construct();
         $this->produtoModel = new Produto();
         $this->empresaModel = new Empresa();
+        $this->categoriaModel = new CategoriaProduto();
+        $this->fotoModel = new ProdutoFoto();
+        $this->variacaoModel = new ProdutoVariacao();
     }
     
     /**
@@ -222,5 +231,206 @@ class ProdutoController extends Controller
         }
         
         return $errors;
+    }
+    
+    /**
+     * Upload de foto do produto
+     */
+    public function uploadFoto(Request $request, Response $response, $produtoId)
+    {
+        $produto = $this->produtoModel->findById($produtoId);
+        
+        if (!$produto) {
+            return $response->json(['success' => false, 'error' => 'Produto não encontrado'], 404);
+        }
+        
+        if (!isset($_FILES['foto']) || $_FILES['foto']['error'] !== UPLOAD_ERR_OK) {
+            return $response->json(['success' => false, 'error' => 'Erro no upload do arquivo'], 400);
+        }
+        
+        $file = $_FILES['foto'];
+        $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        
+        if (!in_array($file['type'], $allowedTypes)) {
+            return $response->json(['success' => false, 'error' => 'Tipo de arquivo não permitido. Use: JPEG, PNG, GIF ou WebP'], 400);
+        }
+        
+        // Verifica tamanho (máximo 5MB)
+        $maxSize = 5 * 1024 * 1024;
+        if ($file['size'] > $maxSize) {
+            return $response->json(['success' => false, 'error' => 'Arquivo muito grande. Tamanho máximo: 5MB'], 400);
+        }
+        
+        // Cria diretório se não existir
+        $uploadDir = __DIR__ . '/../../storage/uploads/produtos/' . $produtoId;
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        // Gera nome único
+        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $filename = uniqid('foto_') . '.' . $extension;
+        $filepath = $uploadDir . '/' . $filename;
+        
+        if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+            return $response->json(['success' => false, 'error' => 'Erro ao salvar arquivo'], 500);
+        }
+        
+        // Salva no banco
+        $fotoData = [
+            'produto_id' => $produtoId,
+            'arquivo' => $filename,
+            'caminho' => '/storage/uploads/produtos/' . $produtoId . '/' . $filename,
+            'tamanho' => $file['size'],
+            'tipo' => $file['type'],
+            'principal' => $request->get('principal', 0),
+            'ordem' => $this->fotoModel->count($produtoId)
+        ];
+        
+        $fotoId = $this->fotoModel->create($fotoData);
+        
+        if ($fotoId) {
+            // Se marcou como principal, atualiza as outras
+            if ($fotoData['principal']) {
+                $this->fotoModel->setPrincipal($fotoId, $produtoId);
+            }
+            
+            return $response->json([
+                'success' => true, 
+                'foto' => array_merge($fotoData, ['id' => $fotoId])
+            ]);
+        }
+        
+        return $response->json(['success' => false, 'error' => 'Erro ao salvar foto no banco'], 500);
+    }
+    
+    /**
+     * Excluir foto do produto
+     */
+    public function deleteFoto(Request $request, Response $response, $fotoId)
+    {
+        $foto = $this->fotoModel->findById($fotoId);
+        
+        if (!$foto) {
+            return $response->json(['success' => false, 'error' => 'Foto não encontrada'], 404);
+        }
+        
+        // Remove arquivo físico
+        $fullPath = __DIR__ . '/../../' . $foto['caminho'];
+        if (file_exists($fullPath)) {
+            unlink($fullPath);
+        }
+        
+        // Remove do banco
+        $result = $this->fotoModel->delete($fotoId);
+        
+        return $response->json(['success' => $result]);
+    }
+    
+    /**
+     * Definir foto como principal
+     */
+    public function setFotoPrincipal(Request $request, Response $response, $fotoId)
+    {
+        $foto = $this->fotoModel->findById($fotoId);
+        
+        if (!$foto) {
+            return $response->json(['success' => false, 'error' => 'Foto não encontrada'], 404);
+        }
+        
+        $result = $this->fotoModel->setPrincipal($fotoId, $foto['produto_id']);
+        
+        return $response->json(['success' => $result]);
+    }
+    
+    /**
+     * Adicionar variação ao produto
+     */
+    public function addVariacao(Request $request, Response $response, $produtoId)
+    {
+        $data = $request->all();
+        $data['produto_id'] = $produtoId;
+        
+        // Converte atributos de array para JSON
+        if (isset($data['atributos']) && is_array($data['atributos'])) {
+            $data['atributos'] = $data['atributos'];
+        } else {
+            $data['atributos'] = [];
+        }
+        
+        $variacaoId = $this->variacaoModel->create($data);
+        
+        if ($variacaoId) {
+            $this->session->set('success', 'Variação adicionada com sucesso!');
+        } else {
+            $this->session->set('error', 'Erro ao adicionar variação.');
+        }
+        
+        return $response->redirect('/produtos/' . $produtoId . '/edit#variacoes');
+    }
+    
+    /**
+     * Atualizar variação
+     */
+    public function updateVariacao(Request $request, Response $response, $variacaoId)
+    {
+        $data = $request->all();
+        $variacao = $this->variacaoModel->findById($variacaoId);
+        
+        if (!$variacao) {
+            $this->session->set('error', 'Variação não encontrada.');
+            return $response->redirect('/produtos');
+        }
+        
+        // Converte atributos de array para JSON
+        if (isset($data['atributos']) && is_array($data['atributos'])) {
+            $data['atributos'] = $data['atributos'];
+        } else {
+            $data['atributos'] = [];
+        }
+        
+        $result = $this->variacaoModel->update($variacaoId, $data);
+        
+        if ($result) {
+            $this->session->set('success', 'Variação atualizada com sucesso!');
+        } else {
+            $this->session->set('error', 'Erro ao atualizar variação.');
+        }
+        
+        return $response->redirect('/produtos/' . $variacao['produto_id'] . '/edit#variacoes');
+    }
+    
+    /**
+     * Excluir variação
+     */
+    public function deleteVariacao(Request $request, Response $response, $variacaoId)
+    {
+        $variacao = $this->variacaoModel->findById($variacaoId);
+        
+        if (!$variacao) {
+            $this->session->set('error', 'Variação não encontrada.');
+            return $response->redirect('/produtos');
+        }
+        
+        $result = $this->variacaoModel->delete($variacaoId);
+        
+        if ($result) {
+            $this->session->set('success', 'Variação excluída com sucesso!');
+        } else {
+            $this->session->set('error', 'Erro ao excluir variação.');
+        }
+        
+        return $response->redirect('/produtos/' . $variacao['produto_id'] . '/edit#variacoes');
+    }
+    
+    /**
+     * Gerar código de barras
+     */
+    public function gerarCodigoBarras(Request $request, Response $response)
+    {
+        // Gera um código EAN-13 simples
+        $codigo = '789' . str_pad(rand(0, 9999999999), 10, '0', STR_PAD_LEFT);
+        
+        return $response->json(['success' => true, 'codigo' => $codigo]);
     }
 }

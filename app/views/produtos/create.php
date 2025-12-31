@@ -40,6 +40,53 @@
                 </div>
             </div>
 
+            <!-- Categoria e Código de Barras -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Categoria -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                        Categoria
+                    </label>
+                    <select name="categoria_id"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Selecione uma categoria</option>
+                        <?php 
+                        $categoriaModel = new \App\Models\CategoriaProduto();
+                        $empresaId = $this->session->get('empresa_id');
+                        $categorias = $categoriaModel->getFlatList($empresaId);
+                        foreach ($categorias as $cat): ?>
+                            <option value="<?= $cat['id'] ?>" <?= (($this->session->get('old')['categoria_id'] ?? '') == $cat['id']) ? 'selected' : '' ?>>
+                                <?= str_repeat('—', $cat['level']) ?> <?= htmlspecialchars($cat['nome']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <!-- Código de Barras -->
+                <div x-data="{ gerandoCodigo: false }">
+                    <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                        Código de Barras (EAN-13)
+                    </label>
+                    <div class="flex gap-2">
+                        <input type="text" name="codigo_barras" x-ref="codigoBarras"
+                               value="<?= htmlspecialchars($this->session->get('old')['codigo_barras'] ?? '') ?>"
+                               maxlength="13"
+                               class="flex-1 px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="7891234567890">
+                        <button type="button" @click="gerarCodigoBarras()"
+                                class="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors whitespace-nowrap"
+                                :disabled="gerandoCodigo">
+                            <svg x-show="!gerandoCodigo" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            <svg x-show="gerandoCodigo" class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Descrição -->
             <div>
                 <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -99,8 +146,8 @@
                 </div>
             </div>
 
-            <!-- Unidade de Medida -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Unidade de Medida e Estoque -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div>
                     <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                         Unidade de Medida *
@@ -123,6 +170,28 @@
                     <?php if (isset($this->session->get('errors')['unidade_medida'])): ?>
                         <p class="mt-1 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['unidade_medida'] ?></p>
                     <?php endif; ?>
+                </div>
+
+                <!-- Estoque Atual -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                        Estoque Atual
+                    </label>
+                    <input type="number" name="estoque" min="0" step="1"
+                           value="<?= htmlspecialchars($this->session->get('old')['estoque'] ?? '0') ?>"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="0">
+                </div>
+
+                <!-- Estoque Mínimo -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                        Estoque Mínimo
+                    </label>
+                    <input type="number" name="estoque_minimo" min="0" step="1"
+                           value="<?= htmlspecialchars($this->session->get('old')['estoque_minimo'] ?? '0') ?>"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="0">
                 </div>
             </div>
 
@@ -169,6 +238,22 @@ function produtoForm() {
             valor = valor.replace(',', '.');
             
             return parseFloat(valor) || 0;
+        },
+        
+        async gerarCodigoBarras() {
+            this.gerandoCodigo = true;
+            try {
+                const response = await fetch('/produtos/gerar-codigo-barras');
+                const data = await response.json();
+                if (data.success) {
+                    this.$refs.codigoBarras.value = data.codigo;
+                }
+            } catch (error) {
+                console.error('Erro ao gerar código de barras:', error);
+                alert('Erro ao gerar código de barras');
+            } finally {
+                this.gerandoCodigo = false;
+            }
         }
     }
 }

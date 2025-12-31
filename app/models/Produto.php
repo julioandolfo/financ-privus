@@ -96,20 +96,24 @@ class Produto extends Model
     public function create($data)
     {
         $sql = "INSERT INTO {$this->table} 
-                (empresa_id, codigo, nome, descricao, custo_unitario, preco_venda, unidade_medida) 
+                (empresa_id, categoria_id, codigo, codigo_barras, nome, descricao, custo_unitario, preco_venda, unidade_medida, estoque, estoque_minimo) 
                 VALUES 
-                (:empresa_id, :codigo, :nome, :descricao, :custo_unitario, :preco_venda, :unidade_medida)";
+                (:empresa_id, :categoria_id, :codigo, :codigo_barras, :nome, :descricao, :custo_unitario, :preco_venda, :unidade_medida, :estoque, :estoque_minimo)";
         
         $stmt = $this->db->prepare($sql);
         
         $success = $stmt->execute([
             'empresa_id' => $data['empresa_id'],
+            'categoria_id' => $data['categoria_id'] ?? null,
             'codigo' => $data['codigo'],
+            'codigo_barras' => $data['codigo_barras'] ?? null,
             'nome' => $data['nome'],
             'descricao' => $data['descricao'] ?? null,
             'custo_unitario' => $data['custo_unitario'] ?? 0,
             'preco_venda' => $data['preco_venda'] ?? 0,
-            'unidade_medida' => $data['unidade_medida'] ?? 'UN'
+            'unidade_medida' => $data['unidade_medida'] ?? 'UN',
+            'estoque' => $data['estoque'] ?? 0,
+            'estoque_minimo' => $data['estoque_minimo'] ?? 0
         ]);
         
         return $success ? $this->db->lastInsertId() : false;
@@ -121,24 +125,32 @@ class Produto extends Model
     public function update($id, $data)
     {
         $sql = "UPDATE {$this->table} SET
+                categoria_id = :categoria_id,
                 codigo = :codigo,
+                codigo_barras = :codigo_barras,
                 nome = :nome,
                 descricao = :descricao,
                 custo_unitario = :custo_unitario,
                 preco_venda = :preco_venda,
-                unidade_medida = :unidade_medida
+                unidade_medida = :unidade_medida,
+                estoque = :estoque,
+                estoque_minimo = :estoque_minimo
                 WHERE id = :id";
         
         $stmt = $this->db->prepare($sql);
         
         return $stmt->execute([
             'id' => $id,
+            'categoria_id' => $data['categoria_id'] ?? null,
             'codigo' => $data['codigo'],
+            'codigo_barras' => $data['codigo_barras'] ?? null,
             'nome' => $data['nome'],
             'descricao' => $data['descricao'] ?? null,
             'custo_unitario' => $data['custo_unitario'] ?? 0,
             'preco_venda' => $data['preco_venda'] ?? 0,
-            'unidade_medida' => $data['unidade_medida'] ?? 'UN'
+            'unidade_medida' => $data['unidade_medida'] ?? 'UN',
+            'estoque' => $data['estoque'] ?? 0,
+            'estoque_minimo' => $data['estoque_minimo'] ?? 0
         ]);
     }
     
