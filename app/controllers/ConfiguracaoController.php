@@ -51,6 +51,18 @@ class ConfiguracaoController extends Controller
             }
         }
         
+        // Processar uploads de arquivos
+        if (!empty($_FILES)) {
+            foreach ($_FILES as $chave => $file) {
+                if ($file['error'] === UPLOAD_ERR_OK) {
+                    $uploadPath = $this->processarUpload($file, $chave);
+                    if ($uploadPath) {
+                        $configuracoes[$chave] = $uploadPath;
+                    }
+                }
+            }
+        }
+        
         // Buscar todas as configs do grupo para marcar checkboxes desmarcados como false
         $configsGrupo = Configuracao::getGrupo($grupo);
         foreach ($configsGrupo as $chave => $config) {
@@ -68,5 +80,46 @@ class ConfiguracaoController extends Controller
         }
         
         return $response->redirect('/configuracoes?aba=' . $grupo);
+    }
+    
+    /**
+     * Processa upload de arquivos (logo/favicon)
+     */
+    private function processarUpload($file, $chave)
+    {
+        // Diretório de upload
+        $uploadDir = __DIR__ . '/../../storage/uploads/';
+        
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        // Validar tipo de arquivo
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon'];
+        if (!in_array($file['type'], $allowedTypes)) {
+            $_SESSION['error'] = 'Tipo de arquivo não permitido. Use JPG, PNG, GIF, SVG ou ICO.';
+            return false;
+        }
+        
+        // Validar tamanho (max 2MB)
+        if ($file['size'] > 2 * 1024 * 1024) {
+            $_SESSION['error'] = 'Arquivo muito grande. Tamanho máximo: 2MB.';
+            return false;
+        }
+        
+        // Gerar nome único
+        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $tipoArquivo = str_replace('sistema.', '', $chave); // "logo" ou "favicon"
+        $nomeArquivo = $tipoArquivo . '_' . time() . '.' . $ext;
+        $caminhoCompleto = $uploadDir . $nomeArquivo;
+        
+        // Mover arquivo
+        if (move_uploaded_file($file['tmp_name'], $caminhoCompleto)) {
+            // Retornar caminho relativo para salvar no banco
+            return '/storage/uploads/' . $nomeArquivo;
+        }
+        
+        $_SESSION['error'] = 'Erro ao fazer upload do arquivo.';
+        return false;
     }
 }

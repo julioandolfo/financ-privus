@@ -42,7 +42,7 @@
     <div class="bg-white dark:bg-gray-800 rounded-b-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
         <?php foreach ($grupos as $grupo): ?>
             <div x-show="abaAtiva === '<?= $grupo ?>'" x-cloak>
-                <form method="POST" action="/configuracoes/salvar">
+                <form method="POST" action="/configuracoes/salvar" enctype="multipart/form-data">
                     <input type="hidden" name="grupo" value="<?= $grupo ?>">
                     
                     <div class="space-y-6">
@@ -67,14 +67,99 @@
                                                        class="sr-only peer">
                                                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                                             </label>
+                                            
                                         <?php elseif ($config['tipo'] === 'number'): ?>
                                             <input type="number" name="<?= htmlspecialchars($chave) ?>" 
                                                    value="<?= htmlspecialchars($config['valor']) ?>"
+                                                   step="<?= $chave === 'api.openai_temperatura' ? '0.1' : '1' ?>"
+                                                   min="<?= $chave === 'api.openai_temperatura' ? '0' : '' ?>"
+                                                   max="<?= $chave === 'api.openai_temperatura' ? '2' : '' ?>"
                                                    class="w-32 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
-                                        <?php else: ?>
-                                            <input type="text" name="<?= htmlspecialchars($chave) ?>" 
+                                                   
+                                        <?php elseif ($chave === 'api.openai_model'): ?>
+                                            <!-- Select para modelo OpenAI -->
+                                            <select name="<?= htmlspecialchars($chave) ?>" 
+                                                    class="w-64 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                                                <option value="gpt-4o" <?= $config['valor'] === 'gpt-4o' ? 'selected' : '' ?>>GPT-4o (Recomendado)</option>
+                                                <option value="gpt-4" <?= $config['valor'] === 'gpt-4' ? 'selected' : '' ?>>GPT-4</option>
+                                                <option value="gpt-4-turbo" <?= $config['valor'] === 'gpt-4-turbo' ? 'selected' : '' ?>>GPT-4 Turbo</option>
+                                                <option value="gpt-3.5-turbo" <?= $config['valor'] === 'gpt-3.5-turbo' ? 'selected' : '' ?>>GPT-3.5 Turbo</option>
+                                            </select>
+                                            
+                                        <?php elseif ($chave === 'sistema.logo' || $chave === 'sistema.favicon'): ?>
+                                            <!-- Upload de arquivo -->
+                                            <div class="space-y-2">
+                                                <?php if ($config['valor']): ?>
+                                                    <div class="flex items-center space-x-2 mb-2">
+                                                        <img src="<?= htmlspecialchars($config['valor']) ?>" 
+                                                             alt="<?= $chave === 'sistema.logo' ? 'Logo' : 'Favicon' ?>"
+                                                             class="<?= $chave === 'sistema.logo' ? 'h-12' : 'h-8' ?> rounded border border-gray-300 dark:border-gray-600">
+                                                        <span class="text-xs text-gray-500 dark:text-gray-400">Atual</span>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <input type="file" 
+                                                       name="<?= htmlspecialchars($chave) ?>" 
+                                                       accept="image/*"
+                                                       class="block w-64 text-sm text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-white dark:bg-gray-700 focus:outline-none">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                    <?= $chave === 'sistema.logo' ? 'PNG, JPG ou SVG (recomendado: 200x50px)' : 'ICO, PNG ou SVG (16x16 ou 32x32px)' ?>
+                                                </p>
+                                            </div>
+                                            
+                                        <?php elseif ($chave === 'sistema.cor_primaria' || $chave === 'sistema.cor_secundaria'): ?>
+                                            <!-- Color picker -->
+                                            <div class="flex items-center space-x-2">
+                                                <input type="color" 
+                                                       name="<?= htmlspecialchars($chave) ?>" 
+                                                       value="<?= htmlspecialchars($config['valor']) ?>"
+                                                       class="h-10 w-20 rounded border border-gray-300 dark:border-gray-600 cursor-pointer">
+                                                <input type="text" 
+                                                       value="<?= htmlspecialchars($config['valor']) ?>"
+                                                       readonly
+                                                       class="w-32 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                            </div>
+                                            
+                                        <?php elseif ($chave === 'backup.frequencia'): ?>
+                                            <!-- Select para frequência de backup -->
+                                            <select name="<?= htmlspecialchars($chave) ?>" 
+                                                    class="w-64 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                                                <option value="diario" <?= $config['valor'] === 'diario' ? 'selected' : '' ?>>Diário</option>
+                                                <option value="semanal" <?= $config['valor'] === 'semanal' ? 'selected' : '' ?>>Semanal</option>
+                                                <option value="mensal" <?= $config['valor'] === 'mensal' ? 'selected' : '' ?>>Mensal</option>
+                                            </select>
+                                            
+                                        <?php elseif ($chave === 'dashboard.periodo_padrao'): ?>
+                                            <!-- Select para período padrão -->
+                                            <select name="<?= htmlspecialchars($chave) ?>" 
+                                                    class="w-64 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                                                <option value="mes_atual" <?= $config['valor'] === 'mes_atual' ? 'selected' : '' ?>>Mês Atual</option>
+                                                <option value="trimestre_atual" <?= $config['valor'] === 'trimestre_atual' ? 'selected' : '' ?>>Trimestre Atual</option>
+                                                <option value="ano_atual" <?= $config['valor'] === 'ano_atual' ? 'selected' : '' ?>>Ano Atual</option>
+                                                <option value="ultimos_30_dias" <?= $config['valor'] === 'ultimos_30_dias' ? 'selected' : '' ?>>Últimos 30 dias</option>
+                                                <option value="ultimos_90_dias" <?= $config['valor'] === 'ultimos_90_dias' ? 'selected' : '' ?>>Últimos 90 dias</option>
+                                            </select>
+                                            
+                                        <?php elseif (strpos($chave, 'senha') !== false || strpos($chave, 'password') !== false): ?>
+                                            <!-- Password field -->
+                                            <input type="password" 
+                                                   name="<?= htmlspecialchars($chave) ?>" 
                                                    value="<?= htmlspecialchars($config['valor']) ?>"
-                                                   placeholder="<?= strpos($chave, 'key') !== false || strpos($chave, 'senha') !== false ? '••••••••••' : '' ?>"
+                                                   placeholder="••••••••••"
+                                                   class="w-64 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                                                   
+                                        <?php elseif (strpos($chave, 'key') !== false): ?>
+                                            <!-- API Key field -->
+                                            <input type="password" 
+                                                   name="<?= htmlspecialchars($chave) ?>" 
+                                                   value="<?= htmlspecialchars($config['valor']) ?>"
+                                                   placeholder="sk-••••••••••••••••••••••••"
+                                                   class="w-64 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 font-mono text-xs">
+                                                   
+                                        <?php else: ?>
+                                            <!-- Text field padrão -->
+                                            <input type="text" 
+                                                   name="<?= htmlspecialchars($chave) ?>" 
+                                                   value="<?= htmlspecialchars($config['valor']) ?>"
                                                    class="w-64 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
                                         <?php endif; ?>
                                     </div>
