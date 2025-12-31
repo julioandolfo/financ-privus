@@ -25,7 +25,7 @@ class CategoriaFinanceira extends Model
      */
     public function findAll($empresaId = null, $tipo = null)
     {
-        $sql = "SELECT * FROM {$this->table} WHERE 1=1";
+        $sql = "SELECT * FROM {$this->table} WHERE ativo = 1";
         $params = [];
         
         if ($empresaId) {
@@ -42,7 +42,7 @@ class CategoriaFinanceira extends Model
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
     
     /**

@@ -194,11 +194,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Atualiza categorias pai quando checkboxes de empresa mudarem
+    // Atualiza estado do "Selecionar Todas" quando checkboxes de empresa mudarem
     empresaCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
-            updateCategoriasPai();
-            
             // Atualiza estado do "Selecionar Todas"
             const allChecked = Array.from(empresaCheckboxes).every(cb => cb.checked);
             const someChecked = Array.from(empresaCheckboxes).some(cb => cb.checked);
@@ -210,40 +208,38 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     function updateCategoriasPai() {
-        const empresasIds = Array.from(empresaCheckboxes)
-            .filter(cb => cb.checked)
-            .map(cb => cb.value);
         const tipo = document.querySelector('input[name="tipo"]:checked')?.value;
         
-        if (empresasIds.length === 0 && !tipo) {
-            // Se não tiver empresa nem tipo, mantém as categorias que já vieram do servidor
+        if (!tipo) {
+            // Se não tiver tipo, mantém as categorias que já vieram do servidor
             return;
         }
         
-        if (empresasIds.length === 0 || !tipo) {
-            categoriaPaiSelect.innerHTML = '<option value="">Selecione empresa(s) e tipo primeiro</option>';
-            return;
-        }
-        
-        // Usa primeira empresa selecionada para buscar categorias (ou todas se quiser categorias comuns)
-        const empresaId = empresasIds[0];
-        
-        // Faz requisição AJAX para buscar categorias disponíveis
-        fetch(`<?= $this->baseUrl('/categorias') ?>?empresa_id=${empresaId}&tipo=${tipo}&ajax=1`)
+        // Faz requisição AJAX para buscar categorias disponíveis do tipo selecionado
+        // Não filtra por empresa porque agora são múltiplas empresas
+        fetch(`<?= $this->baseUrl('/categorias') ?>?tipo=${tipo}&ajax=1`)
             .then(response => response.json())
             .then(data => {
                 categoriaPaiSelect.innerHTML = '<option value="">Nenhuma (Categoria Principal)</option>';
-                if (data.categorias) {
+                if (data.categorias && data.categorias.length > 0) {
                     data.categorias.forEach(cat => {
                         const option = document.createElement('option');
                         option.value = cat.id;
-                        option.textContent = `${cat.codigo} - ${cat.nome}`;
+                        // Mostra também a empresa da categoria para facilitar identificação
+                        const empresaNome = cat.empresa_nome ? ` [${cat.empresa_nome}]` : '';
+                        option.textContent = `${cat.codigo} - ${cat.nome}${empresaNome}`;
                         categoriaPaiSelect.appendChild(option);
                     });
+                } else {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'Nenhuma categoria encontrada para este tipo';
+                    categoriaPaiSelect.appendChild(option);
                 }
             })
             .catch(error => {
                 console.error('Erro ao carregar categorias:', error);
+                categoriaPaiSelect.innerHTML = '<option value="">Erro ao carregar categorias</option>';
             });
     }
     
@@ -251,11 +247,10 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('change', updateCategoriasPai);
     });
     
-    // Carrega categorias pai automaticamente se já tiver empresa e tipo selecionados ao carregar a página
+    // Carrega categorias pai automaticamente se já tiver tipo selecionado ao carregar a página
     setTimeout(() => {
-        const empresasIds = Array.from(empresaCheckboxes).filter(cb => cb.checked);
         const tipo = document.querySelector('input[name="tipo"]:checked')?.value;
-        if (empresasIds.length > 0 && tipo) {
+        if (tipo) {
             updateCategoriasPai();
         }
     }, 100);

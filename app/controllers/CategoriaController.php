@@ -29,8 +29,17 @@ class CategoriaController extends Controller
                 $categorias = $this->categoriaModel->findAll($empresaId, $tipo);
             }
             
-            // Se for requisição AJAX, retorna JSON
+            // Se for requisição AJAX, retorna JSON com nome da empresa
             if ($ajax) {
+                // Adiciona nome da empresa em cada categoria
+                foreach ($categorias as &$categoria) {
+                    if (!empty($categoria['empresa_id'])) {
+                        $this->empresaModel = new Empresa();
+                        $empresa = $this->empresaModel->findById($categoria['empresa_id']);
+                        $categoria['empresa_nome'] = $empresa ? $empresa['nome_fantasia'] : 'N/A';
+                    }
+                }
+                
                 return $response->json([
                     'success' => true,
                     'categorias' => $categorias
@@ -62,26 +71,18 @@ class CategoriaController extends Controller
             $this->empresaModel = new Empresa();
             $empresas = $this->empresaModel->findAll();
             
-            // Pega empresa_id dos parâmetros GET ou da sessão
-            $empresaId = $request->get('empresa_id') ?: ($_SESSION['usuario_empresa_id'] ?? null);
             $tipo = $request->get('tipo');
             
             $this->categoriaModel = new CategoriaFinanceira();
-            $categoriasPai = [];
             
-            // Busca categorias pai se tiver empresa_id
-            if ($empresaId) {
-                $categoriasPai = $this->categoriaModel->getAvailableParents($empresaId, null, $tipo);
-            } else {
-                // Se não tiver empresa específica, busca todas as categorias ativas
-                $categoriasPai = $this->categoriaModel->findAll(null, $tipo);
-            }
+            // Busca todas as categorias ativas para mostrar como opções de categoria pai
+            // O filtro por empresa e tipo será feito dinamicamente via AJAX quando o usuário selecionar
+            $categoriasPai = $this->categoriaModel->findAll(null, $tipo);
             
             return $this->render('categorias/create', [
                 'title' => 'Nova Categoria Financeira',
                 'empresas' => $empresas,
                 'categoriasPai' => $categoriasPai,
-                'defaultEmpresaId' => $empresaId,
                 'defaultTipo' => $tipo
             ]);
         } catch (\Exception $e) {
