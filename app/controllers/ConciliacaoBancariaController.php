@@ -9,6 +9,8 @@ use App\Models\ConciliacaoItem;
 use App\Models\ContaBancaria;
 use App\Models\MovimentacaoCaixa;
 use App\Models\Empresa;
+use includes\services\ExtratoParserService;
+use includes\services\OpenAIService;
 
 class ConciliacaoBancariaController extends Controller
 {
@@ -325,6 +327,109 @@ class ConciliacaoBancariaController extends Controller
         }
         
         return $response->redirect('/conciliacao-bancaria');
+    }
+    
+    /**
+     * Processa upload de extrato bancário
+     */
+    public function processarExtrato(Request $request, Response $response)
+    {
+        if (empty($_FILES['arquivo_extrato']) || $_FILES['arquivo_extrato']['error'] !== UPLOAD_ERR_OK) {
+            return $response->json([
+                'success' => false,
+                'message' => 'Nenhum arquivo foi enviado ou ocorreu um erro no upload.'
+            ]);
+        }
+        
+        try {
+            $arquivo = $_FILES['arquivo_extrato'];
+            
+            // Processar extrato
+            $itens = ExtratoParserService::processar($arquivo);
+            
+            // Tentar extrair saldo final
+            $saldoFinal = ExtratoParserService::extrairSaldoFinal($arquivo);
+            
+            return $response->json([
+                'success' => true,
+                'itens' => $itens,
+                'saldo_final' => $saldoFinal,
+                'total_itens' => count($itens),
+                'message' => count($itens) . ' transações encontradas no extrato!'
+            ]);
+            
+        } catch (\Exception $e) {
+            return $response->json([
+                'success' => false,
+                'message' => 'Erro ao processar extrato: ' . $e->getMessage()
+            ]);
+        }
+    }
+    
+    /**
+     * Analisa conciliação com IA
+     */
+    public function analisarIA(Request $request, Response $response, $id)
+    {
+        try {
+            // Verificar se IA está configurada
+            if (!OpenAIService::isConfigured()) {
+                return $response->json([
+                    'success' => false,
+                    'message' => 'API OpenAI não configurada. Configure a chave API em Configurações → API e IA.'
+                ]);
+            }
+            
+            // Buscar dados da conciliação
+            $conciliacao = $this->conciliacaoModel->findById($id);
+            
+            if (!$conciliacao) {
+                return $response->json([
+                    'success' => false,
+                    'message' => 'Conciliação não encontrada.'
+                ]);
+            }
+            
+            // Buscar itens não vinculados
+            $itensNaoVinculados = $this->itemModel->getNaoVinculados($id);
+            
+            // Buscar movimentações não conciliadas
+            $movimentacoesNaoConciliadas = $this->conciliacaoModel->getMovimentacoesNaoConciliadas(
+                $conciliacao['conta_bancaria_id'],
+                $conciliacao['data_inicio'],
+                $conciliacao['data_fim']
+            );
+            
+            // Buscar itens vinculados
+            $itensVinculados = $this->itemModel->getVinculados($id);
+            
+            // Preparar dados para análise
+            $dadosAnalise = [
+                'data_inicio' => $conciliacao['data_inicio'],
+                'data_fim' => $conciliacao['data_fim'],
+                'conta_descricao' => $conciliacao['conta_descricao'],
+                'saldo_extrato' => $conciliacao['saldo_extrato'],
+                'saldo_sistema' => $conciliacao['saldo_sistema'],
+                'diferenca' => $conciliacao['diferenca'],
+                'itens_nao_vinculados' => $itensNaoVinculados,
+                'movimentacoes_nao_conciliadas' => $movimentacoesNaoConciliadas,
+                'itens_vinculados' => $itensVinculados
+            ];
+            
+            // Chamar IA
+            $analise = OpenAIService::analisarConciliacao($dadosAnalise);
+            
+            return $response->json([
+                'success' => true,
+                'analise' => $analise
+            ]);
+            
+        } catch (\Exception $e) {
+            return $response->json([
+                'success' => false,
+                'message' => 'Erro ao analisar: ' . $e->getMessage()
+            ]);
+        }
     }
     
     /**

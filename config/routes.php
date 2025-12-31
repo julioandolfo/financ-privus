@@ -132,6 +132,8 @@ return [
     'POST /conciliacao-bancaria/store' => ['handler' => 'ConciliacaoBancariaController@store', 'middleware' => ['AuthMiddleware']],
     'GET /conciliacao-bancaria/{id}' => ['handler' => 'ConciliacaoBancariaController@show', 'middleware' => ['AuthMiddleware']],
     'POST /conciliacao-bancaria/{id}/importar-extrato' => ['handler' => 'ConciliacaoBancariaController@importarExtrato', 'middleware' => ['AuthMiddleware']],
+    'POST /conciliacao-bancaria/processar-extrato' => ['handler' => 'ConciliacaoBancariaController@processarExtrato', 'middleware' => ['AuthMiddleware']],
+    'POST /conciliacao-bancaria/{id}/analisar-ia' => ['handler' => 'ConciliacaoBancariaController@analisarIA', 'middleware' => ['AuthMiddleware']],
     'POST /conciliacao-bancaria/vincular' => ['handler' => 'ConciliacaoBancariaController@vincular', 'middleware' => ['AuthMiddleware']],
     'POST /conciliacao-bancaria/desvincular' => ['handler' => 'ConciliacaoBancariaController@desvincular', 'middleware' => ['AuthMiddleware']],
     'POST /conciliacao-bancaria/{id}/fechar' => ['handler' => 'ConciliacaoBancariaController@fechar', 'middleware' => ['AuthMiddleware']],

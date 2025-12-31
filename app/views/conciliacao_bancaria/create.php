@@ -9,17 +9,67 @@
     <form method="POST" action="/conciliacao-bancaria/store" x-data="{ 
         saldoExtrato: 0,
         itens: [],
+        processandoExtrato: false,
+        extratoProcessado: false,
+        
         adicionarItem() {
             this.itens.push({ descricao: '', valor: '', data: '', tipo: 'credito' });
         },
+        
         removerItem(index) {
             this.itens.splice(index, 1);
         },
+        
         calcularTotal() {
             return this.itens.reduce((total, item) => {
                 let valor = parseFloat(item.valor) || 0;
                 return total + (item.tipo === 'credito' ? valor : -valor);
             }, 0);
+        },
+        
+        async processarExtrato(event) {
+            const arquivo = event.target.files[0];
+            if (!arquivo) return;
+            
+            this.processandoExtrato = true;
+            this.extratoProcessado = false;
+            
+            const formData = new FormData();
+            formData.append('arquivo_extrato', arquivo);
+            
+            try {
+                const response = await fetch('/conciliacao-bancaria/processar-extrato', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Limpar itens antigos e adicionar novos
+                    this.itens = result.itens;
+                    
+                    // Se encontrou saldo final, preencher
+                    if (result.saldo_final) {
+                        this.saldoExtrato = result.saldo_final;
+                    }
+                    
+                    this.extratoProcessado = true;
+                    
+                    // Aplicar máscaras nos novos campos
+                    setTimeout(() => {
+                        if (typeof applyMasks === 'function') {
+                            applyMasks();
+                        }
+                    }, 100);
+                } else {
+                    alert('Erro: ' + result.message);
+                }
+            } catch (error) {
+                alert('Erro ao processar extrato: ' + error.message);
+            } finally {
+                this.processandoExtrato = false;
+            }
         }
     }">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8 space-y-6">
@@ -99,12 +149,63 @@
                 </div>
             </div>
 
+            <!-- Seção de Upload de Extrato -->
+            <div class="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
+                    <div class="flex items-start space-x-4">
+                        <svg class="w-12 h-12 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                                🤖 Upload Inteligente de Extrato Bancário
+                            </h3>
+                            <p class="text-blue-800 dark:text-blue-200 text-sm mb-4">
+                                Envie seu extrato em OFX, CSV ou TXT e o sistema extrairá automaticamente todas as transações!
+                            </p>
+                            
+                            <div class="flex items-center space-x-4">
+                                <label class="cursor-pointer">
+                                    <input type="file" 
+                                           id="arquivo_extrato" 
+                                           accept=".ofx,.csv,.txt"
+                                           @change="processarExtrato($event)"
+                                           class="hidden">
+                                    <span class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl">
+                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                        </svg>
+                                        Selecionar Arquivo
+                                    </span>
+                                </label>
+                                
+                                <span x-show="processandoExtrato" class="text-blue-600 dark:text-blue-400">
+                                    ⏳ Processando...
+                                </span>
+                            </div>
+                            
+                            <div x-show="extratoProcessado" class="mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-lg">
+                                <p class="text-green-800 dark:text-green-200 font-semibold flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    <span x-text="'✅ ' + itens.length + ' transações importadas com sucesso!'"></span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Seção de Itens do Extrato (Opcional) -->
             <div class="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Itens do Extrato (Opcional)</h3>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Adicione lançamentos do extrato bancário para conciliação posterior</p>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Itens do Extrato</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            <span x-show="itens.length === 0">Faça upload do extrato acima ou adicione manualmente abaixo</span>
+                            <span x-show="itens.length > 0" x-text="itens.length + ' item(ns) carregado(s)'"></span>
+                        </p>
                     </div>
                     <button type="button" @click="adicionarItem()"
                             class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2">

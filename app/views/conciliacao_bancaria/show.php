@@ -9,6 +9,15 @@
             </p>
         </div>
         <div class="flex space-x-3">
+            <!-- Botão Análise IA -->
+            <button @click="analisarComIA()" 
+                    class="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                </svg>
+                <span x-text="analisandoIA ? 'Analisando...' : '🤖 Análise com IA'"></span>
+            </button>
+            
             <?php if ($conciliacao['status'] === 'aberta'): ?>
                 <form method="POST" action="/conciliacao-bancaria/<?= $conciliacao['id'] ?>/fechar" class="inline" onsubmit="return confirm('Tem certeza que deseja fechar esta conciliação? Todas as movimentações serão marcadas como conciliadas.')">
                     <button type="submit" class="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all shadow-lg">
@@ -197,12 +206,83 @@
             <p class="text-blue-800 dark:text-blue-200"><?= nl2br(htmlspecialchars($conciliacao['observacoes'])) ?></p>
         </div>
     <?php endif; ?>
+    
+    <!-- Modal de Análise IA -->
+    <div x-show="mostrarModalIA" 
+         x-cloak
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
+         style="z-index: 99999 !important;">
+        <div @click.away="mostrarModalIA = false" 
+             class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4 flex items-center justify-between">
+                <h3 class="text-xl font-bold text-white flex items-center">
+                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                    🤖 Análise Inteligente com IA
+                </h3>
+                <button @click="mostrarModalIA = false" class="text-white hover:text-gray-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Content -->
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+                <!-- Loading -->
+                <div x-show="analisandoIA" class="text-center py-12">
+                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+                    <p class="text-gray-600 dark:text-gray-400">Analisando conciliação com IA...</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">Isso pode levar alguns segundos</p>
+                </div>
+                
+                <!-- Resultado -->
+                <div x-show="!analisandoIA && resultadoIA" class="prose dark:prose-invert max-w-none">
+                    <div class="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-6 mb-6">
+                        <p class="text-sm text-purple-800 dark:text-purple-200 m-0">
+                            <strong>💡 Dica:</strong> Esta análise foi gerada por Inteligência Artificial e deve ser usada como orientação. Sempre valide as informações manualmente.
+                        </p>
+                    </div>
+                    
+                    <div x-html="resultadoIA" class="text-gray-900 dark:text-gray-100"></div>
+                </div>
+                
+                <!-- Erro -->
+                <div x-show="erroIA" class="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-xl p-6">
+                    <div class="flex items-start">
+                        <svg class="w-6 h-6 text-red-600 dark:text-red-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div>
+                            <h4 class="font-semibold text-red-900 dark:text-red-100">Erro ao Analisar</h4>
+                            <p class="text-red-800 dark:text-red-200 mt-1" x-text="erroIA"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+                <button @click="mostrarModalIA = false" 
+                        class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
 function conciliacaoData() {
     return {
         itemExtratoSelecionado: null,
+        mostrarModalIA: false,
+        analisandoIA: false,
+        resultadoIA: '',
+        erroIA: '',
         
         selecionarItemExtrato(item) {
             if (item.vinculado) return;
@@ -237,6 +317,32 @@ function conciliacaoData() {
             } catch (error) {
                 alert('Erro ao processar vinculação');
                 console.error(error);
+            }
+        },
+        
+        async analisarComIA() {
+            this.mostrarModalIA = true;
+            this.analisandoIA = true;
+            this.resultadoIA = '';
+            this.erroIA = '';
+            
+            try {
+                const response = await fetch('/conciliacao-bancaria/<?= $conciliacao['id'] ?>/analisar-ia', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Converter Markdown para HTML
+                    this.resultadoIA = marked.parse(result.analise);
+                } else {
+                    this.erroIA = result.message;
+                }
+            } catch (error) {
+                this.erroIA = 'Erro ao conectar com o servidor: ' + error.message;
+            } finally {
+                this.analisandoIA = false;
             }
         }
     }
