@@ -36,7 +36,7 @@
                         <option value="">Selecione uma conta</option>
                         <?php foreach ($contas as $conta): ?>
                             <option value="<?= $conta['id'] ?>" <?= ($this->session->get('old')['conta_bancaria_id'] ?? '') == $conta['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($conta['banco'] . ' - ' . $conta['agencia'] . '/' . $conta['conta'] . ' - ' . $conta['descricao']) ?>
+                                <?= htmlspecialchars($conta['banco_nome'] . ' - Ag: ' . $conta['agencia'] . ' Conta: ' . $conta['conta'] . ' (' . $conta['tipo_conta'] . ')') ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

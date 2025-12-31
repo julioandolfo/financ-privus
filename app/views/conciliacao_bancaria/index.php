@@ -22,7 +22,7 @@
                     <option value="">Todas</option>
                     <?php foreach ($contas as $conta): ?>
                         <option value="<?= $conta['id'] ?>" <?= ($filters['conta_bancaria_id'] ?? '') == $conta['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($conta['banco'] . ' - ' . $conta['descricao']) ?>
+                            <?= htmlspecialchars($conta['banco_nome'] . ' - Ag: ' . $conta['agencia'] . ' Conta: ' . $conta['conta']) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>

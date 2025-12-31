@@ -25,7 +25,8 @@ class ConciliacaoBancaria extends Model
     public function findAll($empresaId = null, $filters = [])
     {
         $sql = "SELECT c.*, 
-                       cb.banco, cb.agencia, cb.conta, cb.descricao as conta_descricao,
+                       cb.banco_nome as banco, cb.agencia, cb.conta, 
+                       CONCAT(cb.banco_nome, ' - Ag: ', cb.agencia, ' Conta: ', cb.conta) as conta_descricao,
                        e.razao_social as empresa_nome
                 FROM {$this->table} c
                 INNER JOIN contas_bancarias cb ON c.conta_bancaria_id = cb.id
@@ -76,7 +77,9 @@ class ConciliacaoBancaria extends Model
     public function findById($id)
     {
         $sql = "SELECT c.*, 
-                       cb.banco, cb.agencia, cb.conta, cb.descricao as conta_descricao, cb.saldo as saldo_atual,
+                       cb.banco_nome as banco, cb.agencia, cb.conta, 
+                       CONCAT(cb.banco_nome, ' - Ag: ', cb.agencia, ' Conta: ', cb.conta) as conta_descricao, 
+                       cb.saldo_atual,
                        e.razao_social as empresa_nome
                 FROM {$this->table} c
                 INNER JOIN contas_bancarias cb ON c.conta_bancaria_id = cb.id
