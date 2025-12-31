@@ -18,6 +18,7 @@ class CategoriaController extends Controller
             $this->categoriaModel = new CategoriaFinanceira();
             $empresaId = $request->get('empresa_id');
             $tipo = $request->get('tipo');
+            $ajax = $request->get('ajax');
             
             // Retorna hierárquico ou flat baseado no parâmetro
             $viewMode = $request->get('view', 'flat'); // 'flat' ou 'tree'
@@ -26,6 +27,14 @@ class CategoriaController extends Controller
                 $categorias = $this->categoriaModel->findHierarchical($empresaId, $tipo);
             } else {
                 $categorias = $this->categoriaModel->findAll($empresaId, $tipo);
+            }
+            
+            // Se for requisição AJAX, retorna JSON
+            if ($ajax) {
+                return $response->json([
+                    'success' => true,
+                    'categorias' => $categorias
+                ]);
             }
             
             $this->empresaModel = new Empresa();
@@ -53,14 +62,19 @@ class CategoriaController extends Controller
             $this->empresaModel = new Empresa();
             $empresas = $this->empresaModel->findAll();
             
-            $empresaId = $request->get('empresa_id');
+            // Pega empresa_id dos parâmetros GET ou da sessão
+            $empresaId = $request->get('empresa_id') ?: ($_SESSION['usuario_empresa_id'] ?? null);
             $tipo = $request->get('tipo');
             
             $this->categoriaModel = new CategoriaFinanceira();
             $categoriasPai = [];
             
+            // Busca categorias pai se tiver empresa_id
             if ($empresaId) {
                 $categoriasPai = $this->categoriaModel->getAvailableParents($empresaId, null, $tipo);
+            } else {
+                // Se não tiver empresa específica, busca todas as categorias ativas
+                $categoriasPai = $this->categoriaModel->findAll(null, $tipo);
             }
             
             return $this->render('categorias/create', [

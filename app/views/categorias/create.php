@@ -172,6 +172,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const empresaId = empresaSelect.value;
         const tipo = document.querySelector('input[name="tipo"]:checked')?.value;
         
+        if (!empresaId && !tipo) {
+            // Se não tiver empresa nem tipo, mantém as categorias que já vieram do servidor
+            return;
+        }
+        
         if (!empresaId || !tipo) {
             categoriaPaiSelect.innerHTML = '<option value="">Selecione empresa e tipo primeiro</option>';
             return;
@@ -200,6 +205,15 @@ document.addEventListener('DOMContentLoaded', function() {
     tipoInputs.forEach(input => {
         input.addEventListener('change', updateCategoriasPai);
     });
+    
+    // Carrega categorias pai automaticamente se já tiver empresa e tipo selecionados ao carregar a página
+    setTimeout(() => {
+        const empresaId = empresaSelect.value;
+        const tipo = document.querySelector('input[name="tipo"]:checked')?.value;
+        if (empresaId && tipo) {
+            updateCategoriasPai();
+        }
+    }, 100);
 });
 </script>
 
