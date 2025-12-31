@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="h-full">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -78,19 +78,35 @@
             font-family: 'Inter', sans-serif;
         }
         html {
-            min-height: 100%;
-            height: auto;
+            height: 100%;
+            overflow-x: hidden;
         }
         body {
-            min-height: 100vh;
-            background-image: linear-gradient(to bottom right, rgb(248 250 252), rgb(239 246 255), rgb(238 242 255));
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            position: relative;
+            overflow-x: hidden;
         }
-        .dark body {
+        /* Background fixo */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: linear-gradient(to bottom right, rgb(248 250 252), rgb(239 246 255), rgb(238 242 255));
+            background-attachment: fixed;
+            background-size: cover;
+            z-index: -1;
+        }
+        .dark body::before {
             background-image: linear-gradient(to bottom right, rgb(15 23 42), rgb(30 41 59), rgb(15 23 42));
         }
     </style>
 </head>
-<body class="min-h-screen transition-colors duration-300">
+<body class="transition-colors duration-300">
     <?php if (isset($_SESSION['usuario_id'])): ?>
         <!-- Sidebar -->
         <?php include __DIR__ . '/../components/sidebar.php'; ?>
@@ -192,7 +208,7 @@
         </div>
     </nav>
 
-    <main class="<?= isset($_SESSION['usuario_id']) ? 'lg:ml-64' : '' ?> min-h-[calc(100vh-4rem)] py-8 px-4 sm:px-6 lg:px-8 relative z-10">
+    <main class="<?= isset($_SESSION['usuario_id']) ? 'lg:ml-64' : '' ?> py-8 px-4 sm:px-6 lg:px-8 relative z-10">
         <!-- Alertas com animação -->
         <?php if (isset($_SESSION['success'])): ?>
             <div class="mb-6 animate-slide-up bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-l-4 border-green-500 dark:border-green-400 text-green-800 dark:text-green-200 p-4 rounded-lg shadow-md">

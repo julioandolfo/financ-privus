@@ -86,14 +86,15 @@ class Usuario extends Model
             }
         }
         
-        $stmt->execute([
-            'empresa_id' => $empresaId,
-            'nome' => $data['nome'],
-            'email' => $data['email'],
-            'senha' => password_hash($data['senha'], PASSWORD_DEFAULT),
-            'ativo' => $data['ativo'] ?? 1,
-            'empresas_consolidadas_padrao' => $empresasConsolidadas
-        ]);
+        // Bind dos parâmetros com tipo correto para NULL
+        $stmt->bindValue(':empresa_id', $empresaId, $empresaId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT);
+        $stmt->bindValue(':nome', $data['nome'], \PDO::PARAM_STR);
+        $stmt->bindValue(':email', $data['email'], \PDO::PARAM_STR);
+        $stmt->bindValue(':senha', password_hash($data['senha'], PASSWORD_DEFAULT), \PDO::PARAM_STR);
+        $stmt->bindValue(':ativo', $data['ativo'] ?? 1, \PDO::PARAM_INT);
+        $stmt->bindValue(':empresas_consolidadas_padrao', $empresasConsolidadas, $empresasConsolidadas === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
+        
+        $stmt->execute();
         
         return $this->db->lastInsertId();
     }
@@ -121,33 +122,41 @@ class Usuario extends Model
             }
         }
         
-        $params = [
-            'id' => $id,
-            'empresa_id' => $empresaId,
-            'nome' => $data['nome'],
-            'email' => $data['email'],
-            'ativo' => $data['ativo'] ?? 1,
-            'empresas_consolidadas_padrao' => isset($data['empresas_consolidadas_padrao']) 
-                ? json_encode($data['empresas_consolidadas_padrao']) 
-                : null
-        ];
+        $empresasConsolidadas = isset($data['empresas_consolidadas_padrao']) 
+            ? json_encode($data['empresas_consolidadas_padrao']) 
+            : null;
         
         // Se senha foi fornecida, atualiza
         if (!empty($data['senha'])) {
             $sql .= ", senha = :senha";
-            $params['senha'] = password_hash($data['senha'], PASSWORD_DEFAULT);
         }
         
         // Se avatar foi fornecido, atualiza
         if (isset($data['avatar'])) {
             $sql .= ", avatar = :avatar";
-            $params['avatar'] = $data['avatar'];
         }
         
         $sql .= " WHERE id = :id";
         
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute($params);
+        
+        // Bind dos parâmetros com tipo correto para NULL
+        $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
+        $stmt->bindValue(':empresa_id', $empresaId, $empresaId === null ? \PDO::PARAM_NULL : \PDO::PARAM_INT);
+        $stmt->bindValue(':nome', $data['nome'], \PDO::PARAM_STR);
+        $stmt->bindValue(':email', $data['email'], \PDO::PARAM_STR);
+        $stmt->bindValue(':ativo', $data['ativo'] ?? 1, \PDO::PARAM_INT);
+        $stmt->bindValue(':empresas_consolidadas_padrao', $empresasConsolidadas, $empresasConsolidadas === null ? \PDO::PARAM_NULL : \PDO::PARAM_STR);
+        
+        if (!empty($data['senha'])) {
+            $stmt->bindValue(':senha', password_hash($data['senha'], PASSWORD_DEFAULT), \PDO::PARAM_STR);
+        }
+        
+        if (isset($data['avatar'])) {
+            $stmt->bindValue(':avatar', $data['avatar'], \PDO::PARAM_STR);
+        }
+        
+        return $stmt->execute();
     }
     
     /**
