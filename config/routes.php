@@ -193,5 +193,18 @@ return [
     'GET /perfis-consolidacao/{id}/aplicar' => ['handler' => 'PerfilConsolidacaoController@aplicar', 'middleware' => ['AuthMiddleware']],
     'POST /perfis-consolidacao/aplicar-custom' => ['handler' => 'PerfilConsolidacaoController@aplicarCustom', 'middleware' => ['AuthMiddleware']],
     'GET /perfis-consolidacao/limpar' => ['handler' => 'PerfilConsolidacaoController@limpar', 'middleware' => ['AuthMiddleware']],
+    
+    // Integrações (protegido)
+    'GET /integracoes' => ['handler' => 'IntegracaoController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /integracoes/create' => ['handler' => 'IntegracaoController@create', 'middleware' => ['AuthMiddleware']],
+    'GET /integracoes/create/{tipo}' => ['handler' => 'IntegracaoController@createTipo', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/woocommerce' => ['handler' => 'IntegracaoController@storeWooCommerce', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/banco-dados' => ['handler' => 'IntegracaoController@storeBancoDados', 'middleware' => ['AuthMiddleware']],
+    'GET /integracoes/{id}' => ['handler' => 'IntegracaoController@show', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/sincronizar' => ['handler' => 'IntegracaoController@sincronizar', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/delete' => ['handler' => 'IntegracaoController@destroy', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/toggle' => ['handler' => 'IntegracaoController@toggleStatus', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/testar-woocommerce' => ['handler' => 'IntegracaoController@testarWooCommerce', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/testar-banco-dados' => ['handler' => 'IntegracaoController@testarBancoDados', 'middleware' => ['AuthMiddleware']],
 ];
 
