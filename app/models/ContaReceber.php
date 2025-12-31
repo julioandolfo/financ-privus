@@ -1,0 +1,377 @@
+<?php
+namespace App\Models;
+
+use App\Core\Model;
+use App\Core\Database;
+use PDO;
+
+/**
+ * Model para Contas a Receber
+ */
+class ContaReceber extends Model
+{
+    protected $table = 'contas_receber';
+    protected $db;
+    
+    public function __construct()
+    {
+        parent::__construct();
+        $this->db = Database::getInstance()->getConnection();
+    }
+    
+    /**
+     * Retorna todas as contas a receber
+     */
+    public function findAll($filters = [])
+    {
+        $sql = "SELECT cr.*, 
+                       e.nome_fantasia as empresa_nome,
+                       c.nome_razao_social as cliente_nome,
+                       cat.nome as categoria_nome,
+                       cc.nome as centro_custo_nome,
+                       cb.banco_nome,
+                       fp.nome as forma_recebimento_nome,
+                       u.nome as usuario_cadastro_nome,
+                       CASE 
+                           WHEN cr.status IN ('pendente', 'parcial') AND cr.data_vencimento < CURDATE() THEN 'vencido'
+                           ELSE cr.status
+                       END as status,
+                       (SELECT COUNT(*) FROM rateios_recebimentos WHERE conta_receber_id = cr.id) > 0 as tem_rateio
+                FROM {$this->table} cr
+                JOIN empresas e ON cr.empresa_id = e.id
+                LEFT JOIN clientes c ON cr.cliente_id = c.id
+                JOIN categorias_financeiras cat ON cr.categoria_id = cat.id
+                LEFT JOIN centros_custo cc ON cr.centro_custo_id = cc.id
+                LEFT JOIN contas_bancarias cb ON cr.conta_bancaria_id = cb.id
+                LEFT JOIN formas_pagamento fp ON cr.forma_recebimento_id = fp.id
+                JOIN usuarios u ON cr.usuario_cadastro_id = u.id
+                WHERE 1=1";
+        $params = [];
+        
+        // Filtro por empresa ou consolidação
+        if (isset($filters['empresas_ids']) && is_array($filters['empresas_ids'])) {
+            $placeholders = implode(',', array_fill(0, count($filters['empresas_ids']), '?'));
+            $sql .= " AND cr.empresa_id IN ({$placeholders})";
+            $params = array_merge($params, $filters['empresas_ids']);
+        } elseif (isset($filters['empresa_id'])) {
+            $sql .= " AND cr.empresa_id = ?";
+            $params[] = $filters['empresa_id'];
+        }
+        
+        // Filtro por cliente
+        if (isset($filters['cliente_id'])) {
+            $sql .= " AND cr.cliente_id = ?";
+            $params[] = $filters['cliente_id'];
+        }
+        
+        // Filtro por categoria
+        if (isset($filters['categoria_id'])) {
+            $sql .= " AND cr.categoria_id = ?";
+            $params[] = $filters['categoria_id'];
+        }
+        
+        // Filtro por status
+        if (isset($filters['status'])) {
+            if ($filters['status'] == 'vencido') {
+                $sql .= " AND cr.status IN ('pendente', 'parcial') AND cr.data_vencimento < CURDATE()";
+            } else {
+                $sql .= " AND cr.status = ?";
+                $params[] = $filters['status'];
+            }
+        }
+        
+        // Filtro por data de vencimento
+        if (isset($filters['data_vencimento_inicio'])) {
+            $sql .= " AND cr.data_vencimento >= ?";
+            $params[] = $filters['data_vencimento_inicio'];
+        }
+        if (isset($filters['data_vencimento_fim'])) {
+            $sql .= " AND cr.data_vencimento <= ?";
+            $params[] = $filters['data_vencimento_fim'];
+        }
+        
+        // Busca por descrição ou número de documento
+        if (isset($filters['search'])) {
+            $sql .= " AND (cr.descricao LIKE ? OR cr.numero_documento LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+        
+        $sql .= " ORDER BY cr.data_vencimento DESC, cr.id DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+    
+    /**
+     * Retorna uma conta a receber por ID
+     */
+    public function findById($id)
+    {
+        $sql = "SELECT cr.*, 
+                       e.nome_fantasia as empresa_nome,
+                       c.nome_razao_social as cliente_nome,
+                       cat.nome as categoria_nome,
+                       cc.nome as centro_custo_nome,
+                       cb.banco_nome,
+                       fp.nome as forma_recebimento_nome,
+                       u.nome as usuario_cadastro_nome,
+                       (SELECT COUNT(*) FROM rateios_recebimentos WHERE conta_receber_id = cr.id) > 0 as tem_rateio
+                FROM {$this->table} cr
+                JOIN empresas e ON cr.empresa_id = e.id
+                LEFT JOIN clientes c ON cr.cliente_id = c.id
+                JOIN categorias_financeiras cat ON cr.categoria_id = cat.id
+                LEFT JOIN centros_custo cc ON cr.centro_custo_id = cc.id
+                LEFT JOIN contas_bancarias cb ON cr.conta_bancaria_id = cb.id
+                LEFT JOIN formas_pagamento fp ON cr.forma_recebimento_id = fp.id
+                JOIN usuarios u ON cr.usuario_cadastro_id = u.id
+                WHERE cr.id = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    /**
+     * Cria uma nova conta a receber
+     */
+    public function create($data)
+    {
+        $sql = "INSERT INTO {$this->table} 
+                (empresa_id, cliente_id, categoria_id, centro_custo_id, numero_documento, 
+                 descricao, valor_total, valor_recebido, data_emissao, data_competencia, 
+                 data_vencimento, status, observacoes, usuario_cadastro_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            $data['empresa_id'],
+            $data['cliente_id'] ?? null,
+            $data['categoria_id'],
+            $data['centro_custo_id'] ?? null,
+            $data['numero_documento'],
+            $data['descricao'],
+            $data['valor_total'],
+            $data['valor_recebido'] ?? 0,
+            $data['data_emissao'],
+            $data['data_competencia'],
+            $data['data_vencimento'],
+            $data['status'] ?? 'pendente',
+            $data['observacoes'] ?? null,
+            $data['usuario_cadastro_id']
+        ]);
+        
+        return $this->db->lastInsertId();
+    }
+    
+    /**
+     * Atualiza uma conta a receber
+     */
+    public function update($id, $data)
+    {
+        $sql = "UPDATE {$this->table} SET
+                empresa_id = ?, cliente_id = ?, categoria_id = ?, centro_custo_id = ?,
+                numero_documento = ?, descricao = ?, valor_total = ?,
+                data_emissao = ?, data_competencia = ?, data_vencimento = ?,
+                observacoes = ?, updated_at = NOW()
+                WHERE id = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            $data['empresa_id'],
+            $data['cliente_id'] ?? null,
+            $data['categoria_id'],
+            $data['centro_custo_id'] ?? null,
+            $data['numero_documento'],
+            $data['descricao'],
+            $data['valor_total'],
+            $data['data_emissao'],
+            $data['data_competencia'],
+            $data['data_vencimento'],
+            $data['observacoes'] ?? null,
+            $id
+        ]);
+    }
+    
+    /**
+     * Atualiza recebimento (baixa parcial ou total)
+     */
+    public function atualizarRecebimento($id, $valorRecebido, $dataRecebimento, $status)
+    {
+        $sql = "UPDATE {$this->table} SET
+                valor_recebido = ?, data_recebimento = ?, status = ?, updated_at = NOW()
+                WHERE id = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$valorRecebido, $dataRecebimento, $status, $id]);
+    }
+    
+    /**
+     * Cancela uma conta a receber
+     */
+    public function cancelar($id)
+    {
+        $sql = "UPDATE {$this->table} SET status = 'cancelado', updated_at = NOW() WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$id]);
+    }
+    
+    /**
+     * Retorna contas vencidas
+     */
+    public function findVencidas($empresasIds = [])
+    {
+        $sql = "SELECT cr.*, e.nome_fantasia as empresa_nome
+                FROM {$this->table} cr
+                JOIN empresas e ON cr.empresa_id = e.id
+                WHERE cr.status IN ('pendente', 'parcial')
+                  AND cr.data_vencimento < CURDATE()";
+        
+        $params = [];
+        if (!empty($empresasIds)) {
+            $placeholders = implode(',', array_fill(0, count($empresasIds), '?'));
+            $sql .= " AND cr.empresa_id IN ({$placeholders})";
+            $params = $empresasIds;
+        }
+        
+        $sql .= " ORDER BY cr.data_vencimento ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+    
+    /**
+     * Atualiza flag de rateio
+     */
+    public function atualizarRateio($id, $temRateio)
+    {
+        $sql = "UPDATE {$this->table} SET tem_rateio = ? WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$temRateio, $id]);
+    }
+    
+    /**
+     * Métricas para o Dashboard
+     */
+    
+    /**
+     * Retorna contagem de contas por status
+     */
+    public function getCountPorStatus()
+    {
+        $sql = "SELECT status, COUNT(*) as total
+                FROM {$this->table}
+                GROUP BY status";
+        
+        $stmt = $this->db->query($sql);
+        $result = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        
+        return [
+            'pendente' => $result['pendente'] ?? 0,
+            'vencido' => $result['vencido'] ?? 0,
+            'parcial' => $result['parcial'] ?? 0,
+            'recebido' => $result['recebido'] ?? 0,
+            'cancelado' => $result['cancelado'] ?? 0
+        ];
+    }
+    
+    /**
+     * Retorna valor total a receber (pendente + parcial + vencido)
+     */
+    public function getValorTotalAReceber()
+    {
+        $sql = "SELECT SUM(valor_total - valor_recebido) as total
+                FROM {$this->table}
+                WHERE status IN ('pendente', 'parcial', 'vencido')";
+        
+        $stmt = $this->db->query($sql);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['total'] ?? 0;
+    }
+    
+    /**
+     * Retorna valor total já recebido
+     */
+    public function getValorTotalRecebido()
+    {
+        $sql = "SELECT SUM(valor_recebido) as total
+                FROM {$this->table}
+                WHERE status IN ('parcial', 'recebido')";
+        
+        $stmt = $this->db->query($sql);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['total'] ?? 0;
+    }
+    
+    /**
+     * Retorna contas vencidas (quantidade e valor)
+     */
+    public function getContasVencidas()
+    {
+        $sql = "SELECT COUNT(*) as quantidade, 
+                       SUM(valor_total - valor_recebido) as valor_total
+                FROM {$this->table}
+                WHERE status IN ('pendente', 'parcial')
+                  AND data_vencimento < CURDATE()";
+        
+        $stmt = $this->db->query($sql);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return [
+            'quantidade' => $result['quantidade'] ?? 0,
+            'valor_total' => $result['valor_total'] ?? 0
+        ];
+    }
+    
+    /**
+     * Retorna contas a vencer nos próximos N dias
+     */
+    public function getContasAVencer($dias = 7)
+    {
+        $sql = "SELECT COUNT(*) as quantidade, 
+                       SUM(valor_total - valor_recebido) as valor_total
+                FROM {$this->table}
+                WHERE status IN ('pendente', 'parcial')
+                  AND data_vencimento BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$dias]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return [
+            'quantidade' => $result['quantidade'] ?? 0,
+            'valor_total' => $result['valor_total'] ?? 0
+        ];
+    }
+    
+    /**
+     * Retorna resumo completo para dashboard
+     */
+    public function getResumo()
+    {
+        return [
+            'total' => $this->count(),
+            'por_status' => $this->getCountPorStatus(),
+            'valor_a_receber' => $this->getValorTotalAReceber(),
+            'valor_recebido' => $this->getValorTotalRecebido(),
+            'vencidas' => $this->getContasVencidas(),
+            'a_vencer_7d' => $this->getContasAVencer(7),
+            'a_vencer_30d' => $this->getContasAVencer(30)
+        ];
+    }
+    
+    /**
+     * Retorna total de registros
+     */
+    public function count()
+    {
+        $sql = "SELECT COUNT(*) FROM {$this->table}";
+        $stmt = $this->db->query($sql);
+        return $stmt->fetchColumn();
+    }
+}
