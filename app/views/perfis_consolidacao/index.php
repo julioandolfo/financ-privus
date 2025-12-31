@@ -8,7 +8,7 @@
                         <h1 class="text-3xl font-bold text-white mb-2">Perfis de Consolidação</h1>
                         <!-- Botão de Ajuda -->
                         <button 
-                            @click="$dispatch('open-modal-help')"
+                            onclick="document.getElementById('modalHelp').classList.remove('hidden')"
                             class="flex items-center justify-center w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 transition-colors mb-2"
                             title="O que são Perfis de Consolidação?"
                         >
@@ -143,30 +143,20 @@
 
 <!-- Modal de Ajuda -->
 <div 
-    x-data="{ open: false }"
-    @open-modal-help.window="open = true"
-    x-show="open"
-    x-cloak
-    class="fixed inset-0 z-50 overflow-y-auto"
-    style="display: none;"
+    id="modalHelp"
+    class="fixed inset-0 z-50 overflow-y-auto hidden"
 >
     <!-- Overlay -->
     <div 
         class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-        @click="open = false"
+        onclick="document.getElementById('modalHelp').classList.add('hidden')"
     ></div>
     
     <!-- Modal -->
     <div class="flex items-center justify-center min-h-screen p-4">
         <div 
-            class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full"
-            @click.stop
-            x-transition:enter="transition ease-out duration-300"
-            x-transition:enter-start="opacity-0 transform scale-90"
-            x-transition:enter-end="opacity-100 transform scale-100"
-            x-transition:leave="transition ease-in duration-200"
-            x-transition:leave-start="opacity-100 transform scale-100"
-            x-transition:leave-end="opacity-0 transform scale-90"
+            class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full animate-fade-in"
+            onclick="event.stopPropagation()"
         >
             <!-- Header -->
             <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
@@ -181,7 +171,7 @@
                     </h2>
                 </div>
                 <button 
-                    @click="open = false"
+                    onclick="document.getElementById('modalHelp').classList.add('hidden')"
                     class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
                 >
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,7 +272,7 @@
             <!-- Footer -->
             <div class="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 rounded-b-2xl">
                 <button 
-                    @click="open = false"
+                    onclick="document.getElementById('modalHelp').classList.add('hidden')"
                     class="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
                     Entendi!
