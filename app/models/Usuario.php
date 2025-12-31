@@ -75,8 +75,19 @@ class Usuario extends Model
             ? json_encode($data['empresas_consolidadas_padrao']) 
             : null;
         
+        // Converte empresa_id vazio para null e valida se existe
+        $empresaId = null;
+        if (!empty($data['empresa_id']) && $data['empresa_id'] !== '') {
+            $empresaId = (int)$data['empresa_id'];
+            // Valida se empresa existe
+            $empresaModel = new \App\Models\Empresa();
+            if (!$empresaModel->findById($empresaId)) {
+                throw new \Exception('Empresa selecionada não encontrada');
+            }
+        }
+        
         $stmt->execute([
-            'empresa_id' => $data['empresa_id'] ?? null,
+            'empresa_id' => $empresaId,
             'nome' => $data['nome'],
             'email' => $data['email'],
             'senha' => password_hash($data['senha'], PASSWORD_DEFAULT),
@@ -99,9 +110,20 @@ class Usuario extends Model
                 ativo = :ativo,
                 empresas_consolidadas_padrao = :empresas_consolidadas_padrao";
         
+        // Converte empresa_id vazio para null e valida se existe
+        $empresaId = null;
+        if (!empty($data['empresa_id']) && $data['empresa_id'] !== '') {
+            $empresaId = (int)$data['empresa_id'];
+            // Valida se empresa existe
+            $empresaModel = new \App\Models\Empresa();
+            if (!$empresaModel->findById($empresaId)) {
+                throw new \Exception('Empresa selecionada não encontrada');
+            }
+        }
+        
         $params = [
             'id' => $id,
-            'empresa_id' => $data['empresa_id'] ?? null,
+            'empresa_id' => $empresaId,
             'nome' => $data['nome'],
             'email' => $data['email'],
             'ativo' => $data['ativo'] ?? 1,

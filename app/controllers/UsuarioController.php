@@ -107,7 +107,8 @@ class UsuarioController extends Controller
                     ];
                 }
                 
-                $permissaoModel->saveBatch($id, $permissoes, $data['empresa_id'] ?? null);
+                $empresaId = !empty($data['empresa_id']) ? (int)$data['empresa_id'] : null;
+                $permissaoModel->saveBatch($id, $permissoes, $empresaId);
             }
             
             $_SESSION['success'] = 'Usuário criado com sucesso!';
