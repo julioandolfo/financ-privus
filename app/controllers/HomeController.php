@@ -16,6 +16,7 @@ use App\Models\ContaPagar;
 use App\Models\ContaReceber;
 use App\Models\MovimentacaoCaixa;
 use App\Models\Produto;
+use App\Models\PedidoVinculado;
 
 class HomeController extends Controller
 {
@@ -56,6 +57,11 @@ class HomeController extends Controller
             // Produtos
             $produtoModel = new Produto();
             $produtosMetricas = $this->obterMetricasProdutos($produtoModel, $empresasIds);
+            
+            // Pedidos
+            $pedidoModel = new PedidoVinculado();
+            $pedidosMetricas = $pedidoModel->getEstatisticas($empresasIds);
+            $pedidosPorOrigem = $pedidoModel->getPorOrigem($empresasIds);
             
             // Dados das empresas
             $empresasData = [];
@@ -164,9 +170,12 @@ class HomeController extends Controller
                     'centros_custo' => $totalCentrosCusto,
                     'formas_pagamento' => $totalFormasPagamento,
                     'contas_bancarias' => $totalContasBancarias,
-                    'produtos' => $produtosMetricas['total']
+                    'produtos' => $produtosMetricas['total'],
+                    'pedidos' => $pedidosMetricas['total_pedidos'] ?? 0
                 ],
                 'produtos' => $produtosMetricas,
+                'pedidos' => $pedidosMetricas,
+                'pedidosPorOrigem' => $pedidosPorOrigem,
                 'empresasData' => $empresasData,
                 'usuarios' => [
                     'ativos' => $usuariosAtivos,

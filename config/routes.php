@@ -94,6 +94,14 @@ return [
     'POST /produtos/{id}' => ['handler' => 'ProdutoController@update', 'middleware' => ['AuthMiddleware']],
     'POST /produtos/{id}/delete' => ['handler' => 'ProdutoController@destroy', 'middleware' => ['AuthMiddleware']],
     
+    // Pedidos Vinculados (protegido)
+    'GET /pedidos' => ['handler' => 'PedidoVinculadoController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /pedidos/create' => ['handler' => 'PedidoVinculadoController@create', 'middleware' => ['AuthMiddleware']],
+    'POST /pedidos' => ['handler' => 'PedidoVinculadoController@store', 'middleware' => ['AuthMiddleware']],
+    'GET /pedidos/{id}' => ['handler' => 'PedidoVinculadoController@show', 'middleware' => ['AuthMiddleware']],
+    'POST /pedidos/{id}/status' => ['handler' => 'PedidoVinculadoController@updateStatus', 'middleware' => ['AuthMiddleware']],
+    'POST /pedidos/{id}/delete' => ['handler' => 'PedidoVinculadoController@destroy', 'middleware' => ['AuthMiddleware']],
+    
     // Contas Bancárias (protegido)
     'GET /contas-bancarias' => ['handler' => 'ContaBancariaController@index', 'middleware' => ['AuthMiddleware']],
     'GET /contas-bancarias/create' => ['handler' => 'ContaBancariaController@create', 'middleware' => ['AuthMiddleware']],

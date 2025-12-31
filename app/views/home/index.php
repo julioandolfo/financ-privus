@@ -376,6 +376,84 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             <?php endif; ?>
         </div>
     <?php endif; ?>
+    
+    <!-- Métricas de Pedidos -->
+    <?php if (isset($pedidos) && ($pedidos['total_pedidos'] ?? 0) > 0): ?>
+        <div class="bg-gradient-to-r from-purple-500 to-pink-600 dark:from-purple-700 dark:to-pink-800 rounded-2xl p-8 shadow-xl mb-8">
+            <div class="mb-6">
+                <h3 class="text-white text-2xl font-bold mb-2 flex items-center">
+                    <svg class="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                    </svg>
+                    Pedidos Vinculados
+                </h3>
+                <p class="text-white/80 text-sm">Análise de vendas e performance</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <!-- Total de Pedidos -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <p class="text-white/70 text-sm mb-1">Total de Pedidos</p>
+                    <p class="text-3xl font-bold text-white"><?= $pedidos['total_pedidos'] ?></p>
+                </div>
+
+                <!-- Valor Total -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <p class="text-white/70 text-sm mb-1">Valor Total</p>
+                    <p class="text-2xl font-bold text-white">R$ <?= number_format($pedidos['valor_total'], 2, ',', '.') ?></p>
+                </div>
+
+                <!-- Ticket Médio -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <p class="text-white/70 text-sm mb-1">Ticket Médio</p>
+                    <p class="text-2xl font-bold text-white">R$ <?= number_format($pedidos['ticket_medio'], 2, ',', '.') ?></p>
+                </div>
+
+                <!-- Lucro Total -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <p class="text-white/70 text-sm mb-1">Lucro Total</p>
+                    <p class="text-2xl font-bold text-white">R$ <?= number_format($pedidos['lucro_total'], 2, ',', '.') ?></p>
+                    <p class="text-xs text-white/70 mt-1">Margem: <?= number_format($pedidos['margem_lucro'], 1, ',', '.') ?>%</p>
+                </div>
+            </div>
+
+            <!-- Status dos Pedidos -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+                    <p class="text-white/70 text-xs mb-1">Pendentes</p>
+                    <p class="text-xl font-bold text-white"><?= $pedidos['pendentes'] ?></p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+                    <p class="text-white/70 text-xs mb-1">Processando</p>
+                    <p class="text-xl font-bold text-white"><?= $pedidos['processando'] ?></p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+                    <p class="text-white/70 text-xs mb-1">Concluídos</p>
+                    <p class="text-xl font-bold text-white"><?= $pedidos['concluidos'] ?></p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+                    <p class="text-white/70 text-xs mb-1">Cancelados</p>
+                    <p class="text-xl font-bold text-white"><?= $pedidos['cancelados'] ?></p>
+                </div>
+            </div>
+
+            <!-- Pedidos por Origem -->
+            <?php if (!empty($pedidosPorOrigem)): ?>
+                <div class="mt-6 bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <p class="text-white/70 text-sm mb-3">Pedidos por Origem</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <?php foreach ($pedidosPorOrigem as $origem): ?>
+                            <div class="bg-white/5 rounded-lg p-3">
+                                <p class="text-white text-sm font-semibold uppercase"><?= htmlspecialchars($origem['origem']) ?></p>
+                                <p class="text-white text-xl font-bold"><?= $origem['total'] ?> pedidos</p>
+                                <p class="text-white/70 text-sm">R$ <?= number_format($origem['valor_total'], 2, ',', '.') ?></p>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 
     <!-- Gráficos e Detalhes -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
