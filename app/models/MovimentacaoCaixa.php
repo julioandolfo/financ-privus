@@ -226,6 +226,22 @@ class MovimentacaoCaixa extends Model
     }
     
     /**
+     * Marcar movimentação como conciliada (alias para conciliar)
+     */
+    public function marcarComoConciliada($id, $conciliacaoId)
+    {
+        return $this->conciliar($id, $conciliacaoId);
+    }
+    
+    /**
+     * Desmarcar conciliação (alias para desconciliar)
+     */
+    public function desmarcarConciliacao($id)
+    {
+        return $this->desconciliar($id);
+    }
+    
+    /**
      * Retorna movimentações por referência (conta pagar/receber)
      */
     public function findByReferencia($referenciaId, $referenciaTipo)

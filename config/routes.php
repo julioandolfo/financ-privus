@@ -126,6 +126,18 @@ return [
     'GET /configuracoes' => ['handler' => 'ConfiguracaoController@index', 'middleware' => ['AuthMiddleware']],
     'POST /configuracoes/salvar' => ['handler' => 'ConfiguracaoController@salvar', 'middleware' => ['AuthMiddleware']],
     
+    // Conciliação Bancária (protegido)
+    'GET /conciliacao-bancaria' => ['handler' => 'ConciliacaoBancariaController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /conciliacao-bancaria/create' => ['handler' => 'ConciliacaoBancariaController@create', 'middleware' => ['AuthMiddleware']],
+    'POST /conciliacao-bancaria/store' => ['handler' => 'ConciliacaoBancariaController@store', 'middleware' => ['AuthMiddleware']],
+    'GET /conciliacao-bancaria/{id}' => ['handler' => 'ConciliacaoBancariaController@show', 'middleware' => ['AuthMiddleware']],
+    'POST /conciliacao-bancaria/{id}/importar-extrato' => ['handler' => 'ConciliacaoBancariaController@importarExtrato', 'middleware' => ['AuthMiddleware']],
+    'POST /conciliacao-bancaria/vincular' => ['handler' => 'ConciliacaoBancariaController@vincular', 'middleware' => ['AuthMiddleware']],
+    'POST /conciliacao-bancaria/desvincular' => ['handler' => 'ConciliacaoBancariaController@desvincular', 'middleware' => ['AuthMiddleware']],
+    'POST /conciliacao-bancaria/{id}/fechar' => ['handler' => 'ConciliacaoBancariaController@fechar', 'middleware' => ['AuthMiddleware']],
+    'POST /conciliacao-bancaria/{id}/reabrir' => ['handler' => 'ConciliacaoBancariaController@reabrir', 'middleware' => ['AuthMiddleware']],
+    'POST /conciliacao-bancaria/{id}/delete' => ['handler' => 'ConciliacaoBancariaController@destroy', 'middleware' => ['AuthMiddleware']],
+    
     // Movimentações de Caixa (protegido)
     'GET /movimentacoes-caixa' => ['handler' => 'MovimentacaoCaixaController@index', 'middleware' => ['AuthMiddleware']],
     'GET /movimentacoes-caixa/create' => ['handler' => 'MovimentacaoCaixaController@create', 'middleware' => ['AuthMiddleware']],
