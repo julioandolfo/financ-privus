@@ -119,18 +119,24 @@ class CategoriaProduto extends Model
     /**
      * Construir árvore de categorias
      */
-    public function buildTree($empresaId, $parentId = null)
+    public function buildTree($empresaId = null, $parentId = null)
     {
-        $sql = "SELECT * FROM {$this->table} 
-                WHERE empresa_id = :empresa_id 
-                AND ativo = 1 
-                AND " . ($parentId ? "categoria_pai_id = :parent_id" : "categoria_pai_id IS NULL") . "
-                ORDER BY ordem ASC, nome ASC";
+        $sql = "SELECT * FROM {$this->table} WHERE ativo = 1";
+        $params = [];
         
-        $params = ['empresa_id' => $empresaId];
-        if ($parentId) {
-            $params['parent_id'] = $parentId;
+        if ($empresaId) {
+            $sql .= " AND empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
         }
+        
+        if ($parentId) {
+            $sql .= " AND categoria_pai_id = :parent_id";
+            $params['parent_id'] = $parentId;
+        } else {
+            $sql .= " AND categoria_pai_id IS NULL";
+        }
+        
+        $sql .= " ORDER BY ordem ASC, nome ASC";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
@@ -217,18 +223,24 @@ class CategoriaProduto extends Model
     /**
      * Obter lista flat (para selects)
      */
-    public function getFlatList($empresaId, $level = 0, $parentId = null, &$result = [])
+    public function getFlatList($empresaId = null, $level = 0, $parentId = null, &$result = [])
     {
-        $sql = "SELECT * FROM {$this->table} 
-                WHERE empresa_id = :empresa_id 
-                AND ativo = 1 
-                AND " . ($parentId ? "categoria_pai_id = :parent_id" : "categoria_pai_id IS NULL") . "
-                ORDER BY ordem ASC, nome ASC";
+        $sql = "SELECT * FROM {$this->table} WHERE ativo = 1";
+        $params = [];
         
-        $params = ['empresa_id' => $empresaId];
-        if ($parentId) {
-            $params['parent_id'] = $parentId;
+        if ($empresaId) {
+            $sql .= " AND empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
         }
+        
+        if ($parentId) {
+            $sql .= " AND categoria_pai_id = :parent_id";
+            $params['parent_id'] = $parentId;
+        } else {
+            $sql .= " AND categoria_pai_id IS NULL";
+        }
+        
+        $sql .= " ORDER BY ordem ASC, nome ASC";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
