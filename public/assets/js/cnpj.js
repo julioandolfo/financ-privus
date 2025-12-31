@@ -21,35 +21,23 @@
         }
         
         try {
-            // API ReceitaWS (gratuita, sem autenticação)
-            const response = await fetch(`https://www.receitaws.com.br/v1/${cnpj}`);
+            // Usa endpoint próprio do sistema para evitar problemas de CORS
+            const baseUrl = window.location.origin;
+            const response = await fetch(`${baseUrl}/api/cnpj/${cnpj}`);
             
             if (!response.ok) {
-                throw new Error('Erro ao consultar CNPJ');
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Erro ao consultar CNPJ');
             }
             
-            const data = await response.json();
+            const result = await response.json();
             
-            if (data.status === 'ERROR' || data.status === 'ERROR') {
-                throw new Error(data.message || 'CNPJ não encontrado ou inválido');
+            if (!result.success) {
+                throw new Error(result.error || 'CNPJ não encontrado ou inválido');
             }
             
             // Retorna dados formatados
-            return {
-                razao_social: data.nome || '',
-                nome_fantasia: data.fantasia || '',
-                telefone: data.telefone || '',
-                email: data.email || '',
-                situacao: data.situacao || '',
-                logradouro: data.logradouro || '',
-                numero: data.numero || '',
-                complemento: data.complemento || '',
-                bairro: data.bairro || '',
-                cidade: data.municipio || '',
-                estado: data.uf || '',
-                cep: data.cep ? data.cep.replace(/\D/g, '') : '',
-                inscricao_estadual: data.inscricao_estadual || ''
-            };
+            return result.data;
         } catch (error) {
             throw new Error('Erro ao buscar CNPJ: ' + error.message);
         }

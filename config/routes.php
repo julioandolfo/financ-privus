@@ -10,6 +10,9 @@ return [
     'POST /login' => ['handler' => 'AuthController@login', 'middleware' => []],
     'POST /logout' => ['handler' => 'AuthController@logout', 'middleware' => ['AuthMiddleware']],
     
+    // API (protegido)
+    'GET /api/cnpj/{cnpj}' => ['handler' => 'ApiController@buscarCNPJ', 'middleware' => ['AuthMiddleware']],
+    
     // Home (protegido)
     'GET /' => ['handler' => 'HomeController@index', 'middleware' => ['AuthMiddleware']],
     
@@ -99,6 +102,17 @@ return [
     'POST /contas-pagar/{id}/delete' => ['handler' => 'ContaPagarController@destroy', 'middleware' => ['AuthMiddleware']],
     'GET /contas-pagar/{id}/baixar' => ['handler' => 'ContaPagarController@baixar', 'middleware' => ['AuthMiddleware']],
     'POST /contas-pagar/{id}/baixar' => ['handler' => 'ContaPagarController@efetuarBaixa', 'middleware' => ['AuthMiddleware']],
+    
+    // Contas a Receber (protegido)
+    'GET /contas-receber' => ['handler' => 'ContaReceberController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /contas-receber/create' => ['handler' => 'ContaReceberController@create', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-receber' => ['handler' => 'ContaReceberController@store', 'middleware' => ['AuthMiddleware']],
+    'GET /contas-receber/{id}' => ['handler' => 'ContaReceberController@show', 'middleware' => ['AuthMiddleware']],
+    'GET /contas-receber/{id}/edit' => ['handler' => 'ContaReceberController@edit', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-receber/{id}' => ['handler' => 'ContaReceberController@update', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-receber/{id}/delete' => ['handler' => 'ContaReceberController@destroy', 'middleware' => ['AuthMiddleware']],
+    'GET /contas-receber/{id}/baixar' => ['handler' => 'ContaReceberController@baixar', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-receber/{id}/baixar' => ['handler' => 'ContaReceberController@efetuarBaixa', 'middleware' => ['AuthMiddleware']],
     
     // Perfis de Consolidação (protegido)
     'GET /perfis-consolidacao' => ['handler' => 'PerfilConsolidacaoController@index', 'middleware' => ['AuthMiddleware']],

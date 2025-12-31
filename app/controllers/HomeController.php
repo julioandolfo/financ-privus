@@ -13,6 +13,7 @@ use App\Models\CentroCusto;
 use App\Models\FormaPagamento;
 use App\Models\ContaBancaria;
 use App\Models\ContaPagar;
+use App\Models\ContaReceber;
 
 class HomeController extends Controller
 {
@@ -29,6 +30,7 @@ class HomeController extends Controller
             $formaPagamentoModel = new FormaPagamento();
             $contaBancariaModel = new ContaBancaria();
             $contaPagarModel = new ContaPagar();
+            $contaReceberModel = new ContaReceber();
             
             // Totais gerais
             $totalEmpresas = count($empresaModel->findAll(['ativo' => 1]));
@@ -102,8 +104,9 @@ class HomeController extends Controller
                 $contasPorBanco[$banco]['saldo'] += (float)$conta['saldo_atual'];
             }
             
-            // Métricas de Contas a Pagar
+            // Métricas de Contas a Pagar e Receber
             $contasPagarResumo = $contaPagarModel->getResumo();
+            $contasReceberResumo = $contaReceberModel->getResumo();
             
             return $this->render('home/index', [
                 'title' => 'Dashboard - Sistema Financeiro',
@@ -146,7 +149,8 @@ class HomeController extends Controller
                     'saldo_total' => $saldoTotal,
                     'por_banco' => $contasPorBanco
                 ],
-                'contas_pagar' => $contasPagarResumo
+                'contas_pagar' => $contasPagarResumo,
+                'contas_receber' => $contasReceberResumo
             ]);
             
         } catch (\Exception $e) {
