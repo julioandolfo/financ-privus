@@ -94,15 +94,19 @@ class IntegracaoLog extends Model
      */
     public function getEstatisticas($integracaoId = null, $periodo = '7 days')
     {
+        // Extrai número de dias do período (ex: "7 days" -> 7)
+        preg_match('/(\d+)/', $periodo, $matches);
+        $dias = isset($matches[1]) ? intval($matches[1]) : 7;
+        
         $sql = "SELECT 
                     COUNT(*) as total,
                     SUM(CASE WHEN tipo = 'sucesso' THEN 1 ELSE 0 END) as sucessos,
                     SUM(CASE WHEN tipo = 'erro' THEN 1 ELSE 0 END) as erros,
                     SUM(CASE WHEN tipo = 'aviso' THEN 1 ELSE 0 END) as avisos
                 FROM {$this->table}
-                WHERE data_execucao >= DATE_SUB(NOW(), INTERVAL {$periodo})";
+                WHERE data_execucao >= DATE_SUB(NOW(), INTERVAL :dias DAY)";
         
-        $params = [];
+        $params = ['dias' => $dias];
         
         if ($integracaoId) {
             $sql .= " AND integracao_id = :integracao_id";
