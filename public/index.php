@@ -11,8 +11,8 @@ require_once APP_ROOT . '/includes/EnvLoader.php';
 EnvLoader::load();
 
 // Define APP_DEBUG baseado no .env
-define('APP_DEBUG', filter_var($_ENV['APP_DEBUG'] ?? true, FILTER_VALIDATE_BOOLEAN));
-define('APP_ENV', $_ENV['APP_ENV'] ?? 'development');
+define('APP_DEBUG', true); // FORÇADO PARA DEBUG
+define('APP_ENV', 'development');
 
 // FORÇAR EXIBIÇÃO DE ERROS PARA DEBUG
 error_reporting(E_ALL);
