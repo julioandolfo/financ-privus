@@ -112,11 +112,40 @@ class CategoriaController extends Controller
                 $data['categoria_pai_id'] = null;
             }
             
-            // Cria categoria
-            $this->categoriaModel = new CategoriaFinanceira();
-            $id = $this->categoriaModel->create($data);
+            // Pega array de empresas selecionadas
+            $empresasIds = $data['empresa_ids'] ?? [];
             
-            $_SESSION['success'] = 'Categoria criada com sucesso!';
+            if (empty($empresasIds)) {
+                $_SESSION['error'] = 'Selecione pelo menos uma empresa.';
+                $this->session->set('old', $data);
+                $response->redirect('/categorias/create');
+                return;
+            }
+            
+            // Cria categoria para cada empresa selecionada
+            $this->categoriaModel = new CategoriaFinanceira();
+            $criadas = 0;
+            
+            foreach ($empresasIds as $empresaId) {
+                $dataCopia = $data;
+                $dataCopia['empresa_id'] = $empresaId;
+                
+                // Remove empresa_ids do array de dados (não existe na tabela)
+                unset($dataCopia['empresa_ids']);
+                
+                $id = $this->categoriaModel->create($dataCopia);
+                if ($id) {
+                    $criadas++;
+                }
+            }
+            
+            if ($criadas > 0) {
+                $plural = $criadas > 1 ? 's' : '';
+                $_SESSION['success'] = "Categoria criada com sucesso para {$criadas} empresa{$plural}!";
+            } else {
+                $_SESSION['error'] = 'Não foi possível criar as categorias.';
+            }
+            
             $response->redirect('/categorias');
             
         } catch (\Exception $e) {
@@ -262,8 +291,14 @@ class CategoriaController extends Controller
     {
         $errors = [];
         
-        // Empresa
-        if (empty($data['empresa_id'])) {
+        // Empresa (para criação, valida empresa_ids; para edição, valida empresa_id)
+        if (isset($data['empresa_ids'])) {
+            // Validação para criação (múltiplas empresas)
+            if (empty($data['empresa_ids']) || !is_array($data['empresa_ids'])) {
+                $errors['empresa_ids'] = 'Selecione pelo menos uma empresa';
+            }
+        } elseif (empty($data['empresa_id'])) {
+            // Validação para edição (empresa única)
             $errors['empresa_id'] = 'A empresa é obrigatória';
         }
         

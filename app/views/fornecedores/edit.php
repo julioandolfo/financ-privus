@@ -301,6 +301,23 @@ document.addEventListener('DOMContentLoaded', function() {
     let cpfCnpjInput = document.getElementById('cpf_cnpj');
     const cpfCnpjHint = document.getElementById('cpf_cnpj_hint');
     
+    function formatCPF(value) {
+        const digits = value.replace(/\D/g, '').slice(0, 11);
+        if (digits.length <= 3) return digits;
+        if (digits.length <= 6) return digits.replace(/(\d{3})(\d+)/, '$1.$2');
+        if (digits.length <= 9) return digits.replace(/(\d{3})(\d{3})(\d+)/, '$1.$2.$3');
+        return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    }
+    
+    function formatCNPJ(value) {
+        const digits = value.replace(/\D/g, '').slice(0, 14);
+        if (digits.length <= 2) return digits;
+        if (digits.length <= 5) return digits.replace(/(\d{2})(\d+)/, '$1.$2');
+        if (digits.length <= 8) return digits.replace(/(\d{2})(\d{3})(\d+)/, '$1.$2.$3');
+        if (digits.length <= 12) return digits.replace(/(\d{2})(\d{3})(\d{3})(\d+)/, '$1.$2.$3/$4');
+        return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    }
+    
     function updateMask() {
         const tipoSelecionado = document.querySelector('input[name="tipo"]:checked')?.value;
         
@@ -333,8 +350,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Restaura o valor sem máscara e dispara input para aplicar máscara
-        cpfCnpjInput.value = valorSemMascara;
+        // Restaura o valor já formatado conforme o tipo
+        cpfCnpjInput.value = tipoSelecionado === 'juridica'
+            ? formatCNPJ(valorSemMascara)
+            : formatCPF(valorSemMascara);
         cpfCnpjInput.dispatchEvent(new Event('input', { bubbles: true }));
         
         // Reinicializa a busca de CNPJ se for pessoa jurídica

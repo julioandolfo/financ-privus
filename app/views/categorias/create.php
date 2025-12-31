@@ -15,25 +15,40 @@
 
     <!-- Formulário -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
-        <form method="POST" action="<?= $this->baseUrl('/categorias') ?>" class="space-y-6">
-            <!-- Empresa -->
+        <form method="POST" action="<?= $this->baseUrl('/categorias') ?>" class="space-y-6" id="formCategoria">
+            <!-- Empresas (Múltipla Seleção) -->
             <div>
-                <label for="empresa_id" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Empresa *
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Empresas * <span class="text-xs font-normal text-gray-500 dark:text-gray-400">(Selecione uma ou mais)</span>
                 </label>
-                <select id="empresa_id" 
-                        name="empresa_id" 
-                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['empresa_id']) ? 'border-red-500' : '' ?>" 
-                        required>
-                    <option value="">Selecione uma empresa</option>
-                    <?php foreach ($empresas as $empresa): ?>
-                        <option value="<?= $empresa['id'] ?>" <?= (($this->session->get('old')['empresa_id'] ?? $defaultEmpresaId ?? '') == $empresa['id']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($empresa['nome_fantasia']) ?>
-                        </option>
+                <div class="space-y-2 max-h-60 overflow-y-auto p-4 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+                    <label class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600/50 cursor-pointer transition-colors">
+                        <input type="checkbox" 
+                               id="select_all_empresas"
+                               class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2">
+                        <span class="font-semibold text-blue-600 dark:text-blue-400">✓ Selecionar Todas</span>
+                    </label>
+                    <div class="border-t border-gray-200 dark:border-gray-600 my-2"></div>
+                    <?php 
+                    $empresasIds = $this->session->get('old')['empresa_ids'] ?? [];
+                    foreach ($empresas as $empresa): 
+                    ?>
+                        <label class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600/50 cursor-pointer transition-colors empresa-checkbox">
+                            <input type="checkbox" 
+                                   name="empresa_ids[]" 
+                                   value="<?= $empresa['id'] ?>"
+                                   <?= in_array($empresa['id'], $empresasIds) ? 'checked' : '' ?>
+                                   class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 empresa-item">
+                            <span class="text-gray-900 dark:text-gray-100">
+                                <?= htmlspecialchars($empresa['nome_fantasia']) ?>
+                            </span>
+                        </label>
                     <?php endforeach; ?>
-                </select>
-                <?php if (isset($this->session->get('errors')['empresa_id'])): ?>
-                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['empresa_id'] ?></p>
+                </div>
+                <?php if (isset($this->session->get('errors')['empresa_ids'])): ?>
+                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['empresa_ids'] ?></p>
+                <?php else: ?>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">A categoria será criada para todas as empresas selecionadas</p>
                 <?php endif; ?>
             </div>
 
@@ -164,23 +179,54 @@
 <script>
 // Atualiza lista de categorias pai quando empresa ou tipo mudar
 document.addEventListener('DOMContentLoaded', function() {
-    const empresaSelect = document.getElementById('empresa_id');
+    const selectAllCheckbox = document.getElementById('select_all_empresas');
+    const empresaCheckboxes = document.querySelectorAll('.empresa-item');
     const tipoInputs = document.querySelectorAll('input[name="tipo"]');
     const categoriaPaiSelect = document.getElementById('categoria_pai_id');
     
+    // Funcionalidade "Selecionar Todas"
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            empresaCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateCategoriasPai();
+        });
+    }
+    
+    // Atualiza categorias pai quando checkboxes de empresa mudarem
+    empresaCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateCategoriasPai();
+            
+            // Atualiza estado do "Selecionar Todas"
+            const allChecked = Array.from(empresaCheckboxes).every(cb => cb.checked);
+            const someChecked = Array.from(empresaCheckboxes).some(cb => cb.checked);
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = allChecked;
+                selectAllCheckbox.indeterminate = someChecked && !allChecked;
+            }
+        });
+    });
+    
     function updateCategoriasPai() {
-        const empresaId = empresaSelect.value;
+        const empresasIds = Array.from(empresaCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
         const tipo = document.querySelector('input[name="tipo"]:checked')?.value;
         
-        if (!empresaId && !tipo) {
+        if (empresasIds.length === 0 && !tipo) {
             // Se não tiver empresa nem tipo, mantém as categorias que já vieram do servidor
             return;
         }
         
-        if (!empresaId || !tipo) {
-            categoriaPaiSelect.innerHTML = '<option value="">Selecione empresa e tipo primeiro</option>';
+        if (empresasIds.length === 0 || !tipo) {
+            categoriaPaiSelect.innerHTML = '<option value="">Selecione empresa(s) e tipo primeiro</option>';
             return;
         }
+        
+        // Usa primeira empresa selecionada para buscar categorias (ou todas se quiser categorias comuns)
+        const empresaId = empresasIds[0];
         
         // Faz requisição AJAX para buscar categorias disponíveis
         fetch(`<?= $this->baseUrl('/categorias') ?>?empresa_id=${empresaId}&tipo=${tipo}&ajax=1`)
@@ -201,19 +247,39 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
-    empresaSelect.addEventListener('change', updateCategoriasPai);
     tipoInputs.forEach(input => {
         input.addEventListener('change', updateCategoriasPai);
     });
     
     // Carrega categorias pai automaticamente se já tiver empresa e tipo selecionados ao carregar a página
     setTimeout(() => {
-        const empresaId = empresaSelect.value;
+        const empresasIds = Array.from(empresaCheckboxes).filter(cb => cb.checked);
         const tipo = document.querySelector('input[name="tipo"]:checked')?.value;
-        if (empresaId && tipo) {
+        if (empresasIds.length > 0 && tipo) {
             updateCategoriasPai();
         }
     }, 100);
+    
+    // Validação do formulário antes de submeter
+    const form = document.getElementById('formCategoria');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const empresasIds = Array.from(empresaCheckboxes).filter(cb => cb.checked);
+            
+            if (empresasIds.length === 0) {
+                e.preventDefault();
+                alert('❌ Por favor, selecione pelo menos uma empresa!');
+                
+                // Scroll para o campo de empresas
+                document.querySelector('.empresa-checkbox')?.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+                
+                return false;
+            }
+        });
+    }
 });
 </script>
 
