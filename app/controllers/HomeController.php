@@ -14,6 +14,7 @@ use App\Models\FormaPagamento;
 use App\Models\ContaBancaria;
 use App\Models\ContaPagar;
 use App\Models\ContaReceber;
+use App\Models\MovimentacaoCaixa;
 
 class HomeController extends Controller
 {
@@ -31,6 +32,7 @@ class HomeController extends Controller
             $contaBancariaModel = new ContaBancaria();
             $contaPagarModel = new ContaPagar();
             $contaReceberModel = new ContaReceber();
+            $movimentacaoCaixaModel = new MovimentacaoCaixa();
             
             // Verificar se há filtro de empresas na sessão
             $empresasFiltradas = $_SESSION['dashboard_empresas_filtro'] ?? null;
@@ -115,6 +117,30 @@ class HomeController extends Controller
             $contasPagarResumo = $contaPagarModel->getResumo($empresasIds);
             $contasReceberResumo = $contaReceberModel->getResumo($empresasIds);
             
+            // Métricas de Movimentações de Caixa
+            $movimentacoes = $this->buscarPorEmpresas($movimentacaoCaixaModel, 'findAll', $empresasIds);
+            $totalMovimentacoes = count($movimentacoes);
+            $totalEntradas = 0;
+            $totalSaidas = 0;
+            $movimentacoesConciliadas = 0;
+            $movimentacoesPendentes = 0;
+            
+            foreach ($movimentacoes as $mov) {
+                if ($mov['tipo'] === 'entrada') {
+                    $totalEntradas += $mov['valor'];
+                } else {
+                    $totalSaidas += $mov['valor'];
+                }
+                
+                if ($mov['conciliado']) {
+                    $movimentacoesConciliadas++;
+                } else {
+                    $movimentacoesPendentes++;
+                }
+            }
+            
+            $saldoMovimentacoes = $totalEntradas - $totalSaidas;
+            
             return $this->render('home/index', [
                 'title' => 'Dashboard - Sistema Financeiro',
                 'filtro' => [
@@ -164,7 +190,15 @@ class HomeController extends Controller
                     'por_banco' => $contasPorBanco
                 ],
                 'contas_pagar' => $contasPagarResumo,
-                'contas_receber' => $contasReceberResumo
+                'contas_receber' => $contasReceberResumo,
+                'movimentacoes_caixa' => [
+                    'total' => $totalMovimentacoes,
+                    'entradas' => $totalEntradas,
+                    'saidas' => $totalSaidas,
+                    'saldo' => $saldoMovimentacoes,
+                    'conciliadas' => $movimentacoesConciliadas,
+                    'pendentes' => $movimentacoesPendentes
+                ]
             ]);
             
         } catch (\Exception $e) {

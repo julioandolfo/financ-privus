@@ -116,6 +116,18 @@ return [
     'GET /contas-receber/{id}/baixar' => ['handler' => 'ContaReceberController@baixar', 'middleware' => ['AuthMiddleware']],
     'POST /contas-receber/{id}/baixar' => ['handler' => 'ContaReceberController@efetuarBaixa', 'middleware' => ['AuthMiddleware']],
     
+    // Fluxo de Caixa (protegido)
+    'GET /fluxo-caixa' => ['handler' => 'FluxoCaixaController@index', 'middleware' => ['AuthMiddleware']],
+    
+    // Movimentações de Caixa (protegido)
+    'GET /movimentacoes-caixa' => ['handler' => 'MovimentacaoCaixaController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /movimentacoes-caixa/create' => ['handler' => 'MovimentacaoCaixaController@create', 'middleware' => ['AuthMiddleware']],
+    'POST /movimentacoes-caixa' => ['handler' => 'MovimentacaoCaixaController@store', 'middleware' => ['AuthMiddleware']],
+    'GET /movimentacoes-caixa/{id}' => ['handler' => 'MovimentacaoCaixaController@show', 'middleware' => ['AuthMiddleware']],
+    'GET /movimentacoes-caixa/{id}/edit' => ['handler' => 'MovimentacaoCaixaController@edit', 'middleware' => ['AuthMiddleware']],
+    'POST /movimentacoes-caixa/{id}' => ['handler' => 'MovimentacaoCaixaController@update', 'middleware' => ['AuthMiddleware']],
+    'POST /movimentacoes-caixa/{id}/delete' => ['handler' => 'MovimentacaoCaixaController@destroy', 'middleware' => ['AuthMiddleware']],
+    
     // Perfis de Consolidação (protegido)
     'GET /perfis-consolidacao' => ['handler' => 'PerfilConsolidacaoController@index', 'middleware' => ['AuthMiddleware']],
     'GET /perfis-consolidacao/create' => ['handler' => 'PerfilConsolidacaoController@create', 'middleware' => ['AuthMiddleware']],
