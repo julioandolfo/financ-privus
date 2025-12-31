@@ -98,11 +98,14 @@ abstract class Controller
      */
     protected function render($view, $data = [], $layout = 'main')
     {
+        // Guarda caminho da view antes de extrair variáveis do array $data
+        $viewPath = $view;
+        
         // Extrai variáveis do array $data
         extract($data);
         
         // Define caminho da view
-        $viewFile = __DIR__ . '/../views/' . str_replace('.', '/', $view) . '.php';
+        $viewFile = __DIR__ . '/../views/' . str_replace('.', '/', $viewPath) . '.php';
         
         if (!file_exists($viewFile)) {
             throw new \Exception("View não encontrada: {$view}");
