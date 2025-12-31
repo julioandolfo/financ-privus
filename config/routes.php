@@ -70,5 +70,35 @@ return [
     'GET /centros-custo/{id}/edit' => ['handler' => 'CentroCustoController@edit', 'middleware' => ['AuthMiddleware']],
     'POST /centros-custo/{id}' => ['handler' => 'CentroCustoController@update', 'middleware' => ['AuthMiddleware']],
     'POST /centros-custo/{id}/delete' => ['handler' => 'CentroCustoController@destroy', 'middleware' => ['AuthMiddleware']],
+    
+    // Formas de Pagamento (protegido)
+    'GET /formas-pagamento' => ['handler' => 'FormaPagamentoController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /formas-pagamento/create' => ['handler' => 'FormaPagamentoController@create', 'middleware' => ['AuthMiddleware']],
+    'POST /formas-pagamento' => ['handler' => 'FormaPagamentoController@store', 'middleware' => ['AuthMiddleware']],
+    'GET /formas-pagamento/{id}' => ['handler' => 'FormaPagamentoController@show', 'middleware' => ['AuthMiddleware']],
+    'GET /formas-pagamento/{id}/edit' => ['handler' => 'FormaPagamentoController@edit', 'middleware' => ['AuthMiddleware']],
+    'POST /formas-pagamento/{id}' => ['handler' => 'FormaPagamentoController@update', 'middleware' => ['AuthMiddleware']],
+    'POST /formas-pagamento/{id}/delete' => ['handler' => 'FormaPagamentoController@destroy', 'middleware' => ['AuthMiddleware']],
+    
+    // Contas Bancárias (protegido)
+    'GET /contas-bancarias' => ['handler' => 'ContaBancariaController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /contas-bancarias/create' => ['handler' => 'ContaBancariaController@create', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-bancarias' => ['handler' => 'ContaBancariaController@store', 'middleware' => ['AuthMiddleware']],
+    'GET /contas-bancarias/{id}' => ['handler' => 'ContaBancariaController@show', 'middleware' => ['AuthMiddleware']],
+    'GET /contas-bancarias/{id}/edit' => ['handler' => 'ContaBancariaController@edit', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-bancarias/{id}' => ['handler' => 'ContaBancariaController@update', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-bancarias/{id}/delete' => ['handler' => 'ContaBancariaController@destroy', 'middleware' => ['AuthMiddleware']],
+    
+    // Perfis de Consolidação (protegido)
+    'GET /perfis-consolidacao' => ['handler' => 'PerfilConsolidacaoController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /perfis-consolidacao/create' => ['handler' => 'PerfilConsolidacaoController@create', 'middleware' => ['AuthMiddleware']],
+    'POST /perfis-consolidacao' => ['handler' => 'PerfilConsolidacaoController@store', 'middleware' => ['AuthMiddleware']],
+    'GET /perfis-consolidacao/{id}' => ['handler' => 'PerfilConsolidacaoController@show', 'middleware' => ['AuthMiddleware']],
+    'GET /perfis-consolidacao/{id}/edit' => ['handler' => 'PerfilConsolidacaoController@edit', 'middleware' => ['AuthMiddleware']],
+    'POST /perfis-consolidacao/{id}' => ['handler' => 'PerfilConsolidacaoController@update', 'middleware' => ['AuthMiddleware']],
+    'POST /perfis-consolidacao/{id}/delete' => ['handler' => 'PerfilConsolidacaoController@destroy', 'middleware' => ['AuthMiddleware']],
+    'GET /perfis-consolidacao/{id}/aplicar' => ['handler' => 'PerfilConsolidacaoController@aplicar', 'middleware' => ['AuthMiddleware']],
+    'POST /perfis-consolidacao/aplicar-custom' => ['handler' => 'PerfilConsolidacaoController@aplicarCustom', 'middleware' => ['AuthMiddleware']],
+    'GET /perfis-consolidacao/limpar' => ['handler' => 'PerfilConsolidacaoController@limpar', 'middleware' => ['AuthMiddleware']],
 ];
 

@@ -82,11 +82,13 @@
             overflow-x: hidden;
         }
         body {
-            height: 100%;
+            min-height: 100%;
             margin: 0;
             padding: 0;
             position: relative;
             overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
         }
         /* Background fixo */
         body::before {
@@ -103,6 +105,10 @@
         }
         .dark body::before {
             background-image: linear-gradient(to bottom right, rgb(15 23 42), rgb(30 41 59), rgb(15 23 42));
+        }
+        /* Garantir que o main ocupe o espaço disponível */
+        main {
+            flex: 1;
         }
     </style>
 </head>
@@ -256,7 +262,7 @@
     </main>
 
     <!-- Footer Moderno -->
-    <footer class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-gray-200/50 dark:border-slate-700/50 mt-12 transition-colors duration-300">
+    <footer class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-gray-200/50 dark:border-slate-700/50 mt-auto transition-colors duration-300 <?= isset($_SESSION['usuario_id']) ? 'lg:ml-64' : '' ?>">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div class="flex flex-col md:flex-row justify-between items-center">
                 <p class="text-gray-600 dark:text-gray-400 text-sm">

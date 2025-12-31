@@ -42,6 +42,17 @@ class Usuario extends Model
     }
     
     /**
+     * Retorna usuários por empresa
+     */
+    public function findByEmpresa($empresaId)
+    {
+        $sql = "SELECT * FROM {$this->table} WHERE empresa_id = :empresa_id AND ativo = 1 ORDER BY nome ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['empresa_id' => $empresaId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+    
+    /**
      * Verifica se email já existe
      */
     public function emailExists($email, $excludeId = null)
