@@ -32,20 +32,32 @@ class HomeController extends Controller
             $contaPagarModel = new ContaPagar();
             $contaReceberModel = new ContaReceber();
             
-            // Totais gerais
-            $totalEmpresas = count($empresaModel->findAll(['ativo' => 1]));
-            $totalUsuarios = count($usuarioModel->findAll());
-            $totalFornecedores = count($fornecedorModel->findAll());
-            $totalClientes = count($clienteModel->findAll());
-            $totalCategorias = count($categoriaModel->findAll());
-            $totalCentrosCusto = count($centroCustoModel->findAll());
-            $totalFormasPagamento = count($formaPagamentoModel->findAll());
-            $totalContasBancarias = count($contaBancariaModel->findAll());
+            // Verificar se há filtro de empresas na sessão
+            $empresasFiltradas = $_SESSION['dashboard_empresas_filtro'] ?? null;
+            
+            // Se não houver filtro, usar todas as empresas
+            $todasEmpresas = $empresaModel->findAll(['ativo' => 1]);
+            $empresasIds = $empresasFiltradas ?? array_column($todasEmpresas, 'id');
+            
+            // Totais gerais (com base nas empresas filtradas)
+            $totalEmpresas = count($todasEmpresas);
+            $empresasFiltro = $empresasFiltradas ? count($empresasFiltradas) : $totalEmpresas;
+            $totalUsuarios = $this->contarPorEmpresas($usuarioModel, 'findAll', $empresasIds);
+            $totalFornecedores = $this->contarPorEmpresas($fornecedorModel, 'findAll', $empresasIds);
+            $totalClientes = $this->contarPorEmpresas($clienteModel, 'findAll', $empresasIds);
+            $totalCategorias = $this->contarPorEmpresas($categoriaModel, 'findAll', $empresasIds);
+            $totalCentrosCusto = $this->contarPorEmpresas($centroCustoModel, 'findAll', $empresasIds);
+            $totalFormasPagamento = $this->contarPorEmpresas($formaPagamentoModel, 'findAll', $empresasIds);
+            $totalContasBancarias = $this->contarPorEmpresas($contaBancariaModel, 'findAll', $empresasIds);
             
             // Dados das empresas
-            $empresas = $empresaModel->findAll(['ativo' => 1]);
             $empresasData = [];
-            foreach ($empresas as $empresa) {
+            foreach ($todasEmpresas as $empresa) {
+                // Se houver filtro e esta empresa não estiver nele, pular
+                if ($empresasFiltradas && !in_array($empresa['id'], $empresasFiltradas)) {
+                    continue;
+                }
+                
                 $empresasData[] = [
                     'nome' => $empresa['nome_fantasia'],
                     'usuarios' => count($usuarioModel->findByEmpresa($empresa['id'])),
@@ -55,34 +67,29 @@ class HomeController extends Controller
                 ];
             }
             
-            // Usuários ativos vs inativos
-            $usuarios = $usuarioModel->findAll();
+            // Buscar dados com filtro de empresas
+            $usuarios = $this->buscarPorEmpresas($usuarioModel, 'findAll', $empresasIds);
             $usuariosAtivos = count(array_filter($usuarios, fn($u) => $u['ativo'] == 1));
             $usuariosInativos = count(array_filter($usuarios, fn($u) => $u['ativo'] == 0));
             
-            // Fornecedores por tipo de pessoa
-            $fornecedores = $fornecedorModel->findAll();
+            $fornecedores = $this->buscarPorEmpresas($fornecedorModel, 'findAll', $empresasIds);
             $fornecedoresPF = count(array_filter($fornecedores, fn($f) => $f['tipo_pessoa'] == 'fisica'));
             $fornecedoresPJ = count(array_filter($fornecedores, fn($f) => $f['tipo_pessoa'] == 'juridica'));
             
-            // Clientes por tipo de pessoa
-            $clientes = $clienteModel->findAll();
+            $clientes = $this->buscarPorEmpresas($clienteModel, 'findAll', $empresasIds);
             $clientesPF = count(array_filter($clientes, fn($c) => $c['tipo_pessoa'] == 'fisica'));
             $clientesPJ = count(array_filter($clientes, fn($c) => $c['tipo_pessoa'] == 'juridica'));
             
-            // Categorias por tipo
-            $categorias = $categoriaModel->findAll();
+            $categorias = $this->buscarPorEmpresas($categoriaModel, 'findAll', $empresasIds);
             $categoriasReceita = count(array_filter($categorias, fn($c) => $c['tipo'] == 'receita'));
             $categoriasDespesa = count(array_filter($categorias, fn($c) => $c['tipo'] == 'despesa'));
             
-            // Formas de pagamento por tipo
-            $formasPagamento = $formaPagamentoModel->findAll();
+            $formasPagamento = $this->buscarPorEmpresas($formaPagamentoModel, 'findAll', $empresasIds);
             $formasPagamentoSomente = count(array_filter($formasPagamento, fn($f) => $f['tipo'] == 'pagamento'));
             $formasRecebimentoSomente = count(array_filter($formasPagamento, fn($f) => $f['tipo'] == 'recebimento'));
             $formasAmbos = count(array_filter($formasPagamento, fn($f) => $f['tipo'] == 'ambos'));
             
-            // Contas bancárias por tipo
-            $contasBancarias = $contaBancariaModel->findAll();
+            $contasBancarias = $this->buscarPorEmpresas($contaBancariaModel, 'findAll', $empresasIds);
             $contasCorrente = count(array_filter($contasBancarias, fn($c) => $c['tipo_conta'] == 'corrente'));
             $contasPoupanca = count(array_filter($contasBancarias, fn($c) => $c['tipo_conta'] == 'poupanca'));
             $contasInvestimento = count(array_filter($contasBancarias, fn($c) => $c['tipo_conta'] == 'investimento'));
@@ -104,12 +111,19 @@ class HomeController extends Controller
                 $contasPorBanco[$banco]['saldo'] += (float)$conta['saldo_atual'];
             }
             
-            // Métricas de Contas a Pagar e Receber
-            $contasPagarResumo = $contaPagarModel->getResumo();
-            $contasReceberResumo = $contaReceberModel->getResumo();
+            // Métricas de Contas a Pagar e Receber (com filtro de empresas)
+            $contasPagarResumo = $contaPagarModel->getResumo($empresasIds);
+            $contasReceberResumo = $contaReceberModel->getResumo($empresasIds);
             
             return $this->render('home/index', [
                 'title' => 'Dashboard - Sistema Financeiro',
+                'filtro' => [
+                    'ativo' => !empty($empresasFiltradas),
+                    'empresas_ids' => $empresasIds,
+                    'total_empresas' => $totalEmpresas,
+                    'empresas_filtradas' => $empresasFiltro
+                ],
+                'todas_empresas' => $todasEmpresas,
                 'totais' => [
                     'empresas' => $totalEmpresas,
                     'usuarios' => $totalUsuarios,
@@ -169,5 +183,58 @@ class HomeController extends Controller
                 ]
             ]);
         }
+    }
+    
+    /**
+     * Aplicar filtro de empresas no dashboard
+     */
+    public function filtrar(Request $request, Response $response)
+    {
+        $empresasSelecionadas = $request->post('empresas', []);
+        
+        if (!empty($empresasSelecionadas) && is_array($empresasSelecionadas)) {
+            $_SESSION['dashboard_empresas_filtro'] = array_map('intval', $empresasSelecionadas);
+            $_SESSION['success'] = count($empresasSelecionadas) . ' empresa(s) selecionada(s) para visualização';
+        } else {
+            unset($_SESSION['dashboard_empresas_filtro']);
+            $_SESSION['success'] = 'Mostrando todas as empresas';
+        }
+        
+        return $response->redirect('/');
+    }
+    
+    /**
+     * Limpar filtro de empresas do dashboard
+     */
+    public function limparFiltro(Request $request, Response $response)
+    {
+        unset($_SESSION['dashboard_empresas_filtro']);
+        $_SESSION['success'] = 'Filtro removido. Mostrando todas as empresas';
+        return $response->redirect('/');
+    }
+    
+    /**
+     * Buscar dados de múltiplas empresas
+     */
+    private function buscarPorEmpresas($model, $method, $empresasIds)
+    {
+        $resultado = [];
+        
+        foreach ($empresasIds as $empresaId) {
+            $dados = $model->$method($empresaId);
+            if (!empty($dados)) {
+                $resultado = array_merge($resultado, $dados);
+            }
+        }
+        
+        return $resultado;
+    }
+    
+    /**
+     * Contar registros de múltiplas empresas
+     */
+    private function contarPorEmpresas($model, $method, $empresasIds)
+    {
+        return count($this->buscarPorEmpresas($model, $method, $empresasIds));
     }
 }

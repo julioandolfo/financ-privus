@@ -309,13 +309,25 @@ class ContaPagar extends Model
     /**
      * Retorna contagem de contas por status
      */
-    public function getCountPorStatus()
+    public function getCountPorStatus($empresasIds = null)
     {
         $sql = "SELECT status, COUNT(*) as total
-                FROM {$this->table}
-                GROUP BY status";
+                FROM {$this->table}";
         
-        $stmt = $this->db->query($sql);
+        if ($empresasIds) {
+            $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
+            $sql .= " WHERE empresa_id IN ($placeholders)";
+        }
+        
+        $sql .= " GROUP BY status";
+        
+        if ($empresasIds) {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($empresasIds);
+        } else {
+            $stmt = $this->db->query($sql);
+        }
+        
         $result = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
         
         return [
@@ -330,13 +342,21 @@ class ContaPagar extends Model
     /**
      * Retorna valor total a pagar (pendente + parcial + vencido)
      */
-    public function getValorTotalAPagar()
+    public function getValorTotalAPagar($empresasIds = null)
     {
         $sql = "SELECT SUM(valor_total - valor_pago) as total
                 FROM {$this->table}
                 WHERE status IN ('pendente', 'parcial', 'vencido')";
         
-        $stmt = $this->db->query($sql);
+        if ($empresasIds) {
+            $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
+            $sql .= " AND empresa_id IN ($placeholders)";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($empresasIds);
+        } else {
+            $stmt = $this->db->query($sql);
+        }
+        
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
         return $result['total'] ?? 0;
@@ -345,13 +365,21 @@ class ContaPagar extends Model
     /**
      * Retorna valor total já pago
      */
-    public function getValorTotalPago()
+    public function getValorTotalPago($empresasIds = null)
     {
         $sql = "SELECT SUM(valor_pago) as total
                 FROM {$this->table}
                 WHERE status IN ('parcial', 'pago')";
         
-        $stmt = $this->db->query($sql);
+        if ($empresasIds) {
+            $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
+            $sql .= " AND empresa_id IN ($placeholders)";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($empresasIds);
+        } else {
+            $stmt = $this->db->query($sql);
+        }
+        
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
         return $result['total'] ?? 0;
@@ -360,7 +388,7 @@ class ContaPagar extends Model
     /**
      * Retorna contas vencidas (quantidade e valor)
      */
-    public function getContasVencidas()
+    public function getContasVencidas($empresasIds = null)
     {
         $sql = "SELECT COUNT(*) as quantidade, 
                        SUM(valor_total - valor_pago) as valor_total
@@ -368,7 +396,15 @@ class ContaPagar extends Model
                 WHERE status IN ('pendente', 'parcial')
                   AND data_vencimento < CURDATE()";
         
-        $stmt = $this->db->query($sql);
+        if ($empresasIds) {
+            $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
+            $sql .= " AND empresa_id IN ($placeholders)";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($empresasIds);
+        } else {
+            $stmt = $this->db->query($sql);
+        }
+        
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
         return [
@@ -380,7 +416,7 @@ class ContaPagar extends Model
     /**
      * Retorna contas a vencer nos próximos N dias
      */
-    public function getContasAVencer($dias = 7)
+    public function getContasAVencer($dias = 7, $empresasIds = null)
     {
         $sql = "SELECT COUNT(*) as quantidade, 
                        SUM(valor_total - valor_pago) as valor_total
@@ -388,8 +424,16 @@ class ContaPagar extends Model
                 WHERE status IN ('pendente', 'parcial')
                   AND data_vencimento BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)";
         
+        $params = [$dias];
+        
+        if ($empresasIds) {
+            $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
+            $sql .= " AND empresa_id IN ($placeholders)";
+            $params = array_merge($params, $empresasIds);
+        }
+        
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([$dias]);
+        $stmt->execute($params);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
         return [
@@ -401,25 +445,34 @@ class ContaPagar extends Model
     /**
      * Retorna resumo completo para dashboard
      */
-    public function getResumo()
+    public function getResumo($empresasIds = null)
     {
         return [
-            'total' => $this->count(),
-            'por_status' => $this->getCountPorStatus(),
-            'valor_a_pagar' => $this->getValorTotalAPagar(),
-            'valor_pago' => $this->getValorTotalPago(),
-            'vencidas' => $this->getContasVencidas(),
-            'a_vencer_7d' => $this->getContasAVencer(7),
-            'a_vencer_30d' => $this->getContasAVencer(30)
+            'total' => $this->count($empresasIds),
+            'por_status' => $this->getCountPorStatus($empresasIds),
+            'valor_a_pagar' => $this->getValorTotalAPagar($empresasIds),
+            'valor_pago' => $this->getValorTotalPago($empresasIds),
+            'vencidas' => $this->getContasVencidas($empresasIds),
+            'a_vencer_7d' => $this->getContasAVencer(7, $empresasIds),
+            'a_vencer_30d' => $this->getContasAVencer(30, $empresasIds)
         ];
     }
     
     /**
      * Retorna total de registros
      */
-    public function count()
+    public function count($empresasIds = null)
     {
         $sql = "SELECT COUNT(*) FROM {$this->table}";
+        
+        if ($empresasIds) {
+            $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
+            $sql .= " WHERE empresa_id IN ($placeholders)";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($empresasIds);
+            return $stmt->fetchColumn();
+        }
+        
         $stmt = $this->db->query($sql);
         return $stmt->fetchColumn();
     }

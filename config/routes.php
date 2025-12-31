@@ -15,6 +15,8 @@ return [
     
     // Home (protegido)
     'GET /' => ['handler' => 'HomeController@index', 'middleware' => ['AuthMiddleware']],
+    'POST /dashboard/filtrar' => ['handler' => 'HomeController@filtrar', 'middleware' => ['AuthMiddleware']],
+    'POST /dashboard/limpar-filtro' => ['handler' => 'HomeController@limparFiltro', 'middleware' => ['AuthMiddleware']],
     
     // Empresas (protegido)
     'GET /empresas' => ['handler' => 'EmpresaController@index', 'middleware' => ['AuthMiddleware']],

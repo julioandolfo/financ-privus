@@ -9,15 +9,128 @@ $pctClientesPJ = $totais['clientes'] > 0 ? ($clientes['pj'] / $totais['clientes'
 $pctCategoriasReceita = $totais['categorias'] > 0 ? ($categorias['receita'] / $totais['categorias'] * 100) : 0;
 $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $totais['categorias'] * 100) : 0;
 ?>
-<div class="animate-fade-in">
+<div class="animate-fade-in" x-data="{ showFiltro: false, empresasSelecionadas: <?= json_encode($filtro['empresas_ids']) ?> }">
     <!-- Hero Banner -->
     <div class="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-800 dark:via-indigo-900 dark:to-purple-900 rounded-2xl shadow-2xl mb-8">
         <div class="absolute inset-0 bg-grid-white/10"></div>
         <div class="relative px-8 py-12">
-            <h1 class="text-4xl font-extrabold text-white mb-2">Dashboard</h1>
-            <p class="text-xl text-blue-100">Visão geral do sistema financeiro</p>
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-4xl font-extrabold text-white mb-2">Dashboard</h1>
+                    <p class="text-xl text-blue-100">Visão geral do sistema financeiro</p>
+                </div>
+                
+                <!-- Indicador de Filtro -->
+                <div class="flex items-center space-x-3">
+                    <?php if ($filtro['ativo']): ?>
+                        <div class="bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-lg flex items-center space-x-2">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                            </svg>
+                            <span class="text-white font-semibold"><?= $filtro['empresas_filtradas'] ?> de <?= $filtro['total_empresas'] ?> empresa(s)</span>
+                        </div>
+                    <?php else: ?>
+                        <div class="bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-lg flex items-center space-x-2">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                            </svg>
+                            <span class="text-white font-semibold">Todas as Empresas (<?= $filtro['total_empresas'] ?>)</span>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <button 
+                        @click="showFiltro = !showFiltro"
+                        class="bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-lg hover:bg-white/30 transition-all flex items-center space-x-2"
+                    >
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                        </svg>
+                        <span class="text-white font-semibold">Filtrar</span>
+                    </button>
+                </div>
+            </div>
         </div>
         <div class="absolute top-0 right-0 -mt-4 -mr-4 w-72 h-72 bg-white/10 rounded-full blur-3xl"></div>
+    </div>
+
+    <!-- Painel de Filtro -->
+    <div x-show="showFiltro" 
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 -translate-y-4"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-4"
+         class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-8">
+        
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Filtrar por Empresas</h3>
+            <button 
+                @click="showFiltro = false"
+                class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <form method="POST" action="/dashboard/filtrar">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <?php foreach ($todas_empresas as $empresa): ?>
+                    <label class="flex items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                        <input 
+                            type="checkbox" 
+                            name="empresas[]" 
+                            value="<?= $empresa['id'] ?>"
+                            <?= in_array($empresa['id'], $filtro['empresas_ids']) ? 'checked' : '' ?>
+                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2"
+                        >
+                        <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-100">
+                            <?= htmlspecialchars($empresa['nome_fantasia']) ?>
+                        </span>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+
+            <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div class="flex items-center space-x-3">
+                    <button 
+                        type="button"
+                        onclick="document.querySelectorAll('input[name=\'empresas[]\']').forEach(cb => cb.checked = true)"
+                        class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                    >
+                        Selecionar Todas
+                    </button>
+                    <button 
+                        type="button"
+                        onclick="document.querySelectorAll('input[name=\'empresas[]\']').forEach(cb => cb.checked = false)"
+                        class="text-sm text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-medium"
+                    >
+                        Limpar Seleção
+                    </button>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <?php if ($filtro['ativo']): ?>
+                        <form method="POST" action="/dashboard/limpar-filtro" class="inline-block">
+                            <button 
+                                type="submit"
+                                class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            >
+                                Remover Filtro
+                            </button>
+                        </form>
+                    <?php endif; ?>
+                    <button 
+                        type="submit"
+                        class="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg"
+                    >
+                        Aplicar Filtro
+                    </button>
+                </div>
+            </div>
+        </form>
     </div>
 
     <!-- Cards de Totais -->
