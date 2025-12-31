@@ -117,7 +117,10 @@
                        id="cpf_cnpj" 
                        name="cpf_cnpj" 
                        data-cnpj
+                       data-mask="<?= strlen(preg_replace('/[^0-9]/', '', $cpfCnpj)) === 11 ? 'cpf' : 'cnpj' ?>"
                        value="<?= htmlspecialchars($cpfCnpj) ?>"
+                       placeholder="<?= strlen(preg_replace('/[^0-9]/', '', $cpfCnpj)) === 11 ? '000.000.000-00' : '00.000.000/0000-00' ?>"
+                       maxlength="18"
                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['cpf_cnpj']) ? 'border-red-500' : '' ?>" 
                        required>
                 <?php if (isset($this->session->get('errors')['cpf_cnpj'])): ?>
@@ -295,31 +298,48 @@
 // Aplica máscara dinâmica de CPF/CNPJ baseado no tipo selecionado
 document.addEventListener('DOMContentLoaded', function() {
     const tipoInputs = document.querySelectorAll('input[name="tipo"]');
-    const cpfCnpjInput = document.getElementById('cpf_cnpj');
+    let cpfCnpjInput = document.getElementById('cpf_cnpj');
     const cpfCnpjHint = document.getElementById('cpf_cnpj_hint');
     
     function updateMask() {
         const tipoSelecionado = document.querySelector('input[name="tipo"]:checked')?.value;
+        
+        if (!tipoSelecionado) return;
+        
+        // Pega o elemento atualizado (caso tenha sido substituído)
+        cpfCnpjInput = document.getElementById('cpf_cnpj');
+        
+        // Salva o valor atual sem máscara
+        const valorSemMascara = cpfCnpjInput.value.replace(/\D/g, '');
         
         if (tipoSelecionado === 'fisica') {
             cpfCnpjInput.setAttribute('data-mask', 'cpf');
             cpfCnpjInput.setAttribute('maxlength', '14');
             cpfCnpjInput.setAttribute('placeholder', '000.000.000-00');
             if (cpfCnpjHint) cpfCnpjHint.textContent = 'Digite apenas números (CPF)';
+            
         } else if (tipoSelecionado === 'juridica') {
             cpfCnpjInput.setAttribute('data-mask', 'cnpj');
             cpfCnpjInput.setAttribute('maxlength', '18');
             cpfCnpjInput.setAttribute('placeholder', '00.000.000/0000-00');
-            if (cpfCnpjHint) cpfCnpjHint.textContent = 'Digite apenas números (CNPJ)';
+            if (cpfCnpjHint) cpfCnpjHint.textContent = 'Digite apenas números. Para CNPJ, os dados serão preenchidos automaticamente via API.';
         }
         
-        // Reaplica máscara se já houver valor
-        if (cpfCnpjInput.value && window.maskManager) {
-            if (tipoSelecionado === 'fisica') {
-                window.maskManager.maskCPF({ target: cpfCnpjInput });
-            } else if (tipoSelecionado === 'juridica') {
-                window.maskManager.maskCNPJ({ target: cpfCnpjInput });
+        // Reinicializa a máscara usando o maskManager
+        if (window.maskManager) {
+            const newInput = window.maskManager.reapplyMask(cpfCnpjInput);
+            if (newInput) {
+                cpfCnpjInput = newInput;
             }
+        }
+        
+        // Restaura o valor sem máscara e dispara input para aplicar máscara
+        cpfCnpjInput.value = valorSemMascara;
+        cpfCnpjInput.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        // Reinicializa a busca de CNPJ se for pessoa jurídica
+        if (tipoSelecionado === 'juridica' && window.CNPJ) {
+            window.CNPJ.inicializar(cpfCnpjInput);
         }
     }
     
@@ -327,8 +347,10 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('change', updateMask);
     });
     
-    // Aplica máscara inicial se já houver tipo selecionado
-    updateMask();
+    // Aguarda os scripts carregarem antes de aplicar máscara inicial
+    setTimeout(() => {
+        updateMask();
+    }, 200);
 });
 </script>
 

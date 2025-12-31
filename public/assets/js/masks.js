@@ -16,6 +16,56 @@ class MaskManager {
             this.applyMasks();
         }
     }
+    
+    /**
+     * Reinicializa máscara em um campo específico
+     */
+    reapplyMask(input) {
+        const maskType = input.getAttribute('data-mask');
+        
+        if (!maskType) return;
+        
+        // Remove listeners anteriores clonando o elemento
+        const newInput = input.cloneNode(true);
+        input.parentNode.replaceChild(newInput, input);
+        
+        // Reaplica máscara no novo elemento
+        if (maskType === 'cnpj') {
+            newInput.addEventListener('keydown', (e) => this.blockNonNumericCNPJ(e));
+            newInput.addEventListener('input', (e) => this.maskCNPJ(e));
+            newInput.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                const numbers = paste.replace(/\D/g, '').substring(0, 14);
+                newInput.value = '';
+                newInput.dispatchEvent(new Event('input', { bubbles: true }));
+                newInput.value = numbers;
+                this.maskCNPJ({ target: newInput });
+            });
+            newInput.addEventListener('blur', (e) => this.validateCNPJ(e));
+            if (newInput.value) {
+                this.maskCNPJ({ target: newInput });
+            }
+        } else if (maskType === 'cpf') {
+            newInput.addEventListener('keydown', (e) => this.blockNonNumeric(e));
+            newInput.addEventListener('input', (e) => this.maskCPF(e));
+            newInput.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                const numbers = paste.replace(/\D/g, '').substring(0, 11);
+                newInput.value = '';
+                newInput.dispatchEvent(new Event('input', { bubbles: true }));
+                newInput.value = numbers;
+                this.maskCPF({ target: newInput });
+            });
+            newInput.addEventListener('blur', (e) => this.validateCPF(e));
+            if (newInput.value) {
+                this.maskCPF({ target: newInput });
+            }
+        }
+        
+        return newInput;
+    }
 
     /**
      * Aplica máscaras em todos os campos com data-mask
