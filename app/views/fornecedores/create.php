@@ -101,13 +101,14 @@
                 <input type="text" 
                        id="cpf_cnpj" 
                        name="cpf_cnpj" 
+                       data-cnpj
                        value="<?= htmlspecialchars($this->session->get('old')['cpf_cnpj'] ?? '') ?>"
                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['cpf_cnpj']) ? 'border-red-500' : '' ?>" 
                        required>
                 <?php if (isset($this->session->get('errors')['cpf_cnpj'])): ?>
                     <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['cpf_cnpj'] ?></p>
                 <?php else: ?>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" id="cpf_cnpj_hint">Digite apenas números</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" id="cpf_cnpj_hint">Digite apenas números. Para CNPJ, os dados serão preenchidos automaticamente.</p>
                 <?php endif; ?>
             </div>
 

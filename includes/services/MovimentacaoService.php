@@ -29,6 +29,8 @@ class MovimentacaoService
     public function criarMovimentacaoPagamento($contaPagarId, $dadosBaixa)
     {
         try {
+            $valor = $dadosBaixa['valor'] ?? 0;
+            
             $dados = [
                 'empresa_id' => $dadosBaixa['empresa_id'],
                 'tipo' => 'saida',
@@ -36,8 +38,8 @@ class MovimentacaoService
                 'centro_custo_id' => $dadosBaixa['centro_custo_id'] ?? null,
                 'conta_bancaria_id' => $dadosBaixa['conta_bancaria_id'],
                 'descricao' => $dadosBaixa['descricao'] ?? 'Pagamento de conta',
-                'valor' => $dadosBaixa['valor_pago'],
-                'data_movimentacao' => $dadosBaixa['data_pagamento'],
+                'valor' => $valor,
+                'data_movimento' => $dadosBaixa['data_movimento'] ?? date('Y-m-d'),
                 'data_competencia' => $dadosBaixa['data_competencia'] ?? null,
                 'forma_pagamento_id' => $dadosBaixa['forma_pagamento_id'] ?? null,
                 'referencia_id' => $contaPagarId,
@@ -49,7 +51,7 @@ class MovimentacaoService
             
             if ($movimentacaoId) {
                 // Atualiza saldo da conta bancária
-                $this->atualizarSaldoConta($dadosBaixa['conta_bancaria_id'], -$dadosBaixa['valor_pago']);
+                $this->atualizarSaldoConta($dadosBaixa['conta_bancaria_id'], -$valor);
             }
             
             return $movimentacaoId;
@@ -184,6 +186,38 @@ class MovimentacaoService
         } catch (Exception $e) {
             error_log("Erro ao estornar movimentação: " . $e->getMessage());
             return false;
+        }
+    }
+    
+    /**
+     * Busca movimentações relacionadas a uma conta a pagar
+     * 
+     * @param int $contaPagarId ID da conta a pagar
+     * @return array Lista de movimentações
+     */
+    public function buscarPorContaPagar($contaPagarId)
+    {
+        try {
+            return $this->movimentacaoModel->findByReferencia($contaPagarId, 'conta_pagar');
+        } catch (Exception $e) {
+            error_log("Erro ao buscar movimentações: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Busca movimentações relacionadas a uma conta a receber
+     * 
+     * @param int $contaReceberId ID da conta a receber
+     * @return array Lista de movimentações
+     */
+    public function buscarPorContaReceber($contaReceberId)
+    {
+        try {
+            return $this->movimentacaoModel->findByReferencia($contaReceberId, 'conta_receber');
+        } catch (Exception $e) {
+            error_log("Erro ao buscar movimentações: " . $e->getMessage());
+            return [];
         }
     }
 }

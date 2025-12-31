@@ -200,10 +200,15 @@ class ContaPagarController extends Controller
                 $rateios = $this->rateioModel->findByContaPagar($id);
             }
             
+            // Busca movimentações (histórico de pagamentos)
+            $this->movimentacaoService = new MovimentacaoService();
+            $movimentacoes = $this->movimentacaoService->buscarPorContaPagar($id);
+            
             return $this->render('contas_pagar/show', [
                 'title' => 'Detalhes da Conta a Pagar',
-                'contaPagar' => $contaPagar,
-                'rateios' => $rateios
+                'conta' => $contaPagar,
+                'rateios' => $rateios,
+                'movimentacoes' => $movimentacoes
             ]);
             
         } catch (\Exception $e) {
@@ -254,7 +259,7 @@ class ContaPagarController extends Controller
             
             return $this->render('contas_pagar/edit', [
                 'title' => 'Editar Conta a Pagar',
-                'contaPagar' => $contaPagar,
+                'conta' => $contaPagar,
                 'empresas' => $empresas,
                 'fornecedores' => $fornecedores,
                 'categorias' => $categorias,
@@ -380,10 +385,9 @@ class ContaPagarController extends Controller
             
             return $this->render('contas_pagar/baixar', [
                 'title' => 'Baixar Conta a Pagar',
-                'contaPagar' => $contaPagar,
+                'conta' => $contaPagar,
                 'formasPagamento' => $formasPagamento,
-                'contasBancarias' => $contasBancarias,
-                'valorRestante' => $valorRestante
+                'contasBancarias' => $contasBancarias
             ]);
             
         } catch (\Exception $e) {
@@ -412,7 +416,9 @@ class ContaPagarController extends Controller
             $this->contaPagarModel = new ContaPagar();
             $contaPagar = $this->contaPagarModel->findById($id);
             
-            $valorPago = $contaPagar['valor_pago'] + floatval($data['valor_pago']);
+            $valorPagamento = floatval($data['valor_pagamento']);
+            $valorJaPago = $contaPagar['valor_pago'];
+            $valorPago = $valorJaPago + $valorPagamento;
             $valorTotal = $contaPagar['valor_total'];
             
             // Determina status
@@ -433,11 +439,11 @@ class ContaPagarController extends Controller
                 'centro_custo_id' => $contaPagar['centro_custo_id'],
                 'conta_bancaria_id' => $data['conta_bancaria_id'],
                 'descricao' => "Pagamento: " . $contaPagar['descricao'],
-                'valor_pago' => $data['valor_pago'],
-                'data_pagamento' => $data['data_pagamento'],
+                'valor' => $valorPagamento,
+                'data_movimento' => $data['data_pagamento'],
                 'data_competencia' => $contaPagar['data_competencia'],
                 'forma_pagamento_id' => $data['forma_pagamento_id'],
-                'observacoes' => $data['observacoes'] ?? null
+                'observacoes' => $data['observacoes_pagamento'] ?? null
             ];
             
             $this->movimentacaoService->criarMovimentacaoPagamento($id, $dadosBaixa);
@@ -503,9 +509,9 @@ class ContaPagarController extends Controller
     {
         $errors = [];
         
-        // Valor pago
-        if (empty($data['valor_pago']) || $data['valor_pago'] <= 0) {
-            $errors['valor_pago'] = 'O valor pago deve ser maior que zero';
+        // Valor pagamento
+        if (empty($data['valor_pagamento']) || $data['valor_pagamento'] <= 0) {
+            $errors['valor_pagamento'] = 'O valor do pagamento deve ser maior que zero';
         }
         
         // Data de pagamento

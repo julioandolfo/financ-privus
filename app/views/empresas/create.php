@@ -43,11 +43,12 @@
                                id="cnpj" 
                                name="cnpj" 
                                data-mask="cnpj"
+                               data-cnpj
                                value="<?= htmlspecialchars($this->session->get('old')['cnpj'] ?? '') ?>"
                                placeholder="00.000.000/0000-00"
                                maxlength="18"
                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Digite apenas números</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Digite apenas números. Os dados serão preenchidos automaticamente ao completar o CNPJ.</p>
                     </div>
                 </div>
 

@@ -301,4 +301,126 @@ class ContaPagar extends Model
         $stmt = $this->db->prepare($sql);
         return $stmt->execute([$temRateio, $id]);
     }
+    
+    /**
+     * Métricas para o Dashboard
+     */
+    
+    /**
+     * Retorna contagem de contas por status
+     */
+    public function getCountPorStatus()
+    {
+        $sql = "SELECT status, COUNT(*) as total
+                FROM {$this->table}
+                GROUP BY status";
+        
+        $stmt = $this->db->query($sql);
+        $result = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+        
+        return [
+            'pendente' => $result['pendente'] ?? 0,
+            'vencido' => $result['vencido'] ?? 0,
+            'parcial' => $result['parcial'] ?? 0,
+            'pago' => $result['pago'] ?? 0,
+            'cancelado' => $result['cancelado'] ?? 0
+        ];
+    }
+    
+    /**
+     * Retorna valor total a pagar (pendente + parcial + vencido)
+     */
+    public function getValorTotalAPagar()
+    {
+        $sql = "SELECT SUM(valor_total - valor_pago) as total
+                FROM {$this->table}
+                WHERE status IN ('pendente', 'parcial', 'vencido')";
+        
+        $stmt = $this->db->query($sql);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['total'] ?? 0;
+    }
+    
+    /**
+     * Retorna valor total já pago
+     */
+    public function getValorTotalPago()
+    {
+        $sql = "SELECT SUM(valor_pago) as total
+                FROM {$this->table}
+                WHERE status IN ('parcial', 'pago')";
+        
+        $stmt = $this->db->query($sql);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['total'] ?? 0;
+    }
+    
+    /**
+     * Retorna contas vencidas (quantidade e valor)
+     */
+    public function getContasVencidas()
+    {
+        $sql = "SELECT COUNT(*) as quantidade, 
+                       SUM(valor_total - valor_pago) as valor_total
+                FROM {$this->table}
+                WHERE status IN ('pendente', 'parcial')
+                  AND data_vencimento < CURDATE()";
+        
+        $stmt = $this->db->query($sql);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return [
+            'quantidade' => $result['quantidade'] ?? 0,
+            'valor_total' => $result['valor_total'] ?? 0
+        ];
+    }
+    
+    /**
+     * Retorna contas a vencer nos próximos N dias
+     */
+    public function getContasAVencer($dias = 7)
+    {
+        $sql = "SELECT COUNT(*) as quantidade, 
+                       SUM(valor_total - valor_pago) as valor_total
+                FROM {$this->table}
+                WHERE status IN ('pendente', 'parcial')
+                  AND data_vencimento BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$dias]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return [
+            'quantidade' => $result['quantidade'] ?? 0,
+            'valor_total' => $result['valor_total'] ?? 0
+        ];
+    }
+    
+    /**
+     * Retorna resumo completo para dashboard
+     */
+    public function getResumo()
+    {
+        return [
+            'total' => $this->count(),
+            'por_status' => $this->getCountPorStatus(),
+            'valor_a_pagar' => $this->getValorTotalAPagar(),
+            'valor_pago' => $this->getValorTotalPago(),
+            'vencidas' => $this->getContasVencidas(),
+            'a_vencer_7d' => $this->getContasAVencer(7),
+            'a_vencer_30d' => $this->getContasAVencer(30)
+        ];
+    }
+    
+    /**
+     * Retorna total de registros
+     */
+    public function count()
+    {
+        $sql = "SELECT COUNT(*) FROM {$this->table}";
+        $stmt = $this->db->query($sql);
+        return $stmt->fetchColumn();
+    }
 }
