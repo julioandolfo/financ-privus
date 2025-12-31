@@ -89,6 +89,11 @@ class CentroCustoController extends Controller
             // Converte ativo para boolean
             $data['ativo'] = isset($data['ativo']) ? 1 : 0;
             
+            // Converte centro_pai_id vazio em NULL
+            if (empty($data['centro_pai_id'])) {
+                $data['centro_pai_id'] = null;
+            }
+            
             // Cria centro de custo
             $this->centroCustoModel = new CentroCusto();
             $id = $this->centroCustoModel->create($data);
@@ -191,6 +196,11 @@ class CentroCustoController extends Controller
             
             // Converte ativo para boolean
             $data['ativo'] = isset($data['ativo']) ? 1 : 0;
+            
+            // Converte centro_pai_id vazio em NULL
+            if (empty($data['centro_pai_id'])) {
+                $data['centro_pai_id'] = null;
+            }
             
             // Atualiza centro de custo
             $this->centroCustoModel = new CentroCusto();

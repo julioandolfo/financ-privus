@@ -21,7 +21,7 @@ class CategoriaProdutoController extends Controller
      */
     public function index(Request $request, Response $response)
     {
-        $empresaId = $this->session->get('empresa_id');
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         
         // Opção de visualização (tree ou flat)
         $view = $request->get('view', 'tree');
@@ -43,7 +43,7 @@ class CategoriaProdutoController extends Controller
      */
     public function create(Request $request, Response $response)
     {
-        $empresaId = $this->session->get('empresa_id');
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         $categorias = $this->categoriaModel->getFlatList($empresaId);
         
         return $this->render('categorias_produtos/create', [
@@ -57,7 +57,7 @@ class CategoriaProdutoController extends Controller
     public function store(Request $request, Response $response)
     {
         $data = $request->all();
-        $empresaId = $this->session->get('empresa_id');
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         
         // Validação
         $errors = $this->validate($data);
@@ -98,7 +98,7 @@ class CategoriaProdutoController extends Controller
             return $response->redirect('/categorias-produtos');
         }
         
-        $empresaId = $this->session->get('empresa_id');
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         $categorias = $this->categoriaModel->getFlatList($empresaId);
         
         // Remove a categoria atual e seus descendentes da lista (para evitar loops)

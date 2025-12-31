@@ -35,7 +35,7 @@ class ConciliacaoBancariaController extends Controller
      */
     public function index(Request $request, Response $response)
     {
-        $empresaId = $this->session->get('empresa_id');
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         $filters = [
             'conta_bancaria_id' => $request->get('conta_bancaria_id'),
             'status' => $request->get('status'),
@@ -59,7 +59,7 @@ class ConciliacaoBancariaController extends Controller
      */
     public function create(Request $request, Response $response)
     {
-        $empresaId = $this->session->get('empresa_id');
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         $contas = $this->contaBancariaModel->findAll($empresaId);
         
         return $this->render('conciliacao_bancaria/create', [
@@ -74,7 +74,7 @@ class ConciliacaoBancariaController extends Controller
     public function store(Request $request, Response $response)
     {
         $data = $request->all();
-        $empresaId = $this->session->get('empresa_id');
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         
         // Validar
         $errors = $this->validate($data);

@@ -11,13 +11,19 @@ require_once APP_ROOT . '/includes/EnvLoader.php';
 EnvLoader::load();
 
 // Define APP_DEBUG baseado no .env
-define('APP_DEBUG', filter_var($_ENV['APP_DEBUG'] ?? true, FILTER_VALIDATE_BOOLEAN));
-define('APP_ENV', $_ENV['APP_ENV'] ?? 'development');
+define('APP_DEBUG', filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN));
+define('APP_ENV', $_ENV['APP_ENV'] ?? 'production');
 
-// FORÇAR EXIBIÇÃO DE ERROS PARA DEBUG
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+// Configurar exibição de erros baseado em APP_DEBUG
+if (APP_DEBUG) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
+} else {
+    error_reporting(0);
+    ini_set('display_errors', 0);
+    ini_set('display_startup_errors', 0);
+}
 
 // Inicia sessão
 require_once APP_ROOT . '/app/core/Session.php';

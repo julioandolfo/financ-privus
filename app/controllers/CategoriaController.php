@@ -93,6 +93,11 @@ class CategoriaController extends Controller
             // Converte ativo para boolean
             $data['ativo'] = isset($data['ativo']) ? 1 : 0;
             
+            // Converte categoria_pai_id vazio em NULL
+            if (empty($data['categoria_pai_id'])) {
+                $data['categoria_pai_id'] = null;
+            }
+            
             // Cria categoria
             $this->categoriaModel = new CategoriaFinanceira();
             $id = $this->categoriaModel->create($data);
@@ -196,6 +201,11 @@ class CategoriaController extends Controller
             
             // Converte ativo para boolean
             $data['ativo'] = isset($data['ativo']) ? 1 : 0;
+            
+            // Converte categoria_pai_id vazio em NULL
+            if (empty($data['categoria_pai_id'])) {
+                $data['categoria_pai_id'] = null;
+            }
             
             // Atualiza categoria
             $this->categoriaModel = new CategoriaFinanceira();

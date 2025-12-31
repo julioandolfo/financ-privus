@@ -33,7 +33,7 @@ class ProdutoController extends Controller
      */
     public function index(Request $request, Response $response)
     {
-        $empresaId = $this->session->get('empresa_id');
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         
         $filters = [
             'busca' => $request->get('busca'),
@@ -68,7 +68,7 @@ class ProdutoController extends Controller
     public function store(Request $request, Response $response)
     {
         $data = $request->all();
-        $empresaId = $this->session->get('empresa_id');
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         
         // Validar
         $errors = $this->validate($data, null, $empresaId);
@@ -142,7 +142,7 @@ class ProdutoController extends Controller
     public function update(Request $request, Response $response, $id)
     {
         $data = $request->all();
-        $empresaId = $this->session->get('empresa_id');
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         
         // Buscar produto
         $produto = $this->produtoModel->findById($id);
@@ -441,7 +441,7 @@ class ProdutoController extends Controller
      */
     public function relatorioEstoque(Request $request, Response $response)
     {
-        $empresaId = $this->session->get('empresa_id');
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         
         // Buscar produtos com estoque baixo
         $produtosEstoqueBaixo = $this->produtoModel->getProdutosEstoqueBaixo($empresaId);

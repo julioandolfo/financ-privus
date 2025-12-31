@@ -33,7 +33,7 @@ class PedidoVinculadoController extends Controller
      */
     public function index(Request $request, Response $response)
     {
-        $empresaId = $this->session->get('empresa_id');
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         
         $filters = [
             'origem' => $request->get('origem'),
@@ -60,7 +60,7 @@ class PedidoVinculadoController extends Controller
      */
     public function create(Request $request, Response $response)
     {
-        $empresaId = $this->session->get('empresa_id');
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         $clientes = $this->clienteModel->findAll($empresaId);
         $produtos = $this->produtoModel->findAll($empresaId);
         
@@ -77,7 +77,7 @@ class PedidoVinculadoController extends Controller
     public function store(Request $request, Response $response)
     {
         $data = $request->all();
-        $empresaId = $this->session->get('empresa_id');
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         
         // Validar
         $errors = $this->validate($data);
