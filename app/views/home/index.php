@@ -281,6 +281,24 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Contas Bancárias</h3>
             <p class="text-3xl font-bold text-gray-900 dark:text-gray-100"><?= $totais['contas_bancarias'] ?></p>
         </div>
+
+        <!-- Produtos -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                </div>
+                <a href="/produtos" class="text-orange-600 dark:text-orange-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </a>
+            </div>
+            <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Produtos</h3>
+            <p class="text-3xl font-bold text-gray-900 dark:text-gray-100"><?= $totais['produtos'] ?></p>
+        </div>
     </div>
 
     <!-- Saldo Total das Contas -->
@@ -296,6 +314,68 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             </div>
         </div>
     </div>
+
+    <!-- Métricas de Produtos -->
+    <?php if (isset($produtos) && $produtos['total'] > 0): ?>
+        <div class="bg-gradient-to-r from-orange-500 to-amber-600 dark:from-orange-700 dark:to-amber-800 rounded-2xl p-8 shadow-xl mb-8">
+            <div class="mb-6">
+                <h3 class="text-white text-2xl font-bold mb-2 flex items-center">
+                    <svg class="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                    Catálogo de Produtos
+                </h3>
+                <p class="text-white/80 text-sm">Análise financeira do seu estoque</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <!-- Total de Produtos -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <p class="text-white/70 text-sm mb-1">Total de Produtos</p>
+                    <p class="text-3xl font-bold text-white"><?= $produtos['total'] ?></p>
+                </div>
+
+                <!-- Valor de Venda Total -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <p class="text-white/70 text-sm mb-1">Valor Total (Venda)</p>
+                    <p class="text-2xl font-bold text-white">R$ <?= number_format($produtos['valor_venda_total'], 2, ',', '.') ?></p>
+                </div>
+
+                <!-- Margem Média -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <p class="text-white/70 text-sm mb-1">Margem Média</p>
+                    <p class="text-3xl font-bold text-white"><?= number_format($produtos['margem_media'], 1, ',', '.') ?>%</p>
+                </div>
+
+                <!-- Lucro Potencial -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <p class="text-white/70 text-sm mb-1">Lucro Potencial</p>
+                    <p class="text-2xl font-bold text-white">R$ <?= number_format($produtos['lucro_potencial'], 2, ',', '.') ?></p>
+                </div>
+            </div>
+
+            <!-- Produtos Destaque -->
+            <?php if ($produtos['produto_mais_caro'] || $produtos['produto_mais_barato']): ?>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <?php if ($produtos['produto_mais_caro']): ?>
+                        <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                            <p class="text-white/70 text-xs mb-2">🏆 Produto Mais Caro</p>
+                            <p class="text-lg font-bold text-white"><?= htmlspecialchars($produtos['produto_mais_caro']['nome']) ?></p>
+                            <p class="text-2xl font-bold text-white mt-1">R$ <?= number_format($produtos['produto_mais_caro']['preco_venda'], 2, ',', '.') ?></p>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <?php if ($produtos['produto_mais_barato']): ?>
+                        <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                            <p class="text-white/70 text-xs mb-2">💰 Produto Mais Barato</p>
+                            <p class="text-lg font-bold text-white"><?= htmlspecialchars($produtos['produto_mais_barato']['nome']) ?></p>
+                            <p class="text-2xl font-bold text-white mt-1">R$ <?= number_format($produtos['produto_mais_barato']['preco_venda'], 2, ',', '.') ?></p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 
     <!-- Gráficos e Detalhes -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">

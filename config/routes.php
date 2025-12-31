@@ -85,6 +85,15 @@ return [
     'POST /formas-pagamento/{id}' => ['handler' => 'FormaPagamentoController@update', 'middleware' => ['AuthMiddleware']],
     'POST /formas-pagamento/{id}/delete' => ['handler' => 'FormaPagamentoController@destroy', 'middleware' => ['AuthMiddleware']],
     
+    // Produtos (protegido)
+    'GET /produtos' => ['handler' => 'ProdutoController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /produtos/create' => ['handler' => 'ProdutoController@create', 'middleware' => ['AuthMiddleware']],
+    'POST /produtos' => ['handler' => 'ProdutoController@store', 'middleware' => ['AuthMiddleware']],
+    'GET /produtos/{id}' => ['handler' => 'ProdutoController@show', 'middleware' => ['AuthMiddleware']],
+    'GET /produtos/{id}/edit' => ['handler' => 'ProdutoController@edit', 'middleware' => ['AuthMiddleware']],
+    'POST /produtos/{id}' => ['handler' => 'ProdutoController@update', 'middleware' => ['AuthMiddleware']],
+    'POST /produtos/{id}/delete' => ['handler' => 'ProdutoController@destroy', 'middleware' => ['AuthMiddleware']],
+    
     // Contas Bancárias (protegido)
     'GET /contas-bancarias' => ['handler' => 'ContaBancariaController@index', 'middleware' => ['AuthMiddleware']],
     'GET /contas-bancarias/create' => ['handler' => 'ContaBancariaController@create', 'middleware' => ['AuthMiddleware']],

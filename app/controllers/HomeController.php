@@ -15,6 +15,7 @@ use App\Models\ContaBancaria;
 use App\Models\ContaPagar;
 use App\Models\ContaReceber;
 use App\Models\MovimentacaoCaixa;
+use App\Models\Produto;
 
 class HomeController extends Controller
 {
@@ -51,6 +52,10 @@ class HomeController extends Controller
             $totalCentrosCusto = $this->contarPorEmpresas($centroCustoModel, 'findAll', $empresasIds);
             $totalFormasPagamento = $this->contarPorEmpresas($formaPagamentoModel, 'findAll', $empresasIds);
             $totalContasBancarias = $this->contarPorEmpresas($contaBancariaModel, 'findAll', $empresasIds);
+            
+            // Produtos
+            $produtoModel = new Produto();
+            $produtosMetricas = $this->obterMetricasProdutos($produtoModel, $empresasIds);
             
             // Dados das empresas
             $empresasData = [];
@@ -158,8 +163,10 @@ class HomeController extends Controller
                     'categorias' => $totalCategorias,
                     'centros_custo' => $totalCentrosCusto,
                     'formas_pagamento' => $totalFormasPagamento,
-                    'contas_bancarias' => $totalContasBancarias
+                    'contas_bancarias' => $totalContasBancarias,
+                    'produtos' => $produtosMetricas['total']
                 ],
+                'produtos' => $produtosMetricas,
                 'empresasData' => $empresasData,
                 'usuarios' => [
                     'ativos' => $usuariosAtivos,
@@ -213,7 +220,15 @@ class HomeController extends Controller
                     'categorias' => 0,
                     'centros_custo' => 0,
                     'formas_pagamento' => 0,
-                    'contas_bancarias' => 0
+                    'contas_bancarias' => 0,
+                    'produtos' => 0
+                ],
+                'produtos' => [
+                    'total' => 0,
+                    'custo_total' => 0,
+                    'valor_venda_total' => 0,
+                    'margem_media' => 0,
+                    'lucro_potencial' => 0
                 ]
             ]);
         }
@@ -270,5 +285,62 @@ class HomeController extends Controller
     private function contarPorEmpresas($model, $method, $empresasIds)
     {
         return count($this->buscarPorEmpresas($model, $method, $empresasIds));
+    }
+    
+    /**
+     * Obter métricas de produtos
+     */
+    private function obterMetricasProdutos($produtoModel, $empresasIds)
+    {
+        $totalProdutos = 0;
+        $custoTotal = 0;
+        $valorVendaTotal = 0;
+        $precoMaiorVenda = 0;
+        $precoMenorVenda = PHP_FLOAT_MAX;
+        $produtoMaisCaro = null;
+        $produtoMaisBarato = null;
+        
+        foreach ($empresasIds as $empresaId) {
+            $produtos = $produtoModel->findAll($empresaId);
+            
+            foreach ($produtos as $produto) {
+                $totalProdutos++;
+                $custoTotal += $produto['custo_unitario'];
+                $valorVendaTotal += $produto['preco_venda'];
+                
+                // Produto mais caro
+                if ($produto['preco_venda'] > $precoMaiorVenda) {
+                    $precoMaiorVenda = $produto['preco_venda'];
+                    $produtoMaisCaro = $produto;
+                }
+                
+                // Produto mais barato
+                if ($produto['preco_venda'] < $precoMenorVenda && $produto['preco_venda'] > 0) {
+                    $precoMenorVenda = $produto['preco_venda'];
+                    $produtoMaisBarato = $produto;
+                }
+            }
+        }
+        
+        // Calcular margem média
+        $margemMedia = 0;
+        if ($custoTotal > 0) {
+            $margemMedia = (($valorVendaTotal - $custoTotal) / $custoTotal) * 100;
+        }
+        
+        $precoMedio = $totalProdutos > 0 ? $valorVendaTotal / $totalProdutos : 0;
+        $custoMedio = $totalProdutos > 0 ? $custoTotal / $totalProdutos : 0;
+        
+        return [
+            'total' => $totalProdutos,
+            'custo_total' => $custoTotal,
+            'valor_venda_total' => $valorVendaTotal,
+            'preco_medio' => $precoMedio,
+            'custo_medio' => $custoMedio,
+            'margem_media' => $margemMedia,
+            'produto_mais_caro' => $produtoMaisCaro,
+            'produto_mais_barato' => $produtoMaisBarato,
+            'lucro_potencial' => $valorVendaTotal - $custoTotal
+        ];
     }
 }
