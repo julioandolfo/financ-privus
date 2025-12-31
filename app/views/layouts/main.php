@@ -59,6 +59,10 @@
     $masksPath = '/assets/js/masks.js';
     ?>
     <script>
+        // Define base URL para uso nos scripts
+        const BASE_URL = '<?= $this->baseUrl() ?>';
+    </script>
+    <script>
         // Aplica tema imediatamente antes do conteúdo ser renderizado (evita flash)
         (function() {
             const theme = localStorage.getItem('theme') || 'system';

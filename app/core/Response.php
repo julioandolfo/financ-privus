@@ -46,6 +46,7 @@ class Response
         $this->setHeader('Content-Type', 'application/json; charset=utf-8');
         $this->body = json_encode($data, JSON_UNESCAPED_UNICODE);
         $this->send();
+        exit;
     }
     
     /**

@@ -21,10 +21,8 @@
         }
         
         try {
-            // Detecta o caminho base (similar ao baseUrl() do PHP)
-            const pathname = window.location.pathname;
-            const basePath = pathname.substring(0, pathname.lastIndexOf('/'));
-            const baseUrl = window.location.origin + basePath;
+            // Usa baseUrl definido globalmente no layout
+            const baseUrl = window.BASE_URL || '';
             
             // Usa endpoint próprio do sistema para evitar problemas de CORS
             const response = await fetch(`${baseUrl}/api/cnpj/${cnpj}`);

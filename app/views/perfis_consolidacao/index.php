@@ -144,7 +144,7 @@
 <!-- Modal de Ajuda -->
 <div 
     id="modalHelp"
-    class="fixed inset-0 z-50 overflow-y-auto hidden"
+    class="fixed inset-0 z-[9999] overflow-y-auto hidden"
 >
     <!-- Overlay -->
     <div 
