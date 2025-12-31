@@ -119,6 +119,13 @@ return [
     // Fluxo de Caixa (protegido)
     'GET /fluxo-caixa' => ['handler' => 'FluxoCaixaController@index', 'middleware' => ['AuthMiddleware']],
     
+    // DRE (protegido)
+    'GET /dre' => ['handler' => 'DREController@index', 'middleware' => ['AuthMiddleware']],
+    
+    // Configurações (protegido)
+    'GET /configuracoes' => ['handler' => 'ConfiguracaoController@index', 'middleware' => ['AuthMiddleware']],
+    'POST /configuracoes/salvar' => ['handler' => 'ConfiguracaoController@salvar', 'middleware' => ['AuthMiddleware']],
+    
     // Movimentações de Caixa (protegido)
     'GET /movimentacoes-caixa' => ['handler' => 'MovimentacaoCaixaController@index', 'middleware' => ['AuthMiddleware']],
     'GET /movimentacoes-caixa/create' => ['handler' => 'MovimentacaoCaixaController@create', 'middleware' => ['AuthMiddleware']],
