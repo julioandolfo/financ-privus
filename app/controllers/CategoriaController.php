@@ -123,6 +123,24 @@ class CategoriaController extends Controller
                 return;
             }
             
+            // Validação adicional: Se tem categoria pai, verifica compatibilidade com múltiplas empresas
+            if (!empty($data['categoria_pai_id']) && count($empresasIds) > 1) {
+                $categoriaPai = $this->categoriaModel->findById($data['categoria_pai_id']);
+                
+                if ($categoriaPai) {
+                    // Verifica se a categoria pai pertence a uma das empresas selecionadas
+                    if (!in_array($categoriaPai['empresa_id'], $empresasIds)) {
+                        $_SESSION['error'] = 'A categoria pai selecionada não pertence às empresas escolhidas. Por favor, crie a categoria sem pai ou selecione apenas uma empresa.';
+                        $this->session->set('old', $data);
+                        $response->redirect('/categorias/create');
+                        return;
+                    }
+                    
+                    // Aviso: categoria pai existe apenas em uma empresa
+                    $_SESSION['warning'] = 'ATENÇÃO: A categoria pai existe apenas na empresa "' . $categoriaPai['empresa_nome'] ?? 'selecionada' . '". A nova categoria será criada como principal nas demais empresas.';
+                }
+            }
+            
             // Cria categoria para cada empresa selecionada
             $this->categoriaModel = new CategoriaFinanceira();
             $criadas = 0;
@@ -133,6 +151,16 @@ class CategoriaController extends Controller
                 
                 // Remove empresa_ids do array de dados (não existe na tabela)
                 unset($dataCopia['empresa_ids']);
+                
+                // Se tem categoria pai, só usa se a categoria pai pertence à mesma empresa
+                if (!empty($data['categoria_pai_id'])) {
+                    $categoriaPai = $this->categoriaModel->findById($data['categoria_pai_id']);
+                    
+                    if ($categoriaPai && $categoriaPai['empresa_id'] != $empresaId) {
+                        // Se a categoria pai não pertence a esta empresa, cria como categoria principal
+                        $dataCopia['categoria_pai_id'] = null;
+                    }
+                }
                 
                 $id = $this->categoriaModel->create($dataCopia);
                 if ($id) {

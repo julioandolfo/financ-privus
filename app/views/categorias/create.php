@@ -141,6 +141,26 @@
                         </option>
                     <?php endforeach; ?>
                 </select>
+                
+                <!-- Alerta para múltiplas empresas com categoria pai -->
+                <div id="alerta-categoria-pai" class="hidden mt-3 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500">
+                    <div class="flex gap-3">
+                        <svg class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-amber-800 dark:text-amber-300 mb-1">⚠️ Atenção: Múltiplas Empresas</h4>
+                            <p class="text-sm text-amber-700 dark:text-amber-400">
+                                A categoria pai selecionada pode não existir em todas as empresas. 
+                                Nesse caso, a categoria será criada como <strong>principal</strong> nas empresas onde o pai não existe.
+                            </p>
+                            <p class="text-xs text-amber-600 dark:text-amber-500 mt-2">
+                                💡 <strong>Dica:</strong> Para garantir a hierarquia em todas as empresas, selecione apenas uma empresa por vez.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
                 <?php if (isset($this->session->get('errors')['categoria_pai_id'])): ?>
                     <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['categoria_pai_id'] ?></p>
                 <?php else: ?>
@@ -254,6 +274,37 @@ document.addEventListener('DOMContentLoaded', function() {
             updateCategoriasPai();
         }
     }, 100);
+    
+    // Controle do alerta de múltiplas empresas com categoria pai
+    const alertaCategoriaPai = document.getElementById('alerta-categoria-pai');
+    
+    function verificarAlertaCategoriaPai() {
+        const empresasIds = Array.from(empresaCheckboxes).filter(cb => cb.checked);
+        const categoriaPaiId = categoriaPaiSelect?.value;
+        
+        // Mostra alerta se: múltiplas empresas selecionadas E categoria pai escolhida
+        if (empresasIds.length > 1 && categoriaPaiId) {
+            alertaCategoriaPai?.classList.remove('hidden');
+        } else {
+            alertaCategoriaPai?.classList.add('hidden');
+        }
+    }
+    
+    // Monitora mudanças que podem afetar o alerta
+    empresaCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', verificarAlertaCategoriaPai);
+    });
+    
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', verificarAlertaCategoriaPai);
+    }
+    
+    if (categoriaPaiSelect) {
+        categoriaPaiSelect.addEventListener('change', verificarAlertaCategoriaPai);
+    }
+    
+    // Verifica ao carregar a página
+    setTimeout(verificarAlertaCategoriaPai, 100);
     
     // Validação do formulário antes de submeter
     const form = document.getElementById('formCategoria');
