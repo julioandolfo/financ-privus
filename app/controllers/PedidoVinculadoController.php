@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
+use App\Core\Database;
 use App\Models\PedidoVinculado;
 use App\Models\PedidoItem;
 use App\Models\Cliente;
@@ -15,6 +16,7 @@ class PedidoVinculadoController extends Controller
     private $itemModel;
     private $clienteModel;
     private $produtoModel;
+    private $db;
     
     public function __construct()
     {
@@ -23,6 +25,7 @@ class PedidoVinculadoController extends Controller
         $this->itemModel = new PedidoItem();
         $this->clienteModel = new Cliente();
         $this->produtoModel = new Produto();
+        $this->db = Database::getInstance()->getConnection();
     }
     
     /**
