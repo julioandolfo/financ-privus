@@ -1,3 +1,14 @@
+<?php
+// Calcula percentuais para evitar operador > dentro de atributos HTML
+$pctUsuariosAtivos = $totais['usuarios'] > 0 ? ($usuarios['ativos'] / $totais['usuarios'] * 100) : 0;
+$pctUsuariosInativos = $totais['usuarios'] > 0 ? ($usuarios['inativos'] / $totais['usuarios'] * 100) : 0;
+$pctFornecedoresPF = $totais['fornecedores'] > 0 ? ($fornecedores['pf'] / $totais['fornecedores'] * 100) : 0;
+$pctFornecedoresPJ = $totais['fornecedores'] > 0 ? ($fornecedores['pj'] / $totais['fornecedores'] * 100) : 0;
+$pctClientesPF = $totais['clientes'] > 0 ? ($clientes['pf'] / $totais['clientes'] * 100) : 0;
+$pctClientesPJ = $totais['clientes'] > 0 ? ($clientes['pj'] / $totais['clientes'] * 100) : 0;
+$pctCategoriasReceita = $totais['categorias'] > 0 ? ($categorias['receita'] / $totais['categorias'] * 100) : 0;
+$pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $totais['categorias'] * 100) : 0;
+?>
 <div class="animate-fade-in">
     <!-- Hero Banner -->
     <div class="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-800 dark:via-indigo-900 dark:to-purple-900 rounded-2xl shadow-2xl mb-8">
@@ -185,7 +196,7 @@
                         <span class="text-sm font-bold text-green-600 dark:text-green-400"><?= $usuarios['ativos'] ?></span>
                     </div>
                     <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                        <div class="bg-gradient-to-r from-green-500 to-emerald-600 h-3 rounded-full" style="width: <?= $totais['usuarios'] > 0 ? ($usuarios['ativos'] / $totais['usuarios'] * 100) : 0 ?>%"></div>
+                        <div class="bg-gradient-to-r from-green-500 to-emerald-600 h-3 rounded-full" style="width: <?= $pctUsuariosAtivos ?>%"></div>
                     </div>
                 </div>
                 <div>
@@ -194,7 +205,7 @@
                         <span class="text-sm font-bold text-red-600 dark:text-red-400"><?= $usuarios['inativos'] ?></span>
                     </div>
                     <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                        <div class="bg-gradient-to-r from-red-500 to-rose-600 h-3 rounded-full" style="width: <?= $totais['usuarios'] > 0 ? ($usuarios['inativos'] / $totais['usuarios'] * 100) : 0 ?>%"></div>
+                        <div class="bg-gradient-to-r from-red-500 to-rose-600 h-3 rounded-full" style="width: <?= $pctUsuariosInativos ?>%"></div>
                     </div>
                 </div>
             </div>
@@ -410,7 +421,8 @@
                             <span class="text-sm font-bold text-blue-600 dark:text-blue-400"><?= $contas_pagar['por_status']['pendente'] ?></span>
                         </div>
                         <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                            <div class="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full" style="width: <?= $contas_pagar['total'] > 0 ? ($contas_pagar['por_status']['pendente'] / $contas_pagar['total'] * 100) : 0 ?>%"></div>
+                            <?php $pctPendente = $contas_pagar['total'] > 0 ? ($contas_pagar['por_status']['pendente'] / $contas_pagar['total'] * 100) : 0; ?>
+                            <div class="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full" style="width: <?= $pctPendente ?>%"></div>
                         </div>
                     </div>
                     <div>
@@ -419,7 +431,8 @@
                             <span class="text-sm font-bold text-red-600 dark:text-red-400"><?= $contas_pagar['por_status']['vencido'] ?></span>
                         </div>
                         <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                            <div class="bg-gradient-to-r from-red-500 to-rose-600 h-3 rounded-full" style="width: <?= $contas_pagar['total'] > 0 ? ($contas_pagar['por_status']['vencido'] / $contas_pagar['total'] * 100) : 0 %>%"></div>
+                            <?php $pctVencido = $contas_pagar['total'] > 0 ? ($contas_pagar['por_status']['vencido'] / $contas_pagar['total'] * 100) : 0; ?>
+                            <div class="bg-gradient-to-r from-red-500 to-rose-600 h-3 rounded-full" style="width: <?= $pctVencido ?>%"></div>
                         </div>
                     </div>
                     <div>
@@ -428,7 +441,8 @@
                             <span class="text-sm font-bold text-amber-600 dark:text-amber-400"><?= $contas_pagar['por_status']['parcial'] ?></span>
                         </div>
                         <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                            <div class="bg-gradient-to-r from-amber-500 to-amber-600 h-3 rounded-full" style="width: <?= $contas_pagar['total'] > 0 ? ($contas_pagar['por_status']['parcial'] / $contas_pagar['total'] * 100) : 0 ?>%"></div>
+                            <?php $pctParcial = $contas_pagar['total'] > 0 ? ($contas_pagar['por_status']['parcial'] / $contas_pagar['total'] * 100) : 0; ?>
+                            <div class="bg-gradient-to-r from-amber-500 to-amber-600 h-3 rounded-full" style="width: <?= $pctParcial ?>%"></div>
                         </div>
                     </div>
                     <div>
@@ -437,7 +451,8 @@
                             <span class="text-sm font-bold text-green-600 dark:text-green-400"><?= $contas_pagar['por_status']['pago'] ?></span>
                         </div>
                         <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                            <div class="bg-gradient-to-r from-green-500 to-emerald-600 h-3 rounded-full" style="width: <?= $contas_pagar['total'] > 0 ? ($contas_pagar['por_status']['pago'] / $contas_pagar['total'] * 100) : 0 ?>%"></div>
+                            <?php $pctPago = $contas_pagar['total'] > 0 ? ($contas_pagar['por_status']['pago'] / $contas_pagar['total'] * 100) : 0; ?>
+                            <div class="bg-gradient-to-r from-green-500 to-emerald-600 h-3 rounded-full" style="width: <?= $pctPago ?>%"></div>
                         </div>
                     </div>
                 </div>
