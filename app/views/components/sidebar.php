@@ -127,10 +127,10 @@ $menuItems = [
     id="sidebar"
     x-data="{}"
     x-bind:class="$store.sidebar.open ? 'translate-x-0' : '-translate-x-full'"
-    class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-700 transform transition-transform duration-300 ease-in-out"
+    class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-700 transform transition-transform duration-300 ease-in-out flex flex-col"
 >
     <!-- Logo -->
-    <div class="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-slate-700">
+    <div class="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
         <div class="flex items-center space-x-3">
             <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -156,7 +156,7 @@ $menuItems = [
     </div>
 
     <!-- Menu Items -->
-    <nav class="flex-1 overflow-y-auto py-4 px-3">
+    <nav class="flex-1 overflow-y-auto py-4 px-3 min-h-0">
         <ul class="space-y-1">
             <?php foreach ($menuItems as $item): ?>
                 <li>
@@ -179,7 +179,7 @@ $menuItems = [
     </nav>
 
     <!-- Footer Sidebar -->
-    <div class="border-t border-gray-200 dark:border-slate-700 p-4 space-y-2">
+    <div class="border-t border-gray-200 dark:border-slate-700 p-4 space-y-2 flex-shrink-0">
         <a href="<?= $basePath ?>/minha-conta" 
            class="flex items-center gap-3 px-2 py-2 rounded-lg bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors <?= $isActive('/minha-conta') ? 'bg-blue-50 dark:bg-blue-900/20' : '' ?>">
             <?php 
@@ -233,6 +233,44 @@ $menuItems = [
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
     </svg>
 </button>
+
+<style>
+    /* Scrollbar customizada para o sidebar */
+    #sidebar nav::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    #sidebar nav::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    
+    #sidebar nav::-webkit-scrollbar-thumb {
+        background: rgba(156, 163, 175, 0.5);
+        border-radius: 3px;
+    }
+    
+    #sidebar nav::-webkit-scrollbar-thumb:hover {
+        background: rgba(156, 163, 175, 0.7);
+    }
+    
+    .dark #sidebar nav::-webkit-scrollbar-thumb {
+        background: rgba(100, 116, 139, 0.5);
+    }
+    
+    .dark #sidebar nav::-webkit-scrollbar-thumb:hover {
+        background: rgba(100, 116, 139, 0.7);
+    }
+    
+    /* Firefox */
+    #sidebar nav {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+    }
+    
+    .dark #sidebar nav {
+        scrollbar-color: rgba(100, 116, 139, 0.5) transparent;
+    }
+</style>
 
 <script>
     // Inicializa store do Alpine para controlar sidebar
