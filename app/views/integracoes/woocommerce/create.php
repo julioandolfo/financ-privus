@@ -47,7 +47,7 @@
         </div>
 
         <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-            <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-4">Configurações de Sincronização</h3>
+            <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-4">⚙️ Configurações de Sincronização</h3>
             
             <div class="flex items-center gap-3 mb-3">
                 <input type="checkbox" name="sincronizar_produtos" value="1" checked class="w-5 h-5 text-purple-600 rounded">
@@ -62,6 +62,32 @@
             <div class="mt-4">
                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Intervalo de Sincronização (minutos)</label>
                 <input type="number" name="intervalo_sincronizacao" value="<?= $this->session->get('old')['intervalo_sincronizacao'] ?? '60' ?>" min="5" max="1440" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+            </div>
+        </div>
+
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-4">🔗 Webhooks (Opcional)</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Configure webhooks no WooCommerce para receber atualizações em tempo real</p>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Webhook Secret (opcional)</label>
+                <input type="text" name="webhook_secret" value="<?= htmlspecialchars($this->session->get('old')['webhook_secret'] ?? '') ?>" placeholder="Gere uma chave secreta no WooCommerce" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 font-mono text-sm">
+                <p class="mt-1 text-xs text-gray-500">Use a mesma chave configurada nos webhooks do WooCommerce</p>
+            </div>
+
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
+                <p class="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">📌 URL do Webhook (copie para o WooCommerce):</p>
+                <div class="flex gap-2">
+                    <code id="webhookUrl" class="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-blue-300 dark:border-blue-600 rounded-lg text-sm text-blue-600 dark:text-blue-400 overflow-x-auto">
+                        <?= $this->baseUrl('/webhook/woocommerce/{ID_DA_INTEGRACAO}') ?>
+                    </code>
+                    <button type="button" onclick="copiarWebhookUrl()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors">
+                        📋 Copiar
+                    </button>
+                </div>
+                <p class="mt-2 text-xs text-blue-700 dark:text-blue-400">
+                    💡 Substitua {ID_DA_INTEGRACAO} pelo ID que será gerado após salvar esta integração
+                </p>
             </div>
         </div>
 
@@ -105,6 +131,15 @@ function testarConexao() {
         alert(d.sucesso ? '✓ ' + d.mensagem : '✗ ' + d.mensagem);
     })
     .catch(() => alert('Erro ao testar conexão'));
+}
+
+function copiarWebhookUrl() {
+    const url = document.getElementById('webhookUrl').textContent.trim();
+    navigator.clipboard.writeText(url).then(() => {
+        alert('✓ URL copiada para a área de transferência!');
+    }).catch(() => {
+        alert('✗ Erro ao copiar. Por favor, copie manualmente.');
+    });
 }
 </script>
 

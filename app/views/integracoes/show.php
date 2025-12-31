@@ -9,25 +9,166 @@
                 <?= htmlspecialchars($integracao['nome']) ?>
             </h1>
         </div>
-        <button onclick="sincronizar()" id="btnSincronizar" class="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg transition-all">
+        <button onclick="abrirModalSincronizacao()" id="btnSincronizar" class="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg transition-all">
             🔄 Sincronizar Agora
         </button>
     </div>
 
+    <!-- Modal de Opções de Sincronização -->
+    <div id="modalSincronizacao" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onclick="fecharModal(event)">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full mx-4 p-8" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-start mb-6">
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">⚙️ Opções de Sincronização</h2>
+                <button onclick="fecharModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="formSincronizacao" class="space-y-6">
+                <!-- Tipo de Sincronização -->
+                <?php if ($integracao['tipo'] === 'woocommerce'): ?>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">O que sincronizar?</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <input type="checkbox" name="sincronizar_produtos" value="1" checked class="w-5 h-5 text-green-600 rounded">
+                            <span class="text-gray-900 dark:text-gray-100">📦 Produtos</span>
+                        </label>
+                        <label class="flex items-center gap-3 p-3 border border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <input type="checkbox" name="sincronizar_pedidos" value="1" checked class="w-5 h-5 text-green-600 rounded">
+                            <span class="text-gray-900 dark:text-gray-100">🛒 Pedidos</span>
+                        </label>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- Filtro por Período -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Período</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <label class="flex items-center gap-2 p-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:border-green-500 has-[:checked]:border-green-500 has-[:checked]:bg-green-50 dark:has-[:checked]:bg-green-900/20">
+                            <input type="radio" name="periodo" value="todos" checked class="w-4 h-4 text-green-600">
+                            <span class="text-sm text-gray-900 dark:text-gray-100">📅 Todos</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:border-green-500 has-[:checked]:border-green-500 has-[:checked]:bg-green-50 dark:has-[:checked]:bg-green-900/20">
+                            <input type="radio" name="periodo" value="7dias" class="w-4 h-4 text-green-600">
+                            <span class="text-sm text-gray-900 dark:text-gray-100">🕐 7 dias</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:border-green-500 has-[:checked]:border-green-500 has-[:checked]:bg-green-50 dark:has-[:checked]:bg-green-900/20">
+                            <input type="radio" name="periodo" value="30dias" class="w-4 h-4 text-green-600">
+                            <span class="text-sm text-gray-900 dark:text-gray-100">📆 30 dias</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Período Customizado -->
+                <div>
+                    <label class="flex items-center gap-2 mb-3">
+                        <input type="checkbox" id="checkPeriodoCustom" onchange="togglePeriodoCustom()" class="w-4 h-4 text-green-600 rounded">
+                        <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">🎯 Período Personalizado</span>
+                    </label>
+                    <div id="periodoCustom" class="hidden grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Data Início</label>
+                            <input type="date" name="data_inicio" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">Data Fim</label>
+                            <input type="date" name="data_fim" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Limite de Registros -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Limite de Registros</label>
+                    <select name="limite" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <option value="50">50 registros</option>
+                        <option value="100">100 registros</option>
+                        <option value="250">250 registros</option>
+                        <option value="500">500 registros</option>
+                        <option value="0">Sem limite</option>
+                    </select>
+                </div>
+
+                <!-- Botões -->
+                <div class="flex gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button type="button" onclick="executarSincronizacao()" class="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all">
+                        ▶️ Iniciar Sincronização
+                    </button>
+                    <button type="button" onclick="fecharModal()" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl transition-all">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
-    function sincronizar() {
+    function abrirModalSincronizacao() {
+        document.getElementById('modalSincronizacao').classList.remove('hidden');
+    }
+
+    function fecharModal(event) {
+        if (!event || event.target.id === 'modalSincronizacao') {
+            document.getElementById('modalSincronizacao').classList.add('hidden');
+        }
+    }
+
+    function togglePeriodoCustom() {
+        const check = document.getElementById('checkPeriodoCustom');
+        const div = document.getElementById('periodoCustom');
+        if (check.checked) {
+            div.classList.remove('hidden');
+            document.querySelectorAll('input[name="periodo"]').forEach(r => r.checked = false);
+        } else {
+            div.classList.add('hidden');
+        }
+    }
+
+    function executarSincronizacao() {
+        const form = document.getElementById('formSincronizacao');
+        const formData = new FormData(form);
+        const opcoes = {};
+        
+        // Coleta opções
+        formData.forEach((value, key) => {
+            if (key === 'sincronizar_produtos' || key === 'sincronizar_pedidos') {
+                opcoes[key] = true;
+            } else {
+                opcoes[key] = value;
+            }
+        });
+
+        // Verifica período customizado
+        if (document.getElementById('checkPeriodoCustom').checked) {
+            opcoes.periodo = 'custom';
+        }
+
+        // Fecha modal e inicia sincronização
+        fecharModal();
         const btn = document.getElementById('btnSincronizar');
         btn.disabled = true;
         btn.innerHTML = '⏳ Sincronizando...';
         
         fetch('<?= $this->baseUrl('/integracoes/' . $integracao['id'] . '/sincronizar') ?>', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'}
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(opcoes)
         })
         .then(r => r.json())
         .then(d => {
             if (d.sucesso) {
-                alert('✓ Sincronização concluída com sucesso!');
+                let msg = '✓ Sincronização concluída!';
+                if (d.resultados) {
+                    if (d.resultados.produtos) msg += `\n📦 Produtos: ${d.resultados.produtos}`;
+                    if (d.resultados.pedidos) msg += `\n🛒 Pedidos: ${d.resultados.pedidos}`;
+                } else if (d.total) {
+                    msg += `\n✓ Total: ${d.total} registros`;
+                }
+                alert(msg);
                 location.reload();
             } else {
                 alert('✗ Erro: ' + (d.erro || 'Erro desconhecido'));
@@ -39,6 +180,15 @@
             alert('Erro ao sincronizar: ' + e.message);
             btn.disabled = false;
             btn.innerHTML = '🔄 Sincronizar Agora';
+        });
+    }
+
+    function copiarWebhookUrlShow() {
+        const url = document.getElementById('webhookUrlShow').textContent.trim();
+        navigator.clipboard.writeText(url).then(() => {
+            alert('✓ URL do Webhook copiada!');
+        }).catch(() => {
+            alert('✗ Erro ao copiar. Copie manualmente.');
         });
     }
     </script>
@@ -80,6 +230,21 @@
                             <dd class="mt-1 flex gap-2">
                                 <?= $configuracao['sincronizar_produtos'] ? '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Produtos</span>' : '' ?>
                                 <?= $configuracao['sincronizar_pedidos'] ? '<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Pedidos</span>' : '' ?>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-semibold text-gray-600 dark:text-gray-400">Webhook URL</dt>
+                            <dd class="mt-1">
+                                <div class="flex gap-2 items-center">
+                                    <code id="webhookUrlShow" class="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded flex-1 overflow-x-auto">
+                                        <?= $this->baseUrl('/webhook/woocommerce/' . $integracao['id']) ?>
+                                    </code>
+                                    <button onclick="copiarWebhookUrlShow()" class="p-1.5 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded transition-colors" title="Copiar URL">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                        </svg>
+                                    </button>
+                                </div>
                             </dd>
                         </div>
                     <?php elseif ($integracao['tipo'] === 'banco_dados'): ?>

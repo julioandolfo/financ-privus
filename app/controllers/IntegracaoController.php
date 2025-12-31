@@ -340,7 +340,7 @@ class IntegracaoController extends Controller
     }
     
     /**
-     * Sincronização manual
+     * Sincronização manual com opções
      */
     public function sincronizar(Request $request, Response $response, $id)
     {
@@ -351,14 +351,17 @@ class IntegracaoController extends Controller
         }
         
         try {
+            // Captura opções de sincronização
+            $opcoes = $request->all();
+            
             $resultado = null;
             
             if ($integracao['tipo'] === IntegracaoConfig::TIPO_WOOCOMMERCE) {
                 $service = new WooCommerceService();
-                $resultado = $service->sincronizar($id);
+                $resultado = $service->sincronizar($id, $opcoes);
             } elseif ($integracao['tipo'] === IntegracaoConfig::TIPO_BANCO_DADOS) {
                 $service = new IntegracaoBancoDadosService();
-                $resultado = $service->sincronizar($id);
+                $resultado = $service->sincronizar($id, $opcoes);
             }
             
             if ($resultado && $resultado['sucesso']) {
@@ -370,6 +373,57 @@ class IntegracaoController extends Controller
         } catch (\Exception $e) {
             $this->logModel->create($id, IntegracaoLog::TIPO_ERRO, 'Erro na sincronização manual: ' . $e->getMessage());
             return $response->json(['sucesso' => false, 'erro' => $e->getMessage()], 500);
+        }
+    }
+    
+    /**
+     * Webhook do WooCommerce
+     */
+    public function webhook(Request $request, Response $response, $integracaoId)
+    {
+        $integracao = $this->integracaoModel->findById($integracaoId);
+        
+        if (!$integracao || $integracao['tipo'] !== IntegracaoConfig::TIPO_WOOCOMMERCE) {
+            return $response->json(['erro' => 'Integração inválida'], 404);
+        }
+        
+        $config = $this->woocommerceModel->findByIntegracaoId($integracaoId);
+        
+        if (!$config) {
+            return $response->json(['erro' => 'Configuração não encontrada'], 404);
+        }
+        
+        try {
+            // Verifica assinatura do webhook
+            $signature = $_SERVER['HTTP_X_WC_WEBHOOK_SIGNATURE'] ?? '';
+            $payload = file_get_contents('php://input');
+            
+            if ($config['webhook_secret']) {
+                $expectedSignature = base64_encode(hash_hmac('sha256', $payload, $config['webhook_secret'], true));
+                if ($signature !== $expectedSignature) {
+                    $this->logModel->create($integracaoId, IntegracaoLog::TIPO_ERRO, 'Webhook: Assinatura inválida');
+                    return $response->json(['erro' => 'Assinatura inválida'], 401);
+                }
+            }
+            
+            // Processa webhook
+            $data = json_decode($payload, true);
+            $topic = $_SERVER['HTTP_X_WC_WEBHOOK_TOPIC'] ?? '';
+            
+            $service = new WooCommerceService();
+            $resultado = $service->processarWebhook($integracaoId, $topic, $data, $integracao['empresa_id']);
+            
+            if ($resultado['sucesso']) {
+                $this->logModel->create($integracaoId, IntegracaoLog::TIPO_SUCESSO, "Webhook processado: {$topic}");
+                return $response->json(['sucesso' => true]);
+            } else {
+                $this->logModel->create($integracaoId, IntegracaoLog::TIPO_ERRO, "Webhook falhou: {$resultado['erro']}");
+                return $response->json(['erro' => $resultado['erro']], 400);
+            }
+            
+        } catch (\Exception $e) {
+            $this->logModel->create($integracaoId, IntegracaoLog::TIPO_ERRO, 'Erro no webhook: ' . $e->getMessage());
+            return $response->json(['erro' => $e->getMessage()], 500);
         }
     }
     

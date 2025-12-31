@@ -23,9 +23,9 @@ class IntegracaoBancoDadosService
     }
     
     /**
-     * Executa sincronização
+     * Executa sincronização com opções
      */
-    public function sincronizar($integracaoId)
+    public function sincronizar($integracaoId, $opcoes = [])
     {
         $integracao = $this->integracaoModel->findById($integracaoId);
         
@@ -43,8 +43,8 @@ class IntegracaoBancoDadosService
             // Conecta ao banco externo
             $pdoExterno = $this->conectarBancoExterno($config);
             
-            // Busca dados
-            $dados = $this->buscarDados($pdoExterno, $config);
+            // Busca dados com filtros
+            $dados = $this->buscarDados($pdoExterno, $config, $opcoes);
             
             // Importa dados
             $total = $this->importarDados($dados, $config, $integracao['empresa_id']);
@@ -79,18 +79,57 @@ class IntegracaoBancoDadosService
     }
     
     /**
-     * Busca dados do banco externo
+     * Busca dados do banco externo com filtros
      */
-    private function buscarDados($pdo, $config)
+    private function buscarDados($pdo, $config, $opcoes = [])
     {
         $sql = "SELECT * FROM {$config['tabela_origem']}";
+        $where = [];
         
-        // Adiciona condições se houver
+        // Adiciona condições configuradas
         if (!empty($config['condicoes'])) {
             $condicoes = json_decode($config['condicoes'], true);
             if (!empty($condicoes)) {
-                $sql .= " WHERE " . implode(' AND ', $condicoes);
+                $where = array_merge($where, $condicoes);
             }
+        }
+        
+        // Filtro por período (assume coluna data_criacao ou similar)
+        if (isset($opcoes['periodo']) && $opcoes['periodo'] !== 'todos') {
+            $dataFim = date('Y-m-d 23:59:59');
+            $dataInicio = null;
+            
+            switch ($opcoes['periodo']) {
+                case '7dias':
+                    $dataInicio = date('Y-m-d 00:00:00', strtotime('-7 days'));
+                    break;
+                case '30dias':
+                    $dataInicio = date('Y-m-d 00:00:00', strtotime('-30 days'));
+                    break;
+                case 'custom':
+                    if (isset($opcoes['data_inicio'])) {
+                        $dataInicio = date('Y-m-d 00:00:00', strtotime($opcoes['data_inicio']));
+                    }
+                    if (isset($opcoes['data_fim'])) {
+                        $dataFim = date('Y-m-d 23:59:59', strtotime($opcoes['data_fim']));
+                    }
+                    break;
+            }
+            
+            if ($dataInicio) {
+                // Assume que existe uma coluna de data (ajustar conforme necessário)
+                $where[] = "created_at >= '{$dataInicio}'";
+                $where[] = "created_at <= '{$dataFim}'";
+            }
+        }
+        
+        if (!empty($where)) {
+            $sql .= " WHERE " . implode(' AND ', $where);
+        }
+        
+        // Limite de registros
+        if (isset($opcoes['limite']) && $opcoes['limite'] > 0) {
+            $sql .= " LIMIT " . intval($opcoes['limite']);
         }
         
         $stmt = $pdo->query($sql);

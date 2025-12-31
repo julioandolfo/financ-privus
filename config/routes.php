@@ -206,5 +206,8 @@ return [
     'POST /integracoes/{id}/toggle' => ['handler' => 'IntegracaoController@toggleStatus', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/testar-woocommerce' => ['handler' => 'IntegracaoController@testarWooCommerce', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/testar-banco-dados' => ['handler' => 'IntegracaoController@testarBancoDados', 'middleware' => ['AuthMiddleware']],
+    
+    // Webhook (público - sem middleware)
+    'POST /webhook/woocommerce/{integracaoId}' => ['handler' => 'IntegracaoController@webhook'],
 ];
 
