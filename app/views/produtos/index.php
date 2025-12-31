@@ -5,12 +5,22 @@
             <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Produtos</h1>
             <p class="text-gray-600 dark:text-gray-400 mt-1">Gerencie o catálogo de produtos da sua empresa</p>
         </div>
-        <a href="/produtos/create" class="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl flex items-center space-x-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            <span>Novo Produto</span>
-        </a>
+        <div class="flex gap-3">
+            <a href="<?= $this->baseUrl('/produtos/relatorio-estoque') ?>" 
+               class="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl hover:from-red-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                <span>Estoque Baixo</span>
+            </a>
+            <a href="<?= $this->baseUrl('/produtos/create') ?>" 
+               class="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                <span>Novo Produto</span>
+            </a>
+        </div>
     </div>
 
     <!-- Cards de Estatísticas -->
@@ -72,21 +82,48 @@
 
     <!-- Filtros -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <form method="GET" action="/produtos" class="flex items-end space-x-4">
-            <div class="flex-1">
+        <form method="GET" action="<?= $this->baseUrl('/produtos') ?>" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Buscar</label>
                 <input type="text" name="busca" value="<?= htmlspecialchars($filters['busca'] ?? '') ?>" 
-                       placeholder="Código ou nome do produto..."
+                       placeholder="Código ou nome..."
                        class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
             </div>
-            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                Buscar
-            </button>
-            <?php if (!empty($filters['busca'])): ?>
-                <a href="/produtos" class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Categoria</label>
+                <select name="categoria_id" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    <option value="">Todas</option>
+                    <?php 
+                    $categoriaModel = new \App\Models\CategoriaProduto();
+                    $empresaId = $this->session->get('empresa_id');
+                    $categorias = $categoriaModel->getFlatList($empresaId);
+                    foreach ($categorias as $cat): ?>
+                        <option value="<?= $cat['id'] ?>" <?= (($filters['categoria_id'] ?? '') == $cat['id']) ? 'selected' : '' ?>>
+                            <?= str_repeat('—', $cat['level']) ?> <?= htmlspecialchars($cat['nome']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Estoque</label>
+                <select name="estoque_status" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    <option value="">Todos</option>
+                    <option value="baixo" <?= (($filters['estoque_status'] ?? '') === 'baixo') ? 'selected' : '' ?>>Estoque Baixo</option>
+                    <option value="ok" <?= (($filters['estoque_status'] ?? '') === 'ok') ? 'selected' : '' ?>>Estoque OK</option>
+                    <option value="zero" <?= (($filters['estoque_status'] ?? '') === 'zero') ? 'selected' : '' ?>>Sem Estoque</option>
+                </select>
+            </div>
+            
+            <div class="md:col-span-2 flex items-end gap-2">
+                <button type="submit" class="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    🔍 Buscar
+                </button>
+                <a href="<?= $this->baseUrl('/produtos') ?>" class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
                     Limpar
                 </a>
-            <?php endif; ?>
+            </div>
         </form>
     </div>
 

@@ -36,7 +36,9 @@ class ProdutoController extends Controller
         $empresaId = $this->session->get('empresa_id');
         
         $filters = [
-            'busca' => $request->get('busca')
+            'busca' => $request->get('busca'),
+            'categoria_id' => $request->get('categoria_id'),
+            'estoque_status' => $request->get('estoque_status')
         ];
         
         $produtos = $this->produtoModel->findAll($empresaId, $filters);
@@ -432,5 +434,35 @@ class ProdutoController extends Controller
         $codigo = '789' . str_pad(rand(0, 9999999999), 10, '0', STR_PAD_LEFT);
         
         return $response->json(['success' => true, 'codigo' => $codigo]);
+    }
+    
+    /**
+     * Relatório de estoque baixo
+     */
+    public function relatorioEstoque(Request $request, Response $response)
+    {
+        $empresaId = $this->session->get('empresa_id');
+        
+        // Buscar produtos com estoque baixo
+        $produtosEstoqueBaixo = $this->produtoModel->getProdutosEstoqueBaixo($empresaId);
+        
+        // Estatísticas
+        $totalProdutos = $this->produtoModel->count($empresaId);
+        $totalEstoqueBaixo = count($produtosEstoqueBaixo);
+        $percentualCritico = $totalProdutos > 0 ? ($totalEstoqueBaixo / $totalProdutos) * 100 : 0;
+        
+        // Calcular valor total em risco
+        $valorEmRisco = 0;
+        foreach ($produtosEstoqueBaixo as $produto) {
+            $valorEmRisco += $produto['preco_venda'] * $produto['estoque'];
+        }
+        
+        return $this->render('produtos/relatorio_estoque', [
+            'produtos' => $produtosEstoqueBaixo,
+            'totalProdutos' => $totalProdutos,
+            'totalEstoqueBaixo' => $totalEstoqueBaixo,
+            'percentualCritico' => $percentualCritico,
+            'valorEmRisco' => $valorEmRisco
+        ]);
     }
 }

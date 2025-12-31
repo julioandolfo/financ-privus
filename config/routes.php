@@ -87,6 +87,8 @@ return [
     
     // Produtos (protegido)
     'GET /produtos' => ['handler' => 'ProdutoController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /produtos/relatorio-estoque' => ['handler' => 'ProdutoController@relatorioEstoque', 'middleware' => ['AuthMiddleware']],
+    'GET /produtos/gerar-codigo-barras' => ['handler' => 'ProdutoController@gerarCodigoBarras', 'middleware' => ['AuthMiddleware']],
     'GET /produtos/create' => ['handler' => 'ProdutoController@create', 'middleware' => ['AuthMiddleware']],
     'POST /produtos' => ['handler' => 'ProdutoController@store', 'middleware' => ['AuthMiddleware']],
     'GET /produtos/{id}' => ['handler' => 'ProdutoController@show', 'middleware' => ['AuthMiddleware']],
@@ -99,7 +101,6 @@ return [
     'POST /produtos/{id}/variacoes' => ['handler' => 'ProdutoController@addVariacao', 'middleware' => ['AuthMiddleware']],
     'POST /produtos/variacoes/{id}' => ['handler' => 'ProdutoController@updateVariacao', 'middleware' => ['AuthMiddleware']],
     'POST /produtos/variacoes/{id}/delete' => ['handler' => 'ProdutoController@deleteVariacao', 'middleware' => ['AuthMiddleware']],
-    'GET /produtos/gerar-codigo-barras' => ['handler' => 'ProdutoController@gerarCodigoBarras', 'middleware' => ['AuthMiddleware']],
     
     // Categorias de Produtos (protegido)
     'GET /categorias-produtos' => ['handler' => 'CategoriaProdutoController@index', 'middleware' => ['AuthMiddleware']],

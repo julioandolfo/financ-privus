@@ -42,6 +42,27 @@ class Produto extends Model
             $params['busca'] = '%' . $filters['busca'] . '%';
         }
         
+        // Filtro por categoria
+        if (!empty($filters['categoria_id'])) {
+            $sql .= " AND p.categoria_id = :categoria_id";
+            $params['categoria_id'] = $filters['categoria_id'];
+        }
+        
+        // Filtro por status de estoque
+        if (!empty($filters['estoque_status'])) {
+            switch ($filters['estoque_status']) {
+                case 'baixo':
+                    $sql .= " AND p.estoque <= p.estoque_minimo";
+                    break;
+                case 'ok':
+                    $sql .= " AND p.estoque > p.estoque_minimo";
+                    break;
+                case 'zero':
+                    $sql .= " AND p.estoque = 0";
+                    break;
+            }
+        }
+        
         $sql .= " ORDER BY p.nome ASC";
         
         $stmt = $this->db->prepare($sql);
@@ -256,5 +277,25 @@ class Produto extends Model
         $stmt->execute(['empresa_id' => $empresaId]);
         
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    /**
+     * Obter produtos com estoque baixo (estoque <= estoque_minimo)
+     */
+    public function getProdutosEstoqueBaixo($empresaId)
+    {
+        $sql = "SELECT p.*, 
+                       c.nome as categoria_nome
+                FROM {$this->table} p
+                LEFT JOIN categorias_produtos c ON p.categoria_id = c.id
+                WHERE p.empresa_id = :empresa_id 
+                AND p.ativo = 1
+                AND p.estoque <= p.estoque_minimo
+                ORDER BY (p.estoque_minimo - p.estoque) DESC, p.nome ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['empresa_id' => $empresaId]);
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 }
