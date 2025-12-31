@@ -200,12 +200,15 @@ return [
     'GET /integracoes/create/{tipo}' => ['handler' => 'IntegracaoController@createTipo', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/woocommerce' => ['handler' => 'IntegracaoController@storeWooCommerce', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/banco-dados' => ['handler' => 'IntegracaoController@storeBancoDados', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/webhook' => ['handler' => 'IntegracaoController@storeWebhook', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/api' => ['handler' => 'IntegracaoController@storeApi', 'middleware' => ['AuthMiddleware']],
     'GET /integracoes/{id}' => ['handler' => 'IntegracaoController@show', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/{id}/sincronizar' => ['handler' => 'IntegracaoController@sincronizar', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/{id}/delete' => ['handler' => 'IntegracaoController@destroy', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/{id}/toggle' => ['handler' => 'IntegracaoController@toggleStatus', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/testar-woocommerce' => ['handler' => 'IntegracaoController@testarWooCommerce', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/testar-banco-dados' => ['handler' => 'IntegracaoController@testarBancoDados', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/testar-api' => ['handler' => 'IntegracaoController@testarApi', 'middleware' => ['AuthMiddleware']],
     
     // Webhook (público - sem middleware)
     'POST /webhook/woocommerce/{integracaoId}' => ['handler' => 'IntegracaoController@webhook'],

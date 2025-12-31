@@ -55,11 +55,44 @@
         </a>
     </div>
 
-    <!-- Em breve -->
-    <div class="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6">
-        <h3 class="text-lg font-bold text-blue-900 dark:text-blue-100 mb-2">🚀 Em Breve</h3>
-        <p class="text-blue-700 dark:text-blue-300 text-sm">
-            Mais integrações estão chegando: Bling, Mercado Livre, APIs REST personalizadas, Webhooks e muito mais!
-        </p>
+        <!-- Webhook -->
+        <a href="<?= $this->baseUrl('/integracoes/create/webhook') ?>" 
+           class="group block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-8 hover:shadow-2xl hover:border-green-500 dark:hover:border-green-600 transition-all duration-300 transform hover:-translate-y-1">
+            <div class="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <svg class="w-10 h-10 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Webhook</h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">
+                Envie dados em tempo real para URLs externas quando eventos ocorrem no sistema (criar pedido, atualizar produto, etc).
+            </p>
+            <div class="flex items-center text-green-600 dark:text-green-400 font-semibold">
+                Configurar agora
+                <svg class="w-5 h-5 ml-2 group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                </svg>
+            </div>
+        </a>
+
+        <!-- API REST -->
+        <a href="<?= $this->baseUrl('/integracoes/create/api') ?>" 
+           class="group block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-8 hover:shadow-2xl hover:border-orange-500 dark:hover:border-orange-600 transition-all duration-300 transform hover:-translate-y-1">
+            <div class="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <svg class="w-10 h-10 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">API REST</h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">
+                Consuma APIs REST, GraphQL ou SOAP externas. Perfeito para integrar com ERPs, CRMs e outros sistemas.
+            </p>
+            <div class="flex items-center text-orange-600 dark:text-orange-400 font-semibold">
+                Configurar agora
+                <svg class="w-5 h-5 ml-2 group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                </svg>
+            </div>
+        </a>
     </div>
 </div>

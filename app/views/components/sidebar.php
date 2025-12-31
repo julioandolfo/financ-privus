@@ -1,7 +1,7 @@
 <?php
 /**
- * Sidebar de navegação do sistema
- * Suporta tema dark/light/system
+ * Sidebar de navegação do sistema - REORGANIZADO
+ * Suporta tema dark/light/system e menus/submenus
  */
 $currentPath = $_SERVER['REQUEST_URI'] ?? '/';
 $basePath = dirname($_SERVER['SCRIPT_NAME'] ?? '/');
@@ -15,7 +15,7 @@ $isActive = function($path) use ($currentPath, $basePath) {
     return strpos($currentPath, $fullPath) === 0 || $currentPath === $fullPath;
 };
 
-// Menu items
+// Menu items organizado hierarquicamente
 $menuItems = [
     [
         'title' => 'Dashboard',
@@ -24,124 +24,134 @@ $menuItems = [
         'active' => $isActive('/') && !$isActive('/empresas') && !$isActive('/usuarios')
     ],
     [
-        'title' => 'Empresas',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>',
-        'path' => '/empresas',
-        'active' => $isActive('/empresas')
-    ],
-    [
-        'title' => 'Usuários',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>',
-        'path' => '/usuarios',
-        'active' => $isActive('/usuarios')
-    ],
-    [
-        'title' => 'Fornecedores',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>',
-        'path' => '/fornecedores',
-        'active' => $isActive('/fornecedores')
-    ],
-    [
-        'title' => 'Clientes',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>',
-        'path' => '/clientes',
-        'active' => $isActive('/clientes')
-    ],
-    [
-        'title' => 'Categorias',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>',
-        'path' => '/categorias',
-        'active' => $isActive('/categorias')
-    ],
-    [
-        'title' => 'Centros de Custo',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>',
-        'path' => '/centros-custo',
-        'active' => $isActive('/centros-custo')
-    ],
-    [
-        'title' => 'Formas de Pagamento',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>',
-        'path' => '/formas-pagamento',
-        'active' => $isActive('/formas-pagamento')
+        'title' => 'Cadastros',
+        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>',
+        'submenu' => [
+            [
+                'title' => 'Empresas',
+                'path' => '/empresas',
+                'active' => $isActive('/empresas')
+            ],
+            [
+                'title' => 'Usuários',
+                'path' => '/usuarios',
+                'active' => $isActive('/usuarios')
+            ],
+            [
+                'title' => 'Fornecedores',
+                'path' => '/fornecedores',
+                'active' => $isActive('/fornecedores')
+            ],
+            [
+                'title' => 'Clientes',
+                'path' => '/clientes',
+                'active' => $isActive('/clientes')
+            ],
+        ]
     ],
     [
         'title' => 'Produtos',
         'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>',
-        'path' => '/produtos',
-        'active' => $isActive('/produtos')
+        'submenu' => [
+            [
+                'title' => 'Produtos',
+                'path' => '/produtos',
+                'active' => $isActive('/produtos')
+            ],
+            [
+                'title' => 'Categorias',
+                'path' => '/categorias-produtos',
+                'active' => $isActive('/categorias-produtos')
+            ],
+            [
+                'title' => 'Pedidos',
+                'path' => '/pedidos',
+                'active' => $isActive('/pedidos')
+            ],
+        ]
     ],
     [
-        'title' => 'Categorias de Produtos',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>',
-        'path' => '/categorias-produtos',
-        'active' => $isActive('/categorias-produtos')
+        'title' => 'Financeiro',
+        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>',
+        'submenu' => [
+            [
+                'title' => 'Categorias Financeiras',
+                'path' => '/categorias',
+                'active' => $isActive('/categorias')
+            ],
+            [
+                'title' => 'Centros de Custo',
+                'path' => '/centros-custo',
+                'active' => $isActive('/centros-custo')
+            ],
+            [
+                'title' => 'Formas de Pagamento',
+                'path' => '/formas-pagamento',
+                'active' => $isActive('/formas-pagamento')
+            ],
+            [
+                'title' => 'Contas Bancárias',
+                'path' => '/contas-bancarias',
+                'active' => $isActive('/contas-bancarias')
+            ],
+        ]
     ],
     [
-        'title' => 'Pedidos',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>',
-        'path' => '/pedidos',
-        'active' => $isActive('/pedidos')
-    ],
-    [
-        'title' => 'Contas Bancárias',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
-        'path' => '/contas-bancarias',
-        'active' => $isActive('/contas-bancarias')
-    ],
-    [
-        'title' => 'Conciliação Bancária',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>',
-        'path' => '/conciliacao-bancaria',
-        'active' => $isActive('/conciliacao-bancaria')
-    ],
-    [
-        'title' => 'Contas a Pagar',
+        'title' => 'Contas',
         'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
-        'path' => '/contas-pagar',
-        'active' => $isActive('/contas-pagar')
-    ],
-    [
-        'title' => 'Contas a Receber',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
-        'path' => '/contas-receber',
-        'active' => $isActive('/contas-receber')
-    ],
-    [
-        'title' => 'Movimentações de Caixa',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>',
-        'path' => '/movimentacoes-caixa',
-        'active' => $isActive('/movimentacoes-caixa')
-    ],
-    [
-        'title' => 'Relatório de Fluxo de Caixa',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>',
-        'path' => '/fluxo-caixa',
-        'active' => $isActive('/fluxo-caixa')
-    ],
-    [
-        'title' => 'DRE',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>',
-        'path' => '/dre',
-        'active' => $isActive('/dre')
-    ],
-    [
-        'title' => 'DFC',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>',
-        'path' => '/dfc',
-        'active' => $isActive('/dfc')
-    ],
-    [
-        'title' => 'Conciliação',
-        'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>',
-        'path' => '/conciliacao',
-        'active' => $isActive('/conciliacao')
+        'submenu' => [
+            [
+                'title' => 'Contas a Pagar',
+                'path' => '/contas-pagar',
+                'active' => $isActive('/contas-pagar')
+            ],
+            [
+                'title' => 'Contas a Receber',
+                'path' => '/contas-receber',
+                'active' => $isActive('/contas-receber')
+            ],
+            [
+                'title' => 'Movimentações de Caixa',
+                'path' => '/movimentacoes-caixa',
+                'active' => $isActive('/movimentacoes-caixa')
+            ],
+            [
+                'title' => 'Conciliação Bancária',
+                'path' => '/conciliacao-bancaria',
+                'active' => $isActive('/conciliacao-bancaria')
+            ],
+        ]
     ],
     [
         'title' => 'Relatórios',
         'icon' => '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>',
-        'path' => '/relatorios',
-        'active' => $isActive('/relatorios')
+        'submenu' => [
+            [
+                'title' => 'Fluxo de Caixa',
+                'path' => '/fluxo-caixa',
+                'active' => $isActive('/fluxo-caixa')
+            ],
+            [
+                'title' => 'DRE',
+                'path' => '/dre',
+                'active' => $isActive('/dre')
+            ],
+            [
+                'title' => 'DFC',
+                'path' => '/dfc',
+                'active' => $isActive('/dfc')
+            ],
+            [
+                'title' => 'Conciliação',
+                'path' => '/conciliacao',
+                'active' => $isActive('/conciliacao')
+            ],
+            [
+                'title' => 'Outros',
+                'path' => '/relatorios',
+                'active' => $isActive('/relatorios')
+            ],
+        ]
     ],
     [
         'title' => 'Integrações',
@@ -161,7 +171,7 @@ $menuItems = [
 <!-- Sidebar -->
 <aside 
     id="sidebar"
-    x-data="{}"
+    x-data="{ openMenus: {} }"
     x-bind:class="$store.sidebar.open ? 'translate-x-0' : '-translate-x-full'"
     class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-700 transform transition-transform duration-300 ease-in-out flex flex-col"
 >
@@ -194,21 +204,67 @@ $menuItems = [
     <!-- Menu Items -->
     <nav class="flex-1 overflow-y-auto py-4 px-3 min-h-0">
         <ul class="space-y-1">
-            <?php foreach ($menuItems as $item): ?>
+            <?php foreach ($menuItems as $index => $item): ?>
                 <li>
-                    <a 
-                        href="<?= htmlspecialchars($basePath . $item['path']) ?>"
-                        class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 <?= $item['active'] 
-                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg' 
-                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800' 
-                        ?>"
-                    >
-                        <span class="flex-shrink-0"><?= $item['icon'] ?></span>
-                        <span><?= htmlspecialchars($item['title']) ?></span>
-                        <?php if ($item['active']): ?>
-                            <span class="ml-auto w-2 h-2 bg-white rounded-full"></span>
-                        <?php endif; ?>
-                    </a>
+                    <?php if (isset($item['submenu'])): ?>
+                        <!-- Item com submenu -->
+                        <div x-data="{ open: <?= array_reduce($item['submenu'], function($carry, $sub) { return $carry || $sub['active']; }, false) ? 'true' : 'false' ?> }">
+                            <button 
+                                @click="open = !open"
+                                class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800"
+                            >
+                                <div class="flex items-center gap-3">
+                                    <span class="flex-shrink-0"><?= $item['icon'] ?></span>
+                                    <span><?= htmlspecialchars($item['title']) ?></span>
+                                </div>
+                                <svg 
+                                    class="w-4 h-4 transition-transform duration-200"
+                                    :class="{ 'rotate-180': open }"
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            <!-- Submenu -->
+                            <ul 
+                                x-show="open" 
+                                x-collapse
+                                class="mt-1 space-y-1 pl-4"
+                            >
+                                <?php foreach ($item['submenu'] as $subitem): ?>
+                                    <li>
+                                        <a 
+                                            href="<?= htmlspecialchars($basePath . $subitem['path']) ?>"
+                                            class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-200 <?= $subitem['active'] 
+                                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md font-medium' 
+                                                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800/50 hover:text-gray-900 dark:hover:text-gray-200' 
+                                            ?>"
+                                        >
+                                            <span class="w-1.5 h-1.5 rounded-full <?= $subitem['active'] ? 'bg-white' : 'bg-gray-400 dark:bg-gray-600' ?>"></span>
+                                            <span><?= htmlspecialchars($subitem['title']) ?></span>
+                                        </a>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php else: ?>
+                        <!-- Item simples -->
+                        <a 
+                            href="<?= htmlspecialchars($basePath . $item['path']) ?>"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 <?= $item['active'] 
+                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg' 
+                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800' 
+                            ?>"
+                        >
+                            <span class="flex-shrink-0"><?= $item['icon'] ?></span>
+                            <span><?= htmlspecialchars($item['title']) ?></span>
+                            <?php if ($item['active']): ?>
+                                <span class="ml-auto w-2 h-2 bg-white rounded-full"></span>
+                            <?php endif; ?>
+                        </a>
+                    <?php endif; ?>
                 </li>
             <?php endforeach; ?>
         </ul>
@@ -319,4 +375,3 @@ $menuItems = [
         });
     });
 </script>
-

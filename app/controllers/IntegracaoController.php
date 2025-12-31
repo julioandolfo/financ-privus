@@ -7,6 +7,8 @@ use App\Core\Response;
 use App\Models\IntegracaoConfig;
 use App\Models\IntegracaoWooCommerce;
 use App\Models\IntegracaoBancoDados;
+use App\Models\IntegracaoWebhook;
+use App\Models\IntegracaoApi;
 use App\Models\IntegracaoLog;
 use App\Models\Empresa;
 use Includes\Services\WooCommerceService;
@@ -17,6 +19,8 @@ class IntegracaoController extends Controller
     private $integracaoModel;
     private $woocommerceModel;
     private $bancoDadosModel;
+    private $webhookModel;
+    private $apiModel;
     private $logModel;
     private $empresaModel;
     
@@ -26,6 +30,8 @@ class IntegracaoController extends Controller
         $this->integracaoModel = new IntegracaoConfig();
         $this->woocommerceModel = new IntegracaoWooCommerce();
         $this->bancoDadosModel = new IntegracaoBancoDados();
+        $this->webhookModel = new IntegracaoWebhook();
+        $this->apiModel = new IntegracaoApi();
         $this->logModel = new IntegracaoLog();
         $this->empresaModel = new Empresa();
     }
@@ -84,6 +90,18 @@ class IntegracaoController extends Controller
                 
             case 'banco-dados':
                 return $this->render('integracoes/banco_dados/create', [
+                    'empresas' => $empresas,
+                    'empresaId' => $empresaId
+                ]);
+                
+            case 'webhook':
+                return $this->render('integracoes/webhook/create', [
+                    'empresas' => $empresas,
+                    'empresaId' => $empresaId
+                ]);
+                
+            case 'api':
+                return $this->render('integracoes/api/create', [
                     'empresas' => $empresas,
                     'empresaId' => $empresaId
                 ]);
@@ -507,5 +525,124 @@ class IntegracaoController extends Controller
         }
         
         return $errors;
+    }
+    
+    /**
+     * Salva integração Webhook
+     */
+    public function storeWebhook(Request $request, Response $response)
+    {
+        $data = $request->all();
+        
+        try {
+            // Cria configuração principal
+            $integracaoId = $this->integracaoModel->create([
+                'empresa_id' => $data['empresa_id'],
+                'tipo' => IntegracaoConfig::TIPO_WEBHOOK,
+                'nome' => $data['nome'],
+                'ativo' => $data['ativo'] ?? 1,
+                'configuracoes' => ['url_webhook' => $data['url_webhook']],
+                'intervalo_sincronizacao' => 0 // Webhooks são em tempo real
+            ]);
+            
+            if ($integracaoId) {
+                // Cria configuração Webhook
+                $this->webhookModel->create([
+                    'integracao_id' => $integracaoId,
+                    'nome_webhook' => $data['nome_webhook'],
+                    'url_webhook' => $data['url_webhook'],
+                    'metodo' => $data['metodo'] ?? 'POST',
+                    'autenticacao' => $data['autenticacao'] ?? 'none',
+                    'auth_usuario' => $data['auth_usuario'] ?? null,
+                    'auth_senha' => $data['auth_senha'] ?? null,
+                    'auth_token' => $data['auth_token'] ?? null,
+                    'api_key_header' => $data['api_key_header'] ?? null,
+                    'api_key_value' => $data['api_key_value'] ?? null,
+                    'eventos_disparo' => $data['eventos_disparo'] ?? [],
+                    'ativo' => $data['ativo'] ?? 1
+                ]);
+                
+                $this->logModel->create($integracaoId, IntegracaoLog::TIPO_SUCESSO, 'Integração Webhook criada');
+                $_SESSION['success'] = 'Webhook criado com sucesso!';
+                return $response->redirect('/integracoes');
+            }
+            
+            $_SESSION['error'] = 'Erro ao criar webhook.';
+            return $response->redirect('/integracoes/create/webhook');
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro: ' . $e->getMessage();
+            $this->session->set('old', $data);
+            return $response->redirect('/integracoes/create/webhook');
+        }
+    }
+    
+    /**
+     * Salva integração API
+     */
+    public function storeApi(Request $request, Response $response)
+    {
+        $data = $request->all();
+        
+        try {
+            // Cria configuração principal
+            $integracaoId = $this->integracaoModel->create([
+                'empresa_id' => $data['empresa_id'],
+                'tipo' => IntegracaoConfig::TIPO_API,
+                'nome' => $data['nome'],
+                'ativo' => $data['ativo'] ?? 1,
+                'configuracoes' => ['base_url' => $data['base_url']],
+                'intervalo_sincronizacao' => 60
+            ]);
+            
+            if ($integracaoId) {
+                // Cria configuração API
+                $this->apiModel->create([
+                    'integracao_id' => $integracaoId,
+                    'nome_api' => $data['nome_api'],
+                    'base_url' => $data['base_url'],
+                    'tipo_api' => $data['tipo_api'] ?? 'rest',
+                    'autenticacao' => $data['autenticacao'] ?? 'none',
+                    'auth_usuario' => $data['auth_usuario'] ?? null,
+                    'auth_senha' => $data['auth_senha'] ?? null,
+                    'auth_token' => $data['auth_token'] ?? null,
+                    'api_key_header' => $data['api_key_header'] ?? null,
+                    'api_key_value' => $data['api_key_value'] ?? null,
+                    'oauth2_client_id' => $data['oauth2_client_id'] ?? null,
+                    'oauth2_client_secret' => $data['oauth2_client_secret'] ?? null,
+                    'oauth2_token_url' => $data['oauth2_token_url'] ?? null,
+                    'oauth2_scope' => $data['oauth2_scope'] ?? null,
+                    'ativo' => $data['ativo'] ?? 1
+                ]);
+                
+                $this->logModel->create($integracaoId, IntegracaoLog::TIPO_SUCESSO, 'Integração API criada');
+                $_SESSION['success'] = 'API criada com sucesso!';
+                return $response->redirect('/integracoes');
+            }
+            
+            $_SESSION['error'] = 'Erro ao criar API.';
+            return $response->redirect('/integracoes/create/api');
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro: ' . $e->getMessage();
+            $this->session->set('old', $data);
+            return $response->redirect('/integracoes/create/api');
+        }
+    }
+    
+    /**
+     * Teste de conexão API
+     */
+    public function testarApi(Request $request, Response $response)
+    {
+        $data = $request->all();
+        
+        $resultado = $this->apiModel->testarConexao(
+            $data['base_url'],
+            $data['autenticacao'],
+            $data['authData'] ?? []
+        );
+        
+        return $response->json($resultado);
     }
 }

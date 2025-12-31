@@ -13,6 +13,7 @@ class IntegracaoConfig extends Model
     const TIPO_BANCO_DADOS = 'banco_dados';
     const TIPO_WOOCOMMERCE = 'woocommerce';
     const TIPO_API = 'api';
+    const TIPO_WEBHOOK = 'webhook';
     
     public function __construct()
     {
