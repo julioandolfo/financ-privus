@@ -144,18 +144,21 @@
 <!-- Modal de Ajuda -->
 <div 
     id="modalHelp"
-    class="fixed inset-0 z-[9999] overflow-y-auto hidden"
+    class="fixed inset-0 overflow-y-auto hidden"
+    style="z-index: 99999 !important;"
 >
     <!-- Overlay -->
     <div 
         class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+        style="z-index: 99998 !important;"
         onclick="document.getElementById('modalHelp').classList.add('hidden')"
     ></div>
     
     <!-- Modal -->
-    <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="flex items-center justify-center min-h-screen p-4" style="z-index: 99999 !important;">
         <div 
             class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full animate-fade-in"
+            style="z-index: 99999 !important;"
             onclick="event.stopPropagation()"
         >
             <!-- Header -->

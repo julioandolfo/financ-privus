@@ -34,7 +34,8 @@ class ApiController extends Controller
         
         try {
             // Faz requisição para API ReceitaWS
-            $url = "https://www.receitaws.com.br/v1/{$cnpj}";
+            // Endpoint correto da ReceitaWS (necessita do prefixo /cnpj/)
+            $url = "https://www.receitaws.com.br/v1/cnpj/{$cnpj}";
             
             // Usa cURL para evitar problemas de CORS
             $ch = curl_init();
