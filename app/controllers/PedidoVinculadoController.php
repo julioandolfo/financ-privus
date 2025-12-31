@@ -33,9 +33,7 @@ class PedidoVinculadoController extends Controller
      */
     public function index(Request $request, Response $response)
     {
-        error_log("DEBUG: Entrando em PedidoVinculadoController::index");
         $empresaId = $this->session->get('empresa_id');
-        error_log("DEBUG: empresa_id = " . $empresaId);
         
         $filters = [
             'origem' => $request->get('origem'),
@@ -46,15 +44,9 @@ class PedidoVinculadoController extends Controller
             'numero_pedido' => $request->get('numero_pedido')
         ];
         
-        error_log("DEBUG: Antes de buscar pedidos");
         $pedidos = $this->pedidoModel->findAll($empresaId, $filters);
-        error_log("DEBUG: Pedidos encontrados: " . count($pedidos));
-        
-        error_log("DEBUG: Antes de buscar clientes");
         $clientes = $this->clienteModel->findAll($empresaId);
-        error_log("DEBUG: Clientes encontrados: " . count($clientes));
         
-        error_log("DEBUG: Antes de renderizar view");
         return $this->render('pedidos/index', [
             'title' => 'Pedidos Vinculados',
             'pedidos' => $pedidos,

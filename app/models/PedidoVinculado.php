@@ -37,7 +37,7 @@ class PedidoVinculado extends Model
     public function findAll($empresaId = null, $filters = [])
     {
         $sql = "SELECT p.*, 
-                       c.nome as cliente_nome,
+                       c.nome_razao_social as cliente_nome,
                        e.razao_social as empresa_nome,
                        (SELECT COUNT(*) FROM pedidos_itens WHERE pedido_id = p.id) as total_itens
                 FROM {$this->table} p
@@ -101,7 +101,7 @@ class PedidoVinculado extends Model
     public function findById($id)
     {
         $sql = "SELECT p.*, 
-                       c.nome as cliente_nome, c.email as cliente_email, c.telefone as cliente_telefone,
+                       c.nome_razao_social as cliente_nome, c.email as cliente_email, c.telefone as cliente_telefone,
                        e.razao_social as empresa_nome
                 FROM {$this->table} p
                 LEFT JOIN clientes c ON p.cliente_id = c.id
