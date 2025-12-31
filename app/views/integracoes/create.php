@@ -17,10 +17,30 @@
         <!-- WooCommerce -->
         <a href="<?= $this->baseUrl('/integracoes/create/woocommerce') ?>" 
            class="group bg-white dark:bg-gray-800 rounded-2xl p-8 border-2 border-gray-200 dark:border-gray-700 hover:border-purple-500 dark:hover:border-purple-500 transition-all shadow-lg hover:shadow-2xl transform hover:-translate-y-1">
-            <div class="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <svg class="w-10 h-10 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                </svg>
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-16 h-16 bg-purple-500 dark:bg-purple-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                    </svg>
+                </div>
+                <div class="relative group/tooltip">
+                    <button type="button" onclick="event.preventDefault(); event.stopPropagation();" class="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors">
+                        <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </button>
+                    <div class="invisible group-hover/tooltip:visible opacity-0 group-hover/tooltip:opacity-100 absolute right-0 top-10 w-72 bg-gray-900 dark:bg-gray-950 text-white text-sm rounded-xl p-4 shadow-2xl z-50 transition-all duration-200">
+                        <div class="absolute -top-2 right-3 w-4 h-4 bg-gray-900 dark:bg-gray-950 transform rotate-45"></div>
+                        <p class="font-semibold mb-2">Como funciona:</p>
+                        <ul class="space-y-1 text-xs text-gray-300">
+                            <li>• Conecta via API REST do WooCommerce</li>
+                            <li>• Sincroniza produtos, pedidos e clientes</li>
+                            <li>• Webhooks em tempo real</li>
+                            <li>• Atualização bidirecional de estoque</li>
+                            <li>• Sincronização automática configurável</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
             <h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">WooCommerce</h3>
             <p class="text-gray-600 dark:text-gray-400 mb-4">
@@ -37,10 +57,30 @@
         <!-- Banco de Dados -->
         <a href="<?= $this->baseUrl('/integracoes/create/banco-dados') ?>" 
            class="group bg-white dark:bg-gray-800 rounded-2xl p-8 border-2 border-gray-200 dark:border-gray-700 hover:border-amber-500 dark:hover:border-amber-500 transition-all shadow-lg hover:shadow-2xl transform hover:-translate-y-1">
-            <div class="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <svg class="w-10 h-10 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
-                </svg>
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-16 h-16 bg-amber-500 dark:bg-amber-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+                    </svg>
+                </div>
+                <div class="relative group/tooltip">
+                    <button type="button" onclick="event.preventDefault(); event.stopPropagation();" class="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors">
+                        <svg class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </button>
+                    <div class="invisible group-hover/tooltip:visible opacity-0 group-hover/tooltip:opacity-100 absolute right-0 top-10 w-72 bg-gray-900 dark:bg-gray-950 text-white text-sm rounded-xl p-4 shadow-2xl z-50 transition-all duration-200">
+                        <div class="absolute -top-2 right-3 w-4 h-4 bg-gray-900 dark:bg-gray-950 transform rotate-45"></div>
+                        <p class="font-semibold mb-2">Como funciona:</p>
+                        <ul class="space-y-1 text-xs text-gray-300">
+                            <li>• Conecta diretamente ao banco externo</li>
+                            <li>• Suporta MySQL, PostgreSQL, SQL Server</li>
+                            <li>• Importa dados por queries SQL</li>
+                            <li>• Mapeamento de colunas personalizável</li>
+                            <li>• Sincronização agendada automática</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
             <h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Banco de Dados</h3>
             <p class="text-gray-600 dark:text-gray-400 mb-4">
@@ -53,15 +93,33 @@
                 </svg>
             </div>
         </a>
-    </div>
-
         <!-- Webhook -->
         <a href="<?= $this->baseUrl('/integracoes/create/webhook') ?>" 
-           class="group block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-8 hover:shadow-2xl hover:border-green-500 dark:hover:border-green-600 transition-all duration-300 transform hover:-translate-y-1">
-            <div class="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <svg class="w-10 h-10 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                </svg>
+           class="group bg-white dark:bg-gray-800 rounded-2xl p-8 border-2 border-gray-200 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-500 transition-all shadow-lg hover:shadow-2xl transform hover:-translate-y-1">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-16 h-16 bg-green-500 dark:bg-green-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+                <div class="relative group/tooltip">
+                    <button type="button" onclick="event.preventDefault(); event.stopPropagation();" class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors">
+                        <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </button>
+                    <div class="invisible group-hover/tooltip:visible opacity-0 group-hover/tooltip:opacity-100 absolute right-0 top-10 w-72 bg-gray-900 dark:bg-gray-950 text-white text-sm rounded-xl p-4 shadow-2xl z-50 transition-all duration-200">
+                        <div class="absolute -top-2 right-3 w-4 h-4 bg-gray-900 dark:bg-gray-950 transform rotate-45"></div>
+                        <p class="font-semibold mb-2">Como funciona:</p>
+                        <ul class="space-y-1 text-xs text-gray-300">
+                            <li>• Envia dados em tempo real via HTTP</li>
+                            <li>• Dispara eventos (pedido, produto, cliente)</li>
+                            <li>• Suporta autenticação (Basic, Bearer, API Key)</li>
+                            <li>• Payload personalizado (JSON/XML)</li>
+                            <li>• Sistema de retry automático</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
             <h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Webhook</h3>
             <p class="text-gray-600 dark:text-gray-400 mb-4">
@@ -77,11 +135,31 @@
 
         <!-- API REST -->
         <a href="<?= $this->baseUrl('/integracoes/create/api') ?>" 
-           class="group block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-8 hover:shadow-2xl hover:border-orange-500 dark:hover:border-orange-600 transition-all duration-300 transform hover:-translate-y-1">
-            <div class="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <svg class="w-10 h-10 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
+           class="group bg-white dark:bg-gray-800 rounded-2xl p-8 border-2 border-gray-200 dark:border-gray-700 hover:border-orange-500 dark:hover:border-orange-500 transition-all shadow-lg hover:shadow-2xl transform hover:-translate-y-1">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-16 h-16 bg-orange-500 dark:bg-orange-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div class="relative group/tooltip">
+                    <button type="button" onclick="event.preventDefault(); event.stopPropagation();" class="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors">
+                        <svg class="w-5 h-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </button>
+                    <div class="invisible group-hover/tooltip:visible opacity-0 group-hover/tooltip:opacity-100 absolute right-0 top-10 w-72 bg-gray-900 dark:bg-gray-950 text-white text-sm rounded-xl p-4 shadow-2xl z-50 transition-all duration-200">
+                        <div class="absolute -top-2 right-3 w-4 h-4 bg-gray-900 dark:bg-gray-950 transform rotate-45"></div>
+                        <p class="font-semibold mb-2">Como funciona:</p>
+                        <ul class="space-y-1 text-xs text-gray-300">
+                            <li>• Consome APIs REST, GraphQL ou SOAP</li>
+                            <li>• Autenticação avançada (OAuth 2.0)</li>
+                            <li>• Mapeamento de endpoints customizável</li>
+                            <li>• Headers personalizados por request</li>
+                            <li>• Ideal para ERPs, CRMs e sistemas externos</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
             <h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">API REST</h3>
             <p class="text-gray-600 dark:text-gray-400 mb-4">
