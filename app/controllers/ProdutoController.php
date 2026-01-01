@@ -465,4 +465,68 @@ class ProdutoController extends Controller
             'valorEmRisco' => $valorEmRisco
         ]);
     }
+    
+    /**
+     * Atualiza informações tributárias do produto
+     */
+    public function updateTributos(Request $request, Response $response, $id)
+    {
+        $data = $request->all();
+        
+        // Dados tributários
+        $dadosTributarios = [
+            'ncm' => $data['ncm'] ?? null,
+            'cest' => $data['cest'] ?? null,
+            'origem' => $data['origem'] ?? 0,
+            'cfop_venda' => $data['cfop_venda'] ?? '5102',
+            'cst_icms' => $data['cst_icms'] ?? '00',
+            'aliquota_icms' => $data['aliquota_icms'] ?? 0.00,
+            'reducao_base_icms' => $data['reducao_base_icms'] ?? 0.00,
+            'cst_ipi' => $data['cst_ipi'] ?? '99',
+            'aliquota_ipi' => $data['aliquota_ipi'] ?? 0.00,
+            'cst_pis' => $data['cst_pis'] ?? '99',
+            'aliquota_pis' => $data['aliquota_pis'] ?? 0.00,
+            'cst_cofins' => $data['cst_cofins'] ?? '99',
+            'aliquota_cofins' => $data['aliquota_cofins'] ?? 0.00,
+            'unidade_tributavel' => $data['unidade_tributavel'] ?? 'UN',
+            'informacoes_adicionais' => $data['informacoes_adicionais'] ?? null,
+            'gtin' => $data['gtin'] ?? null,
+            'gtin_tributavel' => $data['gtin_tributavel'] ?? null
+        ];
+        
+        // Validação básica
+        $errors = [];
+        
+        if (empty($dadosTributarios['ncm'])) {
+            $errors['ncm'] = 'NCM é obrigatório';
+        } elseif (strlen($dadosTributarios['ncm']) != 8) {
+            $errors['ncm'] = 'NCM deve ter 8 dígitos';
+        }
+        
+        if (!empty($dadosTributarios['cest']) && strlen($dadosTributarios['cest']) != 7) {
+            $errors['cest'] = 'CEST deve ter 7 dígitos';
+        }
+        
+        if (!empty($dadosTributarios['gtin']) && !in_array(strlen($dadosTributarios['gtin']), [0, 8, 12, 13, 14])) {
+            $errors['gtin'] = 'GTIN deve ter 8, 12, 13 ou 14 dígitos';
+        }
+        
+        if (!empty($errors)) {
+            $_SESSION['error'] = 'Erro ao atualizar tributos. Verifique os campos.';
+            $_SESSION['errors'] = $errors;
+            $_SESSION['old'] = $data;
+            return $response->redirect('/produtos/' . $id . '/edit');
+        }
+        
+        // Atualizar tributos
+        $updated = $this->produtoModel->updateTributos($id, $dadosTributarios);
+        
+        if ($updated) {
+            $_SESSION['success'] = 'Informações tributárias atualizadas com sucesso!';
+        } else {
+            $_SESSION['error'] = 'Erro ao atualizar informações tributárias.';
+        }
+        
+        return $response->redirect('/produtos/' . $id . '/edit');
+    }
 }

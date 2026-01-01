@@ -102,6 +102,7 @@ return [
     'POST /produtos/{id}/variacoes' => ['handler' => 'ProdutoController@addVariacao', 'middleware' => ['AuthMiddleware']],
     'POST /produtos/variacoes/{id}' => ['handler' => 'ProdutoController@updateVariacao', 'middleware' => ['AuthMiddleware']],
     'POST /produtos/variacoes/{id}/delete' => ['handler' => 'ProdutoController@deleteVariacao', 'middleware' => ['AuthMiddleware']],
+    'POST /produtos/{id}/tributos' => ['handler' => 'ProdutoController@updateTributos', 'middleware' => ['AuthMiddleware']],
     
     // Categorias de Produtos (protegido)
     'GET /categorias-produtos' => ['handler' => 'CategoriaProdutoController@index', 'middleware' => ['AuthMiddleware']],

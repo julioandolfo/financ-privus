@@ -9,7 +9,7 @@ $pctClientesPJ = $totais['clientes'] > 0 ? ($clientes['pj'] / $totais['clientes'
 $pctCategoriasReceita = $totais['categorias'] > 0 ? ($categorias['receita'] / $totais['categorias'] * 100) : 0;
 $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $totais['categorias'] * 100) : 0;
 ?>
-<div class="animate-fade-in" x-data="{ showFiltro: false, empresasSelecionadas: <?= json_encode($filtro['empresas_ids']) ?> }">
+<div class="animate-fade-in" x-data="{ showFiltro: false, showRunwayModal: false, empresasSelecionadas: <?= json_encode($filtro['empresas_ids']) ?> }">
     <!-- Hero Banner -->
     <div class="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-800 dark:via-indigo-900 dark:to-purple-900 rounded-2xl shadow-2xl mb-8">
         <div class="absolute inset-0 bg-grid-white/10 z-0"></div>
@@ -258,7 +258,19 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             <!-- Burn Rate / Runway -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
                 <div class="flex items-center justify-between mb-3">
-                    <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Runway</h4>
+                    <div class="flex items-center space-x-2">
+                        <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Runway</h4>
+                        <button 
+                            @click="showRunwayModal = true"
+                            type="button"
+                            class="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors flex items-center justify-center cursor-pointer"
+                            title="O que é Runway?"
+                        >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </button>
+                    </div>
                     <div class="w-10 h-10 bg-gradient-to-br from-rose-500 to-rose-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -1119,6 +1131,219 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                         <p class="text-2xl font-bold text-cyan-600">R$ <?= number_format($contas_receber['a_vencer_30d']['valor_total'], 2, ',', '.') ?></p>
                         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1"><?= $contas_receber['a_vencer_30d']['quantidade'] ?> conta<?= $contas_receber['a_vencer_30d']['quantidade'] != 1 ? 's' : '' ?></p>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Runway -->
+    <div x-show="showRunwayModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        
+        <!-- Overlay -->
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="showRunwayModal = false"></div>
+        
+        <!-- Modal Container -->
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div x-show="showRunwayModal"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                
+                <!-- Header -->
+                <div class="sticky top-0 bg-gradient-to-r from-rose-600 to-pink-600 px-8 py-6 rounded-t-2xl">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-white">Runway (Pista de Pouso)</h2>
+                                <p class="text-rose-100 text-sm">Métrica de Sobrevivência Financeira</p>
+                            </div>
+                        </div>
+                        <button @click="showRunwayModal = false" 
+                                class="text-white/80 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div class="px-8 py-6 space-y-6">
+                    <!-- O que é -->
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                        <p class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                            🛫 O que é Runway?
+                        </p>
+                        <p class="text-gray-700 dark:text-gray-300">
+                            Runway é uma métrica financeira crucial que responde à pergunta:<br>
+                            <strong class="text-blue-600 dark:text-blue-400">"Por quantos meses minha empresa pode operar com o dinheiro que tenho em caixa hoje?"</strong>
+                        </p>
+                    </div>
+
+                    <!-- Cálculo -->
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                            📊 Como é Calculado
+                        </h3>
+                        <div class="bg-gray-100 dark:bg-gray-700/50 rounded-xl p-4 font-mono text-center">
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Fórmula:</p>
+                            <p class="text-xl font-bold text-gray-900 dark:text-gray-100">
+                                Runway = <span class="text-green-600">Saldo em Caixa</span> / <span class="text-red-600">Burn Rate</span>
+                            </p>
+                            <div class="mt-4 text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                <p><strong class="text-green-600">Saldo em Caixa:</strong> Todo dinheiro disponível (contas bancárias)</p>
+                                <p><strong class="text-red-600">Burn Rate:</strong> Taxa de "queima" mensal = |Despesas - Receitas|</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Exemplo Prático -->
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            🎯 Exemplo Prático
+                        </h3>
+                        <div class="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-3">Se sua empresa tem:</p>
+                            <ul class="space-y-2 mb-3">
+                                <li class="flex items-start">
+                                    <span class="text-green-600 font-bold mr-2">💰</span>
+                                    <span class="text-gray-700 dark:text-gray-300"><strong>R$ 120.000</strong> em caixa</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-red-600 font-bold mr-2">🔥</span>
+                                    <span class="text-gray-700 dark:text-gray-300"><strong>Burn Rate de R$ 10.000/mês</strong> (gasta R$ 10k a mais do que recebe)</span>
+                                </li>
+                            </ul>
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-blue-300 dark:border-blue-700">
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Resultado:</p>
+                                <p class="text-xl font-bold text-blue-600">Runway = R$ 120.000 / R$ 10.000 = <span class="text-2xl">12 meses</span></p>
+                            </div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-3 italic">
+                                Isso significa que sua empresa pode operar por 12 meses antes do dinheiro acabar (se mantiver o padrão atual).
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Interpretação -->
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            🚦 Interpretação dos Valores
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="flex items-start space-x-3 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-r-lg">
+                                <span class="text-2xl">🔴</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-red-900 dark:text-red-100">< 3 meses - CRÍTICO</p>
+                                    <p class="text-sm text-red-700 dark:text-red-300">Ação urgente! Cortar custos ou buscar capital imediatamente</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 rounded-r-lg">
+                                <span class="text-2xl">🟡</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-amber-900 dark:text-amber-100">3-6 meses - ATENÇÃO</p>
+                                    <p class="text-sm text-amber-700 dark:text-amber-300">Planejar redução de custos ou aumento de receita</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 rounded-r-lg">
+                                <span class="text-2xl">🟢</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-green-900 dark:text-green-100">6-12 meses - SAUDÁVEL</p>
+                                    <p class="text-sm text-green-700 dark:text-green-300">Situação boa, mas monitorar de perto</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 border-l-4 border-emerald-500 rounded-r-lg">
+                                <span class="text-2xl">🟢</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-emerald-900 dark:text-emerald-100">> 12 meses - EXCELENTE</p>
+                                    <p class="text-sm text-emerald-700 dark:text-emerald-300">Empresa financeiramente estável</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Por que é Importante -->
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            💡 Por que é Importante?
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-lg">
+                                <p class="font-semibold text-purple-900 dark:text-purple-100 mb-1">📈 Planejamento Estratégico</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">Saber quanto tempo você tem para ajustar o negócio</p>
+                            </div>
+                            <div class="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-4 rounded-lg">
+                                <p class="font-semibold text-blue-900 dark:text-blue-100 mb-1">💼 Captação de Investimento</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">Investidores sempre perguntam sobre runway</p>
+                            </div>
+                            <div class="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-4 rounded-lg">
+                                <p class="font-semibold text-red-900 dark:text-red-100 mb-1">🚨 Gestão de Crise</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">Identificar problemas antes que seja tarde</p>
+                            </div>
+                            <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-4 rounded-lg">
+                                <p class="font-semibold text-green-900 dark:text-green-100 mb-1">🎯 Tomada de Decisão</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">Decidir se deve contratar, investir ou cortar custos</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seu Runway Atual -->
+                    <div class="bg-gradient-to-r from-rose-500 to-pink-600 rounded-xl p-6 text-white">
+                        <h3 class="text-xl font-bold mb-2 flex items-center">
+                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                            🔍 Seu Runway Atual
+                        </h3>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-rose-100 mb-1">Meses de sobrevivência:</p>
+                                <p class="text-4xl font-bold"><?= $metricas_financeiras['runway'] > 24 ? '24+' : number_format($metricas_financeiras['runway'], 0) ?> meses</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-rose-100 text-sm mb-1">Saldo em Caixa:</p>
+                                <p class="text-xl font-bold">R$ <?= number_format($contas_bancarias['saldo_total'], 2, ',', '.') ?></p>
+                                <p class="text-rose-100 text-sm mt-2">Burn Rate:</p>
+                                <p class="text-xl font-bold">R$ <?= number_format($metricas_financeiras['burn_rate'], 2, ',', '.') ?>/mês</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="sticky bottom-0 bg-gray-50 dark:bg-gray-900/50 px-8 py-4 rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
+                    <button @click="showRunwayModal = false" 
+                            class="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg">
+                        Entendi!
+                    </button>
                 </div>
             </div>
         </div>

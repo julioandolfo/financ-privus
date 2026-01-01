@@ -14,6 +14,7 @@ class IntegracaoConfig extends Model
     const TIPO_WOOCOMMERCE = 'woocommerce';
     const TIPO_API = 'api';
     const TIPO_WEBHOOK = 'webhook';
+    const TIPO_WEBMANIBR = 'webmanibr';
     
     public function __construct()
     {

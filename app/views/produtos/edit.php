@@ -45,6 +45,11 @@ $categorias = $categoriaModel->getFlatList($empresaId);
                         class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                     🎨 Variações (<?= count($variacoes) ?>)
                 </button>
+                <button @click="currentTab = 'tributos'" 
+                        :class="currentTab === 'tributos' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    💰 Tributos (NF-e)
+                </button>
             </nav>
         </div>
     </div>
@@ -378,6 +383,240 @@ $categorias = $categoriaModel->getFlatList($empresaId);
                 Posicione o código de barras dentro do quadrado
             </p>
         </div>
+    </div>
+</div>
+
+    <!-- Tab: Tributos -->
+    <div x-show="currentTab === 'tributos'" x-transition>
+        <form method="POST" action="<?= $this->baseUrl('/produtos/' . $produto['id'] . '/tributos') ?>">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8 space-y-8">
+                
+                <!-- Header -->
+                <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+                        <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Informações Tributárias para NF-e
+                    </h3>
+                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Configure os dados fiscais necessários para emissão de Nota Fiscal Eletrônica</p>
+                </div>
+
+                <!-- Informações Gerais -->
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">📋 Informações Gerais</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                NCM (Nomenclatura Comum do Mercosul) *
+                            </label>
+                            <input type="text" name="ncm" maxlength="8" required
+                                   value="<?= htmlspecialchars($produto['ncm'] ?? '') ?>"
+                                   placeholder="00000000"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <p class="mt-1 text-xs text-gray-500">8 dígitos - <a href="https://www.gov.br/receitafederal/pt-br/assuntos/aduana-e-comercio-exterior/manuais/arquivos/tabela-ncm-simples-nacional-2022.pdf" target="_blank" class="text-blue-600 hover:underline">Consultar NCM</a></p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                CEST
+                            </label>
+                            <input type="text" name="cest" maxlength="7"
+                                   value="<?= htmlspecialchars($produto['cest'] ?? '') ?>"
+                                   placeholder="0000000"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <p class="mt-1 text-xs text-gray-500">7 dígitos (opcional)</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                Origem da Mercadoria *
+                            </label>
+                            <select name="origem" required
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="0" <?= ($produto['origem'] ?? 0) == 0 ? 'selected' : '' ?>>0 - Nacional</option>
+                                <option value="1" <?= ($produto['origem'] ?? 0) == 1 ? 'selected' : '' ?>>1 - Estrangeira - Importação direta</option>
+                                <option value="2" <?= ($produto['origem'] ?? 0) == 2 ? 'selected' : '' ?>>2 - Estrangeira - Adquirida no mercado interno</option>
+                                <option value="3" <?= ($produto['origem'] ?? 0) == 3 ? 'selected' : '' ?>>3 - Nacional com conteúdo de importação > 40%</option>
+                                <option value="4" <?= ($produto['origem'] ?? 0) == 4 ? 'selected' : '' ?>>4 - Nacional - Processo prod. básico</option>
+                                <option value="5" <?= ($produto['origem'] ?? 0) == 5 ? 'selected' : '' ?>>5 - Nacional com conteúdo de importação ≤ 40%</option>
+                                <option value="6" <?= ($produto['origem'] ?? 0) == 6 ? 'selected' : '' ?>>6 - Estrangeira - Imp. direta sem similar</option>
+                                <option value="7" <?= ($produto['origem'] ?? 0) == 7 ? 'selected' : '' ?>>7 - Estrangeira - Adquirida no mercado interno sem similar</option>
+                                <option value="8" <?= ($produto['origem'] ?? 0) == 8 ? 'selected' : '' ?>>8 - Nacional com conteúdo de importação > 70%</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                CFOP Venda *
+                            </label>
+                            <input type="text" name="cfop_venda" maxlength="4" required
+                                   value="<?= htmlspecialchars($produto['cfop_venda'] ?? '5102') ?>"
+                                   placeholder="5102"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <p class="mt-1 text-xs text-gray-500">Ex: 5102 (Venda no estado) / 6102 (Venda fora do estado)</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                Unidade Tributável *
+                            </label>
+                            <input type="text" name="unidade_tributavel" maxlength="6" required
+                                   value="<?= htmlspecialchars($produto['unidade_tributavel'] ?? 'UN') ?>"
+                                   placeholder="UN"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase">
+                            <p class="mt-1 text-xs text-gray-500">Ex: UN, CX, KG, L</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                GTIN/EAN
+                            </label>
+                            <input type="text" name="gtin" maxlength="14"
+                                   value="<?= htmlspecialchars($produto['gtin'] ?? '') ?>"
+                                   placeholder="00000000000000"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <p class="mt-1 text-xs text-gray-500">Código GTIN/EAN (13 ou 14 dígitos)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ICMS -->
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <span class="text-2xl mr-2">🟢</span> ICMS (Imposto sobre Circulação de Mercadorias)
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                CST ICMS *
+                            </label>
+                            <input type="text" name="cst_icms" maxlength="3" required
+                                   value="<?= htmlspecialchars($produto['cst_icms'] ?? '00') ?>"
+                                   placeholder="00"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <p class="mt-1 text-xs text-gray-500">Ex: 00, 10, 20, 40, 60</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                Alíquota ICMS (%)
+                            </label>
+                            <input type="number" name="aliquota_icms" step="0.01" min="0" max="100"
+                                   value="<?= htmlspecialchars($produto['aliquota_icms'] ?? '0.00') ?>"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                Redução Base ICMS (%)
+                            </label>
+                            <input type="number" name="reducao_base_icms" step="0.01" min="0" max="100"
+                                   value="<?= htmlspecialchars($produto['reducao_base_icms'] ?? '0.00') ?>"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IPI -->
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <span class="text-2xl mr-2">🟡</span> IPI (Imposto sobre Produtos Industrializados)
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                CST IPI *
+                            </label>
+                            <input type="text" name="cst_ipi" maxlength="2" required
+                                   value="<?= htmlspecialchars($produto['cst_ipi'] ?? '99') ?>"
+                                   placeholder="99"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <p class="mt-1 text-xs text-gray-500">Ex: 00, 49, 50, 99 (não tributado)</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                Alíquota IPI (%)
+                            </label>
+                            <input type="number" name="aliquota_ipi" step="0.01" min="0" max="100"
+                                   value="<?= htmlspecialchars($produto['aliquota_ipi'] ?? '0.00') ?>"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PIS e COFINS -->
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <span class="text-2xl mr-2">🔵</span> PIS e COFINS
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                CST PIS *
+                            </label>
+                            <input type="text" name="cst_pis" maxlength="2" required
+                                   value="<?= htmlspecialchars($produto['cst_pis'] ?? '99') ?>"
+                                   placeholder="99"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <p class="mt-1 text-xs text-gray-500">Ex: 01, 04, 06, 07, 08, 09, 49, 99</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                Alíquota PIS (%)
+                            </label>
+                            <input type="number" name="aliquota_pis" step="0.01" min="0" max="100"
+                                   value="<?= htmlspecialchars($produto['aliquota_pis'] ?? '0.00') ?>"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                CST COFINS *
+                            </label>
+                            <input type="text" name="cst_cofins" maxlength="2" required
+                                   value="<?= htmlspecialchars($produto['cst_cofins'] ?? '99') ?>"
+                                   placeholder="99"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <p class="mt-1 text-xs text-gray-500">Ex: 01, 04, 06, 07, 08, 09, 49, 99</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                Alíquota COFINS (%)
+                            </label>
+                            <input type="number" name="aliquota_cofins" step="0.01" min="0" max="100"
+                                   value="<?= htmlspecialchars($produto['aliquota_cofins'] ?? '0.00') ?>"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Informações Adicionais -->
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">📝 Informações Adicionais</h4>
+                    <textarea name="informacoes_adicionais" rows="4"
+                              placeholder="Informações adicionais que serão exibidas na NF-e..."
+                              class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"><?= htmlspecialchars($produto['informacoes_adicionais'] ?? '') ?></textarea>
+                </div>
+
+                <!-- Botões -->
+                <div class="flex justify-end gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <a href="<?= $this->baseUrl('/produtos') ?>" 
+                       class="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        Voltar
+                    </a>
+                    <button type="submit" 
+                            class="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg">
+                        💾 Salvar Tributos
+                    </button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 

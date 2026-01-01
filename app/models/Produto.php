@@ -298,4 +298,36 @@ class Produto extends Model
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
+    
+    /**
+     * Atualiza apenas os campos tributários de um produto
+     */
+    public function updateTributos($id, $dadosTributarios)
+    {
+        $sql = "UPDATE {$this->table} SET
+                    ncm = :ncm,
+                    cest = :cest,
+                    origem = :origem,
+                    cfop_venda = :cfop_venda,
+                    cst_icms = :cst_icms,
+                    aliquota_icms = :aliquota_icms,
+                    reducao_base_icms = :reducao_base_icms,
+                    cst_ipi = :cst_ipi,
+                    aliquota_ipi = :aliquota_ipi,
+                    cst_pis = :cst_pis,
+                    aliquota_pis = :aliquota_pis,
+                    cst_cofins = :cst_cofins,
+                    aliquota_cofins = :aliquota_cofins,
+                    unidade_tributavel = :unidade_tributavel,
+                    informacoes_adicionais = :informacoes_adicionais,
+                    gtin = :gtin,
+                    gtin_tributavel = :gtin_tributavel,
+                    updated_at = NOW()
+                WHERE id = :id";
+        
+        $params = array_merge($dadosTributarios, ['id' => $id]);
+        
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute($params);
+    }
 }
