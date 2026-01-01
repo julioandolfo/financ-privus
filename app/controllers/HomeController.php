@@ -17,6 +17,8 @@ use App\Models\ContaReceber;
 use App\Models\MovimentacaoCaixa;
 use App\Models\Produto;
 use App\Models\PedidoVinculado;
+use App\Models\ConexaoBancaria;
+use App\Models\TransacaoPendente;
 
 class HomeController extends Controller
 {
@@ -272,6 +274,40 @@ class HomeController extends Controller
             $taxaInadimplencia = $valorTotalReceber > 0 ? 
                 ($valorContasVencidas / $valorTotalReceber) * 100 : 0;
             
+            // MÉTRICAS DE SINCRONIZAÇÃO BANCÁRIA
+            $conexaoBancariaModel = new ConexaoBancaria();
+            $transacaoPendenteModel = new TransacaoPendente();
+            
+            $conexoesAtivas = 0;
+            $transacoesPendentes = 0;
+            $ultimaSincronizacao = null;
+            $transacoesAprovadas = 0;
+            $transacoesIgnoradas = 0;
+            
+            foreach ($empresasIds as $empresaId) {
+                // Conexões ativas
+                $conexoes = $conexaoBancariaModel->findByEmpresa($empresaId);
+                $conexoesAtivas += count($conexoes);
+                
+                // Última sincronização
+                foreach ($conexoes as $conexao) {
+                    if ($conexao['ultima_sincronizacao']) {
+                        $dataSinc = strtotime($conexao['ultima_sincronizacao']);
+                        if (!$ultimaSincronizacao || $dataSinc > $ultimaSincronizacao) {
+                            $ultimaSincronizacao = $dataSinc;
+                        }
+                    }
+                }
+                
+                // Transações pendentes
+                $transacoesPendentes += $transacaoPendenteModel->countByEmpresa($empresaId, 'pendente');
+                
+                // Estatísticas do mês
+                $estatisticas = $transacaoPendenteModel->getEstatisticas($empresaId);
+                $transacoesAprovadas += $estatisticas['aprovadas'] ?? 0;
+                $transacoesIgnoradas += $estatisticas['ignoradas'] ?? 0;
+            }
+            
             return $this->render('home/index', [
                 'title' => 'Dashboard - Sistema Financeiro',
                 'filtro' => [
@@ -356,6 +392,14 @@ class HomeController extends Controller
                     'inadimplencia_valor' => $valorContasVencidas,
                     'inadimplencia_taxa' => $taxaInadimplencia,
                     'contas_vencidas' => $totalContasVencidas
+                ],
+                // Métricas de Sincronização Bancária
+                'sincronizacao_bancaria' => [
+                    'conexoes_ativas' => $conexoesAtivas,
+                    'transacoes_pendentes' => $transacoesPendentes,
+                    'transacoes_aprovadas' => $transacoesAprovadas,
+                    'transacoes_ignoradas' => $transacoesIgnoradas,
+                    'ultima_sincronizacao' => $ultimaSincronizacao
                 ]
             ]);
             

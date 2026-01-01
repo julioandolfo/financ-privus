@@ -1348,4 +1348,150 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             </div>
         </div>
     </div>
+
+    <!-- Seção Sincronização Bancária -->
+    <?php if ($sincronizacao_bancaria['conexoes_ativas'] > 0 || $sincronizacao_bancaria['transacoes_pendentes'] > 0): ?>
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
+                <svg class="w-7 h-7 mr-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                </svg>
+                Sincronização Bancária
+            </h2>
+            <a href="/transacoes-pendentes" class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-medium">
+                Ver Transações Pendentes
+                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Conexões Ativas -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                    </div>
+                </div>
+                <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Conexões Ativas</h3>
+                <p class="text-3xl font-bold text-blue-600 dark:text-blue-400"><?= $sincronizacao_bancaria['conexoes_ativas'] ?></p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    <a href="/conexoes-bancarias" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                        Gerenciar conexões →
+                    </a>
+                </p>
+            </div>
+
+            <!-- Transações Pendentes -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border-2 border-yellow-500 dark:border-yellow-600">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <?php if ($sincronizacao_bancaria['transacoes_pendentes'] > 0): ?>
+                        <span class="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs font-bold rounded-full">
+                            Atenção
+                        </span>
+                    <?php endif; ?>
+                </div>
+                <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Aguardando Aprovação</h3>
+                <p class="text-3xl font-bold text-yellow-600 dark:text-yellow-400"><?= $sincronizacao_bancaria['transacoes_pendentes'] ?></p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    <?php if ($sincronizacao_bancaria['transacoes_pendentes'] > 0): ?>
+                        <a href="/transacoes-pendentes" class="hover:text-yellow-600 dark:hover:text-yellow-400 transition-colors">
+                            Revisar agora →
+                        </a>
+                    <?php else: ?>
+                        Nenhuma transação pendente
+                    <?php endif; ?>
+                </p>
+            </div>
+
+            <!-- Transações Aprovadas -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Aprovadas</h3>
+                <p class="text-3xl font-bold text-green-600 dark:text-green-400"><?= $sincronizacao_bancaria['transacoes_aprovadas'] ?></p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Lançadas no sistema</p>
+            </div>
+
+            <!-- Última Sincronização -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </div>
+                </div>
+                <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Última Sincronização</h3>
+                <?php if ($sincronizacao_bancaria['ultima_sincronizacao']): ?>
+                    <?php 
+                        $diff = time() - $sincronizacao_bancaria['ultima_sincronizacao'];
+                        $horas = floor($diff / 3600);
+                        $minutos = floor(($diff % 3600) / 60);
+                        
+                        if ($diff < 60) {
+                            $tempo = 'Agora mesmo';
+                        } elseif ($diff < 3600) {
+                            $tempo = $minutos . 'min atrás';
+                        } elseif ($diff < 86400) {
+                            $tempo = $horas . 'h atrás';
+                        } else {
+                            $tempo = date('d/m/Y', $sincronizacao_bancaria['ultima_sincronizacao']);
+                        }
+                    ?>
+                    <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400"><?= $tempo ?></p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        <?= date('d/m/Y H:i', $sincronizacao_bancaria['ultima_sincronizacao']) ?>
+                    </p>
+                <?php else: ?>
+                    <p class="text-2xl font-bold text-gray-400 dark:text-gray-500">Nunca</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Configure uma conexão</p>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Info Box -->
+        <?php if ($sincronizacao_bancaria['transacoes_pendentes'] > 0): ?>
+            <div class="mt-6 bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl p-6">
+                <div class="flex items-start space-x-4">
+                    <div class="flex-shrink-0">
+                        <svg class="w-8 h-8 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold text-yellow-900 dark:text-yellow-100 mb-2">
+                            <?= $sincronizacao_bancaria['transacoes_pendentes'] ?> transaç<?= $sincronizacao_bancaria['transacoes_pendentes'] > 1 ? 'ões' : 'ão' ?> aguardando sua revisão
+                        </h3>
+                        <p class="text-sm text-yellow-800 dark:text-yellow-300 mb-4">
+                            As transações foram importadas automaticamente dos seus bancos e classificadas pela IA. 
+                            Revise e aprove para que sejam lançadas no sistema como contas a pagar/receber.
+                        </p>
+                        <a href="/transacoes-pendentes" class="inline-flex items-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors text-sm font-medium">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                            Revisar Transações Agora
+                        </a>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
 </div>
