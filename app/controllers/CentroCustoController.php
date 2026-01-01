@@ -17,6 +17,7 @@ class CentroCustoController extends Controller
         try {
             $this->centroCustoModel = new CentroCusto();
             $empresaId = $request->get('empresa_id');
+            $ajax = $request->get('ajax');
             
             // Retorna hierárquico ou flat baseado no parâmetro
             $viewMode = $request->get('view', 'flat'); // 'flat' ou 'tree'
@@ -25,6 +26,14 @@ class CentroCustoController extends Controller
                 $centrosCusto = $this->centroCustoModel->findHierarchical($empresaId);
             } else {
                 $centrosCusto = $this->centroCustoModel->findAll($empresaId);
+            }
+            
+            // Se for requisição AJAX, retorna JSON
+            if ($ajax) {
+                return $response->json([
+                    'success' => true,
+                    'centros' => $centrosCusto
+                ]);
             }
             
             $this->empresaModel = new Empresa();

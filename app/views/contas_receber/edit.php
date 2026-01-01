@@ -26,6 +26,7 @@ $old = $this->session->get('old') ?? [];
                             Empresa <span class="text-red-500">*</span>
                         </label>
                         <select name="empresa_id" required
+                                @change="carregarCategoriasECentros($event.target.value)"
                                 class="w-full px-4 py-3 rounded-xl border <?= isset($errors['empresa_id']) ? 'border-red-500' : 'border-gray-300 dark:border-gray-600' ?> bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
                             <option value="">Selecione...</option>
                             <?php foreach ($empresas as $empresa): ?>
@@ -58,7 +59,7 @@ $old = $this->session->get('old') ?? [];
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Categoria <span class="text-red-500">*</span>
                         </label>
-                        <select name="categoria_id" required
+                        <select name="categoria_id" id="categoria_id" required
                                 class="w-full px-4 py-3 rounded-xl border <?= isset($errors['categoria_id']) ? 'border-red-500' : 'border-gray-300 dark:border-gray-600' ?> bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
                             <option value="">Selecione...</option>
                             <?php foreach ($categorias as $categoria): ?>
@@ -75,7 +76,7 @@ $old = $this->session->get('old') ?? [];
                     <!-- Centro de Custo -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Centro de Custo</label>
-                        <select name="centro_custo_id"
+                        <select name="centro_custo_id" id="centro_custo_id"
                                 class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
                             <option value="">Selecione...</option>
                             <?php foreach ($centrosCusto as $centro): ?>
@@ -199,6 +200,63 @@ function contaReceberForm() {
         
         atualizarRateios() {
             // Placeholder para lógica de rateio se necessário
+        },
+        
+        async carregarCategoriasECentros(empresaId) {
+            if (!empresaId) {
+                this.limparSelects();
+                return;
+            }
+            
+            const categoriaAtualId = document.getElementById('categoria_id').value;
+            const centroAtualId = document.getElementById('centro_custo_id').value;
+            
+            // Carregar categorias de receita
+            try {
+                const respCategorias = await fetch(`/categorias?ajax=1&empresa_id=${empresaId}&tipo=receita`);
+                const dataCategorias = await respCategorias.json();
+                
+                const selectCategoria = document.getElementById('categoria_id');
+                selectCategoria.innerHTML = '<option value="">Selecione...</option>';
+                
+                if (dataCategorias.success && dataCategorias.categorias) {
+                    dataCategorias.categorias.forEach(cat => {
+                        const option = document.createElement('option');
+                        option.value = cat.id;
+                        option.textContent = cat.nome;
+                        if (cat.id == categoriaAtualId) option.selected = true;
+                        selectCategoria.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar categorias:', error);
+            }
+            
+            // Carregar centros de custo
+            try {
+                const respCentros = await fetch(`/centros-custo?ajax=1&empresa_id=${empresaId}`);
+                const dataCentros = await respCentros.json();
+                
+                const selectCentro = document.getElementById('centro_custo_id');
+                selectCentro.innerHTML = '<option value="">Selecione...</option>';
+                
+                if (dataCentros.success && dataCentros.centros) {
+                    dataCentros.centros.forEach(centro => {
+                        const option = document.createElement('option');
+                        option.value = centro.id;
+                        option.textContent = centro.nome;
+                        if (centro.id == centroAtualId) option.selected = true;
+                        selectCentro.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar centros de custo:', error);
+            }
+        },
+        
+        limparSelects() {
+            document.getElementById('categoria_id').innerHTML = '<option value="">Selecione uma empresa primeiro...</option>';
+            document.getElementById('centro_custo_id').innerHTML = '<option value="">Selecione uma empresa primeiro...</option>';
         }
     }
 }

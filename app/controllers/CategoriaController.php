@@ -145,12 +145,20 @@ class CategoriaController extends Controller
             $this->categoriaModel = new CategoriaFinanceira();
             $criadas = 0;
             
+            // Verificar se código automático está habilitado
+            $codigoAutoGerado = \App\Models\Configuracao::get('categorias.codigo_auto_gerado', true);
+            
             foreach ($empresasIds as $empresaId) {
                 $dataCopia = $data;
                 $dataCopia['empresa_id'] = $empresaId;
                 
                 // Remove empresa_ids do array de dados (não existe na tabela)
                 unset($dataCopia['empresa_ids']);
+                
+                // Gerar código automaticamente se habilitado e código não fornecido
+                if ($codigoAutoGerado && empty($dataCopia['codigo'])) {
+                    $dataCopia['codigo'] = $this->categoriaModel->gerarProximoCodigo($empresaId, $dataCopia['tipo']);
+                }
                 
                 // Se tem categoria pai, só usa se a categoria pai pertence à mesma empresa
                 if (!empty($data['categoria_pai_id'])) {
@@ -332,13 +340,29 @@ class CategoriaController extends Controller
         }
         
         // Código
+        $codigoObrigatorio = \App\Models\Configuracao::get('categorias.codigo_obrigatorio', false);
+        $codigoAutoGerado = \App\Models\Configuracao::get('categorias.codigo_auto_gerado', true);
+        
         if (empty($data['codigo'])) {
-            $errors['codigo'] = 'O código é obrigatório';
+            // Só valida como obrigatório se:
+            // 1. A configuração 'codigo_obrigatorio' está ativada, OU
+            // 2. A geração automática está desativada
+            if ($codigoObrigatorio || !$codigoAutoGerado) {
+                $errors['codigo'] = 'O código é obrigatório';
+            }
         } else {
+            // Se código foi fornecido, valida unicidade
             $this->categoriaModel = new CategoriaFinanceira();
-            $existing = $this->categoriaModel->findByCodigo($data['codigo'], $data['empresa_id']);
-            if ($existing && (!$id || $existing['id'] != $id)) {
-                $errors['codigo'] = 'Este código já está em uso para esta empresa';
+            $empresaId = $data['empresa_id'] ?? null;
+            
+            // Se for criação com múltiplas empresas, não valida aqui (será validado no loop)
+            if (isset($data['empresa_ids'])) {
+                // Para criação com múltiplas empresas, pula a validação de unicidade aqui
+            } else {
+                $existing = $this->categoriaModel->findByCodigo($data['codigo'], $empresaId);
+                if ($existing && (!$id || $existing['id'] != $id)) {
+                    $errors['codigo'] = 'Este código já está em uso para esta empresa';
+                }
             }
         }
         

@@ -140,6 +140,37 @@ class CategoriaFinanceira extends Model
     }
     
     /**
+     * Gera o próximo código sequencial para uma categoria
+     */
+    public function gerarProximoCodigo($empresaId, $tipo)
+    {
+        $sql = "SELECT codigo FROM {$this->table} 
+                WHERE empresa_id = :empresa_id AND tipo = :tipo 
+                AND codigo REGEXP '^[0-9]+$'
+                ORDER BY CAST(codigo AS UNSIGNED) DESC 
+                LIMIT 1";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'empresa_id' => $empresaId,
+            'tipo' => $tipo
+        ]);
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result && is_numeric($result['codigo'])) {
+            // Incrementa o último código numérico
+            $proximoCodigo = (int)$result['codigo'] + 1;
+        } else {
+            // Primeiro código
+            $proximoCodigo = 1;
+        }
+        
+        // Retorna com padding de zeros (ex: 001, 002, etc.)
+        return str_pad($proximoCodigo, 3, '0', STR_PAD_LEFT);
+    }
+    
+    /**
      * Cria uma nova categoria
      */
     public function create($data)
