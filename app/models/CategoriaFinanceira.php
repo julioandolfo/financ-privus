@@ -239,9 +239,14 @@ class CategoriaFinanceira extends Model
                 $excludeIds = array_merge($excludeIds, $this->getAllDescendants($child['id']));
             }
             
-            $placeholders = implode(',', array_fill(0, count($excludeIds), '?'));
-            $sql .= " AND id NOT IN ($placeholders)";
-            $params = array_merge($params, $excludeIds);
+            // Usar parâmetros nomeados em vez de posicionais
+            $placeholders = [];
+            foreach ($excludeIds as $index => $excludeIdValue) {
+                $paramName = "exclude_id_$index";
+                $placeholders[] = ":$paramName";
+                $params[$paramName] = $excludeIdValue;
+            }
+            $sql .= " AND id NOT IN (" . implode(',', $placeholders) . ")";
         }
         
         $sql .= " ORDER BY codigo ASC, nome ASC";
