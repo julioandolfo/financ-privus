@@ -47,55 +47,67 @@ class RelatorioController extends Controller
      */
     public function lucro(Request $request, Response $response)
     {
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        
-        // Filtros
-        $dataInicio = $request->get('data_inicio', date('Y-m-01'));
-        $dataFim = $request->get('data_fim', date('Y-m-t'));
-        $empresaSelecionada = $request->get('empresa_id', $empresaId);
-        
-        // Buscar empresas
-        $empresas = $this->empresaModel->findAll();
-        
-        // Calcular receitas
-        $receitas = $this->contaReceberModel->getSomaByPeriodo(
-            $empresaSelecionada, $dataInicio, $dataFim, 'recebido'
-        );
-        
-        // Calcular despesas
-        $despesas = $this->contaPagarModel->getSomaByPeriodo(
-            $empresaSelecionada, $dataInicio, $dataFim, 'pago'
-        );
-        
-        // Lucro bruto e líquido
-        $lucroBruto = $receitas - $despesas;
-        
-        // Receitas por categoria
-        $receitasPorCategoria = $this->contaReceberModel->getReceitasPorCategoria(
-            $empresaSelecionada, $dataInicio, $dataFim
-        );
-        
-        // Despesas por categoria
-        $despesasPorCategoria = $this->contaPagarModel->getDespesasPorCategoria(
-            $empresaSelecionada, $dataInicio, $dataFim
-        );
-        
-        // Evolução mensal
-        $evolucaoMensal = $this->getEvolucaoMensal($empresaSelecionada, $dataInicio, $dataFim);
-        
-        return $this->render('relatorios/lucro', [
-            'receitas' => $receitas,
-            'despesas' => $despesas,
-            'lucroBruto' => $lucroBruto,
-            'margemLiquida' => $receitas > 0 ? ($lucroBruto / $receitas) * 100 : 0,
-            'receitasPorCategoria' => $receitasPorCategoria,
-            'despesasPorCategoria' => $despesasPorCategoria,
-            'evolucaoMensal' => $evolucaoMensal,
-            'empresas' => $empresas,
-            'empresaSelecionada' => $empresaSelecionada,
-            'dataInicio' => $dataInicio,
-            'dataFim' => $dataFim
-        ]);
+        try {
+            $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
+            
+            // Filtros
+            $dataInicio = $request->get('data_inicio', date('Y-m-01'));
+            $dataFim = $request->get('data_fim', date('Y-m-t'));
+            $empresaSelecionada = $request->get('empresa_id', $empresaId);
+            
+            // Buscar empresas
+            $empresas = $this->empresaModel->findAll();
+            
+            // Calcular receitas
+            $receitas = $this->contaReceberModel->getSomaByPeriodo(
+                $empresaSelecionada, $dataInicio, $dataFim, 'recebido'
+            );
+            
+            // Calcular despesas
+            $despesas = $this->contaPagarModel->getSomaByPeriodo(
+                $empresaSelecionada, $dataInicio, $dataFim, 'pago'
+            );
+            
+            // Lucro bruto e líquido
+            $lucroBruto = $receitas - $despesas;
+            
+            // Receitas por categoria
+            $receitasPorCategoria = $this->contaReceberModel->getReceitasPorCategoria(
+                $empresaSelecionada, $dataInicio, $dataFim
+            );
+            
+            // Despesas por categoria
+            $despesasPorCategoria = $this->contaPagarModel->getDespesasPorCategoria(
+                $empresaSelecionada, $dataInicio, $dataFim
+            );
+            
+            // Evolução mensal
+            $evolucaoMensal = $this->getEvolucaoMensal($empresaSelecionada, $dataInicio, $dataFim);
+            
+            return $this->render('relatorios/lucro', [
+                'receitas' => $receitas,
+                'despesas' => $despesas,
+                'lucroBruto' => $lucroBruto,
+                'margemLiquida' => $receitas > 0 ? ($lucroBruto / $receitas) * 100 : 0,
+                'receitasPorCategoria' => $receitasPorCategoria,
+                'despesasPorCategoria' => $despesasPorCategoria,
+                'evolucaoMensal' => $evolucaoMensal,
+                'empresas' => $empresas,
+                'empresaSelecionada' => $empresaSelecionada,
+                'dataInicio' => $dataInicio,
+                'dataFim' => $dataFim
+            ]);
+        } catch (\Exception $e) {
+            // Exibir erro detalhado
+            echo "<pre>";
+            echo "ERRO NO RELATÓRIO DE LUCRO:\n\n";
+            echo "Mensagem: " . $e->getMessage() . "\n\n";
+            echo "Arquivo: " . $e->getFile() . "\n";
+            echo "Linha: " . $e->getLine() . "\n\n";
+            echo "Stack Trace:\n" . $e->getTraceAsString();
+            echo "</pre>";
+            die();
+        }
     }
 
     /**
