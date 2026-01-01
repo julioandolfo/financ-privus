@@ -71,7 +71,8 @@ class ContaPagarController extends Controller
             $contasPagar = $this->contaPagarModel->findAll($filters);
             $empresas = $this->empresaModel->findAll(['ativo' => 1]);
             $fornecedores = $this->fornecedorModel->findAll(['ativo' => 1]);
-            $categorias = $this->categoriaModel->findAll(['ativo' => 1, 'tipo' => 'despesa']);
+            $empresaAtual = $_SESSION['usuario_empresa_id'] ?? null;
+            $categorias = $this->categoriaModel->findAll($empresaAtual, 'despesa');
             
             return $this->render('contas_pagar/index', [
                 'title' => 'Contas a Pagar',
@@ -97,10 +98,11 @@ class ContaPagarController extends Controller
             $this->formaPagamentoModel = new FormaPagamento();
             $this->contaBancariaModel = new ContaBancaria();
             
+            $empresaAtual = $_SESSION['usuario_empresa_id'] ?? null;
             $empresas = $this->empresaModel->findAll(['ativo' => 1]);
             $fornecedores = $this->fornecedorModel->findAll(['ativo' => 1]);
-            $categorias = $this->categoriaModel->findAll(['ativo' => 1, 'tipo' => 'despesa']);
-            $centrosCusto = $this->centroCustoModel->findAll(['ativo' => 1]);
+            $categorias = $this->categoriaModel->findAll($empresaAtual, 'despesa');
+            $centrosCusto = $this->centroCustoModel->findAll($empresaAtual);
             $formasPagamento = $this->formaPagamentoModel->findAll();
             $contasBancarias = $this->contaBancariaModel->findAll();
             
@@ -243,10 +245,11 @@ class ContaPagarController extends Controller
             $this->formaPagamentoModel = new FormaPagamento();
             $this->contaBancariaModel = new ContaBancaria();
             
+            $empresaAtual = $_SESSION['usuario_empresa_id'] ?? null;
             $empresas = $this->empresaModel->findAll(['ativo' => 1]);
             $fornecedores = $this->fornecedorModel->findAll(['ativo' => 1]);
-            $categorias = $this->categoriaModel->findAll(['ativo' => 1, 'tipo' => 'despesa']);
-            $centrosCusto = $this->centroCustoModel->findAll(['ativo' => 1]);
+            $categorias = $this->categoriaModel->findAll($empresaAtual, 'despesa');
+            $centrosCusto = $this->centroCustoModel->findAll($empresaAtual);
             $formasPagamento = $this->formaPagamentoModel->findAll();
             $contasBancarias = $this->contaBancariaModel->findAll();
             
