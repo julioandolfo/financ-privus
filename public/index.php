@@ -15,20 +15,15 @@ define('APP_DEBUG', filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOL
 define('APP_ENV', $_ENV['APP_ENV'] ?? 'production');
 
 // Configurar exibição de erros baseado em APP_DEBUG
-// TEMPORÁRIO: Forçar exibição de erros para debug
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-
-// if (APP_DEBUG) {
-//     error_reporting(E_ALL);
-//     ini_set('display_errors', 1);
-//     ini_set('display_startup_errors', 1);
-// } else {
-//     error_reporting(0);
-//     ini_set('display_errors', 0);
-//     ini_set('display_startup_errors', 0);
-// }
+if (APP_DEBUG) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
+} else {
+    error_reporting(0);
+    ini_set('display_errors', 0);
+    ini_set('display_startup_errors', 0);
+}
 
 // Inicia sessão
 require_once APP_ROOT . '/app/core/Session.php';

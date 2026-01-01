@@ -157,7 +157,7 @@ class RelatorioController extends Controller
         $empresas = $this->empresaModel->findAll();
         
         // Buscar contas vencidas
-        $contasVencidas = $this->contaReceberModel->getContasVencidas($empresaSelecionada);
+        $contasVencidas = $this->contaReceberModel->getContasVencidasDetalhadas($empresaSelecionada);
         
         // Calcular inadimplência
         $valorTotal = 0;

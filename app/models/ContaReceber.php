@@ -520,9 +520,9 @@ class ContaReceber extends Model
     }
 
     /**
-     * Retorna contas vencidas
+     * Retorna lista detalhada de contas vencidas
      */
-    public function getContasVencidas($empresaId = null)
+    public function getContasVencidasDetalhadas($empresaId = null)
     {
         $sql = "SELECT cr.*, c.nome_razao_social as cliente_nome
                 FROM {$this->table} cr
