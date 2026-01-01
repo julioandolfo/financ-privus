@@ -185,4 +185,22 @@ class IntegracaoConfig extends Model
         
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
     }
+    
+    /**
+     * Busca integração por empresa e tipo
+     */
+    public function findByEmpresaAndTipo($empresaId, $tipo)
+    {
+        $sql = "SELECT * FROM {$this->table} 
+                WHERE empresa_id = :empresa_id AND tipo = :tipo
+                LIMIT 1";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'empresa_id' => $empresaId,
+            'tipo' => $tipo
+        ]);
+        
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 }

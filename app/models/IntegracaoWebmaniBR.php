@@ -32,19 +32,11 @@ class IntegracaoWebmaniBR extends Model
      */
     public function create($data)
     {
-        $sql = "INSERT INTO {$this->table} (
-                    integracao_id, consumer_key, consumer_secret, 
-                    access_token, access_token_secret, ambiente,
-                    serie_nfe, numero_nfe_inicial, emitir_automatico,
-                    enviar_email_cliente, natureza_operacao, tipo_documento,
-                    finalidade_emissao
-                ) VALUES (
-                    :integracao_id, :consumer_key, :consumer_secret,
-                    :access_token, :access_token_secret, :ambiente,
-                    :serie_nfe, :numero_nfe_inicial, :emitir_automatico,
-                    :enviar_email_cliente, :natureza_operacao, :tipo_documento,
-                    :finalidade_emissao
-                )";
+        $fields = array_keys($data);
+        $placeholders = array_map(function($field) { return ":$field"; }, $fields);
+        
+        $sql = "INSERT INTO {$this->table} (" . implode(', ', $fields) . ") 
+                VALUES (" . implode(', ', $placeholders) . ")";
         
         $stmt = $this->db->prepare($sql);
         return $stmt->execute($data);
@@ -55,20 +47,12 @@ class IntegracaoWebmaniBR extends Model
      */
     public function update($integracaoId, $data)
     {
-        $sql = "UPDATE {$this->table} SET
-                    consumer_key = :consumer_key,
-                    consumer_secret = :consumer_secret,
-                    access_token = :access_token,
-                    access_token_secret = :access_token_secret,
-                    ambiente = :ambiente,
-                    serie_nfe = :serie_nfe,
-                    numero_nfe_inicial = :numero_nfe_inicial,
-                    emitir_automatico = :emitir_automatico,
-                    enviar_email_cliente = :enviar_email_cliente,
-                    natureza_operacao = :natureza_operacao,
-                    tipo_documento = :tipo_documento,
-                    finalidade_emissao = :finalidade_emissao,
-                    updated_at = NOW()
+        $setParts = [];
+        foreach (array_keys($data) as $field) {
+            $setParts[] = "$field = :$field";
+        }
+        
+        $sql = "UPDATE {$this->table} SET " . implode(', ', $setParts) . ", updated_at = NOW()
                 WHERE integracao_id = :integracao_id";
         
         $data['integracao_id'] = $integracaoId;

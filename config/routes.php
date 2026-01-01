@@ -214,6 +214,7 @@ return [
     'POST /integracoes/banco-dados' => ['handler' => 'IntegracaoController@storeBancoDados', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/webhook' => ['handler' => 'IntegracaoController@storeWebhook', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/api' => ['handler' => 'IntegracaoController@storeApi', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/webmanibr' => ['handler' => 'IntegracaoController@storeWebmaniBR', 'middleware' => ['AuthMiddleware']],
     'GET /integracoes/{id}' => ['handler' => 'IntegracaoController@show', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/{id}/sincronizar' => ['handler' => 'IntegracaoController@sincronizar', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/{id}/delete' => ['handler' => 'IntegracaoController@destroy', 'middleware' => ['AuthMiddleware']],
@@ -221,6 +222,16 @@ return [
     'POST /integracoes/testar-woocommerce' => ['handler' => 'IntegracaoController@testarWooCommerce', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/testar-banco-dados' => ['handler' => 'IntegracaoController@testarBancoDados', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/testar-api' => ['handler' => 'IntegracaoController@testarApi', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/testar-webmanibr' => ['handler' => 'IntegracaoController@testarWebmaniBR', 'middleware' => ['AuthMiddleware']],
+    
+    // Rotas de NF-e
+    'GET /nfes' => ['handler' => 'NFeController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /nfes/{id}' => ['handler' => 'NFeController@show', 'middleware' => ['AuthMiddleware']],
+    'POST /nfes/emitir/{pedidoId}' => ['handler' => 'NFeController@emitir', 'middleware' => ['AuthMiddleware']],
+    'POST /nfes/{id}/cancelar' => ['handler' => 'NFeController@cancelar', 'middleware' => ['AuthMiddleware']],
+    'POST /nfes/{id}/consultar' => ['handler' => 'NFeController@consultar', 'middleware' => ['AuthMiddleware']],
+    'GET /nfes/{id}/download-xml' => ['handler' => 'NFeController@downloadXML', 'middleware' => ['AuthMiddleware']],
+    'GET /nfes/{id}/download-danfe' => ['handler' => 'NFeController@downloadDANFE', 'middleware' => ['AuthMiddleware']],
     
     // Webhook (público - sem middleware)
     'POST /webhook/woocommerce/{integracaoId}' => ['handler' => 'IntegracaoController@webhook'],

@@ -9,10 +9,12 @@ use App\Models\IntegracaoWooCommerce;
 use App\Models\IntegracaoBancoDados;
 use App\Models\IntegracaoWebhook;
 use App\Models\IntegracaoApi;
+use App\Models\IntegracaoWebmaniBR;
 use App\Models\IntegracaoLog;
 use App\Models\Empresa;
 use Includes\Services\WooCommerceService;
 use Includes\Services\IntegracaoBancoDadosService;
+use Includes\Services\WebmaniBRService;
 
 class IntegracaoController extends Controller
 {
@@ -21,6 +23,7 @@ class IntegracaoController extends Controller
     private $bancoDadosModel;
     private $webhookModel;
     private $apiModel;
+    private $webmanibrModel;
     private $logModel;
     private $empresaModel;
     
@@ -32,6 +35,7 @@ class IntegracaoController extends Controller
         $this->bancoDadosModel = new IntegracaoBancoDados();
         $this->webhookModel = new IntegracaoWebhook();
         $this->apiModel = new IntegracaoApi();
+        $this->webmanibrModel = new IntegracaoWebmaniBR();
         $this->logModel = new IntegracaoLog();
         $this->empresaModel = new Empresa();
     }
@@ -102,6 +106,12 @@ class IntegracaoController extends Controller
                 
             case 'api':
                 return $this->render('integracoes/api/create', [
+                    'empresas' => $empresas,
+                    'empresaId' => $empresaId
+                ]);
+                
+            case 'webmanibr':
+                return $this->render('integracoes/webmanibr/create', [
                     'empresas' => $empresas,
                     'empresaId' => $empresaId
                 ]);
@@ -644,5 +654,101 @@ class IntegracaoController extends Controller
         );
         
         return $response->json($resultado);
+    }
+    
+    /**
+     * Salva configuração WebmaniaBR
+     */
+    public function storeWebmaniBR(Request $request, Response $response)
+    {
+        $data = $request->all();
+        
+        try {
+            // Criar integração principal
+            $integracaoId = $this->integracaoModel->create([
+                'empresa_id' => $data['empresa_id'],
+                'nome' => $data['nome'],
+                'tipo' => IntegracaoConfig::TIPO_WEBMANIBR,
+                'descricao' => $data['descricao'] ?? null,
+                'ativo' => 1
+            ]);
+            
+            // Processar certificado digital se foi enviado
+            $certificadoBase64 = null;
+            if (isset($_FILES['certificado_arquivo']) && $_FILES['certificado_arquivo']['error'] == 0) {
+                $certificadoBase64 = base64_encode(file_get_contents($_FILES['certificado_arquivo']['tmp_name']));
+            }
+            
+            // Criar configuração WebmaniaBR
+            $configData = [
+                'integracao_id' => $integracaoId,
+                'consumer_key' => $data['consumer_key'],
+                'consumer_secret' => $data['consumer_secret'],
+                'access_token' => $data['access_token'],
+                'access_token_secret' => $data['access_token_secret'],
+                'bearer_token' => $data['bearer_token'] ?? null,
+                'ambiente' => $data['ambiente'],
+                'emitir_automatico' => $data['emitir_automatico'],
+                'enviar_email_cliente' => isset($data['enviar_email_cliente']) ? 1 : 0,
+                'emitir_data_pedido' => isset($data['emitir_data_pedido']) ? 1 : 0,
+                'email_notificacao' => $data['email_notificacao'] ?? null,
+                'nfse_classe_imposto' => $data['nfse_classe_imposto'] ?? null,
+                'nfse_tipo_desconto' => $data['nfse_tipo_desconto'] ?? 'nenhum',
+                'nfse_incluir_taxas' => isset($data['nfse_incluir_taxas']) ? 1 : 0,
+                'natureza_operacao' => $data['natureza_operacao'] ?? 'Venda',
+                'nfe_classe_imposto' => $data['nfe_classe_imposto'] ?? null,
+                'ncm_padrao' => $data['ncm_padrao'] ?? null,
+                'cest_padrao' => $data['cest_padrao'] ?? null,
+                'origem_padrao' => $data['origem_padrao'] ?? 0,
+                'intermediador' => $data['intermediador'] ?? 0,
+                'intermediador_cnpj' => $data['intermediador_cnpj'] ?? null,
+                'intermediador_id' => $data['intermediador_id'] ?? null,
+                'informacoes_fisco' => $data['informacoes_fisco'] ?? null,
+                'informacoes_complementares' => $data['informacoes_complementares'] ?? null,
+                'descricao_complementar_servico' => $data['descricao_complementar_servico'] ?? null,
+                'preenchimento_automatico_endereco' => isset($data['preenchimento_automatico_endereco']) ? 1 : 0,
+                'bairro_obrigatorio' => isset($data['bairro_obrigatorio']) ? 1 : 0,
+                'certificado_digital' => $certificadoBase64,
+                'certificado_senha' => $data['certificado_senha'] ?? null,
+                'certificado_validade' => $data['certificado_validade'] ?? null
+            ];
+            
+            $this->webmanibrModel->create($configData);
+            
+            $_SESSION['success'] = 'Integração WebmaniaBR configurada com sucesso!';
+            return $response->redirect('/integracoes');
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao salvar integração: ' . $e->getMessage();
+            $this->session->set('old', $data);
+            return $response->redirect('/integracoes/create/webmanibr');
+        }
+    }
+    
+    /**
+     * Teste de conexão WebmaniaBR
+     */
+    public function testarWebmaniBR(Request $request, Response $response)
+    {
+        $data = $request->all();
+        
+        try {
+            $service = new WebmaniBRService([
+                'consumer_key' => $data['consumer_key'],
+                'consumer_secret' => $data['consumer_secret'],
+                'access_token' => $data['access_token'],
+                'access_token_secret' => $data['access_token_secret'],
+                'ambiente' => $data['ambiente']
+            ]);
+            
+            $resultado = $service->testarConexao();
+            
+            return $response->json($resultado);
+        } catch (\Exception $e) {
+            return $response->json([
+                'success' => false,
+                'message' => 'Erro ao testar conexão: ' . $e->getMessage()
+            ]);
+        }
     }
 }

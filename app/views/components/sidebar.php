@@ -120,6 +120,11 @@ $menuItems = [
                 'path' => '/conciliacao-bancaria',
                 'active' => $isActive('/conciliacao-bancaria')
             ],
+            [
+                'title' => 'NF-es (Notas Fiscais)',
+                'path' => '/nfes',
+                'active' => $isActive('/nfes')
+            ],
         ]
     ],
     [

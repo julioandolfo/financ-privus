@@ -380,8 +380,8 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             <div class="flex items-center justify-between mb-4">
                 <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                    </svg>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
                 </div>
                 <a href="/empresas" class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -398,8 +398,8 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             <div class="flex items-center justify-between mb-4">
                 <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                    </svg>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
                 </div>
                 <a href="/usuarios" class="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -441,12 +441,12 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                     </svg>
-                </a>
-            </div>
+                    </a>
+                </div>
             <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Clientes</h3>
             <p class="text-3xl font-bold text-gray-900 dark:text-gray-100"><?= $totais['clientes'] ?></p>
+            </div>
         </div>
-    </div>
 
     <!-- Linha 2: Configurações -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -466,7 +466,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             </div>
             <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Categorias</h3>
             <p class="text-3xl font-bold text-gray-900 dark:text-gray-100"><?= $totais['categorias'] ?></p>
-        </div>
+    </div>
 
         <!-- Centros de Custo -->
         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
@@ -543,8 +543,8 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
 
     <!-- Saldo Total das Contas -->
     <div class="bg-gradient-to-r from-emerald-500 to-green-600 dark:from-emerald-700 dark:to-green-800 rounded-2xl p-8 shadow-xl mb-8">
-        <div class="flex items-center justify-between">
-            <div>
+            <div class="flex items-center justify-between">
+                <div>
                 <h3 class="text-white text-lg font-semibold mb-2">Saldo Total em Contas Bancárias</h3>
                 <p class="text-white/80 text-sm">Soma de todas as contas ativas</p>
             </div>
@@ -614,7 +614,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                     <?php endif; ?>
                 </div>
             <?php endif; ?>
-        </div>
+                </div>
     <?php endif; ?>
     
     <!-- Métricas de Pedidos -->
@@ -819,9 +819,9 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                     <span class="text-2xl font-bold text-purple-600 dark:text-purple-400"><?= $contas_bancarias['investimento'] ?></span>
                 </div>
                 <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Investimento</p>
+                </div>
             </div>
         </div>
-    </div>
 
     <!-- Contas por Banco -->
     <?php if (!empty($contas_bancarias['por_banco'])): ?>
@@ -829,7 +829,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-6">Saldo por Banco</h3>
         <div class="space-y-4">
             <?php foreach ($contas_bancarias['por_banco'] as $banco => $dados): ?>
-            <div>
+                <div>
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-sm font-medium text-gray-700 dark:text-gray-300"><?= htmlspecialchars($banco) ?></span>
                     <div class="text-right">
@@ -876,16 +876,16 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                 </div>
                 <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Total de Contas</h3>
                 <p class="text-3xl font-bold text-gray-900 dark:text-gray-100"><?= $contas_pagar['total'] ?></p>
-            </div>
+                </div>
 
             <!-- Valor a Pagar -->
             <div class="bg-gradient-to-br from-red-500 to-rose-600 rounded-xl p-6 shadow-lg text-white">
                 <div class="flex items-center justify-between mb-4">
                     <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
                 </div>
                 <h3 class="text-sm font-semibold text-white/90 mb-1">Valor Total a Pagar</h3>
                 <p class="text-3xl font-bold">R$ <?= number_format($contas_pagar['valor_a_pagar'], 2, ',', '.') ?></p>
@@ -956,7 +956,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                             <div class="bg-gradient-to-r from-amber-500 to-amber-600 h-3 rounded-full" style="width: <?= $pctParcial ?>%"></div>
                         </div>
                     </div>
-                    <div>
+                <div>
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Pago</span>
                             <span class="text-sm font-bold text-green-600 dark:text-green-400"><?= $contas_pagar['por_status']['pago'] ?></span>
@@ -1018,20 +1018,20 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                 </div>
                 <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Total de Contas</h3>
                 <p class="text-3xl font-bold text-gray-900 dark:text-gray-100"><?= $contas_receber['total'] ?></p>
-            </div>
+                </div>
 
             <!-- Valor a Receber -->
             <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-6 shadow-lg text-white">
                 <div class="flex items-center justify-between mb-4">
                     <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
                 </div>
+            </div>
                 <h3 class="text-sm font-semibold text-white/90 mb-1">Valor Total a Receber</h3>
                 <p class="text-3xl font-bold">R$ <?= number_format($contas_receber['valor_a_receber'], 2, ',', '.') ?></p>
-            </div>
+        </div>
 
             <!-- Contas Vencidas -->
             <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border-2 border-amber-500 dark:border-amber-600">
@@ -1045,15 +1045,15 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                 <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">Vencidas</h3>
                 <p class="text-3xl font-bold text-amber-600"><?= $contas_receber['vencidas']['quantidade'] ?></p>
                 <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">R$ <?= number_format($contas_receber['vencidas']['valor_total'], 2, ',', '.') ?></p>
-            </div>
+                </div>
 
             <!-- A Vencer (7 dias) -->
             <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border-2 border-blue-500 dark:border-blue-600">
                 <div class="flex items-center justify-between mb-4">
                     <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
+                    </svg>
                     </div>
                 </div>
                 <h3 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">A Vencer (7 dias)</h3>
