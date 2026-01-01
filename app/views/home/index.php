@@ -12,8 +12,8 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
 <div class="animate-fade-in" x-data="{ showFiltro: false, empresasSelecionadas: <?= json_encode($filtro['empresas_ids']) ?> }">
     <!-- Hero Banner -->
     <div class="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-800 dark:via-indigo-900 dark:to-purple-900 rounded-2xl shadow-2xl mb-8">
-        <div class="absolute inset-0 bg-grid-white/10"></div>
-        <div class="relative px-8 py-12">
+        <div class="absolute inset-0 bg-grid-white/10 z-0"></div>
+        <div class="relative px-8 py-12 z-10">
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-4xl font-extrabold text-white mb-2">Dashboard</h1>
@@ -21,7 +21,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                 </div>
                 
                 <!-- Indicador de Filtro -->
-                <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-3 relative z-20">
                     <?php if ($filtro['ativo']): ?>
                         <div class="bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-lg flex items-center space-x-2">
                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -39,8 +39,9 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                     <?php endif; ?>
                     
                     <button 
+                        type="button"
                         @click="showFiltro = !showFiltro"
-                        class="bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-lg hover:bg-white/30 transition-all flex items-center space-x-2"
+                        class="bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-lg hover:bg-white/30 transition-all flex items-center space-x-2 cursor-pointer"
                     >
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
@@ -50,7 +51,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                 </div>
             </div>
         </div>
-        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-72 h-72 bg-white/10 rounded-full blur-3xl"></div>
+        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none z-0"></div>
     </div>
 
     <!-- Painel de Filtro -->
