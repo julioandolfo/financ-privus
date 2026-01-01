@@ -152,6 +152,126 @@ class HomeController extends Controller
             
             $saldoMovimentacoes = $totalEntradas - $totalSaidas;
             
+            // ========================================
+            // MÉTRICAS FINANCEIRAS AVANÇADAS
+            // ========================================
+            
+            // Período dos últimos 30 dias para cálculos
+            $dataInicio = date('Y-m-d', strtotime('-30 days'));
+            $dataFim = date('Y-m-d');
+            
+            // Receitas e Despesas (últimos 30 dias)
+            $receitasUltimos30Dias = 0;
+            $despesasUltimos30Dias = 0;
+            
+            foreach ($empresasIds as $empresaId) {
+                // Receitas (contas recebidas)
+                $contasRecebidas = $contaReceberModel->findAll($empresaId);
+                foreach ($contasRecebidas as $conta) {
+                    if ($conta['status'] === 'recebido' && 
+                        $conta['data_recebimento'] >= $dataInicio && 
+                        $conta['data_recebimento'] <= $dataFim) {
+                        $receitasUltimos30Dias += $conta['valor'];
+                    }
+                }
+                
+                // Despesas (contas pagas)
+                $contasPagas = $contaPagarModel->findAll($empresaId);
+                foreach ($contasPagas as $conta) {
+                    if ($conta['status'] === 'pago' && 
+                        $conta['data_pagamento'] >= $dataInicio && 
+                        $conta['data_pagamento'] <= $dataFim) {
+                        $despesasUltimos30Dias += $conta['valor'];
+                    }
+                }
+            }
+            
+            // LUCRO BRUTO (últimos 30 dias)
+            $lucroBruto = $receitasUltimos30Dias - $despesasUltimos30Dias;
+            
+            // MARGEM BRUTA
+            $margemBruta = $receitasUltimos30Dias > 0 ? 
+                ($lucroBruto / $receitasUltimos30Dias) * 100 : 0;
+            
+            // Despesas Operacionais Estimadas (20% das despesas para simplificar)
+            // Em produção, isso deveria vir de categorias específicas
+            $despesasOperacionais = $despesasUltimos30Dias * 0.20;
+            
+            // EBITDA (Earnings Before Interest, Taxes, Depreciation and Amortization)
+            // EBITDA = Lucro Operacional + Depreciação + Amortização
+            // Simplificado: Receita - Custos Variáveis - Despesas Operacionais
+            $custosVariaveis = $despesasUltimos30Dias * 0.60; // 60% das despesas são custos variáveis
+            $ebitda = $receitasUltimos30Dias - $custosVariaveis - $despesasOperacionais;
+            
+            // MARGEM EBITDA
+            $margemEbitda = $receitasUltimos30Dias > 0 ? 
+                ($ebitda / $receitasUltimos30Dias) * 100 : 0;
+            
+            // LUCRO LÍQUIDO (simplificado: Lucro Bruto - Despesas Operacionais)
+            $lucroLiquido = $lucroBruto - $despesasOperacionais;
+            
+            // MARGEM LÍQUIDA
+            $margemLiquida = $receitasUltimos30Dias > 0 ? 
+                ($lucroLiquido / $receitasUltimos30Dias) * 100 : 0;
+            
+            // ROI (Return on Investment) - baseado em investimentos vs lucro
+            $investimentoTotal = $saldoTotal; // Simplificado: saldo em caixa + bancos
+            $roi = $investimentoTotal > 0 ? 
+                (($lucroLiquido / $investimentoTotal) * 100) : 0;
+            
+            // PONTO DE EQUILÍBRIO (Break-even point)
+            // Custos Fixos / (Margem de Contribuição)
+            $custosFixos = $despesasOperacionais;
+            $margemContribuicao = $receitasUltimos30Dias - $custosVariaveis;
+            $margemContribuicaoPercentual = $receitasUltimos30Dias > 0 ?
+                ($margemContribuicao / $receitasUltimos30Dias) * 100 : 0;
+            
+            $pontoEquilibrio = $margemContribuicaoPercentual > 0 ? 
+                $custosFixos / ($margemContribuicaoPercentual / 100) : 0;
+            
+            // BURN RATE (Taxa de queima de caixa) - mensal
+            $burnRate = abs($despesasUltimos30Dias - $receitasUltimos30Dias);
+            
+            // RUNWAY (Pista de pouso) - meses de sobrevivência
+            $runway = $burnRate > 0 ? ($saldoTotal / $burnRate) : 999;
+            
+            // TICKET MÉDIO (Receita total / número de contas recebidas)
+            $totalContasRecebidas = 0;
+            foreach ($empresasIds as $empresaId) {
+                $contas = $contaReceberModel->findAll($empresaId);
+                $totalContasRecebidas += count(array_filter($contas, function($c) use ($dataInicio, $dataFim) {
+                    return $c['status'] === 'recebido' && 
+                           $c['data_recebimento'] >= $dataInicio && 
+                           $c['data_recebimento'] <= $dataFim;
+                }));
+            }
+            $ticketMedio = $totalContasRecebidas > 0 ? 
+                ($receitasUltimos30Dias / $totalContasRecebidas) : 0;
+            
+            // INADIMPLÊNCIA
+            $totalContasVencidas = 0;
+            $valorContasVencidas = 0;
+            foreach ($empresasIds as $empresaId) {
+                $contas = $contaReceberModel->findAll($empresaId);
+                foreach ($contas as $conta) {
+                    if ($conta['status'] === 'pendente' && $conta['data_vencimento'] < date('Y-m-d')) {
+                        $totalContasVencidas++;
+                        $valorContasVencidas += $conta['valor'];
+                    }
+                }
+            }
+            
+            $totalContasReceber = 0;
+            $valorTotalReceber = 0;
+            foreach ($empresasIds as $empresaId) {
+                $contas = $contaReceberModel->findAll($empresaId);
+                $totalContasReceber += count($contas);
+                $valorTotalReceber += array_sum(array_column($contas, 'valor'));
+            }
+            
+            $taxaInadimplencia = $valorTotalReceber > 0 ? 
+                ($valorContasVencidas / $valorTotalReceber) * 100 : 0;
+            
             return $this->render('home/index', [
                 'title' => 'Dashboard - Sistema Financeiro',
                 'filtro' => [
@@ -214,6 +334,28 @@ class HomeController extends Controller
                     'saldo' => $saldoMovimentacoes,
                     'conciliadas' => $movimentacoesConciliadas,
                     'pendentes' => $movimentacoesPendentes
+                ],
+                // Métricas Financeiras Avançadas (últimos 30 dias)
+                'metricas_financeiras' => [
+                    'periodo' => '30 dias',
+                    'receitas' => $receitasUltimos30Dias,
+                    'despesas' => $despesasUltimos30Dias,
+                    'lucro_bruto' => $lucroBruto,
+                    'margem_bruta' => $margemBruta,
+                    'despesas_operacionais' => $despesasOperacionais,
+                    'ebitda' => $ebitda,
+                    'margem_ebitda' => $margemEbitda,
+                    'lucro_liquido' => $lucroLiquido,
+                    'margem_liquida' => $margemLiquida,
+                    'roi' => $roi,
+                    'ponto_equilibrio' => $pontoEquilibrio,
+                    'margem_contribuicao' => $margemContribuicaoPercentual,
+                    'burn_rate' => $burnRate,
+                    'runway' => $runway,
+                    'ticket_medio' => $ticketMedio,
+                    'inadimplencia_valor' => $valorContasVencidas,
+                    'inadimplencia_taxa' => $taxaInadimplencia,
+                    'contas_vencidas' => $totalContasVencidas
                 ]
             ]);
             

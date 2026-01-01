@@ -133,6 +133,234 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
         </form>
     </div>
 
+    <!-- ========================================
+         MÉTRICAS FINANCEIRAS AVANÇADAS
+         ======================================== -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Indicadores Financeiros</h2>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Últimos <?= $metricas_financeiras['periodo'] ?></p>
+            </div>
+            <a href="/relatorios" class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                Ver Relatórios Detalhados
+            </a>
+        </div>
+
+        <!-- Métricas Principais -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <!-- Receitas -->
+            <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-xl p-6 text-white">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-semibold opacity-90">Receitas</h3>
+                    <svg class="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                    </svg>
+                </div>
+                <p class="text-3xl font-bold mb-1">R$ <?= number_format($metricas_financeiras['receitas'], 2, ',', '.') ?></p>
+                <p class="text-sm opacity-75">Valores recebidos</p>
+            </div>
+
+            <!-- Despesas -->
+            <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl shadow-xl p-6 text-white">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-semibold opacity-90">Despesas</h3>
+                    <svg class="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/>
+                    </svg>
+                </div>
+                <p class="text-3xl font-bold mb-1">R$ <?= number_format($metricas_financeiras['despesas'], 2, ',', '.') ?></p>
+                <p class="text-sm opacity-75">Valores pagos</p>
+            </div>
+
+            <!-- Lucro Líquido -->
+            <div class="bg-gradient-to-br from-<?= $metricas_financeiras['lucro_liquido'] >= 0 ? 'blue' : 'amber' ?>-500 to-<?= $metricas_financeiras['lucro_liquido'] >= 0 ? 'blue' : 'amber' ?>-600 rounded-2xl shadow-xl p-6 text-white">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-semibold opacity-90">Lucro Líquido</h3>
+                    <svg class="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <p class="text-3xl font-bold mb-1">R$ <?= number_format($metricas_financeiras['lucro_liquido'], 2, ',', '.') ?></p>
+                <p class="text-sm opacity-75">Margem: <?= number_format($metricas_financeiras['margem_liquida'], 1) ?>%</p>
+            </div>
+
+            <!-- EBITDA -->
+            <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-xl p-6 text-white">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-sm font-semibold opacity-90">EBITDA</h3>
+                    <svg class="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                </div>
+                <p class="text-3xl font-bold mb-1">R$ <?= number_format($metricas_financeiras['ebitda'], 2, ',', '.') ?></p>
+                <p class="text-sm opacity-75">Margem: <?= number_format($metricas_financeiras['margem_ebitda'], 1) ?>%</p>
+            </div>
+        </div>
+
+        <!-- Métricas Secundárias -->
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-6">
+            <!-- Margem Bruta -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Margem Bruta</h4>
+                    <div class="w-10 h-10 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><?= number_format($metricas_financeiras['margem_bruta'], 1) ?>%</p>
+            </div>
+
+            <!-- ROI -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">ROI</h4>
+                    <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><?= number_format($metricas_financeiras['roi'], 1) ?>%</p>
+            </div>
+
+            <!-- Ticket Médio -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Ticket Médio</h4>
+                    <div class="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 8h6m-5 0a3 3 0 110 6H9l3 3m-3-6h6m6 1a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">R$ <?= number_format($metricas_financeiras['ticket_medio'], 0, ',', '.') ?></p>
+            </div>
+
+            <!-- Inadimplência -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Inadimplência</h4>
+                    <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><?= number_format($metricas_financeiras['inadimplencia_taxa'], 1) ?>%</p>
+            </div>
+
+            <!-- Burn Rate / Runway -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Runway</h4>
+                    <div class="w-10 h-10 bg-gradient-to-br from-rose-500 to-rose-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    <?= $metricas_financeiras['runway'] > 24 ? '24+' : number_format($metricas_financeiras['runway'], 0) ?> meses
+                </p>
+            </div>
+        </div>
+
+        <!-- Detalhamento -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Análise de Rentabilidade -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    Rentabilidade
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Lucro Bruto</span>
+                        <span class="font-bold text-gray-900 dark:text-gray-100">R$ <?= number_format($metricas_financeiras['lucro_bruto'], 2, ',', '.') ?></span>
+                    </div>
+                    <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Despesas Operacionais</span>
+                        <span class="font-bold text-red-600 dark:text-red-400">R$ <?= number_format($metricas_financeiras['despesas_operacionais'], 2, ',', '.') ?></span>
+                    </div>
+                    <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Margem de Contribuição</span>
+                        <span class="font-bold text-blue-600 dark:text-blue-400"><?= number_format($metricas_financeiras['margem_contribuicao'], 1) ?>%</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Ponto de Equilíbrio</span>
+                        <span class="font-bold text-purple-600 dark:text-purple-400">R$ <?= number_format($metricas_financeiras['ponto_equilibrio'], 2, ',', '.') ?></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Análise de Caixa -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    Fluxo de Caixa
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Saldo em Bancos</span>
+                        <span class="font-bold text-gray-900 dark:text-gray-100">R$ <?= number_format($contas_bancarias['saldo_total'], 2, ',', '.') ?></span>
+                    </div>
+                    <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Burn Rate (mensal)</span>
+                        <span class="font-bold text-amber-600 dark:text-amber-400">R$ <?= number_format($metricas_financeiras['burn_rate'], 2, ',', '.') ?></span>
+                    </div>
+                    <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Contas a Receber</span>
+                        <span class="font-bold text-green-600 dark:text-green-400">R$ <?= number_format($contas_receber['total'], 2, ',', '.') ?></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Contas a Pagar</span>
+                        <span class="font-bold text-red-600 dark:text-red-400">R$ <?= number_format($contas_pagar['total'], 2, ',', '.') ?></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Análise de Risco -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    Riscos e Alertas
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Contas Vencidas</span>
+                        <span class="font-bold text-red-600 dark:text-red-400"><?= number_format($metricas_financeiras['contas_vencidas']) ?></span>
+                    </div>
+                    <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Valor em Atraso</span>
+                        <span class="font-bold text-red-600 dark:text-red-400">R$ <?= number_format($metricas_financeiras['inadimplencia_valor'], 2, ',', '.') ?></span>
+                    </div>
+                    <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Movimentações Pendentes</span>
+                        <span class="font-bold text-amber-600 dark:text-amber-400"><?= number_format($movimentacoes_caixa['pendentes']) ?></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Meses de Sobrevivência</span>
+                        <span class="font-bold <?= $metricas_financeiras['runway'] < 3 ? 'text-red-600 dark:text-red-400' : ($metricas_financeiras['runway'] < 6 ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400') ?>">
+                            <?= $metricas_financeiras['runway'] > 24 ? '24+' : number_format($metricas_financeiras['runway'], 0) ?>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Cards de Totais -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <!-- Empresas -->

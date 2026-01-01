@@ -278,4 +278,57 @@ class MovimentacaoCaixa extends Model
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
+
+    /**
+     * Retorna soma por tipo
+     */
+    public function getSomaByTipo($empresaId, $dataInicio, $dataFim, $tipo)
+    {
+        $sql = "SELECT COALESCE(SUM(valor), 0) as total
+                FROM {$this->table}
+                WHERE data_movimentacao BETWEEN :data_inicio AND :data_fim
+                AND tipo = :tipo";
+        
+        $params = [
+            'data_inicio' => $dataInicio,
+            'data_fim' => $dataFim,
+            'tipo' => $tipo
+        ];
+        
+        if ($empresaId) {
+            $sql .= " AND empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['total'] ?? 0;
+    }
+
+    /**
+     * Retorna saldo inicial antes de uma data
+     */
+    public function getSaldoInicial($empresaId, $data)
+    {
+        $sql = "SELECT 
+                    COALESCE(SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END), 0) -
+                    COALESCE(SUM(CASE WHEN tipo = 'saida' THEN valor ELSE 0 END), 0) as saldo
+                FROM {$this->table}
+                WHERE data_movimentacao < :data";
+        
+        $params = ['data' => $data];
+        
+        if ($empresaId) {
+            $sql .= " AND empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['saldo'] ?? 0;
+    }
 }

@@ -155,6 +155,16 @@ return [
     // DRE (protegido)
     'GET /dre' => ['handler' => 'DREController@index', 'middleware' => ['AuthMiddleware']],
     
+    // DFC (protegido)
+    'GET /dfc' => ['handler' => 'DFCController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /dfc/exportar-pdf' => ['handler' => 'DFCController@exportarPDF', 'middleware' => ['AuthMiddleware']],
+    
+    // Relatórios Gerais (protegido)
+    'GET /relatorios' => ['handler' => 'RelatorioController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /relatorios/lucro' => ['handler' => 'RelatorioController@lucro', 'middleware' => ['AuthMiddleware']],
+    'GET /relatorios/margem' => ['handler' => 'RelatorioController@margem', 'middleware' => ['AuthMiddleware']],
+    'GET /relatorios/inadimplencia' => ['handler' => 'RelatorioController@inadimplencia', 'middleware' => ['AuthMiddleware']],
+    
     // Configurações (protegido)
     'GET /configuracoes' => ['handler' => 'ConfiguracaoController@index', 'middleware' => ['AuthMiddleware']],
     'POST /configuracoes/salvar' => ['handler' => 'ConfiguracaoController@salvar', 'middleware' => ['AuthMiddleware']],

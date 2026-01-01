@@ -476,4 +476,103 @@ class ContaPagar extends Model
         $stmt = $this->db->query($sql);
         return $stmt->fetchColumn();
     }
+
+    /**
+     * Retorna soma por período
+     */
+    public function getSomaByPeriodo($empresaId, $dataInicio, $dataFim, $status = null)
+    {
+        $sql = "SELECT COALESCE(SUM(valor), 0) as total
+                FROM {$this->table}
+                WHERE data_pagamento BETWEEN :data_inicio AND :data_fim";
+        
+        $params = [
+            'data_inicio' => $dataInicio,
+            'data_fim' => $dataFim
+        ];
+        
+        if ($empresaId) {
+            $sql .= " AND empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
+        }
+        
+        if ($status) {
+            $sql .= " AND status = :status";
+            $params['status'] = $status;
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['total'] ?? 0;
+    }
+
+    /**
+     * Retorna soma por categoria
+     */
+    public function getSomaByCategoria($empresaId, $dataInicio, $dataFim, $categoriaNome)
+    {
+        $sql = "SELECT COALESCE(SUM(cp.valor), 0) as total
+                FROM {$this->table} cp
+                JOIN categorias_financeiras c ON cp.categoria_id = c.id
+                WHERE cp.data_pagamento BETWEEN :data_inicio AND :data_fim
+                AND c.nome LIKE :categoria_nome
+                AND cp.status = 'pago'";
+        
+        $params = [
+            'data_inicio' => $dataInicio,
+            'data_fim' => $dataFim,
+            'categoria_nome' => "%{$categoriaNome}%"
+        ];
+        
+        if ($empresaId) {
+            $sql .= " AND cp.empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['total'] ?? 0;
+    }
+
+    /**
+     * Retorna despesas agrupadas por categoria
+     */
+    public function getDespesasPorCategoria($empresaId, $dataInicio, $dataFim)
+    {
+        $sql = "SELECT 
+                    c.nome as categoria,
+                    COALESCE(SUM(cp.valor), 0) as total
+                FROM {$this->table} cp
+                JOIN categorias_financeiras c ON cp.categoria_id = c.id
+                WHERE cp.data_pagamento BETWEEN :data_inicio AND :data_fim
+                AND cp.status = 'pago'";
+        
+        $params = [
+            'data_inicio' => $dataInicio,
+            'data_fim' => $dataFim
+        ];
+        
+        if ($empresaId) {
+            $sql .= " AND cp.empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
+        }
+        
+        $sql .= " GROUP BY c.id, c.nome ORDER BY total DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Retorna a conexão do banco (para uso em outros lugares)
+     */
+    public function getDb()
+    {
+        return $this->db;
+    }
 }

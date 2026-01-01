@@ -427,4 +427,128 @@ class ContaReceber extends Model
         $stmt = $this->db->query($sql);
         return $stmt->fetchColumn();
     }
+
+    /**
+     * Retorna soma por período
+     */
+    public function getSomaByPeriodo($empresaId, $dataInicio, $dataFim, $status = null)
+    {
+        $sql = "SELECT COALESCE(SUM(valor), 0) as total
+                FROM {$this->table}
+                WHERE data_recebimento BETWEEN :data_inicio AND :data_fim";
+        
+        $params = [
+            'data_inicio' => $dataInicio,
+            'data_fim' => $dataFim
+        ];
+        
+        if ($empresaId) {
+            $sql .= " AND empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
+        }
+        
+        if ($status) {
+            $sql .= " AND status = :status";
+            $params['status'] = $status;
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['total'] ?? 0;
+    }
+
+    /**
+     * Retorna soma por categoria
+     */
+    public function getSomaByCategoria($empresaId, $dataInicio, $dataFim, $categoriaNome)
+    {
+        $sql = "SELECT COALESCE(SUM(cr.valor), 0) as total
+                FROM {$this->table} cr
+                JOIN categorias_financeiras c ON cr.categoria_id = c.id
+                WHERE cr.data_recebimento BETWEEN :data_inicio AND :data_fim
+                AND c.nome LIKE :categoria_nome
+                AND cr.status = 'recebido'";
+        
+        $params = [
+            'data_inicio' => $dataInicio,
+            'data_fim' => $dataFim,
+            'categoria_nome' => "%{$categoriaNome}%"
+        ];
+        
+        if ($empresaId) {
+            $sql .= " AND cr.empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['total'] ?? 0;
+    }
+
+    /**
+     * Retorna receitas agrupadas por categoria
+     */
+    public function getReceitasPorCategoria($empresaId, $dataInicio, $dataFim)
+    {
+        $sql = "SELECT 
+                    c.nome as categoria,
+                    COALESCE(SUM(cr.valor), 0) as total
+                FROM {$this->table} cr
+                JOIN categorias_financeiras c ON cr.categoria_id = c.id
+                WHERE cr.data_recebimento BETWEEN :data_inicio AND :data_fim
+                AND cr.status = 'recebido'";
+        
+        $params = [
+            'data_inicio' => $dataInicio,
+            'data_fim' => $dataFim
+        ];
+        
+        if ($empresaId) {
+            $sql .= " AND cr.empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
+        }
+        
+        $sql .= " GROUP BY c.id, c.nome ORDER BY total DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Retorna contas vencidas
+     */
+    public function getContasVencidas($empresaId = null)
+    {
+        $sql = "SELECT cr.*, c.nome_razao_social as cliente_nome
+                FROM {$this->table} cr
+                LEFT JOIN clientes c ON cr.cliente_id = c.id
+                WHERE cr.status = 'pendente'
+                AND cr.data_vencimento < CURDATE()";
+        
+        $params = [];
+        
+        if ($empresaId) {
+            $sql .= " AND cr.empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
+        }
+        
+        $sql .= " ORDER BY cr.data_vencimento ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Retorna a conexão do banco (para uso em outros lugares)
+     */
+    public function getDb()
+    {
+        return $this->db;
+    }
 }
