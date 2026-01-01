@@ -102,8 +102,8 @@ class ConexaoBancariaController extends Controller
     public function iniciarConsentimento(Request $request, Response $response)
     {
         $data = $request->all();
-        // Aceita empresa_id vindo do formulário (não depende mais da sessão)
-        $empresaId = $request->get('empresa_id') ?? $request->post('empresa_id') ?? ($_SESSION['usuario_empresa_id'] ?? null);
+        // Captura empresa_id do POST (form), ou querystring, ou sessão
+        $empresaId = $data['empresa_id'] ?? $request->get('empresa_id') ?? ($_SESSION['usuario_empresa_id'] ?? null);
         $usuarioId = $_SESSION['usuario_id'] ?? null;
         
         if (!$empresaId || !$usuarioId) {
