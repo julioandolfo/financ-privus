@@ -8,6 +8,7 @@ use App\Models\ConexaoBancaria;
 use App\Models\CategoriaFinanceira;
 use App\Models\CentroCusto;
 use App\Models\Empresa;
+use App\Models\Usuario;
 use Includes\Services\OpenBankingService;
 
 class ConexaoBancariaController extends Controller
@@ -31,23 +32,31 @@ class ConexaoBancariaController extends Controller
      */
     public function index(Request $request, Response $response)
     {
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        // Se não houver empresa selecionada, exibir a view com aviso (sem redirecionar)
-        if (!$empresaId) {
-            return $this->render('conexoes_bancarias/index', [
-                'conexoes' => [],
-                'empresa' => null,
-                'needsEmpresa' => true
-            ]);
+        $usuarioId = $_SESSION['usuario_id'] ?? null;
+        $usuarioModel = new Usuario();
+        
+        // Buscar empresas do usuário
+        $empresasUsuario = $usuarioModel->getEmpresas($usuarioId);
+        
+        // Pegar empresa da URL ou primeira empresa
+        $empresaId = $request->get('empresa_id');
+        if (!$empresaId && !empty($empresasUsuario)) {
+            $empresaId = $empresasUsuario[0]['id'];
         }
         
-        $conexoes = $this->conexaoModel->findByEmpresa($empresaId);
-        $empresa = $this->empresaModel->findById($empresaId);
+        $conexoes = [];
+        $empresa = null;
+        
+        if ($empresaId) {
+            $conexoes = $this->conexaoModel->findByEmpresa($empresaId);
+            $empresa = $this->empresaModel->findById($empresaId);
+        }
         
         return $this->render('conexoes_bancarias/index', [
             'conexoes' => $conexoes,
             'empresa' => $empresa,
-            'needsEmpresa' => false
+            'empresas_usuario' => $empresasUsuario,
+            'empresa_id_selecionada' => $empresaId
         ]);
     }
     
@@ -56,26 +65,34 @@ class ConexaoBancariaController extends Controller
      */
     public function create(Request $request, Response $response)
     {
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
+        $usuarioId = $_SESSION['usuario_id'] ?? null;
+        $usuarioModel = new Usuario();
         
-        if (!$empresaId) {
-            return $this->render('conexoes_bancarias/create', [
-                'categorias' => [],
-                'centros_custo' => [],
-                'empresa' => null,
-                'needsEmpresa' => true
-            ]);
+        // Buscar empresas do usuário
+        $empresasUsuario = $usuarioModel->getEmpresas($usuarioId);
+        
+        // Pegar empresa da URL ou primeira empresa
+        $empresaId = $request->get('empresa_id');
+        if (!$empresaId && !empty($empresasUsuario)) {
+            $empresaId = $empresasUsuario[0]['id'];
         }
         
-        $categorias = $this->categoriaModel->findAll($empresaId);
-        $centrosCusto = $this->centroCustoModel->findAll($empresaId);
-        $empresa = $this->empresaModel->findById($empresaId);
+        $categorias = [];
+        $centrosCusto = [];
+        $empresa = null;
+        
+        if ($empresaId) {
+            $categorias = $this->categoriaModel->findAll($empresaId);
+            $centrosCusto = $this->centroCustoModel->findAll($empresaId);
+            $empresa = $this->empresaModel->findById($empresaId);
+        }
         
         return $this->render('conexoes_bancarias/create', [
             'categorias' => $categorias,
             'centros_custo' => $centrosCusto,
             'empresa' => $empresa,
-            'needsEmpresa' => false
+            'empresas_usuario' => $empresasUsuario,
+            'empresa_id_selecionada' => $empresaId
         ]);
     }
     
@@ -474,7 +491,7 @@ class ConexaoBancariaController extends Controller
         $errors = [];
         
         // Frequência de sync
-        if (isset($data['frequencia_sync']) && !in_array($data['frequencia_sync'], ['manual', 'diaria', 'semanal'])) {
+        if (isset($data['frequencia_sync']) && !in_array($data['frequencia_sync'], ['manual', '10min', '30min', 'horaria', 'diaria', 'semanal'])) {
             $errors['frequencia_sync'] = 'Frequência de sincronização inválida';
         }
         

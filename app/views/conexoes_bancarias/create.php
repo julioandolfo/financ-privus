@@ -4,18 +4,24 @@ $errors = $this->session->get('errors') ?? [];
 ?>
 
 <div class="max-w-3xl mx-auto">
-    <?php if (!empty($needsEmpresa)): ?>
-        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-2xl p-6 mb-6">
-            <h2 class="text-lg font-bold text-yellow-800 dark:text-yellow-200 mb-2">
-                Selecione uma empresa para continuar
-            </h2>
-            <p class="text-sm text-yellow-700 dark:text-yellow-300">
-                Use o filtro de empresas no topo do dashboard e selecione pelo menos uma empresa.
-            </p>
+    <!-- Seletor de Empresa -->
+    <?php if (!empty($empresas_usuario) && count($empresas_usuario) > 0): ?>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
+            <form method="GET" action="/conexoes-bancarias/create" class="flex items-center gap-4">
+                <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Empresa:</label>
+                <select name="empresa_id" onchange="this.form.submit()" class="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    <?php foreach ($empresas_usuario as $emp): ?>
+                        <option value="<?= $emp['id'] ?>" <?= ($empresa_id_selecionada == $emp['id']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($emp['nome_fantasia']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
         </div>
     <?php endif; ?>
+    
     <div class="mb-8">
-        <a href="/conexoes-bancarias" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mb-4">
+        <a href="/conexoes-bancarias?empresa_id=<?= $empresa_id_selecionada ?? '' ?>" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mb-4">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
             </svg>
@@ -100,10 +106,16 @@ $errors = $this->session->get('errors') ?? [];
                     </label>
                     <select name="frequencia_sync" id="frequencia_sync"
                             class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                        <option value="manual" <?= ($old['frequencia_sync'] ?? 'diaria') == 'manual' ? 'selected' : '' ?>>Manual</option>
-                        <option value="diaria" <?= ($old['frequencia_sync'] ?? 'diaria') == 'diaria' ? 'selected' : '' ?>>Diária</option>
-                        <option value="semanal" <?= ($old['frequencia_sync'] ?? 'diaria') == 'semanal' ? 'selected' : '' ?>>Semanal</option>
+                        <option value="manual" <?= ($old['frequencia_sync'] ?? 'diaria') == 'manual' ? 'selected' : '' ?>>Manual (Sob demanda)</option>
+                        <option value="10min" <?= ($old['frequencia_sync'] ?? 'diaria') == '10min' ? 'selected' : '' ?>>A cada 10 minutos</option>
+                        <option value="30min" <?= ($old['frequencia_sync'] ?? 'diaria') == '30min' ? 'selected' : '' ?>>A cada 30 minutos</option>
+                        <option value="horaria" <?= ($old['frequencia_sync'] ?? 'diaria') == 'horaria' ? 'selected' : '' ?>>A cada hora</option>
+                        <option value="diaria" <?= ($old['frequencia_sync'] ?? 'diaria') == 'diaria' ? 'selected' : '' ?>>Diária (1x por dia)</option>
+                        <option value="semanal" <?= ($old['frequencia_sync'] ?? 'diaria') == 'semanal' ? 'selected' : '' ?>>Semanal (1x por semana)</option>
                     </select>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        ⚠️ Frequências menores que 1 hora podem gerar mais custos de API
+                    </p>
                 </div>
             </div>
 

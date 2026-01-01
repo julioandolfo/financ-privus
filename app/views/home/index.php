@@ -1350,7 +1350,6 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
     </div>
 
     <!-- Seção Sincronização Bancária -->
-    <?php if ($sincronizacao_bancaria['conexoes_ativas'] > 0 || $sincronizacao_bancaria['transacoes_pendentes'] > 0): ?>
     <div class="mb-8">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
@@ -1493,5 +1492,4 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             </div>
         <?php endif; ?>
     </div>
-    <?php endif; ?>
 </div>

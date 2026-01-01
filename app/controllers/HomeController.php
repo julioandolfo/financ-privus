@@ -274,7 +274,7 @@ class HomeController extends Controller
             $taxaInadimplencia = $valorTotalReceber > 0 ? 
                 ($valorContasVencidas / $valorTotalReceber) * 100 : 0;
             
-            // MÉTRICAS DE SINCRONIZAÇÃO BANCÁRIA
+            // MÉTRICAS DE SINCRONIZAÇÃO BANCÁRIA (TODAS AS EMPRESAS DO USUÁRIO)
             $conexaoBancariaModel = new ConexaoBancaria();
             $transacaoPendenteModel = new TransacaoPendente();
             
@@ -284,7 +284,10 @@ class HomeController extends Controller
             $transacoesAprovadas = 0;
             $transacoesIgnoradas = 0;
             
-            foreach ($empresasIds as $empresaId) {
+            // Buscar métricas de TODAS as empresas do usuário (não apenas filtradas)
+            $todasEmpresasIds = array_column($todasEmpresas, 'id');
+            
+            foreach ($todasEmpresasIds as $empresaId) {
                 // Conexões ativas
                 $conexoes = $conexaoBancariaModel->findByEmpresa($empresaId);
                 $conexoesAtivas += count($conexoes);

@@ -11,6 +11,7 @@ use App\Models\CategoriaFinanceira;
 use App\Models\CentroCusto;
 use App\Models\Fornecedor;
 use App\Models\Cliente;
+use App\Models\Usuario;
 
 class TransacaoPendenteController extends Controller
 {
@@ -39,27 +40,16 @@ class TransacaoPendenteController extends Controller
      */
     public function index(Request $request, Response $response)
     {
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-
-        // Se não houver empresa selecionada, mostrar view com aviso (sem redirecionar)
-        if (!$empresaId) {
-            return $this->render('transacoes_pendentes/index', [
-                'transacoes' => [],
-                'estatisticas' => [
-                    'total' => 0,
-                    'pendentes' => 0,
-                    'aprovadas' => 0,
-                    'ignoradas' => 0,
-                    'total_debitos' => 0,
-                    'total_creditos' => 0
-                ],
-                'filtros' => [],
-                'categorias' => [],
-                'centros_custo' => [],
-                'fornecedores' => [],
-                'clientes' => [],
-                'needsEmpresa' => true
-            ]);
+        $usuarioId = $_SESSION['usuario_id'] ?? null;
+        $usuarioModel = new Usuario();
+        
+        // Buscar empresas do usuário
+        $empresasUsuario = $usuarioModel->getEmpresas($usuarioId);
+        
+        // Pegar empresa da URL ou primeira empresa
+        $empresaId = $request->get('empresa_id');
+        if (!$empresaId && !empty($empresasUsuario)) {
+            $empresaId = $empresasUsuario[0]['id'];
         }
 
         // Filtros
@@ -70,14 +60,30 @@ class TransacaoPendenteController extends Controller
             'data_fim' => $request->get('data_fim')
         ];
         
-        $transacoes = $this->transacaoModel->findByEmpresa($empresaId, $filtros);
-        $estatisticas = $this->transacaoModel->getEstatisticas($empresaId);
+        $transacoes = [];
+        $estatisticas = [
+            'total' => 0,
+            'pendentes' => 0,
+            'aprovadas' => 0,
+            'ignoradas' => 0,
+            'total_debitos' => 0,
+            'total_creditos' => 0
+        ];
+        $categorias = [];
+        $centrosCusto = [];
+        $fornecedores = [];
+        $clientes = [];
         
-        // Buscar categorias e centros de custo para os filtros
-        $categorias = $this->categoriaModel->findAll($empresaId);
-        $centrosCusto = $this->centroCustoModel->findAll($empresaId);
-        $fornecedores = $this->fornecedorModel->findAll(['empresa_id' => $empresaId]);
-        $clientes = $this->clienteModel->findAll(['empresa_id' => $empresaId]);
+        if ($empresaId) {
+            $transacoes = $this->transacaoModel->findByEmpresa($empresaId, $filtros);
+            $estatisticas = $this->transacaoModel->getEstatisticas($empresaId);
+            
+            // Buscar categorias e centros de custo para os filtros
+            $categorias = $this->categoriaModel->findAll($empresaId);
+            $centrosCusto = $this->centroCustoModel->findAll($empresaId);
+            $fornecedores = $this->fornecedorModel->findAll(['empresa_id' => $empresaId]);
+            $clientes = $this->clienteModel->findAll(['empresa_id' => $empresaId]);
+        }
         
         return $this->render('transacoes_pendentes/index', [
             'transacoes' => $transacoes,
@@ -87,7 +93,8 @@ class TransacaoPendenteController extends Controller
             'centros_custo' => $centrosCusto,
             'fornecedores' => $fornecedores,
             'clientes' => $clientes,
-            'needsEmpresa' => false
+            'empresas_usuario' => $empresasUsuario,
+            'empresa_id_selecionada' => $empresaId
         ]);
     }
     

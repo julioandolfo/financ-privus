@@ -4,16 +4,22 @@ $errors = $this->session->get('errors') ?? [];
 ?>
 
 <div class="max-w-7xl mx-auto" x-data="{ showModalExplicacao: false }">
-    <?php if (!empty($needsEmpresa)): ?>
-        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-2xl p-6 mb-8">
-            <h2 class="text-lg font-bold text-yellow-800 dark:text-yellow-200 mb-2">
-                Selecione uma empresa para continuar
-            </h2>
-            <p class="text-sm text-yellow-700 dark:text-yellow-300">
-                Use o filtro de empresas no topo do dashboard e selecione pelo menos uma empresa.
-            </p>
+    <!-- Seletor de Empresa -->
+    <?php if (!empty($empresas_usuario) && count($empresas_usuario) > 0): ?>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
+            <form method="GET" action="/conexoes-bancarias" class="flex items-center gap-4">
+                <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Empresa:</label>
+                <select name="empresa_id" onchange="this.form.submit()" class="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    <?php foreach ($empresas_usuario as $emp): ?>
+                        <option value="<?= $emp['id'] ?>" <?= ($empresa_id_selecionada == $emp['id']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($emp['nome_fantasia']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
         </div>
     <?php endif; ?>
+    
     <!-- Header com botão de ajuda -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
