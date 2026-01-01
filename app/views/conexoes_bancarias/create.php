@@ -4,24 +4,8 @@ $errors = $this->session->get('errors') ?? [];
 ?>
 
 <div class="max-w-3xl mx-auto">
-    <!-- Seletor de Empresa -->
-    <?php if (!empty($empresas_usuario) && count($empresas_usuario) > 0): ?>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
-            <form method="GET" action="/conexoes-bancarias/create" class="flex items-center gap-4">
-                <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Empresa:</label>
-                <select name="empresa_id" onchange="this.form.submit()" class="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                    <?php foreach ($empresas_usuario as $emp): ?>
-                        <option value="<?= $emp['id'] ?>" <?= ($empresa_id_selecionada == $emp['id']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($emp['nome_fantasia']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </form>
-        </div>
-    <?php endif; ?>
-    
     <div class="mb-8">
-        <a href="/conexoes-bancarias?empresa_id=<?= $empresa_id_selecionada ?? '' ?>" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mb-4">
+        <a href="/conexoes-bancarias" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mb-4">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
             </svg>
@@ -36,8 +20,32 @@ $errors = $this->session->get('errors') ?? [];
     </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
+        <?php if (empty($empresas_usuario)): ?>
+            <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl p-4 mb-4">
+                <p class="text-sm text-yellow-800 dark:text-yellow-200 font-semibold">Nenhuma empresa encontrada para este usuário.</p>
+                <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">Cadastre uma empresa ou peça acesso a uma existente para criar conexões bancárias.</p>
+            </div>
+        <?php endif; ?>
+
         <form action="/conexoes-bancarias/iniciar-consentimento" method="POST" x-data="conexaoForm()">
-            <input type="hidden" name="empresa_id" value="<?= htmlspecialchars($empresa_id_selecionada ?? '') ?>">
+            <!-- Empresa -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Empresa <span class="text-red-500">*</span>
+                </label>
+                <select name="empresa_id" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($errors['empresa_id']) ? 'border-red-500' : '' ?>">
+                    <option value="">Selecione...</option>
+                    <?php foreach ($empresas_usuario as $emp): ?>
+                        <option value="<?= $emp['id'] ?>" <?= ($empresa_id_selecionada == $emp['id']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($emp['nome_fantasia']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <?php if (isset($errors['empresa_id'])): ?>
+                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $errors['empresa_id'] ?></p>
+                <?php endif; ?>
+            </div>
             
             <!-- Banco -->
             <div class="mb-6">

@@ -107,7 +107,9 @@ class ConexaoBancariaController extends Controller
         $usuarioId = $_SESSION['usuario_id'] ?? null;
         
         if (!$empresaId || !$usuarioId) {
-            return $response->json(['error' => 'Sessão inválida'], 401);
+            $_SESSION['errors'] = ['empresa_id' => 'Selecione a empresa.'];
+            $_SESSION['old'] = $data;
+            return $response->redirect('/conexoes-bancarias/create');
         }
         
         // Validar dados básicos
