@@ -113,14 +113,13 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
 
                 <div class="flex items-center space-x-3">
                     <?php if ($filtro['ativo']): ?>
-                        <form method="POST" action="/dashboard/limpar-filtro" class="inline-block">
-                            <button 
-                                type="submit"
-                                class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                            >
-                                Remover Filtro
-                            </button>
-                        </form>
+                        <button 
+                            type="button"
+                            onclick="window.location.href='/dashboard/limpar-filtro'"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                            Remover Filtro
+                        </button>
                     <?php endif; ?>
                     <button 
                         type="submit"

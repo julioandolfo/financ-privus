@@ -118,9 +118,9 @@ class RelatorioController extends Controller
         $produtosComMargem = [];
         foreach ($produtos as $produto) {
             if ($produto['preco_venda'] > 0) {
-                $margem = (($produto['preco_venda'] - $produto['preco_custo']) / $produto['preco_venda']) * 100;
+                $margem = (($produto['preco_venda'] - $produto['custo_unitario']) / $produto['preco_venda']) * 100;
                 $produto['margem'] = $margem;
-                $produto['lucro_unitario'] = $produto['preco_venda'] - $produto['preco_custo'];
+                $produto['lucro_unitario'] = $produto['preco_venda'] - $produto['custo_unitario'];
                 $produtosComMargem[] = $produto;
             }
         }
@@ -165,7 +165,7 @@ class RelatorioController extends Controller
         $contasPorCliente = [];
         
         foreach ($contasVencidas as $conta) {
-            $valorVencido += $conta['valor'];
+            $valorVencido += $conta['valor_total'];
             
             $clienteId = $conta['cliente_id'];
             if (!isset($contasPorCliente[$clienteId])) {
@@ -177,7 +177,7 @@ class RelatorioController extends Controller
                 ];
             }
             
-            $contasPorCliente[$clienteId]['total_vencido'] += $conta['valor'];
+            $contasPorCliente[$clienteId]['total_vencido'] += $conta['valor_total'];
             $contasPorCliente[$clienteId]['quantidade']++;
             $contasPorCliente[$clienteId]['contas'][] = $conta;
         }
@@ -194,7 +194,7 @@ class RelatorioController extends Controller
         ]);
         
         foreach ($todasContas as $conta) {
-            $valorTotal += $conta['valor'];
+            $valorTotal += $conta['valor_total'];
         }
         
         $taxaInadimplencia = $valorTotal > 0 ? ($valorVencido / $valorTotal) * 100 : 0;
@@ -223,7 +223,7 @@ class RelatorioController extends Controller
                     SUM(CASE WHEN tipo = 'receita' THEN valor ELSE 0 END) as receitas,
                     SUM(CASE WHEN tipo = 'despesa' THEN valor ELSE 0 END) as despesas
                 FROM (
-                    SELECT data_recebimento as data, valor, 'receita' as tipo
+                    SELECT data_recebimento as data, valor_total as valor, 'receita' as tipo
                     FROM contas_receber
                     WHERE status = 'recebido'
                     AND data_recebimento BETWEEN :data_inicio AND :data_fim
@@ -231,7 +231,7 @@ class RelatorioController extends Controller
                     
                     UNION ALL
                     
-                    SELECT data_pagamento as data, valor, 'despesa' as tipo
+                    SELECT data_pagamento as data, valor_total as valor, 'despesa' as tipo
                     FROM contas_pagar
                     WHERE status = 'pago'
                     AND data_pagamento BETWEEN :data_inicio AND :data_fim

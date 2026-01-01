@@ -482,7 +482,7 @@ class ContaPagar extends Model
      */
     public function getSomaByPeriodo($empresaId, $dataInicio, $dataFim, $status = null)
     {
-        $sql = "SELECT COALESCE(SUM(valor), 0) as total
+        $sql = "SELECT COALESCE(SUM(valor_total), 0) as total
                 FROM {$this->table}
                 WHERE data_pagamento BETWEEN :data_inicio AND :data_fim";
         
@@ -513,7 +513,7 @@ class ContaPagar extends Model
      */
     public function getSomaByCategoria($empresaId, $dataInicio, $dataFim, $categoriaNome)
     {
-        $sql = "SELECT COALESCE(SUM(cp.valor), 0) as total
+        $sql = "SELECT COALESCE(SUM(cp.valor_total), 0) as total
                 FROM {$this->table} cp
                 JOIN categorias_financeiras c ON cp.categoria_id = c.id
                 WHERE cp.data_pagamento BETWEEN :data_inicio AND :data_fim
@@ -545,7 +545,7 @@ class ContaPagar extends Model
     {
         $sql = "SELECT 
                     c.nome as categoria,
-                    COALESCE(SUM(cp.valor), 0) as total
+                    COALESCE(SUM(cp.valor_total), 0) as total
                 FROM {$this->table} cp
                 JOIN categorias_financeiras c ON cp.categoria_id = c.id
                 WHERE cp.data_pagamento BETWEEN :data_inicio AND :data_fim

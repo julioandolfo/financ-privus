@@ -103,7 +103,7 @@
                                 <?php endif; ?>
                             </td>
                             <td class="px-6 py-4 text-right text-gray-900 dark:text-gray-100">
-                                R$ <?= number_format($produto['preco_custo'], 2, ',', '.') ?>
+                                R$ <?= number_format($produto['custo_unitario'], 2, ',', '.') ?>
                             </td>
                             <td class="px-6 py-4 text-right text-gray-900 dark:text-gray-100 font-semibold">
                                 R$ <?= number_format($produto['preco_venda'], 2, ',', '.') ?>

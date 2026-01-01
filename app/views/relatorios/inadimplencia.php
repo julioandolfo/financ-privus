@@ -165,7 +165,7 @@
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <span class="font-bold text-red-600 dark:text-red-400">
-                                    R$ <?= number_format($conta['valor'], 2, ',', '.') ?>
+                                    R$ <?= number_format($conta['valor_total'], 2, ',', '.') ?>
                                 </span>
                             </td>
                         </tr>
