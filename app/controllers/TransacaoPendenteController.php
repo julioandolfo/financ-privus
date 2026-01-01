@@ -40,12 +40,28 @@ class TransacaoPendenteController extends Controller
     public function index(Request $request, Response $response)
     {
         $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        
+
+        // Se não houver empresa selecionada, mostrar view com aviso (sem redirecionar)
         if (!$empresaId) {
-            $_SESSION['error'] = 'Selecione uma empresa primeiro';
-            return $response->redirect('/dashboard');
+            return $this->render('transacoes_pendentes/index', [
+                'transacoes' => [],
+                'estatisticas' => [
+                    'total' => 0,
+                    'pendentes' => 0,
+                    'aprovadas' => 0,
+                    'ignoradas' => 0,
+                    'total_debitos' => 0,
+                    'total_creditos' => 0
+                ],
+                'filtros' => [],
+                'categorias' => [],
+                'centros_custo' => [],
+                'fornecedores' => [],
+                'clientes' => [],
+                'needsEmpresa' => true
+            ]);
         }
-        
+
         // Filtros
         $filtros = [
             'status' => $request->get('status', 'pendente'),
@@ -70,7 +86,8 @@ class TransacaoPendenteController extends Controller
             'categorias' => $categorias,
             'centros_custo' => $centrosCusto,
             'fornecedores' => $fornecedores,
-            'clientes' => $clientes
+            'clientes' => $clientes,
+            'needsEmpresa' => false
         ]);
     }
     

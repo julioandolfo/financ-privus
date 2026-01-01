@@ -4,6 +4,16 @@ $errors = $this->session->get('errors') ?? [];
 ?>
 
 <div class="max-w-3xl mx-auto">
+    <?php if (!empty($needsEmpresa)): ?>
+        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-2xl p-6 mb-6">
+            <h2 class="text-lg font-bold text-yellow-800 dark:text-yellow-200 mb-2">
+                Selecione uma empresa para continuar
+            </h2>
+            <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                Use o filtro de empresas no topo do dashboard e selecione pelo menos uma empresa.
+            </p>
+        </div>
+    <?php endif; ?>
     <div class="mb-8">
         <a href="/conexoes-bancarias" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mb-4">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

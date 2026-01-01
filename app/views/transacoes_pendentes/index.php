@@ -4,6 +4,16 @@ $errors = $this->session->get('errors') ?? [];
 ?>
 
 <div class="max-w-7xl mx-auto" x-data="transacoesPendentes()">
+    <?php if (!empty($needsEmpresa)): ?>
+        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-2xl p-6 mb-8">
+            <h2 class="text-lg font-bold text-yellow-800 dark:text-yellow-200 mb-2">
+                Selecione uma empresa para continuar
+            </h2>
+            <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                Use o filtro de empresas no topo do dashboard e selecione pelo menos uma empresa.
+            </p>
+        </div>
+    <?php endif; ?>
     <!-- Header -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>

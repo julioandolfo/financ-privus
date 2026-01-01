@@ -32,10 +32,13 @@ class ConexaoBancariaController extends Controller
     public function index(Request $request, Response $response)
     {
         $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        
+        // Se não houver empresa selecionada, exibir a view com aviso (sem redirecionar)
         if (!$empresaId) {
-            $_SESSION['error'] = 'Selecione uma empresa primeiro';
-            return $response->redirect('/dashboard');
+            return $this->render('conexoes_bancarias/index', [
+                'conexoes' => [],
+                'empresa' => null,
+                'needsEmpresa' => true
+            ]);
         }
         
         $conexoes = $this->conexaoModel->findByEmpresa($empresaId);
@@ -43,7 +46,8 @@ class ConexaoBancariaController extends Controller
         
         return $this->render('conexoes_bancarias/index', [
             'conexoes' => $conexoes,
-            'empresa' => $empresa
+            'empresa' => $empresa,
+            'needsEmpresa' => false
         ]);
     }
     
@@ -55,8 +59,12 @@ class ConexaoBancariaController extends Controller
         $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         
         if (!$empresaId) {
-            $_SESSION['error'] = 'Selecione uma empresa primeiro';
-            return $response->redirect('/dashboard');
+            return $this->render('conexoes_bancarias/create', [
+                'categorias' => [],
+                'centros_custo' => [],
+                'empresa' => null,
+                'needsEmpresa' => true
+            ]);
         }
         
         $categorias = $this->categoriaModel->findAll($empresaId);
@@ -66,7 +74,8 @@ class ConexaoBancariaController extends Controller
         return $this->render('conexoes_bancarias/create', [
             'categorias' => $categorias,
             'centros_custo' => $centrosCusto,
-            'empresa' => $empresa
+            'empresa' => $empresa,
+            'needsEmpresa' => false
         ]);
     }
     
