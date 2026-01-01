@@ -37,6 +37,7 @@ $errors = $this->session->get('errors') ?? [];
 
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
         <form action="/conexoes-bancarias/iniciar-consentimento" method="POST" x-data="conexaoForm()">
+            <input type="hidden" name="empresa_id" value="<?= htmlspecialchars($empresa_id_selecionada ?? '') ?>">
             
             <!-- Banco -->
             <div class="mb-6">
