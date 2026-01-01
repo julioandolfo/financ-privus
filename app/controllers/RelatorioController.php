@@ -47,67 +47,55 @@ class RelatorioController extends Controller
      */
     public function lucro(Request $request, Response $response)
     {
-        try {
-            $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-            
-            // Filtros
-            $dataInicio = $request->get('data_inicio', date('Y-m-01'));
-            $dataFim = $request->get('data_fim', date('Y-m-t'));
-            $empresaSelecionada = $request->get('empresa_id', $empresaId);
-            
-            // Buscar empresas
-            $empresas = $this->empresaModel->findAll();
-            
-            // Calcular receitas
-            $receitas = $this->contaReceberModel->getSomaByPeriodo(
-                $empresaSelecionada, $dataInicio, $dataFim, 'recebido'
-            );
-            
-            // Calcular despesas
-            $despesas = $this->contaPagarModel->getSomaByPeriodo(
-                $empresaSelecionada, $dataInicio, $dataFim, 'pago'
-            );
-            
-            // Lucro bruto e líquido
-            $lucroBruto = $receitas - $despesas;
-            
-            // Receitas por categoria
-            $receitasPorCategoria = $this->contaReceberModel->getReceitasPorCategoria(
-                $empresaSelecionada, $dataInicio, $dataFim
-            );
-            
-            // Despesas por categoria
-            $despesasPorCategoria = $this->contaPagarModel->getDespesasPorCategoria(
-                $empresaSelecionada, $dataInicio, $dataFim
-            );
-            
-            // Evolução mensal
-            $evolucaoMensal = $this->getEvolucaoMensal($empresaSelecionada, $dataInicio, $dataFim);
-            
-            return $this->render('relatorios/lucro', [
-                'receitas' => $receitas,
-                'despesas' => $despesas,
-                'lucroBruto' => $lucroBruto,
-                'margemLiquida' => $receitas > 0 ? ($lucroBruto / $receitas) * 100 : 0,
-                'receitasPorCategoria' => $receitasPorCategoria,
-                'despesasPorCategoria' => $despesasPorCategoria,
-                'evolucaoMensal' => $evolucaoMensal,
-                'empresas' => $empresas,
-                'empresaSelecionada' => $empresaSelecionada,
-                'dataInicio' => $dataInicio,
-                'dataFim' => $dataFim
-            ]);
-        } catch (\Exception $e) {
-            // Exibir erro detalhado
-            echo "<pre>";
-            echo "ERRO NO RELATÓRIO DE LUCRO:\n\n";
-            echo "Mensagem: " . $e->getMessage() . "\n\n";
-            echo "Arquivo: " . $e->getFile() . "\n";
-            echo "Linha: " . $e->getLine() . "\n\n";
-            echo "Stack Trace:\n" . $e->getTraceAsString();
-            echo "</pre>";
-            die();
-        }
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
+        
+        // Filtros
+        $dataInicio = $request->get('data_inicio', date('Y-m-01'));
+        $dataFim = $request->get('data_fim', date('Y-m-t'));
+        $empresaSelecionada = $request->get('empresa_id', $empresaId);
+        
+        // Buscar empresas
+        $empresas = $this->empresaModel->findAll();
+        
+        // Calcular receitas
+        $receitas = $this->contaReceberModel->getSomaByPeriodo(
+            $empresaSelecionada, $dataInicio, $dataFim, 'recebido'
+        );
+        
+        // Calcular despesas
+        $despesas = $this->contaPagarModel->getSomaByPeriodo(
+            $empresaSelecionada, $dataInicio, $dataFim, 'pago'
+        );
+        
+        // Lucro bruto e líquido
+        $lucroBruto = $receitas - $despesas;
+        
+        // Receitas por categoria
+        $receitasPorCategoria = $this->contaReceberModel->getReceitasPorCategoria(
+            $empresaSelecionada, $dataInicio, $dataFim
+        );
+        
+        // Despesas por categoria
+        $despesasPorCategoria = $this->contaPagarModel->getDespesasPorCategoria(
+            $empresaSelecionada, $dataInicio, $dataFim
+        );
+        
+        // Evolução mensal
+        $evolucaoMensal = $this->getEvolucaoMensal($empresaSelecionada, $dataInicio, $dataFim);
+        
+        return $this->render('relatorios/lucro', [
+            'receitas' => $receitas,
+            'despesas' => $despesas,
+            'lucroBruto' => $lucroBruto,
+            'margemLiquida' => $receitas > 0 ? ($lucroBruto / $receitas) * 100 : 0,
+            'receitasPorCategoria' => $receitasPorCategoria,
+            'despesasPorCategoria' => $despesasPorCategoria,
+            'evolucaoMensal' => $evolucaoMensal,
+            'empresas' => $empresas,
+            'empresaSelecionada' => $empresaSelecionada,
+            'dataInicio' => $dataInicio,
+            'dataFim' => $dataFim
+        ]);
     }
 
     /**
@@ -239,26 +227,29 @@ class RelatorioController extends Controller
                     FROM contas_receber
                     WHERE status = 'recebido'
                     AND data_recebimento BETWEEN :data_inicio AND :data_fim
-                    " . ($empresaId ? "AND empresa_id = :empresa_id" : "") . "
+                    " . ($empresaId ? "AND empresa_id = :empresa_id1" : "") . "
                     
                     UNION ALL
                     
                     SELECT data_pagamento as data, valor_total as valor, 'despesa' as tipo
                     FROM contas_pagar
                     WHERE status = 'pago'
-                    AND data_pagamento BETWEEN :data_inicio AND :data_fim
-                    " . ($empresaId ? "AND empresa_id = :empresa_id" : "") . "
+                    AND data_pagamento BETWEEN :data_inicio2 AND :data_fim2
+                    " . ($empresaId ? "AND empresa_id = :empresa_id2" : "") . "
                 ) as movimentos
                 GROUP BY mes
                 ORDER BY mes";
         
         $params = [
             'data_inicio' => $dataInicio,
-            'data_fim' => $dataFim
+            'data_fim' => $dataFim,
+            'data_inicio2' => $dataInicio,
+            'data_fim2' => $dataFim
         ];
         
         if ($empresaId) {
-            $params['empresa_id'] = $empresaId;
+            $params['empresa_id1'] = $empresaId;
+            $params['empresa_id2'] = $empresaId;
         }
         
         $stmt = $db->prepare($sql);
