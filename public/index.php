@@ -182,25 +182,40 @@ try {
     $errorMessage .= "Trace:\n" . $e->getTraceAsString() . "\n\n";
     @file_put_contents($errorLog, $errorMessage, FILE_APPEND);
     
-    if (APP_DEBUG) {
-        echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Erro</title>";
-        echo "<style>body{font-family:monospace;padding:20px;background:#f5f5f5;}pre{background:#fff;padding:15px;border:1px solid #ddd;border-radius:5px;overflow:auto;}</style>";
-        echo "</head><body><h1 style='color:#d32f2f;'>Erro na Aplicação</h1>";
-        echo "<pre>";
-        echo "<strong>Erro:</strong> " . htmlspecialchars($e->getMessage()) . "\n\n";
-        echo "<strong>Arquivo:</strong> " . htmlspecialchars($e->getFile()) . "\n";
-        echo "<strong>Linha:</strong> " . $e->getLine() . "\n\n";
-        echo "<strong>URI:</strong> " . htmlspecialchars($_SERVER['REQUEST_URI'] ?? 'N/A') . "\n";
-        echo "<strong>Script:</strong> " . htmlspecialchars($_SERVER['SCRIPT_NAME'] ?? 'N/A') . "\n";
-        echo "<strong>Método:</strong> " . htmlspecialchars($_SERVER['REQUEST_METHOD'] ?? 'N/A') . "\n\n";
-        echo "<strong>Stack Trace:</strong>\n";
-        echo htmlspecialchars($e->getTraceAsString());
-        echo "</pre></body></html>";
-    } else {
-        http_response_code(500);
-        echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Erro 500</title></head><body>";
-        echo "<h1>Erro Interno do Servidor</h1>";
-        echo "<p>Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.</p>";
-        echo "</body></html>";
-    }
+    // TEMPORÁRIO: Forçar exibição de erro detalhado
+    echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Erro</title>";
+    echo "<style>body{font-family:monospace;padding:20px;background:#f5f5f5;}pre{background:#fff;padding:15px;border:1px solid #ddd;border-radius:5px;overflow:auto;}</style>";
+    echo "</head><body><h1 style='color:#d32f2f;'>Erro na Aplicação</h1>";
+    echo "<pre>";
+    echo "<strong>Erro:</strong> " . htmlspecialchars($e->getMessage()) . "\n\n";
+    echo "<strong>Arquivo:</strong> " . htmlspecialchars($e->getFile()) . "\n";
+    echo "<strong>Linha:</strong> " . $e->getLine() . "\n\n";
+    echo "<strong>URI:</strong> " . htmlspecialchars($_SERVER['REQUEST_URI'] ?? 'N/A') . "\n";
+    echo "<strong>Script:</strong> " . htmlspecialchars($_SERVER['SCRIPT_NAME'] ?? 'N/A') . "\n";
+    echo "<strong>Método:</strong> " . htmlspecialchars($_SERVER['REQUEST_METHOD'] ?? 'N/A') . "\n\n";
+    echo "<strong>Stack Trace:</strong>\n";
+    echo htmlspecialchars($e->getTraceAsString());
+    echo "</pre></body></html>";
+    
+    // if (APP_DEBUG) {
+    //     echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Erro</title>";
+    //     echo "<style>body{font-family:monospace;padding:20px;background:#f5f5f5;}pre{background:#fff;padding:15px;border:1px solid #ddd;border-radius:5px;overflow:auto;}</style>";
+    //     echo "</head><body><h1 style='color:#d32f2f;'>Erro na Aplicação</h1>";
+    //     echo "<pre>";
+    //     echo "<strong>Erro:</strong> " . htmlspecialchars($e->getMessage()) . "\n\n";
+    //     echo "<strong>Arquivo:</strong> " . htmlspecialchars($e->getFile()) . "\n";
+    //     echo "<strong>Linha:</strong> " . $e->getLine() . "\n\n";
+    //     echo "<strong>URI:</strong> " . htmlspecialchars($_SERVER['REQUEST_URI'] ?? 'N/A') . "\n";
+    //     echo "<strong>Script:</strong> " . htmlspecialchars($_SERVER['SCRIPT_NAME'] ?? 'N/A') . "\n";
+    //     echo "<strong>Método:</strong> " . htmlspecialchars($_SERVER['REQUEST_METHOD'] ?? 'N/A') . "\n\n";
+    //     echo "<strong>Stack Trace:</strong>\n";
+    //     echo htmlspecialchars($e->getTraceAsString());
+    //     echo "</pre></body></html>";
+    // } else {
+    //     http_response_code(500);
+    //     echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Erro 500</title></head><body>";
+    //     echo "<h1>Erro Interno do Servidor</h1>";
+    //     echo "<p>Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.</p>";
+    //     echo "</body></html>";
+    // }
 }
