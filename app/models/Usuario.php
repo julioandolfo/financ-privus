@@ -325,15 +325,26 @@ class Usuario extends Model
         if (!empty($usuario['empresas_consolidadas_padrao'])) {
             $empresasConsolidadas = json_decode($usuario['empresas_consolidadas_padrao'], true);
             if (is_array($empresasConsolidadas)) {
-                $empresasIds = array_merge($empresasIds, $empresasConsolidadas);
+                // Pode ser lista de objetos ou ids; normalizar para ids
+                foreach ($empresasConsolidadas as $item) {
+                    if (is_array($item) && isset($item['id'])) {
+                        $empresasIds[] = $item['id'];
+                    } else {
+                        $empresasIds[] = $item;
+                    }
+                }
             }
         }
         
         // Remover duplicatas
         $empresasIds = array_unique($empresasIds);
         
+        // Se não houver empresas vinculadas, retornar todas ativas (fallback)
         if (empty($empresasIds)) {
-            return [];
+            $sql = "SELECT * FROM empresas WHERE ativo = 1 ORDER BY nome_fantasia ASC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
         
         // Buscar dados das empresas
@@ -341,7 +352,17 @@ class Usuario extends Model
         $sql = "SELECT * FROM empresas WHERE id IN ({$placeholders}) AND ativo = 1 ORDER BY nome_fantasia ASC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute($empresasIds);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $empresas = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        
+        // Se ainda assim vazio (ids inválidos), retornar todas ativas
+        if (empty($empresas)) {
+            $sql = "SELECT * FROM empresas WHERE ativo = 1 ORDER BY nome_fantasia ASC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
+        
+        return $empresas;
     }
 }
 
