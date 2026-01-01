@@ -212,5 +212,75 @@ return [
     
     // Webhook (público - sem middleware)
     'POST /webhook/woocommerce/{integracaoId}' => ['handler' => 'IntegracaoController@webhook'],
+    
+    // API Tokens (protegido)
+    'GET /api-tokens' => ['handler' => 'ApiTokenController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /api-tokens/create' => ['handler' => 'ApiTokenController@create', 'middleware' => ['AuthMiddleware']],
+    'POST /api-tokens' => ['handler' => 'ApiTokenController@store', 'middleware' => ['AuthMiddleware']],
+    'GET /api-tokens/{id}' => ['handler' => 'ApiTokenController@show', 'middleware' => ['AuthMiddleware']],
+    'GET /api-tokens/{id}/edit' => ['handler' => 'ApiTokenController@edit', 'middleware' => ['AuthMiddleware']],
+    'POST /api-tokens/{id}' => ['handler' => 'ApiTokenController@update', 'middleware' => ['AuthMiddleware']],
+    'POST /api-tokens/{id}/delete' => ['handler' => 'ApiTokenController@destroy', 'middleware' => ['AuthMiddleware']],
+    'POST /api-tokens/{id}/regenerate' => ['handler' => 'ApiTokenController@regenerate', 'middleware' => ['AuthMiddleware']],
+    
+    // ========================================
+    // API REST - Endpoints Públicos
+    // ========================================
+    // Autenticação via Bearer Token (ApiAuthMiddleware)
+    
+    // Contas a Pagar
+    'GET /api/v1/contas-pagar' => ['handler' => 'ApiRestController@contasPagarIndex', 'middleware' => ['ApiAuthMiddleware']],
+    'GET /api/v1/contas-pagar/{id}' => ['handler' => 'ApiRestController@contasPagarShow', 'middleware' => ['ApiAuthMiddleware']],
+    'POST /api/v1/contas-pagar' => ['handler' => 'ApiRestController@contasPagarStore', 'middleware' => ['ApiAuthMiddleware']],
+    'PUT /api/v1/contas-pagar/{id}' => ['handler' => 'ApiRestController@contasPagarUpdate', 'middleware' => ['ApiAuthMiddleware']],
+    'DELETE /api/v1/contas-pagar/{id}' => ['handler' => 'ApiRestController@contasPagarDelete', 'middleware' => ['ApiAuthMiddleware']],
+    
+    // Contas a Receber
+    'GET /api/v1/contas-receber' => ['handler' => 'ApiRestController@contasReceberIndex', 'middleware' => ['ApiAuthMiddleware']],
+    'GET /api/v1/contas-receber/{id}' => ['handler' => 'ApiRestController@contasReceberShow', 'middleware' => ['ApiAuthMiddleware']],
+    'POST /api/v1/contas-receber' => ['handler' => 'ApiRestController@contasReceberStore', 'middleware' => ['ApiAuthMiddleware']],
+    'PUT /api/v1/contas-receber/{id}' => ['handler' => 'ApiRestController@contasReceberUpdate', 'middleware' => ['ApiAuthMiddleware']],
+    'DELETE /api/v1/contas-receber/{id}' => ['handler' => 'ApiRestController@contasReceberDelete', 'middleware' => ['ApiAuthMiddleware']],
+    
+    // Produtos
+    'GET /api/v1/produtos' => ['handler' => 'ApiRestController@produtosIndex', 'middleware' => ['ApiAuthMiddleware']],
+    'GET /api/v1/produtos/{id}' => ['handler' => 'ApiRestController@produtosShow', 'middleware' => ['ApiAuthMiddleware']],
+    'POST /api/v1/produtos' => ['handler' => 'ApiRestController@produtosStore', 'middleware' => ['ApiAuthMiddleware']],
+    'PUT /api/v1/produtos/{id}' => ['handler' => 'ApiRestController@produtosUpdate', 'middleware' => ['ApiAuthMiddleware']],
+    'DELETE /api/v1/produtos/{id}' => ['handler' => 'ApiRestController@produtosDelete', 'middleware' => ['ApiAuthMiddleware']],
+    
+    // Clientes
+    'GET /api/v1/clientes' => ['handler' => 'ApiRestController@clientesIndex', 'middleware' => ['ApiAuthMiddleware']],
+    'GET /api/v1/clientes/{id}' => ['handler' => 'ApiRestController@clientesShow', 'middleware' => ['ApiAuthMiddleware']],
+    'POST /api/v1/clientes' => ['handler' => 'ApiRestController@clientesStore', 'middleware' => ['ApiAuthMiddleware']],
+    'PUT /api/v1/clientes/{id}' => ['handler' => 'ApiRestController@clientesUpdate', 'middleware' => ['ApiAuthMiddleware']],
+    'DELETE /api/v1/clientes/{id}' => ['handler' => 'ApiRestController@clientesDelete', 'middleware' => ['ApiAuthMiddleware']],
+    
+    // Fornecedores
+    'GET /api/v1/fornecedores' => ['handler' => 'ApiRestController@fornecedoresIndex', 'middleware' => ['ApiAuthMiddleware']],
+    'GET /api/v1/fornecedores/{id}' => ['handler' => 'ApiRestController@fornecedoresShow', 'middleware' => ['ApiAuthMiddleware']],
+    'POST /api/v1/fornecedores' => ['handler' => 'ApiRestController@fornecedoresStore', 'middleware' => ['ApiAuthMiddleware']],
+    'PUT /api/v1/fornecedores/{id}' => ['handler' => 'ApiRestController@fornecedoresUpdate', 'middleware' => ['ApiAuthMiddleware']],
+    'DELETE /api/v1/fornecedores/{id}' => ['handler' => 'ApiRestController@fornecedoresDelete', 'middleware' => ['ApiAuthMiddleware']],
+    
+    // Movimentações de Caixa
+    'GET /api/v1/movimentacoes' => ['handler' => 'ApiRestController@movimentacoesIndex', 'middleware' => ['ApiAuthMiddleware']],
+    'GET /api/v1/movimentacoes/{id}' => ['handler' => 'ApiRestController@movimentacoesShow', 'middleware' => ['ApiAuthMiddleware']],
+    'POST /api/v1/movimentacoes' => ['handler' => 'ApiRestController@movimentacoesStore', 'middleware' => ['ApiAuthMiddleware']],
+    
+    // Categorias Financeiras
+    'GET /api/v1/categorias' => ['handler' => 'ApiRestController@categoriasIndex', 'middleware' => ['ApiAuthMiddleware']],
+    'GET /api/v1/categorias/{id}' => ['handler' => 'ApiRestController@categoriasShow', 'middleware' => ['ApiAuthMiddleware']],
+    'POST /api/v1/categorias' => ['handler' => 'ApiRestController@categoriasStore', 'middleware' => ['ApiAuthMiddleware']],
+    
+    // Centros de Custo
+    'GET /api/v1/centros-custo' => ['handler' => 'ApiRestController@centrosCustoIndex', 'middleware' => ['ApiAuthMiddleware']],
+    'GET /api/v1/centros-custo/{id}' => ['handler' => 'ApiRestController@centrosCustoShow', 'middleware' => ['ApiAuthMiddleware']],
+    'POST /api/v1/centros-custo' => ['handler' => 'ApiRestController@centrosCustoStore', 'middleware' => ['ApiAuthMiddleware']],
+    
+    // Contas Bancárias
+    'GET /api/v1/contas-bancarias' => ['handler' => 'ApiRestController@contasBancariasIndex', 'middleware' => ['ApiAuthMiddleware']],
+    'GET /api/v1/contas-bancarias/{id}' => ['handler' => 'ApiRestController@contasBancariasShow', 'middleware' => ['ApiAuthMiddleware']],
+    'POST /api/v1/contas-bancarias' => ['handler' => 'ApiRestController@contasBancariasStore', 'middleware' => ['ApiAuthMiddleware']],
 ];
 
