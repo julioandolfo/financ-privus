@@ -301,5 +301,47 @@ class Usuario extends Model
         $stmt = $this->db->prepare($sql);
         return $stmt->execute(['id' => $id]);
     }
+    
+    /**
+     * Retorna todas as empresas que o usuário tem acesso
+     * Inclui a empresa principal + empresas consolidadas
+     */
+    public function getEmpresas($usuarioId)
+    {
+        $usuario = $this->findById($usuarioId);
+        
+        if (!$usuario) {
+            return [];
+        }
+        
+        $empresasIds = [];
+        
+        // Empresa principal
+        if ($usuario['empresa_id']) {
+            $empresasIds[] = $usuario['empresa_id'];
+        }
+        
+        // Empresas consolidadas
+        if (!empty($usuario['empresas_consolidadas_padrao'])) {
+            $empresasConsolidadas = json_decode($usuario['empresas_consolidadas_padrao'], true);
+            if (is_array($empresasConsolidadas)) {
+                $empresasIds = array_merge($empresasIds, $empresasConsolidadas);
+            }
+        }
+        
+        // Remover duplicatas
+        $empresasIds = array_unique($empresasIds);
+        
+        if (empty($empresasIds)) {
+            return [];
+        }
+        
+        // Buscar dados das empresas
+        $placeholders = implode(',', array_fill(0, count($empresasIds), '?'));
+        $sql = "SELECT * FROM empresas WHERE id IN ({$placeholders}) AND ativo = 1 ORDER BY nome_fantasia ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($empresasIds);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
 }
 
