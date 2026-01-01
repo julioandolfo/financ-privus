@@ -61,12 +61,7 @@ $old = $this->session->get('old') ?? [];
                         </label>
                         <select name="categoria_id" id="categoria_id" required
                                 class="w-full px-4 py-3 rounded-xl border <?= isset($errors['categoria_id']) ? 'border-red-500' : 'border-gray-300 dark:border-gray-600' ?> bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
-                            <option value="">Selecione...</option>
-                            <?php foreach ($categorias as $categoria): ?>
-                                <option value="<?= $categoria['id'] ?>" <?= ($old['categoria_id'] ?? $conta['categoria_id']) == $categoria['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($categoria['nome']) ?>
-                                </option>
-                            <?php endforeach; ?>
+                            <option value="">Carregando...</option>
                         </select>
                         <?php if (isset($errors['categoria_id'])): ?>
                             <p class="mt-1 text-sm text-red-500"><?= $errors['categoria_id'] ?></p>
@@ -78,12 +73,7 @@ $old = $this->session->get('old') ?? [];
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Centro de Custo</label>
                         <select name="centro_custo_id" id="centro_custo_id"
                                 class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
-                            <option value="">Selecione...</option>
-                            <?php foreach ($centrosCusto as $centro): ?>
-                                <option value="<?= $centro['id'] ?>" <?= ($old['centro_custo_id'] ?? $conta['centro_custo_id']) == $centro['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($centro['nome']) ?>
-                                </option>
-                            <?php endforeach; ?>
+                            <option value="">Carregando...</option>
                         </select>
                     </div>
 
@@ -197,6 +187,14 @@ function contaPagarForm() {
     return {
         valorTotal: <?= $old['valor_total'] ?? $conta['valor_total'] ?>,
         dataCompetencia: '<?= $old['data_competencia'] ?? $conta['data_competencia'] ?>',
+        
+        init() {
+            // Carregar categorias e centros automaticamente ao abrir a página
+            const empresaId = document.querySelector('select[name="empresa_id"]').value;
+            if (empresaId) {
+                this.carregarCategoriasECentros(empresaId);
+            }
+        },
         
         atualizarRateios() {
             // Placeholder para lógica de rateio se necessário

@@ -103,6 +103,15 @@ class CentroCustoController extends Controller
                 $data['centro_pai_id'] = null;
             }
             
+            // Verificar se código automático está habilitado
+            $codigoAutoGerado = \App\Models\Configuracao::get('centros_custo.codigo_auto_gerado', true);
+            
+            // Gerar código automaticamente se habilitado e código não fornecido
+            if ($codigoAutoGerado && empty($data['codigo'])) {
+                $this->centroCustoModel = new CentroCusto();
+                $data['codigo'] = $this->centroCustoModel->gerarProximoCodigo($data['empresa_id']);
+            }
+            
             // Cria centro de custo
             $this->centroCustoModel = new CentroCusto();
             $id = $this->centroCustoModel->create($data);
@@ -258,9 +267,18 @@ class CentroCustoController extends Controller
         }
         
         // Código
+        $codigoObrigatorio = \App\Models\Configuracao::get('centros_custo.codigo_obrigatorio', false);
+        $codigoAutoGerado = \App\Models\Configuracao::get('centros_custo.codigo_auto_gerado', true);
+        
         if (empty($data['codigo'])) {
-            $errors['codigo'] = 'O código é obrigatório';
+            // Só valida como obrigatório se:
+            // 1. A configuração 'codigo_obrigatorio' está ativada, OU
+            // 2. A geração automática está desativada
+            if ($codigoObrigatorio || !$codigoAutoGerado) {
+                $errors['codigo'] = 'O código é obrigatório';
+            }
         } else {
+            // Se código foi fornecido, valida unicidade
             $this->centroCustoModel = new CentroCusto();
             $existing = $this->centroCustoModel->findByCodigo($data['codigo'], $data['empresa_id']);
             if ($existing && (!$id || $existing['id'] != $id)) {

@@ -135,6 +135,34 @@ class CentroCusto extends Model
     }
     
     /**
+     * Gera o próximo código sequencial para um centro de custo
+     */
+    public function gerarProximoCodigo($empresaId)
+    {
+        $sql = "SELECT codigo FROM {$this->table} 
+                WHERE empresa_id = :empresa_id 
+                AND codigo REGEXP '^[0-9]+$'
+                ORDER BY CAST(codigo AS UNSIGNED) DESC 
+                LIMIT 1";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['empresa_id' => $empresaId]);
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result && is_numeric($result['codigo'])) {
+            // Incrementa o último código numérico
+            $proximoCodigo = (int)$result['codigo'] + 1;
+        } else {
+            // Primeiro código
+            $proximoCodigo = 1;
+        }
+        
+        // Retorna com padding de zeros (ex: 001, 002, etc.)
+        return str_pad($proximoCodigo, 3, '0', STR_PAD_LEFT);
+    }
+    
+    /**
      * Cria um novo centro de custo
      */
     public function create($data)

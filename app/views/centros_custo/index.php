@@ -1,13 +1,23 @@
-<div class="max-w-7xl mx-auto">
+<div class="max-w-7xl mx-auto" x-data="{ showInfoModal: false }">
     <!-- Header -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-        <div>
-            <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
-                🏢 Gerenciar Centros de Custo
-            </h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-2">
-                Organize centros de custo em estrutura hierárquica
-            </p>
+        <div class="flex items-start gap-3">
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
+                        🏢 Gerenciar Centros de Custo
+                    </h1>
+                    <button @click="showInfoModal = true" 
+                            class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-gray-600 dark:text-gray-400 mt-2">
+                    Organize centros de custo em estrutura hierárquica
+                </p>
+            </div>
         </div>
         <a href="<?= $this->baseUrl('/centros-custo/create') ?>" 
            class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
@@ -225,5 +235,213 @@
             <?php endif; ?>
         <?php endif; ?>
     </div>
+
+    <!-- Modal Explicativo sobre Centros de Custo -->
+    <template x-teleport="body">
+        <div x-show="showInfoModal"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-90"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-90"
+             class="fixed inset-0 z-50 flex items-center justify-center p-4"
+             @click.away="showInfoModal = false"
+             x-cloak>
+            <div class="fixed inset-0 bg-gray-900 bg-opacity-75 backdrop-blur-sm"></div>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-3xl w-full mx-auto relative z-10 overflow-hidden"
+                 @click.stop>
+                <!-- Modal Header -->
+                <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 rounded-full bg-white bg-opacity-20 flex items-center justify-center mr-4">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold">O que é Centro de Custo?</h3>
+                            <p class="text-sm opacity-90 mt-1">Entenda como organizar suas despesas e receitas</p>
+                        </div>
+                    </div>
+                    <button @click="showInfoModal = false" class="text-white hover:text-gray-200 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                    <!-- Definição -->
+                    <div class="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-xl border border-blue-100 dark:border-blue-700">
+                        <h4 class="text-lg font-bold text-blue-900 dark:text-blue-100 mb-2 flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Definição
+                        </h4>
+                        <p class="text-blue-800 dark:text-blue-200 leading-relaxed">
+                            <strong>Centro de Custo</strong> é uma unidade organizacional que agrupa despesas e receitas relacionadas a uma área específica da empresa. Ele permite analisar a rentabilidade e eficiência de cada departamento, projeto, filial ou atividade de forma independente.
+                        </p>
+                    </div>
+
+                    <!-- Para que serve -->
+                    <div>
+                        <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Para que serve?
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                                <div class="flex items-start">
+                                    <span class="text-2xl mr-3">📊</span>
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-white">Controle Financeiro</p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Acompanhe gastos e receitas de cada setor</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                                <div class="flex items-start">
+                                    <span class="text-2xl mr-3">💰</span>
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-white">Análise de Rentabilidade</p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Identifique áreas mais e menos lucrativas</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                                <div class="flex items-start">
+                                    <span class="text-2xl mr-3">🎯</span>
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-white">Planejamento Estratégico</p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Base para decisões de investimento</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                                <div class="flex items-start">
+                                    <span class="text-2xl mr-3">📈</span>
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-white">Responsabilização</p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Gestores respondem por seus resultados</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Exemplos Práticos -->
+                    <div>
+                        <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                            </svg>
+                            Exemplos Práticos
+                        </h4>
+                        <div class="bg-gray-100 dark:bg-gray-700 p-5 rounded-xl">
+                            <div class="space-y-3">
+                                <div class="flex items-start">
+                                    <span class="text-blue-600 dark:text-blue-400 font-bold mr-3">•</span>
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-white">Por Departamento</p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Comercial, Marketing, TI, RH, Financeiro, Produção</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <span class="text-green-600 dark:text-green-400 font-bold mr-3">•</span>
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-white">Por Projeto</p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Projeto A, Projeto B, Campanha X, Lançamento Y</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <span class="text-purple-600 dark:text-purple-400 font-bold mr-3">•</span>
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-white">Por Localização</p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Filial SP, Filial RJ, Loja Centro, Loja Shopping</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <span class="text-orange-600 dark:text-orange-400 font-bold mr-3">•</span>
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-white">Por Atividade</p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Vendas Online, Vendas Presenciais, Eventos, Treinamentos</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hierarquia -->
+                    <div>
+                        <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                            </svg>
+                            Estrutura Hierárquica
+                        </h4>
+                        <div class="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-5 rounded-xl border border-amber-200 dark:border-amber-700">
+                            <p class="text-gray-700 dark:text-gray-300 mb-3">Os centros de custo podem ser organizados em níveis hierárquicos:</p>
+                            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg font-mono text-sm">
+                                <div class="text-blue-600 dark:text-blue-400">📁 Comercial (Centro Pai)</div>
+                                <div class="ml-4 text-green-600 dark:text-green-400">├─ 🏢 Vendas Internas</div>
+                                <div class="ml-4 text-green-600 dark:text-green-400">├─ 🚗 Vendas Externas</div>
+                                <div class="ml-4 text-green-600 dark:text-green-400">└─ 📞 Televendas</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Diferença vs Categoria -->
+                    <div>
+                        <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                            </svg>
+                            Centro de Custo vs Categoria
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
+                                <p class="font-bold text-blue-900 dark:text-blue-100 mb-2">🏢 Centro de Custo</p>
+                                <p class="text-sm text-blue-800 dark:text-blue-200"><strong>ONDE</strong> o dinheiro foi gasto/recebido</p>
+                                <p class="text-xs text-blue-700 dark:text-blue-300 mt-2">Ex: Departamento TI, Filial SP</p>
+                            </div>
+                            <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-700">
+                                <p class="font-bold text-purple-900 dark:text-purple-100 mb-2">🏷️ Categoria</p>
+                                <p class="text-sm text-purple-800 dark:text-purple-200"><strong>PARA QUÊ</strong> o dinheiro foi gasto/recebido</p>
+                                <p class="text-xs text-purple-700 dark:text-purple-300 mt-2">Ex: Salários, Aluguel, Vendas</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dica -->
+                    <div class="bg-green-50 dark:bg-green-900/20 p-5 rounded-xl border-l-4 border-green-500">
+                        <div class="flex items-start">
+                            <svg class="w-6 h-6 text-green-600 dark:text-green-400 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                            <div>
+                                <p class="font-bold text-green-900 dark:text-green-100 mb-1">💡 Dica Importante</p>
+                                <p class="text-sm text-green-800 dark:text-green-200">
+                                    Uma mesma despesa pode ter <strong>Categoria</strong> (O QUÊ) e <strong>Centro de Custo</strong> (ONDE). Exemplo: "Aluguel" (categoria) do "Departamento de TI" (centro de custo).
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-end">
+                    <button @click="showInfoModal = false"
+                            class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all font-semibold">
+                        Entendi!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
 </div>
 
