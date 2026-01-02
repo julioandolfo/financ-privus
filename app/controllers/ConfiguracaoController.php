@@ -44,6 +44,13 @@ class ConfiguracaoController extends Controller
             return $response->redirect('/configuracoes');
         }
         
+        // DEBUG: Log dos dados recebidos
+        if (defined('APP_DEBUG') && APP_DEBUG) {
+            error_log("=== SALVANDO CONFIGURAÇÕES ===");
+            error_log("Grupo: {$grupo}");
+            error_log("Dados recebidos: " . json_encode($data, JSON_PRETTY_PRINT));
+        }
+        
         // Remover campos de controle
         unset($data['grupo']);
         
@@ -53,26 +60,43 @@ class ConfiguracaoController extends Controller
         // Preparar configurações para salvar
         $configuracoes = [];
         
-        // Processar campos do POST (incluindo campos vazios)
-        foreach ($data as $chave => $valor) {
-            // Verificar se a chave existe no grupo de configurações
-            if (isset($configsGrupo[$chave])) {
-                // Para campos de senha/password/key, só salvar se não estiver vazio
-                // (para não sobrescrever senha existente com string vazia)
-                if (strpos($chave, 'senha') !== false || strpos($chave, 'password') !== false || strpos($chave, 'key') !== false || strpos($chave, 'token') !== false) {
-                    // Se o campo tem valor, salvar
-                    if (!empty(trim($valor))) {
-                        $configuracoes[$chave] = trim($valor);
-                    }
-                    // Se estiver vazio, não adicionar ao array (manter valor atual no banco)
-                } else {
-                    // Para outros campos, salvar mesmo se vazio (permite limpar campos)
-                    $configuracoes[$chave] = is_string($valor) ? trim($valor) : $valor;
-                }
+        // PASSO 1: Processar checkboxes (boolean) PRIMEIRO
+        // Checkboxes marcados enviam value="true", desmarcados não enviam nada
+        foreach ($configsGrupo as $chave => $config) {
+            if ($config['tipo'] === 'boolean') {
+                // Se o checkbox foi enviado no POST, está marcado (true)
+                // Se não foi enviado, está desmarcado (false)
+                $configuracoes[$chave] = isset($data[$chave]);
             }
         }
         
-        // Processar uploads de arquivos
+        // PASSO 2: Processar outros campos (string, number, etc)
+        foreach ($data as $chave => $valor) {
+            // Verificar se a chave existe no grupo de configurações
+            if (!isset($configsGrupo[$chave])) {
+                continue; // Ignorar campos que não existem no grupo
+            }
+            
+            // Pular se já foi processado como boolean
+            if ($configsGrupo[$chave]['tipo'] === 'boolean') {
+                continue;
+            }
+            
+            // Para campos de senha/password/key/token, só salvar se não estiver vazio
+            if (strpos($chave, 'senha') !== false || strpos($chave, 'password') !== false || 
+                strpos($chave, 'key') !== false || strpos($chave, 'token') !== false) {
+                // Se o campo tem valor, salvar
+                if (!empty(trim($valor))) {
+                    $configuracoes[$chave] = trim($valor);
+                }
+                // Se estiver vazio, não adicionar (manter valor atual no banco)
+            } else {
+                // Para outros campos, salvar sempre (permite limpar campos)
+                $configuracoes[$chave] = is_string($valor) ? trim($valor) : $valor;
+            }
+        }
+        
+        // PASSO 3: Processar uploads de arquivos
         if (!empty($_FILES)) {
             foreach ($_FILES as $chave => $file) {
                 if (isset($configsGrupo[$chave]) && $file['error'] === UPLOAD_ERR_OK) {
@@ -84,17 +108,9 @@ class ConfiguracaoController extends Controller
             }
         }
         
-        // Processar checkboxes (boolean) - se não vier no POST, marcar como false
-        foreach ($configsGrupo as $chave => $config) {
-            if ($config['tipo'] === 'boolean') {
-                // Se não foi enviado no POST, significa que está desmarcado
-                if (!isset($data[$chave])) {
-                    $configuracoes[$chave] = false;
-                } else {
-                    // Se foi enviado, processar o valor
-                    $configuracoes[$chave] = ($data[$chave] === 'true' || $data[$chave] === '1' || $data[$chave] === true);
-                }
-            }
+        // DEBUG: Log das configurações a serem salvas
+        if (defined('APP_DEBUG') && APP_DEBUG) {
+            error_log("Configurações a salvar: " . json_encode($configuracoes, JSON_PRETTY_PRINT));
         }
         
         // Verificar se há configurações para salvar
