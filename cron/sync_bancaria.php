@@ -15,12 +15,14 @@ require_once APP_ROOT . '/app/core/Model.php';
 require_once APP_ROOT . '/app/models/ConexaoBancaria.php';
 require_once APP_ROOT . '/app/models/TransacaoPendente.php';
 require_once APP_ROOT . '/includes/services/OpenBankingService.php';
+require_once APP_ROOT . '/includes/services/SicoobApiService.php';
 require_once APP_ROOT . '/includes/services/ClassificadorIAService.php';
 
 use App\Core\Database;
 use App\Models\ConexaoBancaria;
 use App\Models\TransacaoPendente;
 use includes\services\OpenBankingService;
+use includes\services\SicoobApiService;
 use includes\services\ClassificadorIAService;
 
 echo "[" . date('Y-m-d H:i:s') . "] Iniciando sincronização bancária automática...\n";
@@ -29,6 +31,7 @@ try {
     $conexaoModel = new ConexaoBancaria();
     $transacaoModel = new TransacaoPendente();
     $openBankingService = new OpenBankingService();
+    $sicoobService = new SicoobApiService();
     
     // Buscar todas as conexões ativas com auto_sync habilitado
     $db = Database::getInstance()->getConnection();
@@ -91,24 +94,36 @@ try {
         echo "\n[Conexão #{$conexao['id']}] Banco: {$conexao['banco']} - {$conexao['identificacao']}\n";
         
         try {
-            // Verificar se token expirou
-            if (strtotime($conexao['token_expira_em']) < time()) {
-                echo "  Token expirado, renovando...\n";
-                $newTokens = $openBankingService->renovarAccessToken($conexao);
-                
-                $encryptionKey = getenv('ENCRYPTION_KEY') ?: 'default_key_change_in_production';
-                $conexao['access_token'] = OpenBankingService::encrypt($newTokens['access_token'], $encryptionKey);
-                $conexao['token_expira_em'] = date('Y-m-d H:i:s', time() + $newTokens['expires_in']);
-                
-                $conexaoModel->update($conexao['id'], $conexao);
-                echo "  Token renovado com sucesso\n";
-            }
-            
-            // Sincronizar transações
-            if ($conexao['tipo'] === 'cartao_credito') {
-                $transacoes = $openBankingService->sincronizarCartao($conexao);
+            // Escolhe fluxo conforme tipo_integracao
+            if (($conexao['tipo_integracao'] ?? 'of') === 'nativo') {
+                echo "  Usando integração nativa Sicoob...\n";
+                $tokenData = $sicoobService->obterToken($conexao);
+                $transacoes = $sicoobService->listarTransacoes(
+                    $conexao,
+                    $tokenData['access_token'],
+                    date('Y-m-d', strtotime('-30 days')),
+                    date('Y-m-d')
+                );
             } else {
-                $transacoes = $openBankingService->sincronizarExtrato($conexao);
+                // Verificar se token expirou
+                if (!empty($conexao['token_expira_em']) && strtotime($conexao['token_expira_em']) < time()) {
+                    echo "  Token expirado, renovando...\n";
+                    $newTokens = $openBankingService->renovarAccessToken($conexao);
+                    
+                    $conexao['access_token'] = OpenBankingService::encrypt($newTokens['access_token']);
+                    $conexao['refresh_token'] = OpenBankingService::encrypt($newTokens['refresh_token']);
+                    $conexao['token_expira_em'] = date('Y-m-d H:i:s', time() + $newTokens['expires_in']);
+                    
+                    $conexaoModel->update($conexao['id'], $conexao);
+                    echo "  Token renovado com sucesso\n";
+                }
+                
+                // Sincronizar transações
+                if ($conexao['tipo'] === 'cartao_credito') {
+                    $transacoes = $openBankingService->sincronizarCartao($conexao);
+                } else {
+                    $transacoes = $openBankingService->sincronizarExtrato($conexao);
+                }
             }
             
             echo "  Encontradas " . count($transacoes) . " transações\n";

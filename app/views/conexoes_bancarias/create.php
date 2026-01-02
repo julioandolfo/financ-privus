@@ -179,6 +179,16 @@ $errors = $this->session->get('errors') ?? [];
             <!-- Credenciais Sicoob / Open Finance -->
             <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mb-6">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Credenciais Open Finance (Sicoob)</h3>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Tipo de Integração</label>
+                    <select name="tipo_integracao" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        <option value="of" <?= ($old['tipo_integracao'] ?? 'of') == 'of' ? 'selected' : '' ?>>Open Finance (padrão)</option>
+                        <option value="nativo" <?= ($old['tipo_integracao'] ?? 'of') == 'nativo' ? 'selected' : '' ?>>Sicoob (API nativa)</option>
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Selecione Open Finance ou a API nativa do Sicoob.</p>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Ambiente</label>

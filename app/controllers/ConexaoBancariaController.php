@@ -10,6 +10,7 @@ use App\Models\CentroCusto;
 use App\Models\Empresa;
 use App\Models\Usuario;
 use includes\services\OpenBankingService;
+use includes\services\SicoobApiService;
 
 class ConexaoBancariaController extends Controller
 {
@@ -123,6 +124,7 @@ class ConexaoBancariaController extends Controller
         // Salvar configurações temporariamente na sessão
         $_SESSION['conexao_temp'] = [
             'banco' => $data['banco'],
+            'tipo_integracao' => $data['tipo_integracao'] ?? 'of',
             'tipo' => $data['tipo'],
             'identificacao' => $data['identificacao'] ?? null,
             'auto_sync' => $data['auto_sync'] ?? 1,
@@ -140,14 +142,37 @@ class ConexaoBancariaController extends Controller
         ];
         
         // Iniciar fluxo OAuth
-        $openBankingService = new OpenBankingService();
-        $scheme = $_SERVER['REQUEST_SCHEME'] ?? ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http');
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $redirectUri = $scheme . '://' . $host . '/conexoes-bancarias/callback';
-        // Usar método iniciarAutenticacao (mock) para obter URL de autorização
-        $authUrl = $openBankingService->iniciarAutenticacao($data['banco'], $data['tipo'], $redirectUri);
-        
-        return $response->redirect($authUrl);
+        // Se integração for nativa (ex: Sicoob API própria), não usar fluxo OF; salvar direto
+        if (($data['tipo_integracao'] ?? 'of') === 'nativo') {
+            $conexaoTemp = $_SESSION['conexao_temp'] ?? [];
+            unset($_SESSION['conexao_temp']);
+            $conexaoData = array_merge($conexaoTemp, [
+                'empresa_id' => $empresaId,
+                'usuario_id' => $usuarioId,
+                'access_token' => null,
+                'refresh_token' => null,
+                'token_expira_em' => null,
+                'consent_id' => null,
+                'ativo' => 1,
+                'tipo_integracao' => 'nativo'
+            ]);
+            $conexaoId = $this->conexaoModel->create($conexaoData);
+            if ($conexaoId) {
+                $_SESSION['success'] = 'Integração Sicoob (API nativa) configurada. Sincronize usando o CRON ou botão manual.';
+            } else {
+                $_SESSION['error'] = 'Erro ao salvar integração nativa Sicoob.';
+            }
+            return $response->redirect('/conexoes-bancarias');
+        } else {
+            $openBankingService = new OpenBankingService();
+            $scheme = $_SERVER['REQUEST_SCHEME'] ?? ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http');
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $redirectUri = $scheme . '://' . $host . '/conexoes-bancarias/callback';
+            // Usar método iniciarAutenticacao (mock) para obter URL de autorização
+            $authUrl = $openBankingService->iniciarAutenticacao($data['banco'], $data['tipo'], $redirectUri);
+            
+            return $response->redirect($authUrl);
+        }
     }
     
     /**
@@ -168,8 +193,10 @@ class ConexaoBancariaController extends Controller
         try {
             // Trocar código por access_token
             $openBankingService = new OpenBankingService();
-            $redirectUri = $request->getBaseUrl() . '/conexoes-bancarias/callback';
-            $tokens = $openBankingService->obterAccessToken($code, $redirectUri);
+            $scheme = $_SERVER['REQUEST_SCHEME'] ?? ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http');
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $redirectUri = $scheme . '://' . $host . '/conexoes-bancarias/callback';
+            $tokens = $openBankingService->obterAccessToken($code, $redirectUri, $state);
             
             // Recuperar dados temporários
             $conexaoTemp = $_SESSION['conexao_temp'] ?? [];
@@ -352,25 +379,36 @@ class ConexaoBancariaController extends Controller
         }
         
         try {
-            $openBankingService = new OpenBankingService();
-            
-            // Verificar se token expirou
-            if (strtotime($conexao['token_expira_em']) < time()) {
-                $newTokens = $openBankingService->renovarAccessToken($conexao);
-                
-                // Atualizar tokens
-                $encryptionKey = getenv('ENCRYPTION_KEY') ?: 'default_key_change_in_production';
-                $conexao['access_token'] = OpenBankingService::encrypt($newTokens['access_token'], $encryptionKey);
-                $conexao['token_expira_em'] = date('Y-m-d H:i:s', time() + $newTokens['expires_in']);
-                
-                $this->conexaoModel->update($id, $conexao);
-            }
-            
-            // Sincronizar transações
-            if ($conexao['tipo'] === 'cartao_credito') {
-                $transacoes = $openBankingService->sincronizarCartao($conexao);
+            // Integração nativa Sicoob
+            if (($conexao['tipo_integracao'] ?? 'of') === 'nativo') {
+                $sicoobService = new SicoobApiService();
+                $tokenData = $sicoobService->obterToken($conexao);
+                $transacoes = $sicoobService->listarTransacoes(
+                    $conexao,
+                    $tokenData['access_token'],
+                    date('Y-m-d', strtotime('-30 days')),
+                    date('Y-m-d')
+                );
             } else {
-                $transacoes = $openBankingService->sincronizarExtrato($conexao);
+                $openBankingService = new OpenBankingService();
+                
+                // Verificar se token expirou
+                if (!empty($conexao['token_expira_em']) && strtotime($conexao['token_expira_em']) < time()) {
+                    $newTokens = $openBankingService->renovarAccessToken($conexao);
+                    
+                    $conexao['access_token'] = OpenBankingService::encrypt($newTokens['access_token']);
+                    $conexao['refresh_token'] = OpenBankingService::encrypt($newTokens['refresh_token']);
+                    $conexao['token_expira_em'] = date('Y-m-d H:i:s', time() + $newTokens['expires_in']);
+                    
+                    $this->conexaoModel->update($id, $conexao);
+                }
+                
+                // Sincronizar transações
+                if ($conexao['tipo'] === 'cartao_credito') {
+                    $transacoes = $openBankingService->sincronizarCartao($conexao);
+                } else {
+                    $transacoes = $openBankingService->sincronizarExtrato($conexao);
+                }
             }
             
             // Processar e salvar transações

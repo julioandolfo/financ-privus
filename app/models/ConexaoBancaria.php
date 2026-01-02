@@ -61,13 +61,13 @@ class ConexaoBancaria extends Model
     public function create($data)
     {
         $sql = "INSERT INTO {$this->table} 
-                (empresa_id, usuario_id, banco, tipo, identificacao, 
+                (empresa_id, usuario_id, banco, tipo_integracao, tipo, identificacao, 
                  access_token, refresh_token, token_expira_em, consent_id,
                  auto_sync, frequencia_sync, categoria_padrao_id, 
                  centro_custo_padrao_id, aprovacao_automatica,
                  ambiente, client_id, client_secret, cert_pem, key_pem, cert_password, ativo, ultima_sincronizacao) 
                 VALUES 
-                (:empresa_id, :usuario_id, :banco, :tipo, :identificacao,
+                (:empresa_id, :usuario_id, :banco, :tipo_integracao, :tipo, :identificacao,
                  :access_token, :refresh_token, :token_expira_em, :consent_id,
                  :auto_sync, :frequencia_sync, :categoria_padrao_id,
                  :centro_custo_padrao_id, :aprovacao_automatica,
@@ -79,6 +79,7 @@ class ConexaoBancaria extends Model
             'empresa_id' => $data['empresa_id'],
             'usuario_id' => $data['usuario_id'],
             'banco' => $data['banco'],
+            'tipo_integracao' => $data['tipo_integracao'] ?? 'of',
             'tipo' => $data['tipo'],
             'identificacao' => $data['identificacao'] ?? null,
             'access_token' => $this->encryptToken($data['access_token'] ?? null),
@@ -112,7 +113,7 @@ class ConexaoBancaria extends Model
         $allowed = ['identificacao', 'auto_sync', 'frequencia_sync', 
                    'categoria_padrao_id', 'centro_custo_padrao_id', 'aprovacao_automatica',
                    'access_token', 'refresh_token', 'token_expira_em', 'ultima_sincronizacao',
-                   'ambiente', 'client_id', 'client_secret', 'cert_pem', 'key_pem', 'cert_password', 'ativo'];
+                   'ambiente', 'client_id', 'client_secret', 'cert_pem', 'key_pem', 'cert_password', 'ativo', 'tipo_integracao'];
         
         foreach ($allowed as $field) {
             if (isset($data[$field])) {

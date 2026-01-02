@@ -98,74 +98,116 @@ class OpenBankingService
             'consent_id' => $response['consent_id'] ?? null
         ];
     }
+
+    /**
+     * Wrapper para compatibilidade com controlador (usa state opcional).
+     */
+    public function obterAccessToken($code, $redirectUri, $state = null)
+    {
+        // Se state não vier, tenta usar sessão existente
+        $state = $state ?? ($_SESSION['oauth_state'] ?? null);
+        return $this->processarCallback($code, $state);
+    }
     
     /**
      * Sincronizar extratos (últimos 30 dias)
      */
-    public function sincronizarExtratos()
+    public function sincronizarExtrato($conexao)
     {
-        if (!$this->conexao) {
-            throw new \Exception("Conexão não definida");
-        }
-        
+        $this->conexao = $conexao;
+
         $banco = $this->conexao['banco'];
-        $config = $this->bancoConfig[$banco];
-        
+        $config = $this->bancoConfig[$banco] ?? null;
+        if (!$config) {
+            throw new \Exception("Banco não suportado para Open Finance");
+        }
+
         $dataInicio = date('Y-m-d', strtotime('-30 days'));
         $dataFim = date('Y-m-d');
-        
+
         // NOTA: Em produção, usar access_token descriptografado
-        $accessToken = $this->conexao['access_token'];
-        
+        $accessToken = $this->decrypt($this->conexao['access_token'] ?? null);
+
         $endpoint = $config['api_url'] . '/accounts/v1/transactions';
         $params = [
             'fromDate' => $dataInicio,
             'toDate' => $dataFim
         ];
-        
+
         $transacoes = $this->chamarAPI($endpoint, $params, 'GET', $accessToken);
-        
-        return $transacoes['data'] ?? [];
+
+        // Normalizar para formato interno
+        $normalizadas = [];
+        foreach ($transacoes['data'] ?? [] as $txn) {
+            $normalizadas[] = [
+                'transacao_id_banco' => $txn['transactionId'] ?? uniqid('txn_', false),
+                'data_transacao' => $txn['date'] ?? ($txn['bookingDate'] ?? date('Y-m-d')),
+                'descricao_original' => $txn['description'] ?? 'Transação',
+                'valor' => $txn['amount'] ?? ($txn['amount']['amount'] ?? 0),
+                'tipo' => ($txn['amount'] ?? ($txn['amount']['amount'] ?? 0)) < 0 ? 'saida' : 'entrada',
+                'origem' => 'open_finance'
+            ];
+        }
+
+        return $normalizadas;
     }
     
     /**
      * Sincronizar fatura de cartão de crédito
      */
-    public function sincronizarCartao()
+    public function sincronizarCartao($conexao)
     {
-        if (!$this->conexao) {
-            throw new \Exception("Conexão não definida");
-        }
-        
+        $this->conexao = $conexao;
+
         $banco = $this->conexao['banco'];
-        $config = $this->bancoConfig[$banco];
-        
-        $accessToken = $this->conexao['access_token'];
-        
+        $config = $this->bancoConfig[$banco] ?? null;
+        if (!$config) {
+            throw new \Exception("Banco não suportado para Open Finance");
+        }
+
+        $accessToken = $this->decrypt($this->conexao['access_token'] ?? null);
+
         $endpoint = $config['api_url'] . '/credit-cards/v1/bills';
-        
+
         $faturas = $this->chamarAPI($endpoint, [], 'GET', $accessToken);
-        
-        return $faturas['data'] ?? [];
+
+        $normalizadas = [];
+        foreach ($faturas['data'] ?? [] as $fatura) {
+            foreach ($fatura['transactions'] ?? [] as $txn) {
+                $normalizadas[] = [
+                    'transacao_id_banco' => $txn['transactionId'] ?? uniqid('cc_', false),
+                    'data_transacao' => $txn['transactionDate'] ?? date('Y-m-d'),
+                    'descricao_original' => $txn['description'] ?? 'Compra cartão',
+                    'valor' => $txn['amount'] ?? 0,
+                    'tipo' => 'saida',
+                    'origem' => 'open_finance_cartao'
+                ];
+            }
+        }
+
+        return $normalizadas;
     }
     
     /**
      * Renovar access token usando refresh token
      */
-    public function renovarToken()
+    public function renovarAccessToken($conexao)
     {
-        if (!$this->conexao) {
-            throw new \Exception("Conexão não definida");
-        }
-        
+        $this->conexao = $conexao;
+
         $banco = $this->conexao['banco'];
-        $config = $this->bancoConfig[$banco];
-        
+        $config = $this->bancoConfig[$banco] ?? null;
+        if (!$config) {
+            throw new \Exception("Banco não suportado para Open Finance");
+        }
+
+        $refresh = $this->decrypt($this->conexao['refresh_token'] ?? null);
+
         $response = $this->chamarAPI($config['auth_url'] . '/token', [
             'grant_type' => 'refresh_token',
-            'refresh_token' => $this->conexao['refresh_token']
+            'refresh_token' => $refresh
         ], 'POST');
-        
+
         return [
             'access_token' => $response['access_token'],
             'refresh_token' => $response['refresh_token'],
@@ -233,5 +275,20 @@ class OpenBankingService
     public function getBancoConfig($banco)
     {
         return $this->bancoConfig[$banco] ?? null;
+    }
+
+    /**
+     * Criptografia simples (base64) — mantenha para compatibilidade.
+     */
+    public static function encrypt($value, $key = null)
+    {
+        if ($value === null) return null;
+        return base64_encode($value);
+    }
+
+    public static function decrypt($value, $key = null)
+    {
+        if ($value === null) return null;
+        return base64_decode($value);
     }
 }
