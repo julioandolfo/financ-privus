@@ -129,7 +129,14 @@ class ConexaoBancariaController extends Controller
             'frequencia_sync' => $data['frequencia_sync'] ?? 'diaria',
             'categoria_padrao_id' => !empty($data['categoria_padrao_id']) ? $data['categoria_padrao_id'] : null,
             'centro_custo_padrao_id' => !empty($data['centro_custo_padrao_id']) ? $data['centro_custo_padrao_id'] : null,
-            'aprovacao_automatica' => $data['aprovacao_automatica'] ?? 0
+            'aprovacao_automatica' => $data['aprovacao_automatica'] ?? 0,
+            // Credenciais Sicoob / Open Finance
+            'ambiente' => $data['ambiente'] ?? 'sandbox',
+            'client_id' => $data['client_id'] ?? null,
+            'client_secret' => $data['client_secret'] ?? null,
+            'cert_pem' => $data['cert_pem'] ?? null,
+            'key_pem' => $data['key_pem'] ?? null,
+            'cert_password' => $data['cert_password'] ?? null
         ];
         
         // Iniciar fluxo OAuth

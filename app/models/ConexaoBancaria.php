@@ -64,12 +64,14 @@ class ConexaoBancaria extends Model
                 (empresa_id, usuario_id, banco, tipo, identificacao, 
                  access_token, refresh_token, token_expira_em, consent_id,
                  auto_sync, frequencia_sync, categoria_padrao_id, 
-                 centro_custo_padrao_id, aprovacao_automatica) 
+                 centro_custo_padrao_id, aprovacao_automatica,
+                 ambiente, client_id, client_secret, cert_pem, key_pem, cert_password, ativo, ultima_sincronizacao) 
                 VALUES 
                 (:empresa_id, :usuario_id, :banco, :tipo, :identificacao,
                  :access_token, :refresh_token, :token_expira_em, :consent_id,
                  :auto_sync, :frequencia_sync, :categoria_padrao_id,
-                 :centro_custo_padrao_id, :aprovacao_automatica)";
+                 :centro_custo_padrao_id, :aprovacao_automatica,
+                 :ambiente, :client_id, :client_secret, :cert_pem, :key_pem, :cert_password, :ativo, :ultima_sincronizacao)";
         
         $stmt = $this->db->prepare($sql);
         
@@ -87,7 +89,15 @@ class ConexaoBancaria extends Model
             'frequencia_sync' => $data['frequencia_sync'] ?? 'diaria',
             'categoria_padrao_id' => $data['categoria_padrao_id'] ?? null,
             'centro_custo_padrao_id' => $data['centro_custo_padrao_id'] ?? null,
-            'aprovacao_automatica' => $data['aprovacao_automatica'] ?? 0
+            'aprovacao_automatica' => $data['aprovacao_automatica'] ?? 0,
+            'ambiente' => $data['ambiente'] ?? 'sandbox',
+            'client_id' => $data['client_id'] ?? null,
+            'client_secret' => $data['client_secret'] ?? null,
+            'cert_pem' => $data['cert_pem'] ?? null,
+            'key_pem' => $data['key_pem'] ?? null,
+            'cert_password' => $data['cert_password'] ?? null,
+            'ativo' => $data['ativo'] ?? 1,
+            'ultima_sincronizacao' => $data['ultima_sincronizacao'] ?? null
         ]) ? $this->db->lastInsertId() : false;
     }
     
@@ -101,7 +111,8 @@ class ConexaoBancaria extends Model
         
         $allowed = ['identificacao', 'auto_sync', 'frequencia_sync', 
                    'categoria_padrao_id', 'centro_custo_padrao_id', 'aprovacao_automatica',
-                   'access_token', 'refresh_token', 'token_expira_em', 'ultima_sincronizacao'];
+                   'access_token', 'refresh_token', 'token_expira_em', 'ultima_sincronizacao',
+                   'ambiente', 'client_id', 'client_secret', 'cert_pem', 'key_pem', 'cert_password', 'ativo'];
         
         foreach ($allowed as $field) {
             if (isset($data[$field])) {

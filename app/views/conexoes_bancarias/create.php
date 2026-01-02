@@ -176,6 +176,42 @@ $errors = $this->session->get('errors') ?? [];
                 </div>
             </div>
 
+            <!-- Credenciais Sicoob / Open Finance -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mb-6">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Credenciais Open Finance (Sicoob)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Ambiente</label>
+                        <select name="ambiente" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                            <option value="sandbox" <?= ($old['ambiente'] ?? 'sandbox') == 'sandbox' ? 'selected' : '' ?>>Sandbox</option>
+                            <option value="producao" <?= ($old['ambiente'] ?? 'sandbox') == 'producao' ? 'selected' : '' ?>>Produção</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Client ID</label>
+                        <input type="text" name="client_id" value="<?= htmlspecialchars($old['client_id'] ?? '') ?>" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="client_id fornecido pelo Sicoob">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Client Secret</label>
+                        <input type="password" name="client_secret" value="<?= htmlspecialchars($old['client_secret'] ?? '') ?>" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="client_secret fornecido pelo Sicoob">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Certificado (PEM)</label>
+                        <textarea name="cert_pem" rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="-----BEGIN CERTIFICATE-----\n..."><?= htmlspecialchars($old['cert_pem'] ?? '') ?></textarea>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Cole aqui o certificado cliente em formato PEM. Não armazenamos em arquivo público.</p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Chave Privada (PEM)</label>
+                        <textarea name="key_pem" rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="-----BEGIN PRIVATE KEY-----\n..."><?= htmlspecialchars($old['key_pem'] ?? '') ?></textarea>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Cole aqui a chave privada correspondente. Use senha se necessário.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Senha do Certificado (se houver)</label>
+                        <input type="password" name="cert_password" value="<?= htmlspecialchars($old['cert_password'] ?? '') ?>" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Senha do PFX/Pem (opcional)">
+                    </div>
+                </div>
+            </div>
+
             <!-- Botões -->
             <div class="flex gap-4">
                 <a href="/conexoes-bancarias" 
