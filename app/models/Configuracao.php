@@ -57,19 +57,23 @@ class Configuracao extends Model
     {
         $instance = new self();
         
-        // Detectar tipo automaticamente se não fornecido
-        if ($tipo === null) {
-            $tipo = self::detectType($valor);
-        }
-        
-        // Converter valor para string
-        $valorString = self::valueToString($valor, $tipo);
-        
-        // Verificar se já existe
-        $sql = "SELECT id FROM {$instance->table} WHERE chave = :chave LIMIT 1";
+        // Verificar se já existe para preservar tipo se necessário
+        $sql = "SELECT id, tipo FROM {$instance->table} WHERE chave = :chave LIMIT 1";
         $stmt = $instance->db->prepare($sql);
         $stmt->execute(['chave' => $chave]);
         $exists = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Se tipo não foi especificado, usar tipo existente ou detectar
+        if ($tipo === null) {
+            if ($exists && !empty($exists['tipo'])) {
+                $tipo = $exists['tipo'];
+            } else {
+                $tipo = self::detectType($valor);
+            }
+        }
+        
+        // Converter valor para string baseado no tipo
+        $valorString = self::valueToString($valor, $tipo);
         
         if ($exists) {
             // Update
@@ -127,17 +131,30 @@ class Configuracao extends Model
      */
     public static function setMultiplas($configuracoes)
     {
+        if (empty($configuracoes)) {
+            return true; // Nada para salvar, retorna sucesso
+        }
+        
         $instance = new self();
         $instance->db->beginTransaction();
         
         try {
             foreach ($configuracoes as $chave => $valor) {
-                self::set($chave, $valor);
+                $result = self::set($chave, $valor);
+                if (!$result) {
+                    throw new \Exception("Falha ao salvar configuração: {$chave}");
+                }
             }
             $instance->db->commit();
+            
+            // Limpar cache após salvar
+            self::clearCache();
+            
             return true;
         } catch (\Exception $e) {
             $instance->db->rollBack();
+            error_log("Erro ao salvar múltiplas configurações: " . $e->getMessage());
+            error_log("Configurações tentadas: " . json_encode(array_keys($configuracoes)));
             return false;
         }
     }

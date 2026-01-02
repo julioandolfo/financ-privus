@@ -39,22 +39,43 @@ class ConfiguracaoController extends Controller
         $data = $request->all();
         $grupo = $data['grupo'] ?? '';
         
+        if (empty($grupo)) {
+            $_SESSION['error'] = 'Grupo de configuração não especificado.';
+            return $response->redirect('/configuracoes');
+        }
+        
         // Remover campos de controle
         unset($data['grupo']);
         
+        // Buscar todas as configurações do grupo primeiro
+        $configsGrupo = Configuracao::getGrupo($grupo);
+        
         // Preparar configurações para salvar
         $configuracoes = [];
+        
+        // Processar campos do POST (incluindo campos vazios)
         foreach ($data as $chave => $valor) {
-            // Tratar checkboxes (se não marcado, não vem no POST)
-            if (strpos($chave, '.') !== false) {
-                $configuracoes[$chave] = $valor;
+            // Verificar se a chave existe no grupo de configurações
+            if (isset($configsGrupo[$chave])) {
+                // Para campos de senha/password/key, só salvar se não estiver vazio
+                // (para não sobrescrever senha existente com string vazia)
+                if (strpos($chave, 'senha') !== false || strpos($chave, 'password') !== false || strpos($chave, 'key') !== false || strpos($chave, 'token') !== false) {
+                    // Se o campo tem valor, salvar
+                    if (!empty(trim($valor))) {
+                        $configuracoes[$chave] = trim($valor);
+                    }
+                    // Se estiver vazio, não adicionar ao array (manter valor atual no banco)
+                } else {
+                    // Para outros campos, salvar mesmo se vazio (permite limpar campos)
+                    $configuracoes[$chave] = is_string($valor) ? trim($valor) : $valor;
+                }
             }
         }
         
         // Processar uploads de arquivos
         if (!empty($_FILES)) {
             foreach ($_FILES as $chave => $file) {
-                if ($file['error'] === UPLOAD_ERR_OK) {
+                if (isset($configsGrupo[$chave]) && $file['error'] === UPLOAD_ERR_OK) {
                     $uploadPath = $this->processarUpload($file, $chave);
                     if ($uploadPath) {
                         $configuracoes[$chave] = $uploadPath;
@@ -63,20 +84,44 @@ class ConfiguracaoController extends Controller
             }
         }
         
-        // Buscar todas as configs do grupo para marcar checkboxes desmarcados como false
-        $configsGrupo = Configuracao::getGrupo($grupo);
+        // Processar checkboxes (boolean) - se não vier no POST, marcar como false
         foreach ($configsGrupo as $chave => $config) {
-            if ($config['tipo'] === 'boolean' && !isset($configuracoes[$chave])) {
-                $configuracoes[$chave] = false;
+            if ($config['tipo'] === 'boolean') {
+                // Se não foi enviado no POST, significa que está desmarcado
+                if (!isset($data[$chave])) {
+                    $configuracoes[$chave] = false;
+                } else {
+                    // Se foi enviado, processar o valor
+                    $configuracoes[$chave] = ($data[$chave] === 'true' || $data[$chave] === '1' || $data[$chave] === true);
+                }
             }
         }
         
-        $success = Configuracao::setMultiplas($configuracoes);
+        // Verificar se há configurações para salvar
+        if (empty($configuracoes)) {
+            // Se não há configurações para salvar, pode ser porque:
+            // 1. Apenas campos de senha vazios foram enviados (mantém valores atuais)
+            // 2. Nenhum campo foi alterado
+            // Neste caso, consideramos sucesso
+            Configuracao::clearCache();
+            $_SESSION['success'] = 'Configurações verificadas. Nenhuma alteração necessária.';
+            return $response->redirect('/configuracoes?aba=' . $grupo);
+        }
         
-        if ($success) {
-            $_SESSION['success'] = 'Configurações salvas com sucesso!';
-        } else {
-            $_SESSION['error'] = 'Erro ao salvar configurações.';
+        try {
+            $success = Configuracao::setMultiplas($configuracoes);
+            
+            if ($success) {
+                // Limpar cache de configurações
+                Configuracao::clearCache();
+                $_SESSION['success'] = 'Configurações salvas com sucesso!';
+            } else {
+                $_SESSION['error'] = 'Erro ao salvar configurações. Tente novamente.';
+            }
+        } catch (\Exception $e) {
+            // Log do erro
+            error_log("Erro ao salvar configurações: " . $e->getMessage());
+            $_SESSION['error'] = 'Erro ao salvar configurações: ' . $e->getMessage();
         }
         
         return $response->redirect('/configuracoes?aba=' . $grupo);
