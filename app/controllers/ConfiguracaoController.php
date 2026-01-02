@@ -44,12 +44,11 @@ class ConfiguracaoController extends Controller
             return $response->redirect('/configuracoes');
         }
         
-        // DEBUG: Log dos dados recebidos
-        if (defined('APP_DEBUG') && APP_DEBUG) {
-            error_log("=== SALVANDO CONFIGURAÇÕES ===");
-            error_log("Grupo: {$grupo}");
-            error_log("Dados recebidos: " . json_encode($data, JSON_PRETTY_PRINT));
-        }
+        // DEBUG: Log dos dados recebidos (sempre ativo temporariamente)
+        error_log("=== SALVANDO CONFIGURAÇÕES ===");
+        error_log("Grupo: {$grupo}");
+        error_log("Dados recebidos (POST): " . json_encode($data, JSON_PRETTY_PRINT));
+        error_log("Arquivos recebidos: " . json_encode(array_keys($_FILES), JSON_PRETTY_PRINT));
         
         // Remover campos de controle
         unset($data['grupo']);
@@ -108,9 +107,11 @@ class ConfiguracaoController extends Controller
             }
         }
         
-        // DEBUG: Log das configurações a serem salvas
-        if (defined('APP_DEBUG') && APP_DEBUG) {
-            error_log("Configurações a salvar: " . json_encode($configuracoes, JSON_PRETTY_PRINT));
+        // DEBUG: Log das configurações a serem salvas (sempre ativo temporariamente)
+        error_log("Configurações processadas para salvar:");
+        foreach ($configuracoes as $k => $v) {
+            $vStr = is_bool($v) ? ($v ? 'TRUE' : 'FALSE') : $v;
+            error_log("  - {$k} = {$vStr}");
         }
         
         // Verificar se há configurações para salvar
