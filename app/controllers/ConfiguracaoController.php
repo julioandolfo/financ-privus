@@ -182,16 +182,33 @@ class ConfiguracaoController extends Controller
                 continue;
             }
             
-            // Para campos de senha/password/key/token, só salvar se não estiver vazio
-            if (strpos($chave, 'senha') !== false || strpos($chave, 'password') !== false || 
-                strpos($chave, 'key') !== false || strpos($chave, 'token') !== false) {
-                if (!empty(trim($valor))) {
+            $tipoConfig = $configsGrupo[$chave]['tipo'];
+            
+            // Para campos numéricos, aceitar zero como valor válido
+            if ($tipoConfig === 'number') {
+                $valorNumerico = is_numeric($valor) ? $valor : 0;
+                $configuracoes[$chave] = $valorNumerico;
+                $this->log("  - {$chave}: '{$valorNumerico}' (number)");
+                continue;
+            }
+            
+            // Para campos sensíveis (senha/password/key/token REAIS, não campos com essas palavras no nome)
+            // Detectar apenas se termina com essas palavras ou são exatamente essas palavras
+            $isCampoSensivel = (
+                preg_match('/\.(senha|password|key|token|secret|api_key|api_secret)$/i', $chave) ||
+                in_array($chave, ['senha', 'password', 'key', 'token', 'secret'])
+            );
+            
+            if ($isCampoSensivel) {
+                // Para campos sensíveis, só salvar se não estiver vazio
+                if (strlen(trim($valor)) > 0) {
                     $configuracoes[$chave] = trim($valor);
-                    $this->log("  - {$chave}: '{$valor}' (senha/key atualizada)");
+                    $this->log("  - {$chave}: '***' (campo sensível atualizado)");
                 } else {
-                    $this->log("  - {$chave}: (vazio, mantém valor atual)");
+                    $this->log("  - {$chave}: (vazio, mantém valor atual para campo sensível)");
                 }
             } else {
+                // Campos normais (string, etc)
                 $valorTrim = is_string($valor) ? trim($valor) : $valor;
                 $configuracoes[$chave] = $valorTrim;
                 $this->log("  - {$chave}: '{$valorTrim}'");
