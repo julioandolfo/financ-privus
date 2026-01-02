@@ -112,7 +112,7 @@ class ConfiguracaoController extends Controller
         }
         
         // Log dos dados recebidos
-        $this->log("Dados POST completos:");
+        $this->log("Dados POST completos (ANTES da conversão):");
         foreach ($data as $key => $value) {
             $valueStr = is_array($value) ? json_encode($value) : $value;
             $this->log("  - {$key} = {$valueStr}");
@@ -124,6 +124,31 @@ class ConfiguracaoController extends Controller
         
         // Remover campos de controle
         unset($data['grupo']);
+        
+        // CORREÇÃO: PHP converte pontos (.) em underscores (_) automaticamente nos nomes de campos POST!
+        // Precisamos reverter isso para as chaves que pertencem ao grupo
+        $this->log("Convertendo underscores de volta para pontos...");
+        $dataCorrigido = [];
+        $prefixo = $grupo . '_';
+        $prefixoComPonto = $grupo . '.';
+        
+        foreach ($data as $key => $value) {
+            // Se a chave começa com "grupo_", converter para "grupo."
+            if (strpos($key, $prefixo) === 0) {
+                $novaChave = str_replace($prefixo, $prefixoComPonto, $key);
+                $dataCorrigido[$novaChave] = $value;
+                $this->log("  - {$key} → {$novaChave}");
+            } else {
+                $dataCorrigido[$key] = $value;
+            }
+        }
+        
+        $data = $dataCorrigido;
+        $this->log("Dados POST completos (DEPOIS da conversão):");
+        foreach ($data as $key => $value) {
+            $valueStr = is_array($value) ? json_encode($value) : $value;
+            $this->log("  - {$key} = {$valueStr}");
+        }
         
         // Buscar todas as configurações do grupo primeiro
         $configsGrupo = Configuracao::getGrupo($grupo);
