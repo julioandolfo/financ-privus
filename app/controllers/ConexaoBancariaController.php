@@ -137,7 +137,8 @@ class ConexaoBancariaController extends Controller
         $scheme = $_SERVER['REQUEST_SCHEME'] ?? ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http');
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         $redirectUri = $scheme . '://' . $host . '/conexoes-bancarias/callback';
-        $authUrl = $openBankingService->iniciarConsentimento($empresaId, $usuarioId, $data['banco'], $redirectUri);
+        // Usar método iniciarAutenticacao (mock) para obter URL de autorização
+        $authUrl = $openBankingService->iniciarAutenticacao($data['banco'], $data['tipo'], $redirectUri);
         
         return $response->redirect($authUrl);
     }
