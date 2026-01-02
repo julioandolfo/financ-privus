@@ -8,6 +8,63 @@ use App\Models\Configuracao;
 
 class ConfiguracaoController extends Controller
 {
+    private $logFile;
+    
+    public function __construct()
+    {
+        parent::__construct();
+        $this->logFile = __DIR__ . '/../../storage/logs/configuracoes.log';
+        
+        // Criar diretório se não existir
+        $logDir = dirname($this->logFile);
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0755, true);
+        }
+    }
+    
+    /**
+     * Loga mensagem específica de configurações
+     */
+    private function log($message)
+    {
+        $timestamp = date('Y-m-d H:i:s');
+        $logMessage = "[{$timestamp}] {$message}\n";
+        file_put_contents($this->logFile, $logMessage, FILE_APPEND);
+    }
+    
+    /**
+     * Exibe os logs de configuração
+     */
+    public function verLogs(Request $request, Response $response)
+    {
+        if (!file_exists($this->logFile)) {
+            $logs = "Nenhum log ainda.";
+        } else {
+            $logs = file_get_contents($this->logFile);
+            // Pegar últimas 200 linhas
+            $lines = explode("\n", $logs);
+            $lines = array_slice($lines, -200);
+            $logs = implode("\n", $lines);
+        }
+        
+        return $this->render('configuracoes/logs', [
+            'title' => 'Logs de Configurações',
+            'logs' => $logs
+        ]);
+    }
+    
+    /**
+     * Limpa os logs
+     */
+    public function limparLogs(Request $request, Response $response)
+    {
+        if (file_exists($this->logFile)) {
+            file_put_contents($this->logFile, '');
+        }
+        $_SESSION['success'] = 'Logs limpos com sucesso!';
+        return $response->redirect('/configuracoes/logs');
+    }
+    
     /**
      * Exibe a página de configurações
      */
@@ -36,44 +93,63 @@ class ConfiguracaoController extends Controller
      */
     public function salvar(Request $request, Response $response)
     {
+        $this->log("========================================");
+        $this->log("NOVA REQUISIÇÃO DE SALVAMENTO");
+        $this->log("========================================");
+        
         $data = $request->all();
         $grupo = $data['grupo'] ?? '';
         
+        $this->log("Grupo recebido: " . ($grupo ?: '(vazio)'));
+        $this->log("Método HTTP: " . $_SERVER['REQUEST_METHOD']);
+        $this->log("URI: " . $_SERVER['REQUEST_URI']);
+        $this->log("IP: " . ($_SERVER['REMOTE_ADDR'] ?? 'desconhecido'));
+        
         if (empty($grupo)) {
+            $this->log("ERRO: Grupo vazio!");
             $_SESSION['error'] = 'Grupo de configuração não especificado.';
             return $response->redirect('/configuracoes');
         }
         
-        // DEBUG: Log dos dados recebidos (sempre ativo temporariamente)
-        error_log("=== SALVANDO CONFIGURAÇÕES ===");
-        error_log("Grupo: {$grupo}");
-        error_log("Dados recebidos (POST): " . json_encode($data, JSON_PRETTY_PRINT));
-        error_log("Arquivos recebidos: " . json_encode(array_keys($_FILES), JSON_PRETTY_PRINT));
+        // Log dos dados recebidos
+        $this->log("Dados POST completos:");
+        foreach ($data as $key => $value) {
+            $valueStr = is_array($value) ? json_encode($value) : $value;
+            $this->log("  - {$key} = {$valueStr}");
+        }
+        
+        if (!empty($_FILES)) {
+            $this->log("Arquivos recebidos: " . json_encode(array_keys($_FILES)));
+        }
         
         // Remover campos de controle
         unset($data['grupo']);
         
         // Buscar todas as configurações do grupo primeiro
         $configsGrupo = Configuracao::getGrupo($grupo);
+        $this->log("Configurações do grupo '{$grupo}': " . count($configsGrupo) . " itens");
         
         // Preparar configurações para salvar
         $configuracoes = [];
         
         // PASSO 1: Processar checkboxes (boolean) PRIMEIRO
-        // Checkboxes marcados enviam value="true", desmarcados não enviam nada
+        $this->log("PASSO 1: Processando checkboxes (boolean)");
         foreach ($configsGrupo as $chave => $config) {
             if ($config['tipo'] === 'boolean') {
-                // Se o checkbox foi enviado no POST, está marcado (true)
-                // Se não foi enviado, está desmarcado (false)
-                $configuracoes[$chave] = isset($data[$chave]);
+                $enviado = isset($data[$chave]);
+                $configuracoes[$chave] = $enviado;
+                $status = $enviado ? 'TRUE (marcado)' : 'FALSE (desmarcado)';
+                $this->log("  - {$chave}: {$status}");
             }
         }
         
         // PASSO 2: Processar outros campos (string, number, etc)
+        $this->log("PASSO 2: Processando outros campos (string, number, etc)");
         foreach ($data as $chave => $valor) {
             // Verificar se a chave existe no grupo de configurações
             if (!isset($configsGrupo[$chave])) {
-                continue; // Ignorar campos que não existem no grupo
+                $this->log("  - {$chave}: IGNORADO (não existe no grupo)");
+                continue;
             }
             
             // Pular se já foi processado como boolean
@@ -84,63 +160,88 @@ class ConfiguracaoController extends Controller
             // Para campos de senha/password/key/token, só salvar se não estiver vazio
             if (strpos($chave, 'senha') !== false || strpos($chave, 'password') !== false || 
                 strpos($chave, 'key') !== false || strpos($chave, 'token') !== false) {
-                // Se o campo tem valor, salvar
                 if (!empty(trim($valor))) {
                     $configuracoes[$chave] = trim($valor);
+                    $this->log("  - {$chave}: '{$valor}' (senha/key atualizada)");
+                } else {
+                    $this->log("  - {$chave}: (vazio, mantém valor atual)");
                 }
-                // Se estiver vazio, não adicionar (manter valor atual no banco)
             } else {
-                // Para outros campos, salvar sempre (permite limpar campos)
-                $configuracoes[$chave] = is_string($valor) ? trim($valor) : $valor;
+                $valorTrim = is_string($valor) ? trim($valor) : $valor;
+                $configuracoes[$chave] = $valorTrim;
+                $this->log("  - {$chave}: '{$valorTrim}'");
             }
         }
         
         // PASSO 3: Processar uploads de arquivos
+        $this->log("PASSO 3: Processando uploads de arquivos");
         if (!empty($_FILES)) {
             foreach ($_FILES as $chave => $file) {
                 if (isset($configsGrupo[$chave]) && $file['error'] === UPLOAD_ERR_OK) {
+                    $this->log("  - {$chave}: processando upload...");
                     $uploadPath = $this->processarUpload($file, $chave);
                     if ($uploadPath) {
                         $configuracoes[$chave] = $uploadPath;
+                        $this->log("  - {$chave}: upload OK → {$uploadPath}");
+                    } else {
+                        $this->log("  - {$chave}: upload FALHOU");
                     }
                 }
             }
+        } else {
+            $this->log("  (nenhum arquivo para upload)");
         }
         
-        // DEBUG: Log das configurações a serem salvas (sempre ativo temporariamente)
-        error_log("Configurações processadas para salvar:");
+        // Resumo das configurações a salvar
+        $this->log("RESUMO: Total de " . count($configuracoes) . " configurações para salvar");
         foreach ($configuracoes as $k => $v) {
-            $vStr = is_bool($v) ? ($v ? 'TRUE' : 'FALSE') : $v;
-            error_log("  - {$k} = {$vStr}");
+            $vStr = is_bool($v) ? ($v ? 'TRUE' : 'FALSE') : (is_string($v) ? "'{$v}'" : $v);
+            $this->log("  → {$k} = {$vStr}");
         }
         
         // Verificar se há configurações para salvar
         if (empty($configuracoes)) {
-            // Se não há configurações para salvar, pode ser porque:
-            // 1. Apenas campos de senha vazios foram enviados (mantém valores atuais)
-            // 2. Nenhum campo foi alterado
-            // Neste caso, consideramos sucesso
+            $this->log("AVISO: Nenhuma configuração para salvar!");
             Configuracao::clearCache();
             $_SESSION['success'] = 'Configurações verificadas. Nenhuma alteração necessária.';
+            $this->log("Resultado: Nenhuma alteração");
+            $this->log("========================================");
             return $response->redirect('/configuracoes?aba=' . $grupo);
         }
         
+        $this->log("SALVANDO no banco de dados...");
         try {
             $success = Configuracao::setMultiplas($configuracoes);
             
             if ($success) {
+                $this->log("SUCESSO: Configurações salvas no banco!");
+                
                 // Limpar cache de configurações
                 Configuracao::clearCache();
+                $this->log("Cache limpo.");
+                
+                // Verificar se realmente foram salvas
+                $this->log("Verificando valores salvos no banco:");
+                foreach ($configuracoes as $chave => $valorEsperado) {
+                    $valorAtual = Configuracao::get($chave);
+                    $match = $valorAtual === $valorEsperado ? 'OK' : 'ERRO';
+                    $valorAtualStr = is_bool($valorAtual) ? ($valorAtual ? 'TRUE' : 'FALSE') : $valorAtual;
+                    $valorEsperadoStr = is_bool($valorEsperado) ? ($valorEsperado ? 'TRUE' : 'FALSE') : $valorEsperado;
+                    $this->log("  [{$match}] {$chave}: esperado={$valorEsperadoStr}, atual={$valorAtualStr}");
+                }
+                
                 $_SESSION['success'] = 'Configurações salvas com sucesso!';
             } else {
+                $this->log("FALHA: Erro ao salvar no banco!");
                 $_SESSION['error'] = 'Erro ao salvar configurações. Tente novamente.';
             }
         } catch (\Exception $e) {
-            // Log do erro
-            error_log("Erro ao salvar configurações: " . $e->getMessage());
+            $this->log("EXCEÇÃO: " . $e->getMessage());
+            $this->log("Stack trace: " . $e->getTraceAsString());
             $_SESSION['error'] = 'Erro ao salvar configurações: ' . $e->getMessage();
         }
         
+        $this->log("========================================");
         return $response->redirect('/configuracoes?aba=' . $grupo);
     }
     

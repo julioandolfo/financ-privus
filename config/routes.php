@@ -170,6 +170,8 @@ return [
     // Configurações (protegido)
     'GET /configuracoes' => ['handler' => 'ConfiguracaoController@index', 'middleware' => ['AuthMiddleware']],
     'POST /configuracoes/salvar' => ['handler' => 'ConfiguracaoController@salvar', 'middleware' => ['AuthMiddleware']],
+    'GET /configuracoes/logs' => ['handler' => 'ConfiguracaoController@verLogs', 'middleware' => ['AuthMiddleware']],
+    'POST /configuracoes/logs/limpar' => ['handler' => 'ConfiguracaoController@limparLogs', 'middleware' => ['AuthMiddleware']],
     
     // Conciliação Bancária (protegido)
     'GET /conciliacao-bancaria' => ['handler' => 'ConciliacaoBancariaController@index', 'middleware' => ['AuthMiddleware']],
