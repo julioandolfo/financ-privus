@@ -20,8 +20,8 @@ require_once APP_ROOT . '/includes/services/ClassificadorIAService.php';
 use App\Core\Database;
 use App\Models\ConexaoBancaria;
 use App\Models\TransacaoPendente;
-use Includes\Services\OpenBankingService;
-use Includes\Services\ClassificadorIAService;
+use includes\services\OpenBankingService;
+use includes\services\ClassificadorIAService;
 
 echo "[" . date('Y-m-d H:i:s') . "] Iniciando sincronização bancária automática...\n";
 

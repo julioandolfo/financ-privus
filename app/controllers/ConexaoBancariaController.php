@@ -9,7 +9,7 @@ use App\Models\CategoriaFinanceira;
 use App\Models\CentroCusto;
 use App\Models\Empresa;
 use App\Models\Usuario;
-use Includes\Services\OpenBankingService;
+use includes\services\OpenBankingService;
 
 class ConexaoBancariaController extends Controller
 {
@@ -390,7 +390,7 @@ class ConexaoBancariaController extends Controller
     private function processarTransacoes($transacoes, $conexao)
     {
         $transacaoPendenteModel = new \App\Models\TransacaoPendente();
-        $classificadorService = new \Includes\Services\ClassificadorIAService($conexao['empresa_id']);
+        $classificadorService = new \includes\services\ClassificadorIAService($conexao['empresa_id']);
         
         $novas = [];
         
