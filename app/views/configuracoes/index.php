@@ -196,6 +196,101 @@
                         </div>
                     <?php endif; ?>
                 </form>
+                
+                <!-- Teste de Email (apenas na aba email) -->
+                <?php if ($grupo === 'email'): ?>
+                    <div class="mt-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-6" 
+                         x-data="{
+                             emailTeste: '',
+                             testando: false,
+                             resultado: null,
+                             testarEmail() {
+                                 if (!this.emailTeste) {
+                                     alert('Por favor, informe um email para teste.');
+                                     return;
+                                 }
+                                 
+                                 this.testando = true;
+                                 this.resultado = null;
+                                 
+                                 fetch('/configuracoes/testar-email', {
+                                     method: 'POST',
+                                     headers: {
+                                         'Content-Type': 'application/x-www-form-urlencoded',
+                                     },
+                                     body: 'email_teste=' + encodeURIComponent(this.emailTeste)
+                                 })
+                                 .then(response => response.json())
+                                 .then(data => {
+                                     this.testando = false;
+                                     this.resultado = data;
+                                 })
+                                 .catch(error => {
+                                     this.testando = false;
+                                     this.resultado = {
+                                         success: false,
+                                         message: 'Erro na requisição: ' + error.message
+                                     };
+                                 });
+                             }
+                         }">
+                        <div class="flex items-start">
+                            <svg class="w-6 h-6 text-amber-600 dark:text-amber-400 mr-3 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                            </svg>
+                            <div class="flex-1">
+                                <h3 class="text-amber-900 dark:text-amber-100 font-semibold mb-2">🧪 Testar Envio de Email</h3>
+                                <p class="text-sm text-amber-800 dark:text-amber-200 mb-4">
+                                    Certifique-se de <strong>salvar as configurações acima</strong> antes de testar. Digite um email e clique em "Enviar Teste" para verificar se o servidor SMTP está funcionando corretamente.
+                                </p>
+                                
+                                <div class="flex items-center space-x-3">
+                                    <input type="email" 
+                                           x-model="emailTeste"
+                                           placeholder="seu@email.com"
+                                           class="flex-1 px-4 py-2 rounded-lg border border-amber-300 dark:border-amber-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                           :disabled="testando">
+                                    
+                                    <button @click="testarEmail()" 
+                                            :disabled="testando"
+                                            class="px-6 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg hover:from-amber-700 hover:to-orange-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2">
+                                        <svg x-show="!testando" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                        </svg>
+                                        <svg x-show="testando" class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span x-text="testando ? 'Enviando...' : 'Enviar Teste'"></span>
+                                    </button>
+                                </div>
+                                
+                                <!-- Resultado do Teste -->
+                                <div x-show="resultado !== null" 
+                                     x-transition
+                                     class="mt-4 p-4 rounded-lg"
+                                     :class="resultado && resultado.success ? 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700' : 'bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700'">
+                                    <div class="flex items-start">
+                                        <svg x-show="resultado && resultado.success" class="w-5 h-5 text-green-600 dark:text-green-400 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <svg x-show="resultado && !resultado.success" class="w-5 h-5 text-red-600 dark:text-red-400 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <div>
+                                            <p class="font-medium"
+                                               :class="resultado && resultado.success ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100'"
+                                               x-text="resultado && resultado.success ? '✅ Sucesso!' : '❌ Erro'"></p>
+                                            <p class="text-sm mt-1"
+                                               :class="resultado && resultado.success ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'"
+                                               x-text="resultado ? resultado.message : ''"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
         <?php endforeach; ?>
     </div>

@@ -5,6 +5,7 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
 use App\Models\Configuracao;
+use Includes\Services\EmailService;
 
 class ConfiguracaoController extends Controller
 {
@@ -326,5 +327,62 @@ class ConfiguracaoController extends Controller
         
         $_SESSION['error'] = 'Erro ao fazer upload do arquivo.';
         return false;
+    }
+    
+    /**
+     * Testa o envio de email
+     */
+    public function testarEmail(Request $request, Response $response)
+    {
+        $emailTeste = $request->get('email_teste');
+        
+        // Validar email
+        if (empty($emailTeste)) {
+            return $response->json([
+                'success' => false,
+                'message' => 'Por favor, informe um email para teste.'
+            ]);
+        }
+        
+        if (!filter_var($emailTeste, FILTER_VALIDATE_EMAIL)) {
+            return $response->json([
+                'success' => false,
+                'message' => 'Email inválido. Por favor, informe um email válido.'
+            ]);
+        }
+        
+        try {
+            // Instanciar serviço de email
+            $emailService = new EmailService();
+            
+            // Validar configurações primeiro
+            $validacao = $emailService->validarConfiguracao();
+            if (!$validacao['valido']) {
+                return $response->json([
+                    'success' => false,
+                    'message' => 'Configurações incompletas: ' . implode(', ', $validacao['erros'])
+                ]);
+            }
+            
+            // Enviar email de teste
+            $resultado = $emailService->enviarEmailTeste($emailTeste);
+            
+            // Log do teste
+            $this->log("========================================");
+            $this->log("TESTE DE EMAIL");
+            $this->log("Email destino: " . $emailTeste);
+            $this->log("Resultado: " . ($resultado['success'] ? 'SUCESSO' : 'FALHA'));
+            $this->log("Mensagem: " . $resultado['message']);
+            $this->log("========================================");
+            
+            return $response->json($resultado);
+            
+        } catch (\Exception $e) {
+            $this->log("ERRO ao testar email: " . $e->getMessage());
+            return $response->json([
+                'success' => false,
+                'message' => 'Erro ao enviar email: ' . $e->getMessage()
+            ]);
+        }
     }
 }
