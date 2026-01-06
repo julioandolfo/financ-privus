@@ -73,8 +73,8 @@ spl_autoload_register(function ($class) {
     }
     
     // Namespace includes
-    if (strpos($class, 'includes\\') === 0) {
-        $relativeClass = str_replace('includes\\', '', $class);
+    if (strpos($class, 'includes\\') === 0 || strpos($class, 'Includes\\') === 0) {
+        $relativeClass = str_replace(['includes\\', 'Includes\\'], '', $class);
         $file = APP_ROOT . '/includes/' . str_replace('\\', '/', $relativeClass) . '.php';
         if (file_exists($file)) {
             require_once $file;
@@ -147,8 +147,8 @@ spl_autoload_register(function ($class) {
     }
     
     // Namespace includes
-    if (strpos($class, 'includes\\') === 0) {
-        $relativeClass = str_replace('includes\\', '', $class);
+    if (strpos($class, 'includes\\') === 0 || strpos($class, 'Includes\\') === 0) {
+        $relativeClass = str_replace(['includes\\', 'Includes\\'], '', $class);
         $file = APP_ROOT . '/includes/' . str_replace('\\', '/', $relativeClass) . '.php';
         if (file_exists($file)) {
             require_once $file;
