@@ -249,6 +249,9 @@ return [
     'POST /api-tokens/{id}/delete' => ['handler' => 'ApiTokenController@destroy', 'middleware' => ['AuthMiddleware']],
     'POST /api-tokens/{id}/regenerate' => ['handler' => 'ApiTokenController@regenerate', 'middleware' => ['AuthMiddleware']],
     
+    // Documentação da API (público/protegido opcional)
+    'GET /api/docs' => ['handler' => 'ApiDocController@index'],
+    
     // ========================================
     // API REST - Endpoints Públicos
     // ========================================
