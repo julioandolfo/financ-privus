@@ -278,6 +278,13 @@ return [
     'PUT /api/v1/produtos/{id}' => ['handler' => 'ApiRestController@produtosUpdate', 'middleware' => ['ApiAuthMiddleware']],
     'DELETE /api/v1/produtos/{id}' => ['handler' => 'ApiRestController@produtosDelete', 'middleware' => ['ApiAuthMiddleware']],
     
+    // Pedidos
+    'GET /api/v1/pedidos' => ['handler' => 'ApiRestController@pedidosIndex', 'middleware' => ['ApiAuthMiddleware']],
+    'GET /api/v1/pedidos/{id}' => ['handler' => 'ApiRestController@pedidosShow', 'middleware' => ['ApiAuthMiddleware']],
+    'POST /api/v1/pedidos' => ['handler' => 'ApiRestController@pedidosStore', 'middleware' => ['ApiAuthMiddleware']],
+    'PUT /api/v1/pedidos/{id}' => ['handler' => 'ApiRestController@pedidosUpdate', 'middleware' => ['ApiAuthMiddleware']],
+    'DELETE /api/v1/pedidos/{id}' => ['handler' => 'ApiRestController@pedidosDelete', 'middleware' => ['ApiAuthMiddleware']],
+    
     // Clientes
     'GET /api/v1/clientes' => ['handler' => 'ApiRestController@clientesIndex', 'middleware' => ['ApiAuthMiddleware']],
     'GET /api/v1/clientes/{id}' => ['handler' => 'ApiRestController@clientesShow', 'middleware' => ['ApiAuthMiddleware']],

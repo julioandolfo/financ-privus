@@ -223,19 +223,178 @@ class ApiDocController extends Controller
                             'method' => 'GET',
                             'endpoint' => '/api/v1/produtos',
                             'description' => 'Lista todos os produtos',
+                            'params' => [
+                                ['name' => 'busca', 'type' => 'string', 'required' => false, 'description' => 'Buscar por código ou nome'],
+                                ['name' => 'categoria_id', 'type' => 'integer', 'required' => false, 'description' => 'Filtrar por categoria'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'data' => [
+                                    [
+                                        'id' => 1,
+                                        'empresa_id' => 1,
+                                        'nome' => 'Produto Exemplo',
+                                        'codigo' => 'PROD001',
+                                        'preco_venda' => 99.90,
+                                        'estoque' => 50,
+                                    ]
+                                ]
+                            ]
+                        ],
+                        [
+                            'method' => 'GET',
+                            'endpoint' => '/api/v1/produtos/{id}',
+                            'description' => 'Busca um produto específico',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID do produto'],
+                            ],
                         ],
                         [
                             'method' => 'POST',
                             'endpoint' => '/api/v1/produtos',
                             'description' => 'Cria um novo produto',
                             'body' => [
-                                'empresa_id' => ['type' => 'integer', 'required' => true],
-                                'nome' => ['type' => 'string', 'required' => true],
-                                'codigo' => ['type' => 'string', 'required' => false],
-                                'descricao' => ['type' => 'text', 'required' => false],
-                                'preco_custo' => ['type' => 'decimal', 'required' => false],
-                                'preco_venda' => ['type' => 'decimal', 'required' => true],
-                                'estoque_atual' => ['type' => 'integer', 'required' => false],
+                                'empresa_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da empresa'],
+                                'nome' => ['type' => 'string', 'required' => true, 'description' => 'Nome do produto'],
+                                'codigo' => ['type' => 'string', 'required' => false, 'description' => 'Código/SKU do produto'],
+                                'descricao' => ['type' => 'text', 'required' => false, 'description' => 'Descrição detalhada'],
+                                'preco_custo' => ['type' => 'decimal', 'required' => false, 'description' => 'Preço de custo'],
+                                'preco_venda' => ['type' => 'decimal', 'required' => true, 'description' => 'Preço de venda'],
+                                'estoque' => ['type' => 'integer', 'required' => false, 'description' => 'Quantidade em estoque'],
+                                'estoque_minimo' => ['type' => 'integer', 'required' => false, 'description' => 'Estoque mínimo'],
+                                'categoria_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da categoria'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'id' => 1,
+                                'message' => 'Produto criado com sucesso'
+                            ]
+                        ],
+                        [
+                            'method' => 'PUT',
+                            'endpoint' => '/api/v1/produtos/{id}',
+                            'description' => 'Atualiza um produto',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID do produto'],
+                            ],
+                            'body' => [
+                                'nome' => ['type' => 'string', 'required' => false, 'description' => 'Nome do produto'],
+                                'preco_venda' => ['type' => 'decimal', 'required' => false, 'description' => 'Preço de venda'],
+                                'estoque' => ['type' => 'integer', 'required' => false, 'description' => 'Quantidade em estoque'],
+                            ],
+                        ],
+                        [
+                            'method' => 'DELETE',
+                            'endpoint' => '/api/v1/produtos/{id}',
+                            'description' => 'Exclui um produto',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID do produto'],
+                            ],
+                        ],
+                    ]
+                ],
+                
+                'pedidos' => [
+                    'name' => 'Pedidos',
+                    'description' => 'Gerenciamento de pedidos vinculados',
+                    'base_url' => '/api/v1/pedidos',
+                    'methods' => [
+                        [
+                            'method' => 'GET',
+                            'endpoint' => '/api/v1/pedidos',
+                            'description' => 'Lista todos os pedidos',
+                            'params' => [
+                                ['name' => 'status', 'type' => 'string', 'required' => false, 'description' => 'Filtrar por status (pendente, processando, concluido, cancelado)'],
+                                ['name' => 'origem', 'type' => 'string', 'required' => false, 'description' => 'Filtrar por origem (woocommerce, manual, externo)'],
+                                ['name' => 'cliente_id', 'type' => 'integer', 'required' => false, 'description' => 'Filtrar por cliente'],
+                                ['name' => 'data_inicio', 'type' => 'date', 'required' => false, 'description' => 'Data inicial (YYYY-MM-DD)'],
+                                ['name' => 'data_fim', 'type' => 'date', 'required' => false, 'description' => 'Data final (YYYY-MM-DD)'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'data' => [
+                                    [
+                                        'id' => 1,
+                                        'empresa_id' => 1,
+                                        'cliente_id' => 10,
+                                        'cliente_nome' => 'Cliente Exemplo',
+                                        'numero_pedido' => 'PED-2026-001',
+                                        'data_pedido' => '2026-01-06',
+                                        'total' => 299.90,
+                                        'status' => 'pendente',
+                                        'origem' => 'manual',
+                                        'total_itens' => 3,
+                                    ]
+                                ],
+                                'total' => 1
+                            ]
+                        ],
+                        [
+                            'method' => 'GET',
+                            'endpoint' => '/api/v1/pedidos/{id}',
+                            'description' => 'Busca um pedido específico com seus itens',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID do pedido'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'data' => [
+                                    'id' => 1,
+                                    'numero_pedido' => 'PED-2026-001',
+                                    'total' => 299.90,
+                                    'status' => 'pendente',
+                                    'itens' => [
+                                        [
+                                            'produto_id' => 5,
+                                            'produto_nome' => 'Produto A',
+                                            'quantidade' => 2,
+                                            'preco_unitario' => 99.90,
+                                            'subtotal' => 199.80,
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ],
+                        [
+                            'method' => 'POST',
+                            'endpoint' => '/api/v1/pedidos',
+                            'description' => 'Cria um novo pedido',
+                            'body' => [
+                                'empresa_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da empresa'],
+                                'cliente_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID do cliente'],
+                                'numero_pedido' => ['type' => 'string', 'required' => false, 'description' => 'Número do pedido (gerado automaticamente se não fornecido)'],
+                                'data_pedido' => ['type' => 'date', 'required' => true, 'description' => 'Data do pedido (YYYY-MM-DD)'],
+                                'total' => ['type' => 'decimal', 'required' => true, 'description' => 'Valor total do pedido'],
+                                'status' => ['type' => 'string', 'required' => false, 'description' => 'Status (padrão: pendente)'],
+                                'origem' => ['type' => 'string', 'required' => false, 'description' => 'Origem (padrão: externo)'],
+                                'observacoes' => ['type' => 'text', 'required' => false, 'description' => 'Observações do pedido'],
+                                'itens' => ['type' => 'array', 'required' => false, 'description' => 'Array de itens do pedido'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'id' => 1,
+                                'message' => 'Pedido criado com sucesso'
+                            ]
+                        ],
+                        [
+                            'method' => 'PUT',
+                            'endpoint' => '/api/v1/pedidos/{id}',
+                            'description' => 'Atualiza um pedido',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID do pedido'],
+                            ],
+                            'body' => [
+                                'status' => ['type' => 'string', 'required' => false, 'description' => 'Novo status do pedido'],
+                                'total' => ['type' => 'decimal', 'required' => false, 'description' => 'Novo total'],
+                                'observacoes' => ['type' => 'text', 'required' => false, 'description' => 'Observações'],
+                            ],
+                        ],
+                        [
+                            'method' => 'DELETE',
+                            'endpoint' => '/api/v1/pedidos/{id}',
+                            'description' => 'Exclui um pedido',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID do pedido'],
                             ],
                         ],
                     ]

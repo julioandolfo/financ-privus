@@ -925,8 +925,182 @@ class ApiRestController extends Controller
     }
 
     // =====================================================
+    // PEDIDOS
+    // =====================================================
+
+    public function pedidosIndex(Request $request, Response $response)
+    {
+        $token = $this->authenticate($request, $response);
+        
+        $model = new PedidoVinculado();
+        $empresaId = $token['empresa_id'];
+        
+        // Filtros opcionais
+        $filters = [];
+        if ($request->get('status')) {
+            $filters['status'] = $request->get('status');
+        }
+        if ($request->get('origem')) {
+            $filters['origem'] = $request->get('origem');
+        }
+        if ($request->get('cliente_id')) {
+            $filters['cliente_id'] = $request->get('cliente_id');
+        }
+        if ($request->get('data_inicio')) {
+            $filters['data_inicio'] = $request->get('data_inicio');
+        }
+        if ($request->get('data_fim')) {
+            $filters['data_fim'] = $request->get('data_fim');
+        }
+        
+        $pedidos = $model->findAll($empresaId, $filters);
+        
+        $data = ['success' => true, 'data' => $pedidos, 'total' => count($pedidos)];
+        $this->logSuccess($request, 200, $data);
+        $response->json($data);
+    }
+
+    public function pedidosShow(Request $request, Response $response, $id)
+    {
+        $token = $this->authenticate($request, $response);
+        
+        $model = new PedidoVinculado();
+        $pedido = $model->findById($id);
+        
+        if (!$pedido || ($token['empresa_id'] && $pedido['empresa_id'] != $token['empresa_id'])) {
+            $data = ['success' => false, 'error' => 'Pedido não encontrado'];
+            $this->logSuccess($request, 404, $data);
+            return $response->json($data, 404);
+        }
+        
+        // Buscar itens do pedido
+        $pedido['itens'] = $model->getItems($id);
+        
+        $data = ['success' => true, 'data' => $pedido];
+        $this->logSuccess($request, 200, $data);
+        $response->json($data);
+    }
+
+    public function pedidosStore(Request $request, Response $response)
+    {
+        $token = $this->authenticate($request, $response);
+        
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        $errors = $this->validatePedido($input);
+        if (!empty($errors)) {
+            $data = ['success' => false, 'errors' => $errors];
+            $this->logSuccess($request, 400, $data);
+            return $response->json($data, 400);
+        }
+        
+        // Garantir empresa_id do token
+        $input['empresa_id'] = $token['empresa_id'];
+        
+        $model = new PedidoVinculado();
+        
+        try {
+            $this->db->beginTransaction();
+            
+            // Criar pedido
+            $pedidoId = $model->create($input);
+            
+            // Adicionar itens se fornecidos
+            if (!empty($input['itens']) && is_array($input['itens'])) {
+                foreach ($input['itens'] as $item) {
+                    $item['pedido_id'] = $pedidoId;
+                    $model->addItem($item);
+                }
+            }
+            
+            $this->db->commit();
+            
+            $data = ['success' => true, 'id' => $pedidoId, 'message' => 'Pedido criado com sucesso'];
+            $this->logSuccess($request, 201, $data);
+            $response->json($data, 201);
+            
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $data = ['success' => false, 'error' => 'Erro ao criar pedido: ' . $e->getMessage()];
+            $this->logSuccess($request, 500, $data);
+            $response->json($data, 500);
+        }
+    }
+
+    public function pedidosUpdate(Request $request, Response $response, $id)
+    {
+        $token = $this->authenticate($request, $response);
+        
+        $model = new PedidoVinculado();
+        $pedido = $model->findById($id);
+        
+        if (!$pedido || ($token['empresa_id'] && $pedido['empresa_id'] != $token['empresa_id'])) {
+            $data = ['success' => false, 'error' => 'Pedido não encontrado'];
+            $this->logSuccess($request, 404, $data);
+            return $response->json($data, 404);
+        }
+        
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        $errors = $this->validatePedido($input, $id);
+        if (!empty($errors)) {
+            $data = ['success' => false, 'errors' => $errors];
+            $this->logSuccess($request, 400, $data);
+            return $response->json($data, 400);
+        }
+        
+        // Garantir que não altere empresa_id
+        unset($input['empresa_id']);
+        
+        $model->update($id, $input);
+        
+        $data = ['success' => true, 'message' => 'Pedido atualizado com sucesso'];
+        $this->logSuccess($request, 200, $data);
+        $response->json($data);
+    }
+
+    public function pedidosDelete(Request $request, Response $response, $id)
+    {
+        $token = $this->authenticate($request, $response);
+        
+        $model = new PedidoVinculado();
+        $pedido = $model->findById($id);
+        
+        if (!$pedido || ($token['empresa_id'] && $pedido['empresa_id'] != $token['empresa_id'])) {
+            $data = ['success' => false, 'error' => 'Pedido não encontrado'];
+            $this->logSuccess($request, 404, $data);
+            return $response->json($data, 404);
+        }
+        
+        $model->delete($id);
+        
+        $data = ['success' => true, 'message' => 'Pedido excluído com sucesso'];
+        $this->logSuccess($request, 200, $data);
+        $response->json($data);
+    }
+
+    // =====================================================
     // VALIDAÇÕES ADICIONAIS
     // =====================================================
+
+    private function validatePedido($data, $id = null)
+    {
+        $errors = [];
+        
+        if (empty($data['data_pedido'])) {
+            $errors['data_pedido'] = 'Data do pedido é obrigatória';
+        }
+        
+        if (empty($data['total'])) {
+            $errors['total'] = 'Total do pedido é obrigatório';
+        }
+        
+        if (!empty($data['itens']) && !is_array($data['itens'])) {
+            $errors['itens'] = 'Itens devem ser um array';
+        }
+        
+        return $errors;
+    }
 
     private function validateMovimentacao($data, $id = null)
     {
