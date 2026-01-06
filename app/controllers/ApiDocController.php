@@ -28,11 +28,19 @@ class ApiDocController extends Controller
         // Definir estrutura da documentação
         $apiDoc = $this->getApiDocumentation();
         
-        return $this->render('api_docs/index', [
+        // Renderizar sem layout (a view tem HTML completo)
+        $viewPath = __DIR__ . '/../views/api_docs/index.php';
+        
+        // Extrair variáveis para a view
+        extract([
             'apiDoc' => $apiDoc,
             'tokens' => $tokens,
             'baseUrl' => $this->getBaseUrl(),
         ]);
+        
+        // Incluir view diretamente sem layout
+        include $viewPath;
+        return;
     }
     
     /**
