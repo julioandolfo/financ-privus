@@ -72,6 +72,22 @@ class ApiToken extends Model
     }
 
     /**
+     * Busca tokens por usuário
+     */
+    public function findByUsuario($usuarioId)
+    {
+        $sql = "SELECT at.*, e.nome_fantasia as empresa_nome
+                FROM {$this->table} at
+                LEFT JOIN empresas e ON at.empresa_id = e.id
+                WHERE at.usuario_id = :usuario_id AND at.ativo = 1
+                ORDER BY at.created_at DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['usuario_id' => $usuarioId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
      * Cria um novo token
      */
     public function create($data)
