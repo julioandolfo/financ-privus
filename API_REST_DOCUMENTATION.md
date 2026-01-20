@@ -1,5 +1,26 @@
 # 📚 Documentação da API REST
 
+> **🆕 Novidade:** Agora você pode criar **Vendas com Produtos** via API, incluindo cálculo automático de **Lucro** e **Margem de Lucro**! Veja a seção [Contas a Receber](#-contas-a-receber) e [Pedidos Vinculados](#-pedidos-vinculados).
+
+## 📋 Índice
+
+- [🔐 Autenticação](#-autenticação)
+- [💰 Contas a Pagar](#-contas-a-pagar)
+- [💵 Contas a Receber](#-contas-a-receber) ⭐ *COM PEDIDOS E PRODUTOS*
+- [📦 Pedidos Vinculados](#-pedidos-vinculados) ⭐ *NOVO*
+- [📦 Produtos](#-produtos)
+- [👥 Clientes](#-clientes)
+- [🏭 Fornecedores](#-fornecedores)
+- [💸 Movimentações de Caixa](#-movimentações-de-caixa)
+- [📂 Categorias Financeiras](#-categorias-financeiras)
+- [📊 Centros de Custo](#-centros-de-custo)
+- [🏦 Contas Bancárias](#-contas-bancárias)
+- [⚠️ Tratamento de Erros](#️-tratamento-de-erros)
+- [🔒 Segurança](#-segurança)
+- [💡 Exemplos Práticos](#-exemplos-práticos)
+
+---
+
 ## 🔐 Autenticação
 
 Todos os endpoints da API REST requerem autenticação via **Bearer Token**.
@@ -164,13 +185,94 @@ DELETE /api/v1/contas-pagar/{id}
 GET /api/v1/contas-receber
 ```
 
+**Parâmetros de Query (opcionais):**
+- `empresa_id` - Filtrar por empresa
+- `cliente_id` - Filtrar por cliente
+- `status` - Filtrar por status (pendente, recebido, vencido, cancelado, parcial)
+- `data_inicio` - Data inicial (YYYY-MM-DD)
+- `data_fim` - Data final (YYYY-MM-DD)
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "id": 1,
+            "empresa_id": 1,
+            "cliente_id": 3,
+            "cliente_nome": "João da Silva",
+            "pedido_id": 5,
+            "categoria_id": 10,
+            "centro_custo_id": 2,
+            "numero_documento": "NF-456",
+            "descricao": "Venda de produtos",
+            "valor_total": 2500.00,
+            "valor_recebido": 0.00,
+            "data_emissao": "2025-01-01",
+            "data_vencimento": "2025-01-20",
+            "data_recebimento": null,
+            "status": "pendente"
+        }
+    ]
+}
+```
+
 ### Buscar Conta Específica
 
 ```http
 GET /api/v1/contas-receber/{id}
 ```
 
-### Criar Conta a Receber
+**Resposta:**
+```json
+{
+    "success": true,
+    "data": {
+        "id": 1,
+        "empresa_id": 1,
+        "cliente_id": 3,
+        "cliente_nome": "João da Silva",
+        "pedido_id": 5,
+        "categoria_id": 10,
+        "centro_custo_id": 2,
+        "numero_documento": "NF-456",
+        "descricao": "Venda de produtos",
+        "valor_total": 2500.00,
+        "valor_recebido": 0.00,
+        "data_emissao": "2025-01-01",
+        "data_vencimento": "2025-01-20",
+        "status": "pendente",
+        "pedido": {
+            "id": 5,
+            "numero_pedido": "PED-001",
+            "valor_total": 2500.00,
+            "valor_custo_total": 1500.00,
+            "lucro": 1000.00,
+            "margem_lucro": 66.67,
+            "itens": [
+                {
+                    "id": 10,
+                    "produto_id": 1,
+                    "produto_codigo": "PROD-001",
+                    "nome_produto": "Produto A",
+                    "quantidade": 2,
+                    "valor_unitario": 100.00,
+                    "valor_total": 200.00,
+                    "custo_unitario": 60.00,
+                    "custo_total": 120.00,
+                    "lucro_item": 80.00,
+                    "margem_item": 66.67
+                }
+            ]
+        }
+    }
+}
+```
+
+### Criar Conta a Receber (Simples)
+
+Para contas a receber sem produtos vinculados:
 
 ```http
 POST /api/v1/contas-receber
@@ -178,25 +280,249 @@ Content-Type: application/json
 
 {
     "cliente_id": 3,
-    "descricao": "Venda de produtos",
-    "valor": 2500.00,
+    "categoria_id": 10,
+    "centro_custo_id": 2,
+    "descricao": "Prestação de serviço",
+    "valor_total": 1500.00,
     "data_vencimento": "2025-01-20",
     "data_emissao": "2025-01-01",
-    "numero_documento": "NF-456"
+    "data_competencia": "2025-01-01",
+    "numero_documento": "NF-456",
+    "observacoes": "Serviço de consultoria"
 }
 ```
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "id": 15,
+    "message": "Conta a receber criada com sucesso"
+}
+```
+
+### Criar Conta a Receber com Pedido (Venda com Produtos)
+
+Para vendas com produtos, incluindo cálculo automático de lucro/margem:
+
+```http
+POST /api/v1/contas-receber
+Content-Type: application/json
+
+{
+    "cliente_id": 3,
+    "categoria_id": 10,
+    "centro_custo_id": 2,
+    "descricao": "Venda de produtos",
+    "data_vencimento": "2025-01-20",
+    "data_emissao": "2025-01-01",
+    "data_competencia": "2025-01-01",
+    "numero_documento": "NF-456",
+    "criar_pedido": true,
+    "pedido": {
+        "numero_pedido": "PED-001",
+        "data_pedido": "2025-01-01",
+        "status": "pendente",
+        "produtos": [
+            {
+                "produto_id": 1,
+                "quantidade": 2,
+                "valor_unitario": 100.00,
+                "custo_unitario": 60.00
+            },
+            {
+                "produto_id": 2,
+                "quantidade": 1,
+                "valor_unitario": 50.00,
+                "custo_unitario": 30.00
+            }
+        ]
+    }
+}
+```
+
+**Nota:** O campo `valor_total` é calculado automaticamente pela soma dos produtos. Os campos `custo_unitario` são opcionais - se não informados, o sistema busca do cadastro do produto.
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "id": 15,
+    "pedido_id": 20,
+    "valor_total": 250.00,
+    "valor_custo_total": 150.00,
+    "lucro": 100.00,
+    "margem_lucro": 66.67,
+    "message": "Conta a receber criada com sucesso com pedido vinculado"
+}
+```
+
+### 🆕 Criar Conta a Receber com Auto-Cadastro de Produtos via SKU
+
+**Novo recurso:** Agora você pode enviar produtos usando **SKU** e o sistema irá:
+1. ✅ **Buscar** o produto existente pelo SKU
+2. ✅ **Criar automaticamente** o produto se não existir
+3. ✅ **Vincular** ao pedido
+
+```http
+POST /api/v1/contas-receber
+Content-Type: application/json
+
+{
+    "cliente_id": 3,
+    "categoria_id": 10,
+    "descricao": "Venda de produtos externos",
+    "data_vencimento": "2025-01-20",
+    "data_emissao": "2025-01-01",
+    "criar_pedido": true,
+    "pedido": {
+        "produtos": [
+            {
+                "sku": "PROD-EXTERNO-001",
+                "nome": "Produto Novo da Integração",
+                "quantidade": 5,
+                "valor_unitario": 150.00,
+                "custo_unitario": 90.00,
+                "unidade_medida": "UN"
+            },
+            {
+                "sku": "PROD-EXTERNO-002",
+                "nome": "Outro Produto",
+                "quantidade": 2,
+                "valor_unitario": 75.00,
+                "custo_unitario": 45.00
+            }
+        ]
+    }
+}
+```
+
+**Como funciona:**
+- Se o produto com `sku = "PROD-EXTERNO-001"` **já existe**: usa o produto cadastrado (ignora nome/valores enviados)
+- Se **não existe**: cria automaticamente com os dados fornecidos
+- O `codigo` do produto é gerado automaticamente se não fornecido
+
+**Campos aceitos para auto-cadastro:**
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `sku` | string | Sim* | Identificador único do produto |
+| `produto_id` | int | Sim* | ID do produto (alternativa ao SKU) |
+| `nome` | string | Sim** | Nome do produto (para auto-cadastro) |
+| `quantidade` | decimal | Sim | Quantidade vendida |
+| `valor_unitario` | decimal | Sim | Preço de venda |
+| `custo_unitario` | decimal | Não | Custo (padrão: 0) |
+| `unidade_medida` | string | Não | UN, KG, L, etc (padrão: UN) |
+| `codigo` | string | Não | Código interno (auto-gerado se omitido) |
+| `descricao` | text | Não | Descrição do produto |
+
+*Use `sku` OU `produto_id`, não ambos  
+**Obrigatório apenas se o produto não existir e você está usando SKU
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "id": 25,
+    "pedido_id": 30,
+    "valor_total": 900.00,
+    "valor_custo_total": 540.00,
+    "lucro": 360.00,
+    "margem_lucro": 66.67,
+    "produtos_criados": 2,
+    "produtos_vinculados": 2,
+    "message": "Conta a receber criada com sucesso. 2 produtos foram criados automaticamente."
+}
+```
+
+### Estrutura Completa do Pedido
+
+**Campos do objeto `pedido`:**
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `numero_pedido` | string | Não | Número do pedido (se não informado, gera automático) |
+| `data_pedido` | date | Sim | Data do pedido (YYYY-MM-DD) |
+| `status` | string | Não | Status do pedido (pendente, processando, concluido, cancelado) |
+| `produtos` | array | Sim | Lista de produtos do pedido |
+
+**Campos do objeto `produtos[]`:**
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `produto_id` | int | Condicional* | ID do produto cadastrado |
+| `sku` | string | Condicional* | SKU do produto (alternativa ao produto_id) |
+| `nome` | string | Condicional** | Nome do produto (para auto-cadastro via SKU) |
+| `quantidade` | decimal | Sim | Quantidade vendida (aceita decimais para produtos fracionados) |
+| `valor_unitario` | decimal | Sim | Valor de venda unitário |
+| `custo_unitario` | decimal | Não | Custo unitário do produto (padrão: busca do cadastro ou 0) |
+| `unidade_medida` | string | Não | UN, KG, L, etc (padrão: UN para auto-cadastro) |
+| `codigo` | string | Não | Código interno (auto-gerado para novos produtos) |
+| `descricao` | text | Não | Descrição do produto (para auto-cadastro) |
+
+*Use `produto_id` (se o produto já está cadastrado) OU `sku` (para buscar/criar automaticamente)  
+**Obrigatório apenas quando usar `sku` e o produto não existir no sistema
 
 ### Atualizar Conta a Receber
 
 ```http
 PUT /api/v1/contas-receber/{id}
+Content-Type: application/json
+
+{
+    "descricao": "Venda de produtos - ATUALIZADO",
+    "valor_total": 2800.00,
+    "data_vencimento": "2025-01-25"
+}
 ```
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "message": "Conta a receber atualizada com sucesso"
+}
+```
+
+### Atualizar Pedido Vinculado
+
+Para atualizar produtos de uma conta que já possui pedido:
+
+```http
+PUT /api/v1/contas-receber/{id}
+Content-Type: application/json
+
+{
+    "pedido": {
+        "produtos": [
+            {
+                "produto_id": 1,
+                "quantidade": 3,
+                "valor_unitario": 110.00,
+                "custo_unitario": 65.00
+            }
+        ]
+    }
+}
+```
+
+**Nota:** Atualizar o pedido recalcula automaticamente o `valor_total` da conta a receber.
 
 ### Excluir Conta a Receber
 
 ```http
 DELETE /api/v1/contas-receber/{id}
 ```
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "message": "Conta a receber excluída com sucesso"
+}
+```
+
+**Nota:** Excluir uma conta a receber também exclui o pedido e itens vinculados (CASCADE).
 
 ---
 
@@ -208,6 +534,11 @@ DELETE /api/v1/contas-receber/{id}
 GET /api/v1/produtos
 ```
 
+**Parâmetros de Query (opcionais):**
+- `empresa_id` - Filtrar por empresa
+- `categoria_id` - Filtrar por categoria
+- `busca` - Buscar por código ou nome
+
 **Resposta:**
 ```json
 {
@@ -215,11 +546,16 @@ GET /api/v1/produtos
     "data": [
         {
             "id": 1,
+            "empresa_id": 1,
             "nome": "Produto Exemplo",
             "codigo": "PROD-001",
+            "categoria_id": 5,
             "preco_venda": 150.00,
-            "preco_custo": 80.00,
+            "custo_unitario": 80.00,
+            "margem_lucro": 87.5,
             "estoque": 50,
+            "estoque_minimo": 10,
+            "unidade_medida": "UN",
             "ativo": true
         }
     ]
@@ -232,6 +568,30 @@ GET /api/v1/produtos
 GET /api/v1/produtos/{id}
 ```
 
+**Resposta:**
+```json
+{
+    "success": true,
+    "data": {
+        "id": 1,
+        "empresa_id": 1,
+        "codigo": "PROD-001",
+        "codigo_barras": "7891234567890",
+        "nome": "Produto Exemplo",
+        "descricao": "Descrição detalhada do produto",
+        "categoria_id": 5,
+        "categoria_nome": "Categoria A",
+        "custo_unitario": 80.00,
+        "preco_venda": 150.00,
+        "margem_lucro": 87.5,
+        "unidade_medida": "UN",
+        "estoque": 50,
+        "estoque_minimo": 10,
+        "ativo": true
+    }
+}
+```
+
 ### Criar Produto
 
 ```http
@@ -239,21 +599,47 @@ POST /api/v1/produtos
 Content-Type: application/json
 
 {
-    "nome": "Novo Produto",
     "codigo": "PROD-002",
+    "sku": "SKU-PROD-002",
+    "codigo_barras": "7891234567891",
+    "nome": "Novo Produto",
+    "descricao": "Descrição do produto",
+    "categoria_id": 5,
+    "custo_unitario": 100.00,
     "preco_venda": 200.00,
-    "preco_custo": 100.00,
+    "unidade_medida": "UN",
     "estoque": 100,
-    "estoque_minimo": 10,
-    "descricao": "Descrição do produto"
+    "estoque_minimo": 10
 }
 ```
+
+**Campos:**
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `codigo` | string | Sim | Código interno único do produto |
+| `sku` | string | Não | SKU - Identificador único para integração/API |
+| `codigo_barras` | string | Não | Código de barras EAN-13 |
+| `nome` | string | Sim | Nome do produto |
+| `descricao` | text | Não | Descrição detalhada |
+| `categoria_id` | int | Não | ID da categoria do produto |
+| `custo_unitario` | decimal | Sim | Custo de compra/produção |
+| `preco_venda` | decimal | Sim | Preço de venda |
+| `unidade_medida` | string | Sim | UN, KG, L, M, CX, etc |
+| `estoque` | decimal | Não | Quantidade em estoque (padrão: 0) |
+| `estoque_minimo` | decimal | Não | Estoque mínimo para alerta (padrão: 0) |
+
+**⭐ Sobre o SKU:**
+- SKU deve ser único por empresa
+- Usado para identificar produtos em integrações via API
+- Se fornecido em pedidos, o sistema busca/cria automaticamente o produto
 
 **Resposta:**
 ```json
 {
     "success": true,
     "id": 15,
+    "margem_lucro": 100.0,
     "message": "Produto criado com sucesso"
 }
 ```
@@ -266,7 +652,17 @@ Content-Type: application/json
 
 {
     "preco_venda": 220.00,
-    "estoque": 95
+    "estoque": 95,
+    "custo_unitario": 110.00
+}
+```
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "margem_lucro": 100.0,
+    "message": "Produto atualizado com sucesso"
 }
 ```
 
@@ -274,6 +670,293 @@ Content-Type: application/json
 
 ```http
 DELETE /api/v1/produtos/{id}
+```
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "message": "Produto excluído com sucesso"
+}
+```
+
+### Buscar Produtos para Autocomplete
+
+Endpoint otimizado para busca rápida (retorna apenas campos essenciais):
+
+```http
+GET /api/v1/produtos/buscar?empresa_id=1&q=termo
+```
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "id": 1,
+            "codigo": "PROD-001",
+            "nome": "Produto A",
+            "preco_venda": 100.00,
+            "custo_unitario": 60.00,
+            "unidade_medida": "UN"
+        }
+    ]
+}
+```
+
+---
+
+## 📦 Pedidos Vinculados
+
+Os pedidos são criados automaticamente ao criar contas a receber com produtos, mas também podem ser gerenciados independentemente.
+
+### Listar Pedidos
+
+```http
+GET /api/v1/pedidos
+```
+
+**Parâmetros de Query (opcionais):**
+- `empresa_id` - Filtrar por empresa
+- `cliente_id` - Filtrar por cliente
+- `status` - Filtrar por status
+- `origem` - Filtrar por origem (manual, woocommerce, externo)
+- `data_inicio` - Data inicial (YYYY-MM-DD)
+- `data_fim` - Data final (YYYY-MM-DD)
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "id": 5,
+            "empresa_id": 1,
+            "numero_pedido": "PED-001",
+            "cliente_id": 3,
+            "cliente_nome": "João da Silva",
+            "origem": "manual",
+            "status": "concluido",
+            "data_pedido": "2025-01-20",
+            "valor_total": 250.00,
+            "valor_custo_total": 150.00,
+            "lucro": 100.00,
+            "margem_lucro": 66.67,
+            "total_itens": 2
+        }
+    ]
+}
+```
+
+### Buscar Pedido Específico
+
+```http
+GET /api/v1/pedidos/{id}
+```
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "data": {
+        "id": 5,
+        "empresa_id": 1,
+        "numero_pedido": "PED-001",
+        "cliente_id": 3,
+        "cliente_nome": "João da Silva",
+        "cliente_email": "joao@email.com",
+        "origem": "manual",
+        "status": "concluido",
+        "data_pedido": "2025-01-20 10:30:00",
+        "valor_total": 250.00,
+        "valor_custo_total": 150.00,
+        "lucro": 100.00,
+        "margem_lucro": 66.67,
+        "itens": [
+            {
+                "id": 10,
+                "produto_id": 1,
+                "produto_codigo": "PROD-001",
+                "nome_produto": "Produto A",
+                "quantidade": 2,
+                "valor_unitario": 100.00,
+                "valor_total": 200.00,
+                "custo_unitario": 60.00,
+                "custo_total": 120.00,
+                "lucro_item": 80.00,
+                "margem_item": 66.67
+            },
+            {
+                "id": 11,
+                "produto_id": 2,
+                "produto_codigo": "PROD-002",
+                "nome_produto": "Produto B",
+                "quantidade": 1,
+                "valor_unitario": 50.00,
+                "valor_total": 50.00,
+                "custo_unitario": 30.00,
+                "custo_total": 30.00,
+                "lucro_item": 20.00,
+                "margem_item": 66.67
+            }
+        ],
+        "conta_receber": {
+            "id": 15,
+            "numero_documento": "NF-456",
+            "status": "pendente"
+        }
+    }
+}
+```
+
+### Criar Pedido (Sem Conta a Receber)
+
+Para criar um pedido independente (não vinculado a conta a receber):
+
+```http
+POST /api/v1/pedidos
+Content-Type: application/json
+
+{
+    "numero_pedido": "PED-002",
+    "cliente_id": 5,
+    "data_pedido": "2025-01-20",
+    "status": "pendente",
+    "origem": "manual",
+    "produtos": [
+        {
+            "produto_id": 1,
+            "quantidade": 3,
+            "valor_unitario": 150.00,
+            "custo_unitario": 90.00
+        }
+    ]
+}
+```
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "id": 25,
+    "valor_total": 450.00,
+    "valor_custo_total": 270.00,
+    "lucro": 180.00,
+    "margem_lucro": 66.67,
+    "message": "Pedido criado com sucesso"
+}
+```
+
+### Atualizar Status do Pedido
+
+```http
+PATCH /api/v1/pedidos/{id}/status
+Content-Type: application/json
+
+{
+    "status": "concluido"
+}
+```
+
+**Status possíveis:**
+- `pendente` - Pedido criado, aguardando processamento
+- `processando` - Em processamento/separação
+- `concluido` - Pedido finalizado/entregue
+- `cancelado` - Pedido cancelado
+- `reembolsado` - Pedido reembolsado
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "message": "Status do pedido atualizado com sucesso"
+}
+```
+
+### Adicionar Item ao Pedido
+
+```http
+POST /api/v1/pedidos/{id}/itens
+Content-Type: application/json
+
+{
+    "produto_id": 3,
+    "quantidade": 2,
+    "valor_unitario": 75.00,
+    "custo_unitario": 45.00
+}
+```
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "item_id": 50,
+    "novo_total": 400.00,
+    "novo_custo_total": 240.00,
+    "message": "Item adicionado ao pedido"
+}
+```
+
+### Remover Item do Pedido
+
+```http
+DELETE /api/v1/pedidos/{id}/itens/{item_id}
+```
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "novo_total": 250.00,
+    "novo_custo_total": 150.00,
+    "message": "Item removido do pedido"
+}
+```
+
+### Análise de Lucro/Margem
+
+Endpoint específico para análise financeira de pedidos:
+
+```http
+GET /api/v1/pedidos/{id}/analise
+```
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "data": {
+        "pedido_id": 5,
+        "numero_pedido": "PED-001",
+        "valor_total": 250.00,
+        "valor_custo_total": 150.00,
+        "lucro_bruto": 100.00,
+        "margem_lucro_percentual": 66.67,
+        "ticket_medio_item": 125.00,
+        "itens": [
+            {
+                "produto": "Produto A",
+                "quantidade": 2,
+                "valor_venda": 200.00,
+                "custo": 120.00,
+                "lucro": 80.00,
+                "margem": 66.67,
+                "contribuicao_percentual": 80.0
+            },
+            {
+                "produto": "Produto B",
+                "quantidade": 1,
+                "valor_venda": 50.00,
+                "custo": 30.00,
+                "lucro": 20.00,
+                "margem": 66.67,
+                "contribuicao_percentual": 20.0
+            }
+        ]
+    }
+}
 ```
 
 ---
@@ -731,6 +1414,55 @@ curl -X POST https://seudominio.com/api/v1/contas-pagar \
   }'
 ```
 
+### Criar Venda com Produtos (Conta a Receber + Pedido)
+
+```bash
+curl -X POST https://seudominio.com/api/v1/contas-receber \
+  -H "Authorization: Bearer seu_token_aqui" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cliente_id": 10,
+    "categoria_id": 15,
+    "descricao": "Venda de produtos",
+    "data_vencimento": "2025-02-28",
+    "data_emissao": "2025-01-20",
+    "data_competencia": "2025-01-20",
+    "numero_documento": "NF-789",
+    "criar_pedido": true,
+    "pedido": {
+      "numero_pedido": "PED-123",
+      "data_pedido": "2025-01-20",
+      "status": "concluido",
+      "produtos": [
+        {
+          "produto_id": 1,
+          "quantidade": 5,
+          "valor_unitario": 100.00
+        },
+        {
+          "produto_id": 2,
+          "quantidade": 2,
+          "valor_unitario": 250.00
+        }
+      ]
+    }
+  }'
+```
+
+**Resposta esperada:**
+```json
+{
+    "success": true,
+    "id": 50,
+    "pedido_id": 30,
+    "valor_total": 1000.00,
+    "valor_custo_total": 600.00,
+    "lucro": 400.00,
+    "margem_lucro": 66.67,
+    "message": "Conta a receber criada com sucesso com pedido vinculado"
+}
+```
+
 ### Listar Produtos com JavaScript
 
 ```javascript
@@ -814,4 +1546,25 @@ Para dúvidas ou problemas:
 ---
 
 **Versão da API:** v1  
-**Última atualização:** Dezembro 2025
+**Última atualização:** Janeiro 2026
+
+## 🆕 Changelog
+
+### v1.1 - Janeiro 2026
+- ✅ Adicionado suporte a **Pedidos Vinculados** em Contas a Receber
+- ✅ Adicionado campo `pedido_id` em Contas a Receber
+- ✅ Adicionado endpoint `/api/v1/pedidos` para gerenciamento independente
+- ✅ Adicionado cálculo automático de **Lucro** e **Margem** em vendas
+- ✅ Adicionado campo `custo_unitario` obrigatório em Produtos
+- ✅ Adicionado campo **`sku`** em Produtos para identificação única
+- ✅ **Auto-cadastro de produtos via SKU**: Produtos são criados automaticamente se não existirem
+- ✅ Adicionado endpoint `/api/v1/produtos/buscar` para autocomplete
+- ✅ Adicionado endpoint `/api/v1/pedidos/{id}/analise` para análise financeira
+- ✅ Melhorado documentação com exemplos práticos de vendas com produtos
+
+### v1.0 - Dezembro 2025
+- 🚀 Lançamento inicial da API REST
+- ✅ Endpoints básicos para todos os módulos
+- ✅ Sistema de autenticação via Bearer Token
+- ✅ Rate limiting e controle de permissões
+- ✅ Logs detalhados de requisições

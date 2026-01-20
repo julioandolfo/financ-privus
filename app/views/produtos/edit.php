@@ -59,8 +59,8 @@ $categorias = $categoriaModel->getFlatList($empresaId);
         <form method="POST" action="<?= $this->baseUrl('/produtos/' . $produto['id']) ?>">
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8 space-y-6">
                 
-                <!-- Código e Nome -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Código, SKU e Nome -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div>
                         <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                             Código *
@@ -68,6 +68,17 @@ $categorias = $categoriaModel->getFlatList($empresaId);
                         <input type="text" name="codigo" required
                                value="<?= htmlspecialchars($this->session->get('old')['codigo'] ?? $produto['codigo']) ?>"
                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                            SKU
+                            <span class="text-xs text-gray-500 dark:text-gray-400 font-normal ml-1">(Código único)</span>
+                        </label>
+                        <input type="text" name="sku"
+                               value="<?= htmlspecialchars($this->session->get('old')['sku'] ?? $produto['sku'] ?? '') ?>"
+                               class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Identificador único para integração via API</p>
                     </div>
 
                     <div class="md:col-span-2">

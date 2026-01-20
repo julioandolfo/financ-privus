@@ -61,8 +61,22 @@ class ApiDocController extends Controller
         return [
             'info' => [
                 'title' => 'API Financeiro Empresarial',
-                'version' => '1.0.0',
-                'description' => 'API RESTful para integração com o Sistema Financeiro Empresarial. Gerencie contas a pagar/receber, produtos, clientes, fornecedores e movimentações financeiras.',
+                'version' => '1.1.0',
+                'description' => 'API RESTful para integração com o Sistema Financeiro Empresarial. Gerencie contas a pagar/receber, produtos, clientes, fornecedores e movimentações financeiras. ⭐ NOVO: Suporte a pedidos com produtos, auto-cadastro via SKU e cálculo automático de lucro/margem.',
+                'changelog' => [
+                    'v1.1.0 (Janeiro 2026)' => [
+                        '✅ Suporte a Pedidos Vinculados em Contas a Receber',
+                        '✅ Auto-cadastro de produtos via SKU',
+                        '✅ Cálculo automático de Lucro e Margem',
+                        '✅ Campo pedido_id em Contas a Receber',
+                        '✅ Campo sku em Produtos (único por empresa)',
+                    ],
+                    'v1.0.0 (Dezembro 2025)' => [
+                        '🚀 Lançamento inicial da API',
+                        '✅ Endpoints básicos para todos os módulos',
+                        '✅ Sistema de autenticação via Bearer Token',
+                    ]
+                ]
             ],
             
             'authentication' => [
@@ -228,7 +242,7 @@ class ApiDocController extends Controller
                 
                 'contas_receber' => [
                     'name' => 'Contas a Receber',
-                    'description' => 'Gerenciamento de contas a receber',
+                    'description' => 'Gerenciamento de contas a receber (com suporte a pedidos e produtos)',
                     'base_url' => '/api/v1/contas-receber',
                     'methods' => [
                         [
@@ -236,14 +250,16 @@ class ApiDocController extends Controller
                             'endpoint' => '/api/v1/contas-receber',
                             'description' => 'Lista todas as contas a receber',
                             'params' => [
-                                ['name' => 'status', 'type' => 'string', 'required' => false, 'description' => 'Filtrar por status'],
+                                ['name' => 'status', 'type' => 'string', 'required' => false, 'description' => 'Filtrar por status (pendente, recebido, vencido, parcial, cancelado)'],
                                 ['name' => 'cliente_id', 'type' => 'integer', 'required' => false, 'description' => 'Filtrar por cliente'],
+                                ['name' => 'data_inicio', 'type' => 'date', 'required' => false, 'description' => 'Data inicial (YYYY-MM-DD)'],
+                                ['name' => 'data_fim', 'type' => 'date', 'required' => false, 'description' => 'Data final (YYYY-MM-DD)'],
                             ],
                         ],
                         [
                             'method' => 'POST',
                             'endpoint' => '/api/v1/contas-receber',
-                            'description' => 'Cria uma nova conta a receber',
+                            'description' => 'Cria uma nova conta a receber SIMPLES (sem produtos)',
                             'body' => [
                                 'empresa_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da empresa'],
                                 'cliente_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID do cliente'],
@@ -252,15 +268,9 @@ class ApiDocController extends Controller
                                 'valor_total' => ['type' => 'decimal', 'required' => true, 'description' => 'Valor total da conta'],
                                 'numero_documento' => ['type' => 'string', 'required' => false, 'description' => 'Número do documento (nota fiscal, etc)'],
                                 'data_emissao' => ['type' => 'date', 'required' => false, 'description' => 'Data de emissão (YYYY-MM-DD). Padrão: data atual'],
-                                'data_competencia' => ['type' => 'date', 'required' => true, 'description' => 'Data de competência (YYYY-MM-DD). IMPORTANTE: Usado para regime de competência'],
+                                'data_competencia' => ['type' => 'date', 'required' => true, 'description' => 'Data de competência (YYYY-MM-DD)'],
                                 'data_vencimento' => ['type' => 'date', 'required' => true, 'description' => 'Data de vencimento (YYYY-MM-DD)'],
-                                'data_recebimento' => ['type' => 'date', 'required' => false, 'description' => 'Data de recebimento (YYYY-MM-DD). Se informado, marca como recebido'],
-                                'valor_recebido' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor já recebido. Padrão: 0'],
-                                'status' => ['type' => 'string', 'required' => false, 'description' => 'Status: pendente, recebido, parcial, vencido, cancelado. Padrão: pendente'],
                                 'centro_custo_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID do centro de custo'],
-                                'conta_bancaria_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da conta bancária'],
-                                'forma_pagamento_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da forma de pagamento'],
-                                'tem_rateio' => ['type' => 'boolean', 'required' => false, 'description' => 'Indica se a conta tem rateio entre empresas. Padrão: false'],
                                 'observacoes' => ['type' => 'text', 'required' => false, 'description' => 'Observações adicionais'],
                             ],
                             'response' => [
@@ -269,12 +279,87 @@ class ApiDocController extends Controller
                                 'data' => ['id' => 1]
                             ]
                         ],
+                        [
+                            'method' => 'POST',
+                            'endpoint' => '/api/v1/contas-receber',
+                            'description' => '⭐ Cria conta a receber COM PEDIDO E PRODUTOS (calcula lucro/margem automaticamente)',
+                            'body' => [
+                                'empresa_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da empresa'],
+                                'cliente_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID do cliente'],
+                                'categoria_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da categoria financeira'],
+                                'descricao' => ['type' => 'string', 'required' => true, 'description' => 'Descrição da venda'],
+                                'data_vencimento' => ['type' => 'date', 'required' => true, 'description' => 'Data de vencimento (YYYY-MM-DD)'],
+                                'data_emissao' => ['type' => 'date', 'required' => false, 'description' => 'Data de emissão (padrão: hoje)'],
+                                'data_competencia' => ['type' => 'date', 'required' => true, 'description' => 'Data de competência (YYYY-MM-DD)'],
+                                'numero_documento' => ['type' => 'string', 'required' => false, 'description' => 'Número da NF/Recibo'],
+                                'criar_pedido' => ['type' => 'boolean', 'required' => true, 'description' => '⭐ OBRIGATÓRIO: true para criar pedido com produtos'],
+                                'pedido' => ['type' => 'object', 'required' => true, 'description' => 'Dados do pedido', 'fields' => [
+                                    'numero_pedido' => ['type' => 'string', 'required' => false, 'description' => 'Número do pedido (auto-gerado se omitido)'],
+                                    'data_pedido' => ['type' => 'date', 'required' => false, 'description' => 'Data do pedido (padrão: hoje)'],
+                                    'status' => ['type' => 'string', 'required' => false, 'description' => 'Status: pendente, processando, concluido, cancelado (padrão: pendente)'],
+                                    'produtos' => ['type' => 'array', 'required' => true, 'description' => '⭐ Array de produtos do pedido', 'items' => [
+                                        'produto_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID do produto (use OU produto_id OU sku)'],
+                                        'sku' => ['type' => 'string', 'required' => false, 'description' => '⭐ SKU do produto (busca/cria automaticamente)'],
+                                        'nome' => ['type' => 'string', 'required' => false, 'description' => 'Nome do produto (obrigatório se usar SKU novo)'],
+                                        'quantidade' => ['type' => 'decimal', 'required' => true, 'description' => 'Quantidade vendida (aceita decimais)'],
+                                        'valor_unitario' => ['type' => 'decimal', 'required' => true, 'description' => 'Preço de venda unitário'],
+                                        'custo_unitario' => ['type' => 'decimal', 'required' => false, 'description' => 'Custo unitário (busca do cadastro se omitido)'],
+                                        'unidade_medida' => ['type' => 'string', 'required' => false, 'description' => 'UN, KG, L, etc (padrão: UN)'],
+                                        'codigo' => ['type' => 'string', 'required' => false, 'description' => 'Código interno (auto-gerado para novos)'],
+                                        'descricao' => ['type' => 'text', 'required' => false, 'description' => 'Descrição do produto (para auto-cadastro)'],
+                                    ]],
+                                ]],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'id' => 15,
+                                'pedido_id' => 20,
+                                'valor_total' => 250.00,
+                                'valor_custo_total' => 150.00,
+                                'lucro' => 100.00,
+                                'margem_lucro' => 66.67,
+                                'produtos_criados' => 2,
+                                'produtos_vinculados' => 2,
+                                'message' => 'Conta a receber criada com sucesso. 2 produtos foram criados automaticamente.'
+                            ],
+                            'example' => [
+                                'empresa_id' => 1,
+                                'cliente_id' => 10,
+                                'categoria_id' => 15,
+                                'descricao' => 'Venda de produtos via API',
+                                'data_vencimento' => '2026-02-28',
+                                'data_emissao' => '2026-01-20',
+                                'data_competencia' => '2026-01-20',
+                                'numero_documento' => 'NF-789',
+                                'criar_pedido' => true,
+                                'pedido' => [
+                                    'numero_pedido' => 'PED-123',
+                                    'data_pedido' => '2026-01-20',
+                                    'status' => 'concluido',
+                                    'produtos' => [
+                                        [
+                                            'sku' => 'PROD-EXT-001',
+                                            'nome' => 'Produto da API',
+                                            'quantidade' => 5,
+                                            'valor_unitario' => 100.00,
+                                            'custo_unitario' => 60.00,
+                                            'unidade_medida' => 'UN'
+                                        ],
+                                        [
+                                            'produto_id' => 2,
+                                            'quantidade' => 2,
+                                            'valor_unitario' => 250.00
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ],
                     ]
                 ],
                 
                 'produtos' => [
                     'name' => 'Produtos',
-                    'description' => 'Gerenciamento de produtos',
+                    'description' => 'Gerenciamento de produtos (com suporte a SKU para auto-cadastro)',
                     'base_url' => '/api/v1/produtos',
                     'methods' => [
                         [
@@ -282,7 +367,8 @@ class ApiDocController extends Controller
                             'endpoint' => '/api/v1/produtos',
                             'description' => 'Lista todos os produtos',
                             'params' => [
-                                ['name' => 'busca', 'type' => 'string', 'required' => false, 'description' => 'Buscar por código ou nome'],
+                                ['name' => 'empresa_id', 'type' => 'integer', 'required' => false, 'description' => 'Filtrar por empresa'],
+                                ['name' => 'busca', 'type' => 'string', 'required' => false, 'description' => 'Buscar por código, SKU ou nome'],
                                 ['name' => 'categoria_id', 'type' => 'integer', 'required' => false, 'description' => 'Filtrar por categoria'],
                             ],
                             'response' => [
@@ -291,10 +377,15 @@ class ApiDocController extends Controller
                                     [
                                         'id' => 1,
                                         'empresa_id' => 1,
-                                        'nome' => 'Produto Exemplo',
                                         'codigo' => 'PROD001',
+                                        'sku' => 'SKU-PROD-001',
+                                        'nome' => 'Produto Exemplo',
+                                        'custo_unitario' => 60.00,
                                         'preco_venda' => 99.90,
+                                        'margem_lucro' => 66.5,
                                         'estoque' => 50,
+                                        'unidade_medida' => 'UN',
+                                        'ativo' => true
                                     ]
                                 ]
                             ]
@@ -306,6 +397,27 @@ class ApiDocController extends Controller
                             'params' => [
                                 ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID do produto'],
                             ],
+                            'response' => [
+                                'success' => true,
+                                'data' => [
+                                    'id' => 1,
+                                    'empresa_id' => 1,
+                                    'codigo' => 'PROD001',
+                                    'sku' => 'SKU-PROD-001',
+                                    'codigo_barras' => '7891234567890',
+                                    'nome' => 'Produto Exemplo',
+                                    'descricao' => 'Descrição detalhada',
+                                    'custo_unitario' => 60.00,
+                                    'preco_venda' => 99.90,
+                                    'margem_lucro' => 66.5,
+                                    'unidade_medida' => 'UN',
+                                    'estoque' => 50,
+                                    'estoque_minimo' => 10,
+                                    'categoria_id' => 5,
+                                    'categoria_nome' => 'Eletrônicos',
+                                    'ativo' => true
+                                ]
+                            ]
                         ],
                         [
                             'method' => 'POST',
@@ -313,19 +425,34 @@ class ApiDocController extends Controller
                             'description' => 'Cria um novo produto',
                             'body' => [
                                 'empresa_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da empresa'],
+                                'codigo' => ['type' => 'string', 'required' => true, 'description' => 'Código interno do produto'],
+                                'sku' => ['type' => 'string', 'required' => false, 'description' => '⭐ SKU - Identificador único para integração (único por empresa)'],
+                                'codigo_barras' => ['type' => 'string', 'required' => false, 'description' => 'Código de barras EAN-13'],
                                 'nome' => ['type' => 'string', 'required' => true, 'description' => 'Nome do produto'],
-                                'codigo' => ['type' => 'string', 'required' => false, 'description' => 'Código/SKU do produto'],
                                 'descricao' => ['type' => 'text', 'required' => false, 'description' => 'Descrição detalhada'],
-                                'preco_custo' => ['type' => 'decimal', 'required' => false, 'description' => 'Preço de custo'],
+                                'custo_unitario' => ['type' => 'decimal', 'required' => true, 'description' => 'Custo de compra/produção'],
                                 'preco_venda' => ['type' => 'decimal', 'required' => true, 'description' => 'Preço de venda'],
-                                'estoque' => ['type' => 'integer', 'required' => false, 'description' => 'Quantidade em estoque'],
-                                'estoque_minimo' => ['type' => 'integer', 'required' => false, 'description' => 'Estoque mínimo'],
-                                'categoria_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da categoria'],
+                                'unidade_medida' => ['type' => 'string', 'required' => false, 'description' => 'UN, KG, L, M, CX, etc (padrão: UN)'],
+                                'estoque' => ['type' => 'decimal', 'required' => false, 'description' => 'Quantidade em estoque (padrão: 0)'],
+                                'estoque_minimo' => ['type' => 'decimal', 'required' => false, 'description' => 'Estoque mínimo para alerta (padrão: 0)'],
+                                'categoria_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da categoria do produto'],
                             ],
                             'response' => [
                                 'success' => true,
                                 'id' => 1,
+                                'margem_lucro' => 66.5,
                                 'message' => 'Produto criado com sucesso'
+                            ],
+                            'example' => [
+                                'empresa_id' => 1,
+                                'codigo' => 'PROD-002',
+                                'sku' => 'SKU-PROD-002',
+                                'nome' => 'Novo Produto',
+                                'custo_unitario' => 100.00,
+                                'preco_venda' => 200.00,
+                                'unidade_medida' => 'UN',
+                                'estoque' => 50,
+                                'estoque_minimo' => 10
                             ]
                         ],
                         [
@@ -336,18 +463,30 @@ class ApiDocController extends Controller
                                 ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID do produto'],
                             ],
                             'body' => [
+                                'codigo' => ['type' => 'string', 'required' => false, 'description' => 'Código interno'],
+                                'sku' => ['type' => 'string', 'required' => false, 'description' => 'SKU do produto'],
                                 'nome' => ['type' => 'string', 'required' => false, 'description' => 'Nome do produto'],
+                                'custo_unitario' => ['type' => 'decimal', 'required' => false, 'description' => 'Custo unitário'],
                                 'preco_venda' => ['type' => 'decimal', 'required' => false, 'description' => 'Preço de venda'],
-                                'estoque' => ['type' => 'integer', 'required' => false, 'description' => 'Quantidade em estoque'],
+                                'estoque' => ['type' => 'decimal', 'required' => false, 'description' => 'Quantidade em estoque'],
                             ],
+                            'response' => [
+                                'success' => true,
+                                'margem_lucro' => 75.0,
+                                'message' => 'Produto atualizado com sucesso'
+                            ]
                         ],
                         [
                             'method' => 'DELETE',
                             'endpoint' => '/api/v1/produtos/{id}',
-                            'description' => 'Exclui um produto',
+                            'description' => 'Exclui um produto (soft delete)',
                             'params' => [
                                 ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID do produto'],
                             ],
+                            'response' => [
+                                'success' => true,
+                                'message' => 'Produto excluído com sucesso'
+                            ]
                         ],
                     ]
                 ],

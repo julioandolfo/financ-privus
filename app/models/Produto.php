@@ -112,14 +112,69 @@ class Produto extends Model
     }
     
     /**
+     * Buscar produto por SKU
+     */
+    public function findBySku($sku, $empresaId)
+    {
+        $sql = "SELECT * FROM {$this->table} 
+                WHERE sku = :sku AND empresa_id = :empresa_id AND ativo = 1
+                LIMIT 1";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'sku' => $sku,
+            'empresa_id' => $empresaId
+        ]);
+        
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    /**
+     * Criar ou buscar produto por SKU (para API)
+     */
+    public function findOrCreateBySku($data, $empresaId)
+    {
+        // Se tem SKU, tenta buscar primeiro
+        if (!empty($data['sku'])) {
+            $produto = $this->findBySku($data['sku'], $empresaId);
+            if ($produto) {
+                return $produto;
+            }
+        }
+        
+        // Se não encontrou ou não tem SKU, cria novo produto
+        $data['empresa_id'] = $empresaId;
+        
+        // Gera código automático se não fornecido
+        if (empty($data['codigo'])) {
+            $data['codigo'] = $data['sku'] ?? 'AUTO-' . uniqid();
+        }
+        
+        // Define valores padrão
+        $data['custo_unitario'] = $data['custo_unitario'] ?? 0;
+        $data['preco_venda'] = $data['preco_venda'] ?? 0;
+        $data['unidade_medida'] = $data['unidade_medida'] ?? 'UN';
+        $data['estoque'] = $data['estoque'] ?? 0;
+        $data['estoque_minimo'] = $data['estoque_minimo'] ?? 0;
+        
+        $id = $this->create($data);
+        
+        if ($id) {
+            return $this->findById($id);
+        }
+        
+        return null;
+    }
+    
+    /**
      * Criar produto
      */
     public function create($data)
     {
         $sql = "INSERT INTO {$this->table} 
-                (empresa_id, categoria_id, codigo, codigo_barras, nome, descricao, custo_unitario, preco_venda, unidade_medida, estoque, estoque_minimo) 
+                (empresa_id, categoria_id, codigo, sku, codigo_barras, nome, descricao, custo_unitario, preco_venda, unidade_medida, estoque, estoque_minimo) 
                 VALUES 
-                (:empresa_id, :categoria_id, :codigo, :codigo_barras, :nome, :descricao, :custo_unitario, :preco_venda, :unidade_medida, :estoque, :estoque_minimo)";
+                (:empresa_id, :categoria_id, :codigo, :sku, :codigo_barras, :nome, :descricao, :custo_unitario, :preco_venda, :unidade_medida, :estoque, :estoque_minimo)";
         
         $stmt = $this->db->prepare($sql);
         
@@ -127,6 +182,7 @@ class Produto extends Model
             'empresa_id' => $data['empresa_id'],
             'categoria_id' => $data['categoria_id'] ?? null,
             'codigo' => $data['codigo'],
+            'sku' => $data['sku'] ?? null,
             'codigo_barras' => $data['codigo_barras'] ?? null,
             'nome' => $data['nome'],
             'descricao' => $data['descricao'] ?? null,
@@ -148,6 +204,7 @@ class Produto extends Model
         $sql = "UPDATE {$this->table} SET
                 categoria_id = :categoria_id,
                 codigo = :codigo,
+                sku = :sku,
                 codigo_barras = :codigo_barras,
                 nome = :nome,
                 descricao = :descricao,
@@ -164,6 +221,7 @@ class Produto extends Model
             'id' => $id,
             'categoria_id' => $data['categoria_id'] ?? null,
             'codigo' => $data['codigo'],
+            'sku' => $data['sku'] ?? null,
             'codigo_barras' => $data['codigo_barras'] ?? null,
             'nome' => $data['nome'],
             'descricao' => $data['descricao'] ?? null,

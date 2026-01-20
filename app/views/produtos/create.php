@@ -9,8 +9,8 @@
     <form method="POST" action="/produtos" x-data="produtoForm()">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8 space-y-6">
             
-            <!-- Código e Nome -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Código, SKU e Nome -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <!-- Código -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -22,6 +22,22 @@
                            placeholder="Ex: PROD001">
                     <?php if (isset($this->session->get('errors')['codigo'])): ?>
                         <p class="mt-1 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['codigo'] ?></p>
+                    <?php endif; ?>
+                </div>
+
+                <!-- SKU -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                        SKU
+                        <span class="text-xs text-gray-500 dark:text-gray-400 font-normal ml-1">(Código único)</span>
+                    </label>
+                    <input type="text" name="sku"
+                           value="<?= htmlspecialchars($this->session->get('old')['sku'] ?? '') ?>"
+                           class="w-full px-4 py-3 rounded-xl border <?= isset($this->session->get('errors')['sku']) ? 'border-red-500' : 'border-gray-300 dark:border-gray-600' ?> bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase"
+                           placeholder="Ex: SKU-001">
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Identificador único para integração via API</p>
+                    <?php if (isset($this->session->get('errors')['sku'])): ?>
+                        <p class="mt-1 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['sku'] ?></p>
                     <?php endif; ?>
                 </div>
 
