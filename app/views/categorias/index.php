@@ -20,7 +20,7 @@
 
     <!-- Filtros -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
-        <form method="GET" action="<?= $this->baseUrl('/categorias') ?>" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <form method="GET" action="<?= $this->baseUrl('/categorias') ?>" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
                 <label for="empresa_id" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Empresa
@@ -49,6 +49,28 @@
                 </select>
             </div>
             <div>
+                <label for="codigo" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Código
+                </label>
+                <input type="text" 
+                       id="codigo" 
+                       name="codigo" 
+                       value="<?= htmlspecialchars($filters['codigo'] ?? '') ?>"
+                       placeholder="Ex: 001"
+                       class="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+            </div>
+            <div>
+                <label for="nome" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Nome
+                </label>
+                <input type="text" 
+                       id="nome" 
+                       name="nome" 
+                       value="<?= htmlspecialchars($filters['nome'] ?? '') ?>"
+                       placeholder="Ex: Vendas"
+                       class="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+            </div>
+            <div>
                 <label for="view" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Visualização
                 </label>
@@ -59,11 +81,18 @@
                     <option value="tree" <?= ($viewMode ?? 'flat') === 'tree' ? 'selected' : '' ?>>Árvore</option>
                 </select>
             </div>
-            <div class="flex items-end">
+            <div class="flex items-end gap-2">
                 <button type="submit" 
-                        class="w-full px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors">
+                        class="flex-1 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors">
                     Filtrar
                 </button>
+                <?php if (!empty($filters['codigo']) || !empty($filters['nome']) || !empty($filters['empresa_id']) || !empty($filters['tipo'])): ?>
+                    <a href="<?= $this->baseUrl('/categorias') ?>" 
+                       class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-xl transition-colors"
+                       title="Limpar filtros">
+                        ✕
+                    </a>
+                <?php endif; ?>
             </div>
         </form>
     </div>
@@ -267,5 +296,111 @@
             <?php endif; ?>
         <?php endif; ?>
     </div>
+
+    <!-- Paginação (apenas para visualização flat) -->
+    <?php if (!empty($categorias) && $viewMode === 'flat' && $pagination['total_pages'] > 1): ?>
+        <div class="mt-6 flex items-center justify-between">
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                Mostrando 
+                <span class="font-semibold text-gray-900 dark:text-gray-100">
+                    <?= (($pagination['current_page'] - 1) * $pagination['per_page']) + 1 ?>
+                </span>
+                até
+                <span class="font-semibold text-gray-900 dark:text-gray-100">
+                    <?= min($pagination['current_page'] * $pagination['per_page'], $pagination['total']) ?>
+                </span>
+                de
+                <span class="font-semibold text-gray-900 dark:text-gray-100">
+                    <?= $pagination['total'] ?>
+                </span>
+                categorias
+            </div>
+
+            <div class="flex gap-2">
+                <?php
+                $currentPage = $pagination['current_page'];
+                $totalPages = $pagination['total_pages'];
+                $empresaId = $filters['empresa_id'] ?? '';
+                $tipo = $filters['tipo'] ?? '';
+                $codigo = $filters['codigo'] ?? '';
+                $nome = $filters['nome'] ?? '';
+                
+                // Monta query string base
+                $queryParams = [];
+                if ($empresaId) $queryParams['empresa_id'] = $empresaId;
+                if ($tipo) $queryParams['tipo'] = $tipo;
+                if ($codigo) $queryParams['codigo'] = $codigo;
+                if ($nome) $queryParams['nome'] = $nome;
+                if ($viewMode) $queryParams['view'] = $viewMode;
+                
+                // Botão Primeira
+                if ($currentPage > 1):
+                    $queryParams['page'] = 1;
+                    $queryString = http_build_query($queryParams);
+                ?>
+                    <a href="<?= $this->baseUrl('/categorias?' . $queryString) ?>" 
+                       class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300">
+                        «
+                    </a>
+                <?php endif; ?>
+
+                <?php
+                // Botão Anterior
+                if ($currentPage > 1):
+                    $queryParams['page'] = $currentPage - 1;
+                    $queryString = http_build_query($queryParams);
+                ?>
+                    <a href="<?= $this->baseUrl('/categorias?' . $queryString) ?>" 
+                       class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300">
+                        ‹ Anterior
+                    </a>
+                <?php endif; ?>
+
+                <?php
+                // Páginas numeradas
+                $range = 2; // Quantas páginas mostrar antes e depois da atual
+                $start = max(1, $currentPage - $range);
+                $end = min($totalPages, $currentPage + $range);
+                
+                for ($i = $start; $i <= $end; $i++):
+                    $queryParams['page'] = $i;
+                    $queryString = http_build_query($queryParams);
+                    $isActive = $i === $currentPage;
+                ?>
+                    <a href="<?= $this->baseUrl('/categorias?' . $queryString) ?>" 
+                       class="px-4 py-2 <?= $isActive 
+                           ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold' 
+                           : 'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300' 
+                       ?> rounded-lg transition-colors">
+                        <?= $i ?>
+                    </a>
+                <?php endfor; ?>
+
+                <?php
+                // Botão Próximo
+                if ($currentPage < $totalPages):
+                    $queryParams['page'] = $currentPage + 1;
+                    $queryString = http_build_query($queryParams);
+                ?>
+                    <a href="<?= $this->baseUrl('/categorias?' . $queryString) ?>" 
+                       class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300">
+                        Próximo ›
+                    </a>
+                <?php endif; ?>
+
+                <?php
+                // Botão Última
+                if ($currentPage < $totalPages):
+                    $queryParams['page'] = $totalPages;
+                    $queryString = http_build_query($queryParams);
+                ?>
+                    <a href="<?= $this->baseUrl('/categorias?' . $queryString) ?>" 
+                       class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300">
+                        »
+                    </a>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 

@@ -23,7 +23,7 @@ class CategoriaFinanceira extends Model
     /**
      * Retorna todas as categorias (flat)
      */
-    public function findAll($empresaId = null, $tipo = null)
+    public function findAll($empresaId = null, $tipo = null, $limit = null, $offset = 0, $filters = [])
     {
         $sql = "SELECT c.*, e.nome_fantasia as empresa_nome 
                 FROM {$this->table} c
@@ -41,11 +41,76 @@ class CategoriaFinanceira extends Model
             $params['tipo'] = $tipo;
         }
         
+        // Filtro por código
+        if (!empty($filters['codigo'])) {
+            $sql .= " AND c.codigo LIKE :codigo";
+            $params['codigo'] = '%' . $filters['codigo'] . '%';
+        }
+        
+        // Filtro por nome
+        if (!empty($filters['nome'])) {
+            $sql .= " AND c.nome LIKE :nome";
+            $params['nome'] = '%' . $filters['nome'] . '%';
+        }
+        
         $sql .= " ORDER BY c.codigo ASC, c.nome ASC";
+        
+        // Adiciona paginação se limit for especificado
+        if ($limit !== null) {
+            $sql .= " LIMIT :limit OFFSET :offset";
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        
+        // Bind dos parâmetros
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(":$key", $value);
+        }
+        
+        // Bind de limit e offset como inteiros
+        if ($limit !== null) {
+            $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+        }
+        
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+    
+    /**
+     * Conta total de categorias (para paginação)
+     */
+    public function count($empresaId = null, $tipo = null, $filters = [])
+    {
+        $sql = "SELECT COUNT(*) as total FROM {$this->table} WHERE ativo = 1";
+        $params = [];
+        
+        if ($empresaId) {
+            $sql .= " AND empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
+        }
+        
+        if ($tipo) {
+            $sql .= " AND tipo = :tipo";
+            $params['tipo'] = $tipo;
+        }
+        
+        // Filtro por código
+        if (!empty($filters['codigo'])) {
+            $sql .= " AND codigo LIKE :codigo";
+            $params['codigo'] = '%' . $filters['codigo'] . '%';
+        }
+        
+        // Filtro por nome
+        if (!empty($filters['nome'])) {
+            $sql .= " AND nome LIKE :nome";
+            $params['nome'] = '%' . $filters['nome'] . '%';
+        }
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)($result['total'] ?? 0);
     }
     
     /**

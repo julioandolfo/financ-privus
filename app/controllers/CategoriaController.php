@@ -18,15 +18,34 @@ class CategoriaController extends Controller
             $this->categoriaModel = new CategoriaFinanceira();
             $empresaId = $request->get('empresa_id');
             $tipo = $request->get('tipo');
+            $codigo = $request->get('codigo');
+            $nome = $request->get('nome');
             $ajax = $request->get('ajax');
             
             // Retorna hierárquico ou flat baseado no parâmetro
             $viewMode = $request->get('view', 'flat'); // 'flat' ou 'tree'
             
+            // Prepara filtros de busca
+            $searchFilters = [
+                'codigo' => $codigo,
+                'nome' => $nome
+            ];
+            
+            // Paginação (apenas para view flat)
+            $page = max(1, (int)$request->get('page', 1));
+            $perPage = 20;
+            $offset = ($page - 1) * $perPage;
+            
             if ($viewMode === 'tree') {
+                // Árvore não tem paginação (carrega tudo)
                 $categorias = $this->categoriaModel->findHierarchical($empresaId, $tipo);
+                $total = count($categorias);
+                $totalPages = 1;
             } else {
-                $categorias = $this->categoriaModel->findAll($empresaId, $tipo);
+                // Lista com paginação
+                $categorias = $this->categoriaModel->findAll($empresaId, $tipo, $perPage, $offset, $searchFilters);
+                $total = $this->categoriaModel->count($empresaId, $tipo, $searchFilters);
+                $totalPages = ceil($total / $perPage);
             }
             
             // Se for requisição AJAX, retorna JSON com nome da empresa
@@ -54,9 +73,17 @@ class CategoriaController extends Controller
                 'categorias' => $categorias,
                 'empresas' => $empresas,
                 'viewMode' => $viewMode,
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $total,
+                    'total_pages' => $totalPages
+                ],
                 'filters' => [
                     'empresa_id' => $empresaId,
-                    'tipo' => $tipo
+                    'tipo' => $tipo,
+                    'codigo' => $codigo,
+                    'nome' => $nome
                 ]
             ]);
         } catch (\Exception $e) {
