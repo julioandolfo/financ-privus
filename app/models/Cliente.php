@@ -59,7 +59,10 @@ class Cliente extends Model
      */
     public function findByCpfCnpj($cpfCnpj, $empresaId = null)
     {
-        $sql = "SELECT * FROM {$this->table} WHERE cpf_cnpj = :cpf_cnpj";
+        // Remove formatação do CPF/CNPJ
+        $cpfCnpjLimpo = preg_replace('/[^0-9]/', '', $cpfCnpj);
+        
+        $sql = "SELECT * FROM {$this->table} WHERE REPLACE(REPLACE(REPLACE(REPLACE(cpf_cnpj, '.', ''), '-', ''), '/', ''), ' ', '') = :cpf_cnpj";
         
         if ($empresaId) {
             $sql .= " AND empresa_id = :empresa_id";
@@ -69,13 +72,52 @@ class Cliente extends Model
         
         $stmt = $this->db->prepare($sql);
         
-        $params = ['cpf_cnpj' => $cpfCnpj];
+        $params = ['cpf_cnpj' => $cpfCnpjLimpo];
         if ($empresaId) {
             $params['empresa_id'] = $empresaId;
         }
         
         $stmt->execute($params);
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    /**
+     * Criar ou buscar cliente por CPF/CNPJ (para API)
+     */
+    public function findOrCreateByCpfCnpj($data, $empresaId)
+    {
+        // Se tem CPF/CNPJ, tenta buscar primeiro
+        if (!empty($data['cpf_cnpj'])) {
+            $cliente = $this->findByCpfCnpj($data['cpf_cnpj'], $empresaId);
+            if ($cliente) {
+                return $cliente;
+            }
+        }
+        
+        // Se não encontrou, cria novo cliente
+        $data['empresa_id'] = $empresaId;
+        
+        // Define valores padrão
+        $data['tipo'] = $data['tipo'] ?? $this->detectarTipo($data['cpf_cnpj'] ?? '');
+        $data['nome_razao_social'] = $data['nome_razao_social'] ?? $data['nome'] ?? 'Cliente API';
+        $data['ativo'] = 1;
+        
+        $id = $this->create($data);
+        
+        if ($id) {
+            return $this->findById($id);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Detecta tipo de pessoa por CPF/CNPJ
+     */
+    private function detectarTipo($cpfCnpj)
+    {
+        $numeros = preg_replace('/[^0-9]/', '', $cpfCnpj);
+        return strlen($numeros) === 14 ? 'juridica' : 'fisica';
     }
     
     /**

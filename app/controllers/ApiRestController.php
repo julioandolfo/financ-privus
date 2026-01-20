@@ -10,6 +10,7 @@ use App\Models\Produto;
 use App\Models\Cliente;
 use App\Models\Fornecedor;
 use App\Models\PedidoVinculado;
+use App\Models\PedidoItem;
 use App\Models\MovimentacaoCaixa;
 use App\Models\CategoriaFinanceira;
 use App\Models\CentroCusto;
@@ -263,6 +264,126 @@ class ApiRestController extends Controller
             $input['status'] = 'pendente';
         }
         
+        // 🚀 NOVO: Auto-cadastro completo (Cliente + Produtos + Pedido)
+        $clienteCriado = false;
+        $produtosCriados = 0;
+        $produtosVinculados = 0;
+        $pedidoId = null;
+        $clienteId = null;
+        $valorCustoTotal = 0;
+        $lucro = 0;
+        $margemLucro = 0;
+        
+        try {
+            // 1. Auto-cadastro de CLIENTE (se enviado)
+            if (isset($input['cliente']) && !empty($input['cliente'])) {
+                $clienteData = $input['cliente'];
+                
+                if (!empty($clienteData['cpf_cnpj'])) {
+                    $clienteModel = new Cliente();
+                    $cliente = $clienteModel->findOrCreateByCpfCnpj($clienteData, $input['empresa_id']);
+                    
+                    if ($cliente) {
+                        $clienteId = $cliente['id'];
+                        $input['cliente_id'] = $clienteId;
+                        
+                        // Verifica se foi criado agora ou já existia
+                        $clienteExistente = $clienteModel->findByCpfCnpj($clienteData['cpf_cnpj'], $input['empresa_id']);
+                        $clienteCriado = empty($clienteExistente);
+                    }
+                }
+            }
+            
+            // 2. Auto-cadastro de PEDIDO com PRODUTOS (se enviado)
+            if (isset($input['criar_pedido']) && $input['criar_pedido'] === true && isset($input['pedido'])) {
+                $pedidoData = $input['pedido'];
+                
+                // Criar pedido
+                $pedidoModel = new PedidoVinculado();
+                $numeroPedido = $pedidoData['numero_pedido'] ?? 'API-' . date('YmdHis');
+                
+                $pedidoId = $pedidoModel->create([
+                    'empresa_id' => $input['empresa_id'],
+                    'cliente_id' => $clienteId ?? $input['cliente_id'] ?? null,
+                    'numero_pedido' => $numeroPedido,
+                    'data_pedido' => $input['data_emissao'],
+                    'status' => 'concluido',
+                    'origem' => 'api',
+                    'valor_total' => 0 // Será calculado
+                ]);
+                
+                $input['pedido_id'] = $pedidoId;
+                
+                // Criar itens do pedido
+                if (isset($pedidoData['produtos']) && is_array($pedidoData['produtos'])) {
+                    $produtoModel = new Produto();
+                    $pedidoItemModel = new PedidoItem();
+                    $valorTotalPedido = 0;
+                    
+                    foreach ($pedidoData['produtos'] as $produtoData) {
+                        $produto = null;
+                        
+                        // Buscar ou criar produto por SKU
+                        if (!empty($produtoData['sku'])) {
+                            $produto = $produtoModel->findOrCreateBySku([
+                                'sku' => $produtoData['sku'],
+                                'nome' => $produtoData['nome'] ?? 'Produto API',
+                                'codigo' => $produtoData['codigo'] ?? strtoupper(substr($produtoData['sku'], 0, 20)),
+                                'custo_unitario' => $produtoData['custo_unitario'] ?? 0,
+                                'preco_venda' => $produtoData['valor_unitario'] ?? 0,
+                                'unidade_medida' => $produtoData['unidade_medida'] ?? 'UN',
+                                'empresa_id' => $input['empresa_id']
+                            ], $input['empresa_id']);
+                            
+                            if ($produto && empty($produtoModel->findBySku($produtoData['sku'], $input['empresa_id']))) {
+                                $produtosCriados++;
+                            }
+                        }
+                        
+                        if ($produto) {
+                            $quantidade = $produtoData['quantidade'] ?? 1;
+                            $valorUnitario = $produtoData['valor_unitario'] ?? $produto['preco_venda'];
+                            $custoUnitario = $produtoData['custo_unitario'] ?? $produto['custo_unitario'] ?? 0;
+                            $valorTotal = $quantidade * $valorUnitario;
+                            
+                            // Criar item do pedido
+                            $pedidoItemModel->create([
+                                'pedido_id' => $pedidoId,
+                                'produto_id' => $produto['id'],
+                                'quantidade' => $quantidade,
+                                'valor_unitario' => $valorUnitario,
+                                'custo_unitario' => $custoUnitario,
+                                'valor_total' => $valorTotal
+                            ]);
+                            
+                            $valorTotalPedido += $valorTotal;
+                            $valorCustoTotal += ($quantidade * $custoUnitario);
+                            $produtosVinculados++;
+                        }
+                    }
+                    
+                    // Atualizar valor_total do pedido
+                    $pedidoModel->update($pedidoId, ['valor_total' => $valorTotalPedido]);
+                    
+                    // Se não foi informado valor_total, usar o do pedido
+                    if (empty($input['valor_total'])) {
+                        $input['valor_total'] = $valorTotalPedido;
+                    }
+                    
+                    // Calcular lucro e margem
+                    if ($valorTotalPedido > 0) {
+                        $lucro = $valorTotalPedido - $valorCustoTotal;
+                        $margemLucro = ($lucro / $valorTotalPedido) * 100;
+                    }
+                }
+            }
+            
+        } catch (\Exception $e) {
+            $data = ['success' => false, 'error' => 'Erro ao processar pedido/cliente: ' . $e->getMessage()];
+            $this->logSuccess($request, 500, $data);
+            return $response->json($data, 500);
+        }
+        
         $errors = $this->validateContaReceber($input);
         if (!empty($errors)) {
             $data = ['success' => false, 'errors' => $errors];
@@ -273,7 +394,40 @@ class ApiRestController extends Controller
         $model = new ContaReceber();
         $id = $model->create($input);
         
-        $data = ['success' => true, 'id' => $id, 'message' => 'Conta criada com sucesso'];
+        // Resposta detalhada
+        $data = [
+            'success' => true,
+            'conta_receber_id' => $id,
+            'message' => 'Conta criada com sucesso'
+        ];
+        
+        // Adicionar informações do auto-cadastro
+        if ($pedidoId) {
+            $data['pedido_id'] = $pedidoId;
+            $data['produtos_vinculados'] = $produtosVinculados;
+            $data['valor_total'] = $input['valor_total'];
+            $data['valor_custo_total'] = round($valorCustoTotal, 2);
+            $data['lucro'] = round($lucro, 2);
+            $data['margem_lucro'] = round($margemLucro, 2);
+        }
+        
+        if ($clienteId) {
+            $data['cliente_id'] = $clienteId;
+            $data['cliente_criado'] = $clienteCriado;
+        }
+        
+        if ($produtosCriados > 0) {
+            $data['produtos_criados'] = $produtosCriados;
+        }
+        
+        // Mensagem amigável
+        $mensagens = ['Conta a receber criada com sucesso!'];
+        if ($clienteCriado) $mensagens[] = 'Cliente cadastrado automaticamente';
+        if ($produtosCriados > 0) $mensagens[] = "{$produtosCriados} produto(s) criado(s) automaticamente";
+        if ($pedidoId) $mensagens[] = "Pedido #{$input['pedido']['numero_pedido'] ?? $pedidoId} vinculado";
+        
+        $data['message'] = implode('. ', $mensagens) . '.';
+        
         $this->logSuccess($request, 201, $data);
         $response->json($data, 201);
     }

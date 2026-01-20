@@ -364,6 +364,10 @@ Content-Type: application/json
 2. ✅ **Criar automaticamente** o produto se não existir
 3. ✅ **Vincular** ao pedido
 
+### 🚀 NOVO: Criar Tudo em UMA Requisição (Cliente + Produtos + Pedido + Conta)
+
+**Recurso completo:** Crie uma venda completa com auto-cadastro de cliente e produtos em uma única requisição!
+
 ```http
 POST /api/v1/contas-receber
 Content-Type: application/json

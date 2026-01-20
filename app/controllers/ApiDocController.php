@@ -65,8 +65,10 @@ class ApiDocController extends Controller
                 'description' => 'API RESTful para integração com o Sistema Financeiro Empresarial. Gerencie contas a pagar/receber, produtos, clientes, fornecedores e movimentações financeiras. ⭐ NOVO: Suporte a pedidos com produtos, auto-cadastro via SKU e cálculo automático de lucro/margem.',
                 'changelog' => [
                     'v1.1.0 (Janeiro 2026)' => [
-                        '✅ Suporte a Pedidos Vinculados em Contas a Receber',
+                        '🚀 Auto-cadastro COMPLETO: Cliente + Produtos + Pedido + Conta em UMA requisição',
+                        '✅ Auto-criar cliente por CPF/CNPJ (busca ou cria)',
                         '✅ Auto-cadastro de produtos via SKU',
+                        '✅ Suporte a Pedidos Vinculados em Contas a Receber',
                         '✅ Cálculo automático de Lucro e Margem',
                         '✅ Campo pedido_id em Contas a Receber',
                         '✅ Campo sku em Produtos (único por empresa)',
@@ -242,7 +244,7 @@ class ApiDocController extends Controller
                 
                 'contas_receber' => [
                     'name' => 'Contas a Receber',
-                    'description' => 'Gerenciamento de contas a receber (com suporte a pedidos e produtos)',
+                    'description' => 'Gerenciamento de contas a receber com auto-cadastro COMPLETO: Cliente (por CPF/CNPJ) + Produtos (por SKU) + Pedido em uma única requisição!',
                     'base_url' => '/api/v1/contas-receber',
                     'methods' => [
                         [
@@ -277,6 +279,88 @@ class ApiDocController extends Controller
                                 'success' => true,
                                 'message' => 'Conta a receber criada com sucesso!',
                                 'data' => ['id' => 1]
+                            ]
+                        ],
+                        [
+                            'method' => 'POST',
+                            'endpoint' => '/api/v1/contas-receber',
+                            'description' => '🚀 COMPLETO: Cria TUDO em UMA requisição (Cliente + Produtos + Pedido + Conta)',
+                            'body' => [
+                                'empresa_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da empresa'],
+                                'categoria_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da categoria financeira'],
+                                'descricao' => ['type' => 'string', 'required' => true, 'description' => 'Descrição da venda'],
+                                'data_vencimento' => ['type' => 'date', 'required' => true, 'description' => 'Data de vencimento (YYYY-MM-DD)'],
+                                'data_emissao' => ['type' => 'date', 'required' => false, 'description' => 'Data de emissão (padrão: hoje)'],
+                                'data_competencia' => ['type' => 'date', 'required' => true, 'description' => 'Data de competência (YYYY-MM-DD)'],
+                                'numero_documento' => ['type' => 'string', 'required' => false, 'description' => 'Número da NF/Recibo'],
+                                'criar_pedido' => ['type' => 'boolean', 'required' => true, 'description' => 'true para criar pedido'],
+                                'cliente' => ['type' => 'object', 'required' => true, 'description' => '🚀 Dados do cliente (busca/cria por CPF/CNPJ)', 'fields' => [
+                                    'cpf_cnpj' => ['type' => 'string', 'required' => true, 'description' => 'CPF ou CNPJ (busca existente ou cria novo)'],
+                                    'nome' => ['type' => 'string', 'required' => true, 'description' => 'Nome ou Razão Social (obrigatório se cliente novo)'],
+                                    'email' => ['type' => 'string', 'required' => false, 'description' => 'E-mail do cliente'],
+                                    'telefone' => ['type' => 'string', 'required' => false, 'description' => 'Telefone do cliente'],
+                                    'tipo' => ['type' => 'string', 'required' => false, 'description' => 'fisica ou juridica (auto-detecta pelo CPF/CNPJ)'],
+                                ]],
+                                'pedido' => ['type' => 'object', 'required' => true, 'description' => 'Dados do pedido', 'fields' => [
+                                    'numero_pedido' => ['type' => 'string', 'required' => false, 'description' => 'Número do pedido (auto-gerado se omitido)'],
+                                    'produtos' => ['type' => 'array', 'required' => true, 'description' => 'Array de produtos', 'items' => [
+                                        'sku' => ['type' => 'string', 'required' => true, 'description' => 'SKU do produto (busca/cria automaticamente)'],
+                                        'nome' => ['type' => 'string', 'required' => true, 'description' => 'Nome do produto (obrigatório se produto novo)'],
+                                        'quantidade' => ['type' => 'decimal', 'required' => true, 'description' => 'Quantidade vendida'],
+                                        'valor_unitario' => ['type' => 'decimal', 'required' => true, 'description' => 'Preço de venda'],
+                                        'custo_unitario' => ['type' => 'decimal', 'required' => false, 'description' => 'Custo (busca do cadastro se omitido)'],
+                                        'unidade_medida' => ['type' => 'string', 'required' => false, 'description' => 'UN, KG, L, etc'],
+                                    ]],
+                                ]],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'conta_receber_id' => 25,
+                                'pedido_id' => 30,
+                                'cliente_id' => 15,
+                                'cliente_criado' => true,
+                                'produtos_criados' => 2,
+                                'produtos_vinculados' => 2,
+                                'valor_total' => 900.00,
+                                'valor_custo_total' => 540.00,
+                                'lucro' => 360.00,
+                                'margem_lucro' => 66.67,
+                                'message' => 'Venda completa criada! Cliente e 2 produtos criados automaticamente.'
+                            ],
+                            'example' => [
+                                'empresa_id' => 1,
+                                'categoria_id' => 15,
+                                'descricao' => 'Venda completa via API',
+                                'data_vencimento' => '2026-02-28',
+                                'data_competencia' => '2026-01-20',
+                                'numero_documento' => 'NF-999',
+                                'criar_pedido' => true,
+                                'cliente' => [
+                                    'cpf_cnpj' => '123.456.789-00',
+                                    'nome' => 'João da Silva',
+                                    'email' => 'joao@email.com',
+                                    'telefone' => '(11) 98765-4321'
+                                ],
+                                'pedido' => [
+                                    'numero_pedido' => 'PED-API-001',
+                                    'produtos' => [
+                                        [
+                                            'sku' => 'PROD-EXT-001',
+                                            'nome' => 'Produto A da API',
+                                            'quantidade' => 5,
+                                            'valor_unitario' => 100.00,
+                                            'custo_unitario' => 60.00,
+                                            'unidade_medida' => 'UN'
+                                        ],
+                                        [
+                                            'sku' => 'PROD-EXT-002',
+                                            'nome' => 'Produto B da API',
+                                            'quantidade' => 2,
+                                            'valor_unitario' => 200.00,
+                                            'custo_unitario' => 120.00
+                                        ]
+                                    ]
+                                ]
                             ]
                         ],
                         [
