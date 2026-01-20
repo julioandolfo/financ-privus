@@ -110,6 +110,9 @@
                                 <div class="flex-1 flex items-center gap-3">
                                     <span class="font-mono text-sm text-gray-500 dark:text-gray-400"><?= htmlspecialchars($categoria['codigo']) ?></span>
                                     <span class="font-semibold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($categoria['nome']) ?></span>
+                                    <span class="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                                        🏢 <?= htmlspecialchars($categoria['empresa_nome'] ?? 'N/A') ?>
+                                    </span>
                                     <?php if ($categoria['tipo'] === 'receita'): ?>
                                         <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                                             💰 Receita
@@ -174,6 +177,7 @@
                             <tr>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Código</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Nome</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold">Empresa</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Tipo</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Categoria Pai</th>
                                 <th class="px-6 py-4 text-left text-sm font-semibold">Status</th>
@@ -192,6 +196,11 @@
                                         <div class="font-semibold text-gray-900 dark:text-gray-100">
                                             <?= htmlspecialchars($categoria['nome']) ?>
                                         </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">
+                                            <?= htmlspecialchars($categoria['empresa_nome'] ?? 'N/A') ?>
+                                        </span>
                                     </td>
                                     <td class="px-6 py-4">
                                         <?php if ($categoria['tipo'] === 'receita'): ?>

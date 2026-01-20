@@ -25,20 +25,23 @@ class CategoriaFinanceira extends Model
      */
     public function findAll($empresaId = null, $tipo = null)
     {
-        $sql = "SELECT * FROM {$this->table} WHERE ativo = 1";
+        $sql = "SELECT c.*, e.nome_fantasia as empresa_nome 
+                FROM {$this->table} c
+                LEFT JOIN empresas e ON c.empresa_id = e.id
+                WHERE c.ativo = 1";
         $params = [];
         
         if ($empresaId) {
-            $sql .= " AND empresa_id = :empresa_id";
+            $sql .= " AND c.empresa_id = :empresa_id";
             $params['empresa_id'] = $empresaId;
         }
         
         if ($tipo) {
-            $sql .= " AND tipo = :tipo";
+            $sql .= " AND c.tipo = :tipo";
             $params['tipo'] = $tipo;
         }
         
-        $sql .= " ORDER BY codigo ASC, nome ASC";
+        $sql .= " ORDER BY c.codigo ASC, c.nome ASC";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);

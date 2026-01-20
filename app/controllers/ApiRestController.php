@@ -93,6 +93,34 @@ class ApiRestController extends Controller
         
         $input = json_decode(file_get_contents('php://input'), true);
         
+        // Mapear 'valor' para 'valor_total' se necessário (compatibilidade)
+        if (isset($input['valor']) && !isset($input['valor_total'])) {
+            $input['valor_total'] = $input['valor'];
+            unset($input['valor']);
+        }
+        
+        // Garantir empresa_id do token
+        $input['empresa_id'] = $token['empresa_id'] ?? $input['empresa_id'];
+        
+        // Garantir usuario_cadastro_id
+        if (!isset($input['usuario_cadastro_id'])) {
+            $input['usuario_cadastro_id'] = $token['usuario_id'] ?? null;
+        }
+        
+        // Valores padrão
+        if (!isset($input['data_emissao'])) {
+            $input['data_emissao'] = date('Y-m-d');
+        }
+        if (!isset($input['data_competencia'])) {
+            $input['data_competencia'] = $input['data_emissao'] ?? date('Y-m-d');
+        }
+        if (!isset($input['valor_pago'])) {
+            $input['valor_pago'] = 0;
+        }
+        if (!isset($input['status'])) {
+            $input['status'] = 'pendente';
+        }
+        
         // Validação básica
         $errors = $this->validateContaPagar($input);
         if (!empty($errors)) {
@@ -100,9 +128,6 @@ class ApiRestController extends Controller
             $this->logSuccess($request, 400, $data);
             return $response->json($data, 400);
         }
-        
-        // Garantir empresa_id do token
-        $input['empresa_id'] = $token['empresa_id'] ?? $input['empresa_id'];
         
         $model = new ContaPagar();
         $id = $model->create($input);
@@ -127,6 +152,13 @@ class ApiRestController extends Controller
         
         $input = json_decode(file_get_contents('php://input'), true);
         
+        // Mapear 'valor' para 'valor_total' se necessário (compatibilidade)
+        if (isset($input['valor']) && !isset($input['valor_total'])) {
+            $input['valor_total'] = $input['valor'];
+            unset($input['valor']);
+        }
+        
+        // Validação básica (mais flexível para update)
         $errors = $this->validateContaPagar($input, $id);
         if (!empty($errors)) {
             $data = ['success' => false, 'errors' => $errors];
@@ -203,14 +235,40 @@ class ApiRestController extends Controller
         
         $input = json_decode(file_get_contents('php://input'), true);
         
+        // Mapear 'valor' para 'valor_total' se necessário (compatibilidade)
+        if (isset($input['valor']) && !isset($input['valor_total'])) {
+            $input['valor_total'] = $input['valor'];
+            unset($input['valor']);
+        }
+        
+        // Garantir empresa_id do token
+        $input['empresa_id'] = $token['empresa_id'] ?? $input['empresa_id'];
+        
+        // Garantir usuario_cadastro_id
+        if (!isset($input['usuario_cadastro_id'])) {
+            $input['usuario_cadastro_id'] = $token['usuario_id'] ?? null;
+        }
+        
+        // Valores padrão
+        if (!isset($input['data_emissao'])) {
+            $input['data_emissao'] = date('Y-m-d');
+        }
+        if (!isset($input['data_competencia'])) {
+            $input['data_competencia'] = $input['data_emissao'] ?? date('Y-m-d');
+        }
+        if (!isset($input['valor_recebido'])) {
+            $input['valor_recebido'] = 0;
+        }
+        if (!isset($input['status'])) {
+            $input['status'] = 'pendente';
+        }
+        
         $errors = $this->validateContaReceber($input);
         if (!empty($errors)) {
             $data = ['success' => false, 'errors' => $errors];
             $this->logSuccess($request, 400, $data);
             return $response->json($data, 400);
         }
-        
-        $input['empresa_id'] = $token['empresa_id'] ?? $input['empresa_id'];
         
         $model = new ContaReceber();
         $id = $model->create($input);
@@ -228,6 +286,33 @@ class ApiRestController extends Controller
         $conta = $model->findById($id);
         
         if (!$conta || ($token['empresa_id'] && $conta['empresa_id'] != $token['empresa_id'])) {
+            $data = ['success' => false, 'error' => 'Conta não encontrada'];
+            $this->logSuccess($request, 404, $data);
+            return $response->json($data, 404);
+        }
+        
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        // Mapear 'valor' para 'valor_total' se necessário (compatibilidade)
+        if (isset($input['valor']) && !isset($input['valor_total'])) {
+            $input['valor_total'] = $input['valor'];
+            unset($input['valor']);
+        }
+        
+        // Validação básica (mais flexível para update)
+        $errors = $this->validateContaReceber($input, $id);
+        if (!empty($errors)) {
+            $data = ['success' => false, 'errors' => $errors];
+            $this->logSuccess($request, 400, $data);
+            return $response->json($data, 400);
+        }
+        
+        $model->update($id, $input);
+        
+        $data = ['success' => true, 'message' => 'Conta atualizada com sucesso'];
+        $this->logSuccess($request, 200, $data);
+        $response->json($data);
+    }
             $data = ['success' => false, 'error' => 'Conta não encontrada'];
             $this->logSuccess($request, 404, $data);
             return $response->json($data, 404);
@@ -605,12 +690,20 @@ class ApiRestController extends Controller
             $errors['fornecedor_id'] = 'Fornecedor é obrigatório';
         }
         
+        if (empty($data['categoria_id'])) {
+            $errors['categoria_id'] = 'Categoria financeira é obrigatória';
+        }
+        
         if (empty($data['descricao'])) {
             $errors['descricao'] = 'Descrição é obrigatória';
         }
         
-        if (empty($data['valor'])) {
-            $errors['valor'] = 'Valor é obrigatório';
+        if (empty($data['valor_total']) && empty($data['valor'])) {
+            $errors['valor_total'] = 'Valor total é obrigatório';
+        }
+        
+        if (empty($data['data_competencia'])) {
+            $errors['data_competencia'] = 'Data de competência é obrigatória';
         }
         
         if (empty($data['data_vencimento'])) {
@@ -628,12 +721,20 @@ class ApiRestController extends Controller
             $errors['cliente_id'] = 'Cliente é obrigatório';
         }
         
+        if (empty($data['categoria_id'])) {
+            $errors['categoria_id'] = 'Categoria financeira é obrigatória';
+        }
+        
         if (empty($data['descricao'])) {
             $errors['descricao'] = 'Descrição é obrigatória';
         }
         
-        if (empty($data['valor'])) {
-            $errors['valor'] = 'Valor é obrigatório';
+        if (empty($data['valor_total']) && empty($data['valor'])) {
+            $errors['valor_total'] = 'Valor total é obrigatório';
+        }
+        
+        if (empty($data['data_competencia'])) {
+            $errors['data_competencia'] = 'Data de competência é obrigatória';
         }
         
         if (empty($data['data_vencimento'])) {
