@@ -40,8 +40,24 @@
         },
         
         copyCode(code) {
-            navigator.clipboard.writeText(code);
-            alert('Código copiado para a área de transferência!');
+            // Decodificar HTML entities se necessário
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = code;
+            const decodedCode = textarea.value;
+            
+            navigator.clipboard.writeText(decodedCode).then(() => {
+                // Mostrar feedback visual
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-2';
+                toast.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>Código copiado!</span>
+                `;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2000);
+            });
         },
         
         getMethodColor(method) {
@@ -115,6 +131,12 @@
                             :class="activeSection === 'quickstart' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
                             class="w-full text-left px-3 py-2 rounded-lg transition-colors">
                         ⚡ Quick Start
+                    </button>
+                    
+                    <button @click="scrollToSection('payload-guide')" 
+                            :class="activeSection === 'payload-guide' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                            class="w-full text-left px-3 py-2 rounded-lg transition-colors">
+                        📋 Guia de Payloads
                     </button>
                     
                     <div class="pt-4 pb-2">
@@ -310,6 +332,159 @@ print(data)</code></pre>
                     </div>
                 </section>
                 
+                <!-- Guia de Uso dos Payloads -->
+                <section id="payload-guide" class="mb-16">
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">📋 Guia de Uso dos Payloads</h2>
+                    
+                    <div class="space-y-6">
+                        <!-- Introdução -->
+                        <div class="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border-2 border-purple-200 dark:border-purple-800 p-6">
+                            <div class="flex items-start">
+                                <svg class="w-8 h-8 text-purple-600 mr-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <div>
+                                    <h3 class="text-xl font-bold text-purple-900 dark:text-purple-100 mb-3">Como Interpretar Esta Documentação</h3>
+                                    <p class="text-purple-800 dark:text-purple-200 mb-4">
+                                        Esta documentação apresenta <strong>exemplos completos de payloads</strong> prontos para usar. 
+                                        Cada endpoint inclui tabelas detalhadas de parâmetros, exemplos de JSON e código cURL.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Estrutura dos Parâmetros -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                            <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                                <svg class="w-6 h-6 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                </svg>
+                                Entendendo a Tabela de Parâmetros
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex items-start space-x-3">
+                                    <span class="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-gray-100">Campos com fundo azul claro</p>
+                                        <p class="text-gray-600 dark:text-gray-400 text-sm">
+                                            São campos <strong>aninhados</strong>. Por exemplo: <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs">cliente.cpf_cnpj</code> 
+                                            significa que você deve enviar um objeto <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs">cliente</code> 
+                                            contendo o campo <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs">cpf_cnpj</code>.
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-start space-x-3">
+                                    <span class="flex-shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-gray-100">Campos com <code class="text-purple-600 dark:text-purple-400 text-sm">[]</code></p>
+                                        <p class="text-gray-600 dark:text-gray-400 text-sm">
+                                            Indicam <strong>arrays (listas)</strong>. Por exemplo: <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs">produtos[]</code> 
+                                            significa que você pode enviar múltiplos itens neste campo.
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-start space-x-3">
+                                    <span class="flex-shrink-0 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-gray-100">Badge vermelho "Sim"</p>
+                                        <p class="text-gray-600 dark:text-gray-400 text-sm">
+                                            Indica campos <strong>obrigatórios</strong>. Você deve sempre incluí-los na requisição.
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-start space-x-3">
+                                    <span class="flex-shrink-0 w-6 h-6 bg-gray-400 text-white rounded-full flex items-center justify-center text-sm font-bold">4</span>
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-gray-100">Badge cinza "Não"</p>
+                                        <p class="text-gray-600 dark:text-gray-400 text-sm">
+                                            Campos <strong>opcionais</strong>. Você pode omiti-los se não forem necessários.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Exemplo Visual -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                            <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                                <svg class="w-6 h-6 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                                </svg>
+                                Exemplo: Estrutura Aninhada
+                            </h3>
+                            <p class="text-gray-600 dark:text-gray-400 mb-4">
+                                Quando você vê na tabela de parâmetros:
+                            </p>
+                            <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4 space-y-2 text-sm">
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-mono text-gray-900 dark:text-gray-100">cliente</span>
+                                    <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">object</span>
+                                </div>
+                                <div class="flex items-center space-x-2 pl-6 text-blue-600 dark:text-blue-400">
+                                    <span>└─</span>
+                                    <span class="font-mono">cliente.cpf_cnpj</span>
+                                    <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">string</span>
+                                </div>
+                                <div class="flex items-center space-x-2 pl-6 text-blue-600 dark:text-blue-400">
+                                    <span>└─</span>
+                                    <span class="font-mono">cliente.nome</span>
+                                    <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">string</span>
+                                </div>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 mb-2">
+                                Você deve enviar o JSON assim:
+                            </p>
+                            <div class="bg-gray-900 rounded-lg p-4">
+                                <pre class="text-sm text-green-400"><code>{
+  "cliente": {
+    "cpf_cnpj": "123.456.789-00",
+    "nome": "João da Silva"
+  }
+}</code></pre>
+                            </div>
+                        </div>
+                        
+                        <!-- Botões de Copiar -->
+                        <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl p-6">
+                            <h3 class="text-xl font-bold text-green-900 dark:text-green-100 mb-3 flex items-center">
+                                <svg class="w-6 h-6 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                                Copiando Exemplos
+                            </h3>
+                            <p class="text-green-800 dark:text-green-200">
+                                <strong>Todos os exemplos de código têm botões "Copiar"</strong> no canto superior direito. 
+                                Clique para copiar e cole diretamente no seu código ou ferramenta de teste (Postman, Insomnia, etc).
+                            </p>
+                        </div>
+                        
+                        <!-- Changelog -->
+                        <?php if (isset($apiDoc['info']['changelog']) && !empty($apiDoc['info']['changelog'])): ?>
+                            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                                <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                                    <svg class="w-6 h-6 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Histórico de Versões
+                                </h3>
+                                <?php foreach ($apiDoc['info']['changelog'] as $version => $changes): ?>
+                                    <div class="mb-4 last:mb-0">
+                                        <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-2"><?= htmlspecialchars($version) ?></h4>
+                                        <ul class="list-disc list-inside space-y-1">
+                                            <?php foreach ($changes as $change): ?>
+                                                <li class="text-gray-700 dark:text-gray-300 text-sm"><?= htmlspecialchars($change) ?></li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </section>
+                
                 <!-- Endpoints -->
                 <?php foreach ($apiDoc['endpoints'] as $key => $endpoint): ?>
                     <section id="endpoint-<?= $key ?>" class="mb-16">
@@ -365,7 +540,12 @@ print(data)</code></pre>
                                 <?php endif; ?>
                                 
                                 <?php if (isset($method['body']) && !empty($method['body'])): ?>
-                                    <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">Body (JSON)</h4>
+                                    <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                                        <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                        </svg>
+                                        Parâmetros do Body (JSON)
+                                    </h4>
                                     <div class="overflow-x-auto mb-4">
                                         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                             <thead class="bg-gray-50 dark:bg-gray-700">
@@ -377,29 +557,129 @@ print(data)</code></pre>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                                <?php foreach ($method['body'] as $field => $details): ?>
-                                                    <tr>
-                                                        <td class="px-4 py-2 text-sm font-mono text-gray-900 dark:text-gray-100"><?= htmlspecialchars($field) ?></td>
-                                                        <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400"><?= htmlspecialchars($details['type']) ?></td>
-                                                        <td class="px-4 py-2 text-sm">
-                                                            <?php if ($details['required']): ?>
-                                                                <span class="text-red-600 dark:text-red-400 font-semibold">✓ Sim</span>
-                                                            <?php else: ?>
-                                                                <span class="text-gray-500">Não</span>
-                                                            <?php endif; ?>
-                                                        </td>
-                                                        <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300"><?= htmlspecialchars($details['description'] ?? '') ?></td>
-                                                    </tr>
-                                                <?php endforeach; ?>
+                                                <?php 
+                                                function renderBodyFields($fields, $prefix = '') {
+                                                    foreach ($fields as $field => $details) {
+                                                        $fieldName = $prefix . $field;
+                                                        ?>
+                                                        <tr class="<?= $prefix ? 'bg-blue-50 dark:bg-blue-900/20' : '' ?>">
+                                                            <td class="px-4 py-2 text-sm font-mono text-gray-900 dark:text-gray-100">
+                                                                <?= $prefix ? '<span class="text-blue-600 dark:text-blue-400">└─</span> ' : '' ?>
+                                                                <?= htmlspecialchars($fieldName) ?>
+                                                                <?php if ($details['type'] === 'array'): ?>
+                                                                    <span class="text-xs text-purple-600 dark:text-purple-400">[]</span>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                            <td class="px-4 py-2 text-sm">
+                                                                <span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">
+                                                                    <?= htmlspecialchars($details['type']) ?>
+                                                                </span>
+                                                            </td>
+                                                            <td class="px-4 py-2 text-sm">
+                                                                <?php if ($details['required']): ?>
+                                                                    <span class="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded text-xs font-semibold">Sim</span>
+                                                                <?php else: ?>
+                                                                    <span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded text-xs">Não</span>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                            <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                                                <?= htmlspecialchars($details['description'] ?? '') ?>
+                                                            </td>
+                                                        </tr>
+                                                        <?php
+                                                        // Renderizar campos aninhados (fields ou items)
+                                                        if (isset($details['fields']) && is_array($details['fields'])) {
+                                                            renderBodyFields($details['fields'], $fieldName . '.');
+                                                        }
+                                                        if (isset($details['items']) && is_array($details['items'])) {
+                                                            renderBodyFields($details['items'], $fieldName . '[].');
+                                                        }
+                                                    }
+                                                }
+                                                renderBodyFields($method['body']);
+                                                ?>
                                             </tbody>
                                         </table>
                                     </div>
                                 <?php endif; ?>
                                 
+                                <?php if (isset($method['example'])): ?>
+                                    <div class="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-800 p-6">
+                                        <h4 class="font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center text-lg">
+                                            <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                                            </svg>
+                                            📋 Exemplo de Payload Completo
+                                        </h4>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                            Copie e cole este exemplo para testar a requisição. Ajuste os valores conforme necessário.
+                                        </p>
+                                        <div class="relative">
+                                            <button @click="copyCode('<?= htmlspecialchars(json_encode($method['example'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES) ?>')" 
+                                                    class="absolute top-2 right-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                                </svg>
+                                                <span>Copiar</span>
+                                            </button>
+                                            <div class="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+                                                <pre class="text-sm"><code class="language-json"><?= htmlspecialchars(json_encode($method['example'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></code></pre>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Exemplo cURL -->
+                                        <div class="mt-4">
+                                            <h5 class="font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center">
+                                                <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                </svg>
+                                                Exemplo cURL
+                                            </h5>
+                                            <?php 
+                                            $curlExample = "curl -X {$method['method']} \\\n";
+                                            $curlExample .= "  '{$baseUrl}{$method['endpoint']}' \\\n";
+                                            $curlExample .= "  -H 'Authorization: Bearer SEU_TOKEN_AQUI' \\\n";
+                                            $curlExample .= "  -H 'Content-Type: application/json' \\\n";
+                                            if (in_array($method['method'], ['POST', 'PUT'])) {
+                                                $curlExample .= "  -d '" . json_encode($method['example'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "'";
+                                            }
+                                            ?>
+                                            <div class="relative">
+                                                <button @click="copyCode(`<?= str_replace(['`', "\n"], ['\\`', "\\n"], $curlExample) ?>`)" 
+                                                        class="absolute top-2 right-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1 z-10">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                                    </svg>
+                                                    <span>Copiar</span>
+                                                </button>
+                                                <div class="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+                                                    <pre class="text-sm"><code class="language-bash"><?= htmlspecialchars($curlExample) ?></code></pre>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                                
                                 <?php if (isset($method['response'])): ?>
-                                    <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">Resposta de Sucesso</h4>
-                                    <div class="bg-gray-800 rounded-lg p-4">
-                                        <pre class="text-green-400 text-sm overflow-x-auto"><code><?= htmlspecialchars(json_encode($method['response'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) ?></code></pre>
+                                    <div class="mt-6">
+                                        <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                                            <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            Resposta de Sucesso
+                                        </h4>
+                                        <div class="relative">
+                                            <button @click="copyCode('<?= htmlspecialchars(json_encode($method['response'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES) ?>')" 
+                                                    class="absolute top-2 right-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1 z-10">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                                </svg>
+                                                <span>Copiar</span>
+                                            </button>
+                                            <div class="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+                                                <pre class="text-sm"><code class="language-json"><?= htmlspecialchars(json_encode($method['response'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></code></pre>
+                                            </div>
+                                        </div>
                                     </div>
                                 <?php endif; ?>
                             </div>
