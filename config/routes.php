@@ -140,6 +140,14 @@ return [
     'GET /contas-pagar/{id}/baixar' => ['handler' => 'ContaPagarController@baixar', 'middleware' => ['AuthMiddleware']],
     'POST /contas-pagar/{id}/baixar' => ['handler' => 'ContaPagarController@efetuarBaixa', 'middleware' => ['AuthMiddleware']],
     
+    // Importação de Extrato Bancário (protegido)
+    'GET /extrato-bancario' => ['handler' => 'ExtratoBancarioController@index', 'middleware' => ['AuthMiddleware']],
+    'POST /extrato-bancario/upload' => ['handler' => 'ExtratoBancarioController@upload', 'middleware' => ['AuthMiddleware']],
+    'GET /extrato-bancario/revisar' => ['handler' => 'ExtratoBancarioController@revisar', 'middleware' => ['AuthMiddleware']],
+    'POST /extrato-bancario/excluir-linha' => ['handler' => 'ExtratoBancarioController@excluirLinha', 'middleware' => ['AuthMiddleware']],
+    'POST /extrato-bancario/salvar-padrao' => ['handler' => 'ExtratoBancarioController@salvarPadrao', 'middleware' => ['AuthMiddleware']],
+    'POST /extrato-bancario/cadastrar' => ['handler' => 'ExtratoBancarioController@cadastrar', 'middleware' => ['AuthMiddleware']],
+    
     // Contas a Receber (protegido)
     'GET /contas-receber' => ['handler' => 'ContaReceberController@index', 'middleware' => ['AuthMiddleware']],
     'GET /contas-receber/create' => ['handler' => 'ContaReceberController@create', 'middleware' => ['AuthMiddleware']],

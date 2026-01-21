@@ -106,6 +106,11 @@ $menuItems = [
                 'active' => $isActive('/contas-pagar')
             ],
             [
+                'title' => 'Importar Extrato',
+                'path' => '/extrato-bancario',
+                'active' => $isActive('/extrato-bancario')
+            ],
+            [
                 'title' => 'Contas a Receber',
                 'path' => '/contas-receber',
                 'active' => $isActive('/contas-receber')
