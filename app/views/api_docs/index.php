@@ -28,53 +28,74 @@
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-    <div x-data="{
-        activeSection: 'intro',
-        activeEndpoint: 'contas_pagar',
-        activeMethod: 0,
-        activeLanguage: 'curl',
-        
-        scrollToSection(section) {
-            this.activeSection = section;
-            document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        },
-        
-        copyCode(code) {
-            // Se code já é uma string, usar diretamente
-            let textToCopy = code;
-            
-            // Se for um elemento HTML, pegar o texto
-            if (typeof code === 'object' && code.textContent) {
-                textToCopy = code.textContent;
-            }
-            
-            // Remover HTML entities se necessário
-            const textarea = document.createElement('textarea');
-            textarea.innerHTML = textToCopy;
-            const decodedCode = textarea.value || textToCopy;
-            
-            navigator.clipboard.writeText(decodedCode).then(() => {
-                // Mostrar feedback visual
-                const toast = document.createElement('div');
-                toast.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-2';
-                toast.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Código copiado!</span>';
-                document.body.appendChild(toast);
-                setTimeout(() => toast.remove(), 2000);
-            }).catch(err => {
-                console.error('Erro ao copiar:', err);
-            });
-        },
-        
-        getMethodColor(method) {
-            const colors = {
-                'GET': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-                'POST': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-                'PUT': 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
-                'DELETE': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    <script>
+        // Função Alpine.js para gerenciar estado da documentação
+        function apiDocData() {
+            return {
+                activeSection: 'intro',
+                activeEndpoint: 'contas_pagar',
+                activeMethod: 0,
+                activeLanguage: 'curl',
+                
+                scrollToSection(section) {
+                    this.activeSection = section;
+                    const element = document.getElementById(section);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                },
+                
+                copyCode(code) {
+                    let textToCopy = '';
+                    
+                    // Se code é um elemento DOM (usando $el)
+                    if (code && typeof code === 'object' && code.getAttribute) {
+                        const dataCode = code.getAttribute('data-code');
+                        if (dataCode) {
+                            textToCopy = dataCode;
+                        } else if (code.textContent) {
+                            textToCopy = code.textContent.trim();
+                        }
+                    } 
+                    // Se code é uma string simples
+                    else if (typeof code === 'string') {
+                        textToCopy = code;
+                    }
+                    // Se code é um elemento com textContent (referência)
+                    else if (code && code.textContent) {
+                        textToCopy = code.textContent.trim();
+                    }
+                    
+                    if (!textToCopy) {
+                        console.error('Nenhum texto para copiar');
+                        return;
+                    }
+                    
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        const toast = document.createElement('div');
+                        toast.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-2';
+                        toast.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Código copiado!</span>';
+                        document.body.appendChild(toast);
+                        setTimeout(() => toast.remove(), 2000);
+                    }).catch(err => {
+                        console.error('Erro ao copiar:', err);
+                    });
+                },
+                
+                getMethodColor(method) {
+                    const colors = {
+                        'GET': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+                        'POST': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+                        'PUT': 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+                        'DELETE': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+                    };
+                    return colors[method] || 'bg-gray-100 text-gray-800';
+                }
             };
-            return colors[method] || 'bg-gray-100 text-gray-800';
         }
-    }" class="min-h-screen">
+    </script>
+    
+    <div x-data="apiDocData()" class="min-h-screen">
         
         <!-- Header -->
         <header class="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
@@ -637,7 +658,8 @@ print(data)</code></pre>
                                             $exampleJson = json_encode($method['example'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                                             $exampleJsonEscaped = htmlspecialchars($exampleJson, ENT_QUOTES);
                                             ?>
-                                            <button @click="copyCode('<?= addslashes($exampleJson) ?>')" 
+                                            <button @click="copyCode($el)" 
+                                                    data-code="<?= htmlspecialchars($exampleJson, ENT_QUOTES) ?>"
                                                     class="absolute top-2 right-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
@@ -670,7 +692,8 @@ print(data)</code></pre>
                                             $curlExampleEscaped = htmlspecialchars($curlExample, ENT_QUOTES);
                                             ?>
                                             <div class="relative">
-                                                <button @click="copyCode('<?= addslashes($curlExample) ?>')" 
+                                                <button @click="copyCode($el)" 
+                                                        data-code="<?= htmlspecialchars($curlExample, ENT_QUOTES) ?>"
                                                         class="absolute top-2 right-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1 z-10">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
@@ -698,7 +721,8 @@ print(data)</code></pre>
                                             $responseJson = json_encode($method['response'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                                             $responseJsonEscaped = htmlspecialchars($responseJson, ENT_QUOTES);
                                             ?>
-                                            <button @click="copyCode('<?= addslashes($responseJson) ?>')" 
+                                            <button @click="copyCode($el)" 
+                                                    data-code="<?= htmlspecialchars($responseJson, ENT_QUOTES) ?>"
                                                     class="absolute top-2 right-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1 z-10">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
