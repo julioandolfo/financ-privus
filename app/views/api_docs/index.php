@@ -40,23 +40,28 @@
         },
         
         copyCode(code) {
-            // Decodificar HTML entities se necessário
+            // Se code já é uma string, usar diretamente
+            let textToCopy = code;
+            
+            // Se for um elemento HTML, pegar o texto
+            if (typeof code === 'object' && code.textContent) {
+                textToCopy = code.textContent;
+            }
+            
+            // Remover HTML entities se necessário
             const textarea = document.createElement('textarea');
-            textarea.innerHTML = code;
-            const decodedCode = textarea.value;
+            textarea.innerHTML = textToCopy;
+            const decodedCode = textarea.value || textToCopy;
             
             navigator.clipboard.writeText(decodedCode).then(() => {
                 // Mostrar feedback visual
                 const toast = document.createElement('div');
                 toast.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-2';
-                toast.innerHTML = `
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Código copiado!</span>
-                `;
+                toast.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Código copiado!</span>';
                 document.body.appendChild(toast);
                 setTimeout(() => toast.remove(), 2000);
+            }).catch(err => {
+                console.error('Erro ao copiar:', err);
             });
         },
         
@@ -486,6 +491,59 @@ print(data)</code></pre>
                 </section>
                 
                 <!-- Endpoints -->
+                <?php 
+                // Função auxiliar para renderizar campos do body (definida uma vez antes do loop)
+                if (!function_exists('renderBodyFields')) {
+                    function renderBodyFields($fields, $prefix = '') {
+                        if (!is_array($fields) || empty($fields)) {
+                            return;
+                        }
+                        
+                        foreach ($fields as $field => $details) {
+                            if (!is_array($details)) {
+                                // Se details não é array, tratar como string simples
+                                $details = ['type' => 'string', 'description' => $details];
+                            }
+                            
+                            $fieldName = $prefix . $field;
+                            ?>
+                            <tr class="<?= $prefix ? 'bg-blue-50 dark:bg-blue-900/20' : '' ?>">
+                                <td class="px-4 py-2 text-sm font-mono text-gray-900 dark:text-gray-100">
+                                    <?= $prefix ? '<span class="text-blue-600 dark:text-blue-400">└─</span> ' : '' ?>
+                                    <?= htmlspecialchars($fieldName) ?>
+                                    <?php if (isset($details['type']) && $details['type'] === 'array'): ?>
+                                        <span class="text-xs text-purple-600 dark:text-purple-400">[]</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="px-4 py-2 text-sm">
+                                    <span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">
+                                        <?= htmlspecialchars($details['type'] ?? 'string') ?>
+                                    </span>
+                                </td>
+                                <td class="px-4 py-2 text-sm">
+                                    <?php if (!empty($details['required'])): ?>
+                                        <span class="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded text-xs font-semibold">Sim</span>
+                                    <?php else: ?>
+                                        <span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded text-xs">Não</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                    <?= htmlspecialchars($details['description'] ?? '') ?>
+                                </td>
+                            </tr>
+                            <?php
+                            // Renderizar campos aninhados (fields ou items)
+                            if (isset($details['fields']) && is_array($details['fields']) && !empty($details['fields'])) {
+                                renderBodyFields($details['fields'], $fieldName . '.');
+                            }
+                            if (isset($details['items']) && is_array($details['items']) && !empty($details['items'])) {
+                                renderBodyFields($details['items'], $fieldName . '[].');
+                            }
+                        }
+                    }
+                }
+                ?>
+                
                 <?php foreach ($apiDoc['endpoints'] as $key => $endpoint): ?>
                     <section id="endpoint-<?= $key ?>" class="mb-16">
                         <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2"><?= htmlspecialchars($endpoint['name']) ?></h2>
@@ -497,7 +555,7 @@ print(data)</code></pre>
                                     <div class="flex items-center space-x-3">
                                         <span :class="getMethodColor('<?= $method['method'] ?>')" 
                                               class="px-3 py-1 rounded-lg font-semibold text-sm">
-                                            <?= $method['method'] ?>
+                                            <?= htmlspecialchars($method['method']) ?>
                                         </span>
                                         <code class="text-gray-900 dark:text-gray-100 font-mono text-sm">
                                             <?= htmlspecialchars($method['endpoint']) ?>
@@ -505,7 +563,7 @@ print(data)</code></pre>
                                     </div>
                                 </div>
                                 
-                                <p class="text-gray-700 dark:text-gray-300 mb-4"><?= htmlspecialchars($method['description']) ?></p>
+                                <p class="text-gray-700 dark:text-gray-300 mb-4"><?= htmlspecialchars($method['description'] ?? '') ?></p>
                                 
                                 <?php if (isset($method['params']) && !empty($method['params'])): ?>
                                     <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">Parâmetros</h4>
@@ -525,7 +583,7 @@ print(data)</code></pre>
                                                         <td class="px-4 py-2 text-sm font-mono text-gray-900 dark:text-gray-100"><?= htmlspecialchars($param['name']) ?></td>
                                                         <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400"><?= htmlspecialchars($param['type']) ?></td>
                                                         <td class="px-4 py-2 text-sm">
-                                                            <?php if ($param['required']): ?>
+                                                            <?php if (!empty($param['required'])): ?>
                                                                 <span class="text-red-600 dark:text-red-400 font-semibold">✓ Sim</span>
                                                             <?php else: ?>
                                                                 <span class="text-gray-500">Não</span>
@@ -557,47 +615,7 @@ print(data)</code></pre>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                                <?php 
-                                                function renderBodyFields($fields, $prefix = '') {
-                                                    foreach ($fields as $field => $details) {
-                                                        $fieldName = $prefix . $field;
-                                                        ?>
-                                                        <tr class="<?= $prefix ? 'bg-blue-50 dark:bg-blue-900/20' : '' ?>">
-                                                            <td class="px-4 py-2 text-sm font-mono text-gray-900 dark:text-gray-100">
-                                                                <?= $prefix ? '<span class="text-blue-600 dark:text-blue-400">└─</span> ' : '' ?>
-                                                                <?= htmlspecialchars($fieldName) ?>
-                                                                <?php if ($details['type'] === 'array'): ?>
-                                                                    <span class="text-xs text-purple-600 dark:text-purple-400">[]</span>
-                                                                <?php endif; ?>
-                                                            </td>
-                                                            <td class="px-4 py-2 text-sm">
-                                                                <span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">
-                                                                    <?= htmlspecialchars($details['type']) ?>
-                                                                </span>
-                                                            </td>
-                                                            <td class="px-4 py-2 text-sm">
-                                                                <?php if ($details['required']): ?>
-                                                                    <span class="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded text-xs font-semibold">Sim</span>
-                                                                <?php else: ?>
-                                                                    <span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded text-xs">Não</span>
-                                                                <?php endif; ?>
-                                                            </td>
-                                                            <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
-                                                                <?= htmlspecialchars($details['description'] ?? '') ?>
-                                                            </td>
-                                                        </tr>
-                                                        <?php
-                                                        // Renderizar campos aninhados (fields ou items)
-                                                        if (isset($details['fields']) && is_array($details['fields'])) {
-                                                            renderBodyFields($details['fields'], $fieldName . '.');
-                                                        }
-                                                        if (isset($details['items']) && is_array($details['items'])) {
-                                                            renderBodyFields($details['items'], $fieldName . '[].');
-                                                        }
-                                                    }
-                                                }
-                                                renderBodyFields($method['body']);
-                                                ?>
+                                                <?php renderBodyFields($method['body']); ?>
                                             </tbody>
                                         </table>
                                     </div>
@@ -615,7 +633,11 @@ print(data)</code></pre>
                                             Copie e cole este exemplo para testar a requisição. Ajuste os valores conforme necessário.
                                         </p>
                                         <div class="relative">
-                                            <button @click="copyCode('<?= htmlspecialchars(json_encode($method['example'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES) ?>')" 
+                                            <?php 
+                                            $exampleJson = json_encode($method['example'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                            $exampleJsonEscaped = htmlspecialchars($exampleJson, ENT_QUOTES);
+                                            ?>
+                                            <button @click="copyCode('<?= addslashes($exampleJson) ?>')" 
                                                     class="absolute top-2 right-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
@@ -623,7 +645,7 @@ print(data)</code></pre>
                                                 <span>Copiar</span>
                                             </button>
                                             <div class="bg-gray-900 rounded-lg p-4 overflow-x-auto">
-                                                <pre class="text-sm"><code class="language-json"><?= htmlspecialchars(json_encode($method['example'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></code></pre>
+                                                <pre class="text-sm"><code class="language-json"><?= $exampleJsonEscaped ?></code></pre>
                                             </div>
                                         </div>
                                         
@@ -636,16 +658,19 @@ print(data)</code></pre>
                                                 Exemplo cURL
                                             </h5>
                                             <?php 
+                                            $baseUrlSafe = $baseUrl ?? 'https://seu-dominio.com.br';
                                             $curlExample = "curl -X {$method['method']} \\\n";
-                                            $curlExample .= "  '{$baseUrl}{$method['endpoint']}' \\\n";
+                                            $curlExample .= "  '{$baseUrlSafe}{$method['endpoint']}' \\\n";
                                             $curlExample .= "  -H 'Authorization: Bearer SEU_TOKEN_AQUI' \\\n";
-                                            $curlExample .= "  -H 'Content-Type: application/json' \\\n";
-                                            if (in_array($method['method'], ['POST', 'PUT'])) {
-                                                $curlExample .= "  -d '" . json_encode($method['example'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "'";
+                                            $curlExample .= "  -H 'Content-Type: application/json'";
+                                            if (in_array($method['method'], ['POST', 'PUT']) && !empty($method['example'])) {
+                                                $jsonData = json_encode($method['example'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                                $curlExample .= " \\\n  -d '" . addslashes($jsonData) . "'";
                                             }
+                                            $curlExampleEscaped = htmlspecialchars($curlExample, ENT_QUOTES);
                                             ?>
                                             <div class="relative">
-                                                <button @click="copyCode(`<?= str_replace(['`', "\n"], ['\\`', "\\n"], $curlExample) ?>`)" 
+                                                <button @click="copyCode('<?= addslashes($curlExample) ?>')" 
                                                         class="absolute top-2 right-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1 z-10">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
@@ -653,7 +678,7 @@ print(data)</code></pre>
                                                     <span>Copiar</span>
                                                 </button>
                                                 <div class="bg-gray-900 rounded-lg p-4 overflow-x-auto">
-                                                    <pre class="text-sm"><code class="language-bash"><?= htmlspecialchars($curlExample) ?></code></pre>
+                                                    <pre class="text-sm"><code class="language-bash"><?= $curlExampleEscaped ?></code></pre>
                                                 </div>
                                             </div>
                                         </div>
@@ -669,7 +694,11 @@ print(data)</code></pre>
                                             Resposta de Sucesso
                                         </h4>
                                         <div class="relative">
-                                            <button @click="copyCode('<?= htmlspecialchars(json_encode($method['response'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES) ?>')" 
+                                            <?php 
+                                            $responseJson = json_encode($method['response'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                                            $responseJsonEscaped = htmlspecialchars($responseJson, ENT_QUOTES);
+                                            ?>
+                                            <button @click="copyCode('<?= addslashes($responseJson) ?>')" 
                                                     class="absolute top-2 right-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1 z-10">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
@@ -677,7 +706,7 @@ print(data)</code></pre>
                                                 <span>Copiar</span>
                                             </button>
                                             <div class="bg-gray-900 rounded-lg p-4 overflow-x-auto">
-                                                <pre class="text-sm"><code class="language-json"><?= htmlspecialchars(json_encode($method['response'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></code></pre>
+                                                <pre class="text-sm"><code class="language-json"><?= $responseJsonEscaped ?></code></pre>
                                             </div>
                                         </div>
                                     </div>
