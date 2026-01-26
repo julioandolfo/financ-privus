@@ -101,8 +101,11 @@ class UsuarioController extends Controller
             
             if (!empty($data['permissoes']) && is_array($data['permissoes'])) {
                 foreach ($data['permissoes'] as $permissaoStr) {
-                    if (strpos($permissaoStr, '_') !== false) {
-                        list($modulo, $acao) = explode('_', $permissaoStr, 2);
+                    // A ação é sempre a ÚLTIMA parte após o último underscore
+                    $lastUnderscorePos = strrpos($permissaoStr, '_');
+                    if ($lastUnderscorePos !== false) {
+                        $modulo = substr($permissaoStr, 0, $lastUnderscorePos);
+                        $acao = substr($permissaoStr, $lastUnderscorePos + 1);
                         $permissoes[] = [
                             'modulo' => $modulo,
                             'acao' => $acao
@@ -269,8 +272,12 @@ class UsuarioController extends Controller
                 
                 foreach ($data['permissoes'] as $permissaoStr) {
                     // Validar formato da permissão
-                    if (strpos($permissaoStr, '_') !== false) {
-                        list($modulo, $acao) = explode('_', $permissaoStr, 2);
+                    // Formato: modulo_acao (ex: centros_custo_visualizar)
+                    // A ação é sempre a ÚLTIMA parte após o último underscore
+                    $lastUnderscorePos = strrpos($permissaoStr, '_');
+                    if ($lastUnderscorePos !== false) {
+                        $modulo = substr($permissaoStr, 0, $lastUnderscorePos);
+                        $acao = substr($permissaoStr, $lastUnderscorePos + 1);
                         $permissoes[] = [
                             'modulo' => $modulo,
                             'acao' => $acao
