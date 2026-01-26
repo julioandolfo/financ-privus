@@ -7,6 +7,7 @@ use App\Core\Response;
 use App\Models\Usuario;
 use App\Models\Empresa;
 use App\Models\Permissao;
+use App\Models\LogSistema;
 
 class UsuarioController extends Controller
 {
@@ -247,12 +248,25 @@ class UsuarioController extends Controller
             // Atualiza usuário
             $this->usuarioModel->update($id, $data);
             
+            // LOG: Início do processamento de permissões
+            LogSistema::debug('UsuarioController', 'update', 'Iniciando processamento de permissões', [
+                'usuario_id' => $id,
+                'data_permissoes_raw' => $data['permissoes'] ?? 'NÃO EXISTE NO POST',
+                'data_empresa_id' => $data['empresa_id'] ?? 'NÃO EXISTE',
+                'usuario_empresa_id' => $usuario['empresa_id'] ?? 'NULL'
+            ]);
+            
             // SEMPRE processar permissões (mesmo se vazio, para permitir remover todas)
             $permissaoModel = new Permissao();
             $permissoes = [];
             
             // Processar permissões se existirem
             if (!empty($data['permissoes']) && is_array($data['permissoes'])) {
+                LogSistema::debug('UsuarioController', 'update', 'Permissões encontradas no POST', [
+                    'total_permissoes' => count($data['permissoes']),
+                    'permissoes_raw' => $data['permissoes']
+                ]);
+                
                 foreach ($data['permissoes'] as $permissaoStr) {
                     // Validar formato da permissão
                     if (strpos($permissaoStr, '_') !== false) {
@@ -263,6 +277,17 @@ class UsuarioController extends Controller
                         ];
                     }
                 }
+                
+                LogSistema::debug('UsuarioController', 'update', 'Permissões processadas', [
+                    'total_processadas' => count($permissoes),
+                    'permissoes' => $permissoes
+                ]);
+            } else {
+                LogSistema::warning('UsuarioController', 'update', 'Nenhuma permissão no POST', [
+                    'data_keys' => array_keys($data),
+                    'permissoes_isset' => isset($data['permissoes']),
+                    'permissoes_empty' => empty($data['permissoes'])
+                ]);
             }
             
             // Determinar empresa_id para as permissões
@@ -273,8 +298,19 @@ class UsuarioController extends Controller
                 $empresaId = (int)$usuario['empresa_id'];
             }
             
+            LogSistema::debug('UsuarioController', 'update', 'Chamando saveBatch', [
+                'usuario_id' => $id,
+                'empresa_id_final' => $empresaId,
+                'total_permissoes' => count($permissoes)
+            ]);
+            
             // Salvar permissões (mesmo se vazio, isso vai limpar as permissões existentes)
-            $permissaoModel->saveBatch($id, $permissoes, $empresaId);
+            $resultado = $permissaoModel->saveBatch($id, $permissoes, $empresaId);
+            
+            LogSistema::info('UsuarioController', 'update', 'Resultado saveBatch', [
+                'resultado' => $resultado,
+                'usuario_id' => $id
+            ]);
             
             $_SESSION['success'] = 'Usuário atualizado com sucesso!';
             $response->redirect('/usuarios');

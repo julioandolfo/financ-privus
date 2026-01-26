@@ -349,5 +349,9 @@ return [
     'POST /transacoes-pendentes/{id}/aprovar' => ['handler' => 'TransacaoPendenteController@aprovar', 'middleware' => ['AuthMiddleware']],
     'POST /transacoes-pendentes/{id}/ignorar' => ['handler' => 'TransacaoPendenteController@ignorar', 'middleware' => ['AuthMiddleware']],
     'POST /transacoes-pendentes/aprovar-lote' => ['handler' => 'TransacaoPendenteController@aprovarLote', 'middleware' => ['AuthMiddleware']],
+    
+    // Logs do Sistema (protegido - apenas admin)
+    'GET /logs' => ['handler' => 'LogController@index', 'middleware' => ['AuthMiddleware']],
+    'POST /logs/limpar' => ['handler' => 'LogController@limpar', 'middleware' => ['AuthMiddleware']],
 ];
 

@@ -10,6 +10,14 @@ use PDO;
  */
 class Permissao extends Model
 {
+    // Importar LogSistema para debug
+    private static function logDebug($acao, $mensagem, $dados = null)
+    {
+        if (class_exists('App\Models\LogSistema')) {
+            \App\Models\LogSistema::debug('Permissao', $acao, $mensagem, $dados);
+        }
+    }
+
     protected $table = 'permissoes';
     protected $db;
     
@@ -159,23 +167,45 @@ class Permissao extends Model
      */
     public function saveBatch($usuarioId, $permissoes, $empresaId = null)
     {
+        self::logDebug('saveBatch', 'INÍCIO - Parâmetros recebidos', [
+            'usuario_id' => $usuarioId,
+            'empresa_id_recebido' => $empresaId,
+            'total_permissoes' => count($permissoes),
+            'permissoes' => $permissoes
+        ]);
+        
         // Validar empresa_id se fornecido
         if ($empresaId !== null && !empty($empresaId)) {
             // Verificar se a empresa existe
             $stmtCheck = $this->db->prepare("SELECT id FROM empresas WHERE id = :id LIMIT 1");
             $stmtCheck->execute(['id' => $empresaId]);
-            if (!$stmtCheck->fetch()) {
+            $empresaExiste = $stmtCheck->fetch();
+            
+            self::logDebug('saveBatch', 'Verificando empresa', [
+                'empresa_id' => $empresaId,
+                'existe' => $empresaExiste ? 'SIM' : 'NÃO'
+            ]);
+            
+            if (!$empresaExiste) {
                 // Empresa não existe, usar NULL (permissões globais)
-                error_log("AVISO: empresa_id {$empresaId} não existe, usando permissões globais (NULL)");
+                self::logDebug('saveBatch', 'Empresa não existe, usando NULL', ['empresa_id_original' => $empresaId]);
                 $empresaId = null;
             }
         } else {
             // Se empresaId for 0, string vazia ou false, considerar como NULL
+            self::logDebug('saveBatch', 'empresa_id vazio, usando NULL', ['empresa_id_original' => $empresaId]);
             $empresaId = null;
         }
         
         // Remove permissões existentes
-        $this->deleteByUsuario($usuarioId, $empresaId);
+        self::logDebug('saveBatch', 'Removendo permissões existentes', [
+            'usuario_id' => $usuarioId,
+            'empresa_id' => $empresaId
+        ]);
+        
+        $deleteResult = $this->deleteByUsuario($usuarioId, $empresaId);
+        
+        self::logDebug('saveBatch', 'Resultado da remoção', ['sucesso' => $deleteResult]);
         
         // Insere novas permissões
         if (!empty($permissoes)) {
@@ -190,13 +220,36 @@ class Permissao extends Model
                 $params["usuario_id_{$index}"] = $usuarioId;
                 $params["modulo_{$index}"] = $permissao['modulo'];
                 $params["acao_{$index}"] = $permissao['acao'];
-                $params["empresa_id_{$index}"] = $empresaId; // Agora é NULL se inválido
+                $params["empresa_id_{$index}"] = $empresaId;
                 $index++;
             }
             
             $sql .= implode(', ', $values);
-            $stmt = $this->db->prepare($sql);
-            return $stmt->execute($params);
+            
+            self::logDebug('saveBatch', 'SQL de inserção', [
+                'sql' => $sql,
+                'params' => $params
+            ]);
+            
+            try {
+                $stmt = $this->db->prepare($sql);
+                $resultado = $stmt->execute($params);
+                
+                self::logDebug('saveBatch', 'Resultado da inserção', [
+                    'sucesso' => $resultado,
+                    'rows_affected' => $stmt->rowCount()
+                ]);
+                
+                return $resultado;
+            } catch (\Exception $e) {
+                self::logDebug('saveBatch', 'ERRO na inserção', [
+                    'erro' => $e->getMessage(),
+                    'sql' => $sql
+                ]);
+                throw $e;
+            }
+        } else {
+            self::logDebug('saveBatch', 'Nenhuma permissão para inserir', []);
         }
         
         return true;
@@ -207,7 +260,18 @@ class Permissao extends Model
      */
     public function getFormattedPermissions($usuarioId, $empresaId = null)
     {
+        self::logDebug('getFormattedPermissions', 'Buscando permissões', [
+            'usuario_id' => $usuarioId,
+            'empresa_id' => $empresaId
+        ]);
+        
         $permissoes = $this->findByUsuarioGrouped($usuarioId, $empresaId);
+        
+        self::logDebug('getFormattedPermissions', 'Permissões encontradas', [
+            'total_modulos' => count($permissoes),
+            'permissoes' => $permissoes
+        ]);
+        
         $formatted = [];
         
         foreach (self::MODULOS as $moduloKey => $moduloNome) {
