@@ -151,6 +151,21 @@ class Permissao extends Model
      */
     public function saveBatch($usuarioId, $permissoes, $empresaId = null)
     {
+        // Validar empresa_id se fornecido
+        if ($empresaId !== null && !empty($empresaId)) {
+            // Verificar se a empresa existe
+            $stmtCheck = $this->db->prepare("SELECT id FROM empresas WHERE id = :id LIMIT 1");
+            $stmtCheck->execute(['id' => $empresaId]);
+            if (!$stmtCheck->fetch()) {
+                // Empresa não existe, usar NULL (permissões globais)
+                error_log("AVISO: empresa_id {$empresaId} não existe, usando permissões globais (NULL)");
+                $empresaId = null;
+            }
+        } else {
+            // Se empresaId for 0, string vazia ou false, considerar como NULL
+            $empresaId = null;
+        }
+        
         // Remove permissões existentes
         $this->deleteByUsuario($usuarioId, $empresaId);
         
@@ -167,7 +182,7 @@ class Permissao extends Model
                 $params["usuario_id_{$index}"] = $usuarioId;
                 $params["modulo_{$index}"] = $permissao['modulo'];
                 $params["acao_{$index}"] = $permissao['acao'];
-                $params["empresa_id_{$index}"] = $empresaId;
+                $params["empresa_id_{$index}"] = $empresaId; // Agora é NULL se inválido
                 $index++;
             }
             

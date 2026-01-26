@@ -107,7 +107,12 @@ class UsuarioController extends Controller
                     ];
                 }
                 
-                $empresaId = !empty($data['empresa_id']) ? (int)$data['empresa_id'] : null;
+                // Validar empresa_id: só passar se for um número válido e maior que 0
+                $empresaId = null;
+                if (!empty($data['empresa_id']) && is_numeric($data['empresa_id']) && (int)$data['empresa_id'] > 0) {
+                    $empresaId = (int)$data['empresa_id'];
+                }
+                
                 $permissaoModel->saveBatch($id, $permissoes, $empresaId);
             }
             
@@ -247,7 +252,15 @@ class UsuarioController extends Controller
                     ];
                 }
                 
-                $permissaoModel->saveBatch($id, $permissoes, $data['empresa_id'] ?? $usuario['empresa_id'] ?? null);
+                // Validar empresa_id: só passar se for um número válido e maior que 0
+                $empresaId = null;
+                if (!empty($data['empresa_id']) && is_numeric($data['empresa_id']) && (int)$data['empresa_id'] > 0) {
+                    $empresaId = (int)$data['empresa_id'];
+                } elseif (!empty($usuario['empresa_id']) && is_numeric($usuario['empresa_id']) && (int)$usuario['empresa_id'] > 0) {
+                    $empresaId = (int)$usuario['empresa_id'];
+                }
+                
+                $permissaoModel->saveBatch($id, $permissoes, $empresaId);
             }
             
             $_SESSION['success'] = 'Usuário atualizado com sucesso!';
