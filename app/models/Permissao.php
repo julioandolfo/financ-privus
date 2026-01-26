@@ -55,12 +55,18 @@ class Permissao extends Model
      */
     public function findByUsuario($usuarioId, $empresaId = null)
     {
+        // Busca todas as permissões do usuário (globais + específicas da empresa)
         $sql = "SELECT * FROM {$this->table} WHERE usuario_id = :usuario_id";
         $params = ['usuario_id' => $usuarioId];
         
-        if ($empresaId !== null) {
+        // Se empresa_id foi fornecido, busca permissões dessa empresa OU globais (NULL)
+        // Se não foi fornecido, busca apenas permissões globais (NULL)
+        if ($empresaId !== null && !empty($empresaId)) {
             $sql .= " AND (empresa_id = :empresa_id OR empresa_id IS NULL)";
             $params['empresa_id'] = $empresaId;
+        } else {
+            // Busca permissões globais (sem empresa) ou todas
+            $sql .= " AND (empresa_id IS NULL OR empresa_id IS NOT NULL)"; // Busca todas
         }
         
         $stmt = $this->db->prepare($sql);
@@ -137,10 +143,12 @@ class Permissao extends Model
         $sql = "DELETE FROM {$this->table} WHERE usuario_id = :usuario_id";
         $params = ['usuario_id' => $usuarioId];
         
-        if ($empresaId !== null) {
-            $sql .= " AND empresa_id = :empresa_id";
+        if ($empresaId !== null && !empty($empresaId)) {
+            // Remove permissões específicas dessa empresa E as globais (NULL)
+            $sql .= " AND (empresa_id = :empresa_id OR empresa_id IS NULL)";
             $params['empresa_id'] = $empresaId;
         }
+        // Se empresa_id for null/vazio, remove TODAS as permissões do usuário
         
         $stmt = $this->db->prepare($sql);
         return $stmt->execute($params);

@@ -94,25 +94,30 @@ class UsuarioController extends Controller
             // Cria usuário (o Model já faz hash da senha)
             $id = $this->usuarioModel->create($data);
             
-            // Salva permissões se fornecidas
+            // SEMPRE processar permissões (mesmo se vazio)
+            $permissaoModel = new Permissao();
+            $permissoes = [];
+            
             if (!empty($data['permissoes']) && is_array($data['permissoes'])) {
-                $permissaoModel = new Permissao();
-                $permissoes = [];
-                
                 foreach ($data['permissoes'] as $permissaoStr) {
-                    list($modulo, $acao) = explode('_', $permissaoStr, 2);
-                    $permissoes[] = [
-                        'modulo' => $modulo,
-                        'acao' => $acao
-                    ];
+                    if (strpos($permissaoStr, '_') !== false) {
+                        list($modulo, $acao) = explode('_', $permissaoStr, 2);
+                        $permissoes[] = [
+                            'modulo' => $modulo,
+                            'acao' => $acao
+                        ];
+                    }
                 }
-                
-                // Validar empresa_id: só passar se for um número válido e maior que 0
-                $empresaId = null;
-                if (!empty($data['empresa_id']) && is_numeric($data['empresa_id']) && (int)$data['empresa_id'] > 0) {
-                    $empresaId = (int)$data['empresa_id'];
-                }
-                
+            }
+            
+            // Determinar empresa_id para as permissões
+            $empresaId = null;
+            if (!empty($data['empresa_id']) && is_numeric($data['empresa_id']) && (int)$data['empresa_id'] > 0) {
+                $empresaId = (int)$data['empresa_id'];
+            }
+            
+            // Salvar permissões
+            if (!empty($permissoes)) {
                 $permissaoModel->saveBatch($id, $permissoes, $empresaId);
             }
             
@@ -174,7 +179,10 @@ class UsuarioController extends Controller
             
             $empresas = $this->empresaModel->findAll();
             $permissaoModel = new Permissao();
-            $permissoesFormatadas = $permissaoModel->getFormattedPermissions($id, $usuario['empresa_id']);
+            
+            // Buscar permissões - usar empresa_id do usuário ou null para buscar todas
+            $empresaIdParaPermissoes = !empty($usuario['empresa_id']) ? $usuario['empresa_id'] : null;
+            $permissoesFormatadas = $permissaoModel->getFormattedPermissions($id, $empresaIdParaPermissoes);
             
             return $this->render('usuarios/edit', [
                 'title' => 'Editar Usuário',
@@ -239,29 +247,34 @@ class UsuarioController extends Controller
             // Atualiza usuário
             $this->usuarioModel->update($id, $data);
             
-            // Salva permissões se fornecidas
+            // SEMPRE processar permissões (mesmo se vazio, para permitir remover todas)
+            $permissaoModel = new Permissao();
+            $permissoes = [];
+            
+            // Processar permissões se existirem
             if (!empty($data['permissoes']) && is_array($data['permissoes'])) {
-                $permissaoModel = new Permissao();
-                $permissoes = [];
-                
                 foreach ($data['permissoes'] as $permissaoStr) {
-                    list($modulo, $acao) = explode('_', $permissaoStr, 2);
-                    $permissoes[] = [
-                        'modulo' => $modulo,
-                        'acao' => $acao
-                    ];
+                    // Validar formato da permissão
+                    if (strpos($permissaoStr, '_') !== false) {
+                        list($modulo, $acao) = explode('_', $permissaoStr, 2);
+                        $permissoes[] = [
+                            'modulo' => $modulo,
+                            'acao' => $acao
+                        ];
+                    }
                 }
-                
-                // Validar empresa_id: só passar se for um número válido e maior que 0
-                $empresaId = null;
-                if (!empty($data['empresa_id']) && is_numeric($data['empresa_id']) && (int)$data['empresa_id'] > 0) {
-                    $empresaId = (int)$data['empresa_id'];
-                } elseif (!empty($usuario['empresa_id']) && is_numeric($usuario['empresa_id']) && (int)$usuario['empresa_id'] > 0) {
-                    $empresaId = (int)$usuario['empresa_id'];
-                }
-                
-                $permissaoModel->saveBatch($id, $permissoes, $empresaId);
             }
+            
+            // Determinar empresa_id para as permissões
+            $empresaId = null;
+            if (!empty($data['empresa_id']) && is_numeric($data['empresa_id']) && (int)$data['empresa_id'] > 0) {
+                $empresaId = (int)$data['empresa_id'];
+            } elseif (!empty($usuario['empresa_id']) && is_numeric($usuario['empresa_id']) && (int)$usuario['empresa_id'] > 0) {
+                $empresaId = (int)$usuario['empresa_id'];
+            }
+            
+            // Salvar permissões (mesmo se vazio, isso vai limpar as permissões existentes)
+            $permissaoModel->saveBatch($id, $permissoes, $empresaId);
             
             $_SESSION['success'] = 'Usuário atualizado com sucesso!';
             $response->redirect('/usuarios');
