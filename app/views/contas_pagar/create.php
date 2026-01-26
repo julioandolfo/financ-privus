@@ -41,14 +41,9 @@ $old = $this->session->get('old') ?? [];
                     <!-- Fornecedor -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fornecedor</label>
-                        <select name="fornecedor_id"
+                        <select name="fornecedor_id" id="fornecedor_id"
                                 class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
-                            <option value="">Selecione...</option>
-                            <?php foreach ($fornecedores as $fornecedor): ?>
-                                <option value="<?= $fornecedor['id'] ?>" <?= ($old['fornecedor_id'] ?? '') == $fornecedor['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($fornecedor['nome_razao_social']) ?>
-                                </option>
-                            <?php endforeach; ?>
+                            <option value="">Selecione uma empresa primeiro...</option>
                         </select>
                     </div>
 
@@ -335,11 +330,32 @@ function contaPagarForm() {
             } catch (error) {
                 console.error('Erro ao carregar centros de custo:', error);
             }
+            
+            // Carregar fornecedores
+            try {
+                const respFornecedores = await fetch(`/fornecedores?ajax=1&empresa_id=${empresaId}`);
+                const dataFornecedores = await respFornecedores.json();
+                
+                const selectFornecedor = document.getElementById('fornecedor_id');
+                selectFornecedor.innerHTML = '<option value="">Selecione...</option>';
+                
+                if (dataFornecedores.success && dataFornecedores.fornecedores) {
+                    dataFornecedores.fornecedores.forEach(fornecedor => {
+                        const option = document.createElement('option');
+                        option.value = fornecedor.id;
+                        option.textContent = fornecedor.nome_razao_social;
+                        selectFornecedor.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Erro ao carregar fornecedores:', error);
+            }
         },
         
         limparSelects() {
             document.getElementById('categoria_id').innerHTML = '<option value="">Selecione uma empresa primeiro...</option>';
             document.getElementById('centro_custo_id').innerHTML = '<option value="">Selecione uma empresa primeiro...</option>';
+            document.getElementById('fornecedor_id').innerHTML = '<option value="">Selecione uma empresa primeiro...</option>';
         }
     }
 }

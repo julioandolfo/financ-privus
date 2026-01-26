@@ -16,13 +16,30 @@ class FornecedorController extends Controller
     {
         try {
             $this->fornecedorModel = new Fornecedor();
-            $fornecedores = $this->fornecedorModel->findAll();
+            $empresaId = $request->get('empresa_id');
+            $ajax = $request->get('ajax');
+            
+            $fornecedores = $this->fornecedorModel->findAll($empresaId);
+            
+            // Se for requisição AJAX, retorna JSON
+            if ($ajax) {
+                return $response->json([
+                    'success' => true,
+                    'fornecedores' => $fornecedores
+                ]);
+            }
             
             return $this->render('fornecedores/index', [
                 'title' => 'Gerenciar Fornecedores',
                 'fornecedores' => $fornecedores
             ]);
         } catch (\Exception $e) {
+            if ($request->get('ajax')) {
+                return $response->json([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]);
+            }
             $_SESSION['error'] = 'Erro ao carregar fornecedores: ' . $e->getMessage();
             $response->redirect('/');
         }
