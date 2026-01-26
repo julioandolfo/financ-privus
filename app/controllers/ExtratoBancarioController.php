@@ -199,13 +199,13 @@ class ExtratoBancarioController extends Controller
         $empresaId = $_SESSION['extrato_empresa_id'] ?? null;
         $arquivoNome = $_SESSION['extrato_arquivo_nome'] ?? 'extrato';
         
-        // Buscar dados para dropdowns
+        // Buscar dados para dropdowns - todos filtrados pela empresa selecionada
         $empresa = $this->empresaModel->findById($empresaId);
         $categorias = $this->categoriaModel->findAll($empresaId, 'despesa');
         $centrosCusto = $this->centroCustoModel->findAll($empresaId);
         $fornecedores = $this->fornecedorModel->findAll($empresaId);
         $contasBancarias = $this->contaBancariaModel->findAll($empresaId);
-        $formasPagamento = $this->formaPagamentoModel->findAll();
+        $formasPagamento = $this->formaPagamentoModel->findAll($empresaId);
         
         // Buscar todas as empresas do usuário para o rateio
         $usuarioModel = new \App\Models\Usuario();

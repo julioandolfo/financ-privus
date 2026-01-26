@@ -3,6 +3,28 @@ $title = 'Revisar Transações do Extrato';
 $empresasJson = json_encode($empresas ?? []);
 ?>
 
+<style>
+/* Fix Tom Select dropdown z-index e tamanho */
+.ts-wrapper {
+    min-width: 200px !important;
+}
+.ts-wrapper .ts-dropdown {
+    z-index: 9999 !important;
+    position: absolute !important;
+}
+.ts-wrapper .ts-control {
+    min-height: 42px !important;
+    padding: 8px 12px !important;
+}
+.ts-wrapper .ts-control input {
+    min-width: 100px !important;
+}
+/* Garantir que cards com selects abertos fiquem por cima */
+.card-extrato:focus-within {
+    z-index: 9000 !important;
+}
+</style>
+
 <div class="max-w-7xl mx-auto" x-data="extratoRevisarForm()">
     <!-- Header -->
     <div class="mb-6">
@@ -31,15 +53,18 @@ $empresasJson = json_encode($empresas ?? []);
                 <?php 
                 $padrao = $transacao['padrao'] ?? null;
                 $temPadrao = !empty($padrao);
+                $zIndex = 1000 - $index; // Z-index decrescente para cada card
                 ?>
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+                <div class="card-extrato bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-visible relative"
+                     style="z-index: <?= $zIndex ?>;"
                      x-data="{ expanded: false, temRateio: <?= ($padrao && $padrao['tem_rateio']) ? 'true' : 'false' ?>, rateios: [] }">
                     
                     <!-- Linha Principal -->
                     <div class="p-4">
-                        <div class="flex items-start gap-4">
+                        <!-- Linha Superior: Checkbox + Informações + Valor + Ações -->
+                        <div class="flex items-start gap-3 mb-3">
                             <!-- Checkbox -->
-                            <div class="pt-2">
+                            <div class="pt-1">
                                 <input type="checkbox" 
                                        name="transacoes[<?= $index ?>][selecionada]" 
                                        value="1" 
@@ -48,146 +73,156 @@ $empresasJson = json_encode($empresas ?? []);
                                        @change="updateSelectedCount()">
                             </div>
                             
-                            <!-- Info da Transação -->
-                            <div class="flex-1 grid grid-cols-1 md:grid-cols-6 gap-4">
-                                <!-- Data e Descrição -->
-                                <div class="md:col-span-2">
-                                    <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                        <span class="font-medium"><?= date('d/m/Y', strtotime($transacao['data'])) ?></span>
-                                        <?php if (!empty($transacao['metodo_pagamento'])): ?>
-                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium
-                                                <?php 
-                                                $metodo = $transacao['metodo_pagamento'];
-                                                if ($metodo === 'PIX') echo 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400';
-                                                elseif ($metodo === 'Boleto') echo 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400';
-                                                elseif ($metodo === 'Tarifa Bancária' || $metodo === 'IOF' || $metodo === 'Juros') echo 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400';
-                                                else echo 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
-                                                ?>">
-                                                <?= htmlspecialchars($metodo) ?>
-                                            </span>
-                                        <?php endif; ?>
-                                        <?php if ($temPadrao): ?>
-                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400 flex items-center gap-1">
-                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                                </svg>
-                                                Padrão
-                                                <?php 
-                                                $tipoPadraoEncontrado = $transacao['tipo_padrao_encontrado'] ?? null;
-                                                if ($tipoPadraoEncontrado === 'cnpj_cpf') echo '(CNPJ)';
-                                                elseif ($tipoPadraoEncontrado === 'nome') echo '(Beneficiário)';
-                                                elseif ($tipoPadraoEncontrado === 'memo') echo '(Descrição)';
-                                                ?>
-                                            </span>
-                                        <?php endif; ?>
-                                    </div>
-                                    
-                                    <!-- Descrição principal (MEMO) -->
-                                    <div class="font-medium text-gray-900 dark:text-gray-100 mt-1">
-                                        <?= htmlspecialchars($transacao['memo'] ?? $transacao['descricao_curta'] ?? '') ?>
-                                    </div>
-                                    
-                                    <!-- Nome/Beneficiário -->
-                                    <?php if (!empty($transacao['nome'])): ?>
-                                        <div class="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
-                                            <span class="font-medium">→</span> <?= htmlspecialchars($transacao['nome']) ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    
-                                    <!-- CNPJ/CPF se identificado -->
-                                    <?php if (!empty($transacao['cnpj_cpf'])): ?>
-                                        <div class="text-xs text-gray-500 dark:text-gray-500 mt-0.5 font-mono">
-                                            <?php 
-                                            $doc = $transacao['cnpj_cpf'];
-                                            if (strlen($doc) === 14) {
-                                                echo substr($doc, 0, 2) . '.' . substr($doc, 2, 3) . '.' . substr($doc, 5, 3) . '/' . substr($doc, 8, 4) . '-' . substr($doc, 12, 2);
-                                            } elseif (strlen($doc) === 11) {
-                                                echo substr($doc, 0, 3) . '.' . substr($doc, 3, 3) . '.' . substr($doc, 6, 3) . '-' . substr($doc, 9, 2);
-                                            } else {
-                                                echo $doc;
-                                            }
-                                            ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    
-                                    <!-- Referência/Documento -->
-                                    <?php if (!empty($transacao['numero_documento'])): ?>
-                                        <div class="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-                                            Doc: <?= htmlspecialchars($transacao['numero_documento']) ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    
-                                    <div class="text-lg font-bold text-red-600 dark:text-red-400 mt-2">
-                                        R$ <?= number_format($transacao['valor'], 2, ',', '.') ?>
-                                    </div>
-                                    <input type="hidden" name="transacoes[<?= $index ?>][empresa_id]" value="<?= $empresaId ?>">
-                                </div>
-                                
-                                <!-- Categoria -->
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Categoria *</label>
-                                    <select name="transacoes[<?= $index ?>][categoria_id]" 
-                                            id="categoria_<?= $index ?>"
-                                            required
-                                            data-placeholder="Selecione..."
-                                            class="select-search w-full">
-                                        <option value="">Selecione...</option>
-                                        <?php foreach ($categorias as $categoria): ?>
-                                            <option value="<?= $categoria['id'] ?>" 
-                                                    <?= ($padrao && $padrao['categoria_id'] == $categoria['id']) ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($categoria['nome']) ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                
-                                <!-- Fornecedor -->
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Fornecedor</label>
-                                    <select name="transacoes[<?= $index ?>][fornecedor_id]"
-                                            id="fornecedor_<?= $index ?>"
-                                            data-placeholder="Selecione..."
-                                            class="select-search w-full">
-                                        <option value="">Selecione...</option>
-                                        <?php foreach ($fornecedores as $fornecedor): ?>
-                                            <option value="<?= $fornecedor['id'] ?>" 
-                                                    <?= ($padrao && $padrao['fornecedor_id'] == $fornecedor['id']) ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($fornecedor['nome_razao_social']) ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                
-                                <!-- Vencimento -->
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vencimento *</label>
-                                    <input type="date" 
-                                           name="transacoes[<?= $index ?>][data_vencimento]" 
-                                           value="<?= $transacao['data'] ?>"
-                                           required
-                                           class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                                </div>
-                                
-                                <!-- Ações -->
-                                <div class="flex items-end gap-2">
-                                    <button type="button" 
-                                            @click="expanded = !expanded"
-                                            class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1 transition-all"
-                                            :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300': expanded }">
-                                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': expanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            <!-- Data e Badges -->
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                                    <?= date('d/m/Y', strtotime($transacao['data'])) ?>
+                                </span>
+                                <?php if (!empty($transacao['metodo_pagamento'])): ?>
+                                    <span class="px-2 py-1 rounded text-xs font-medium
+                                        <?php 
+                                        $metodo = $transacao['metodo_pagamento'];
+                                        if ($metodo === 'PIX') echo 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400';
+                                        elseif ($metodo === 'Boleto') echo 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400';
+                                        elseif ($metodo === 'Tarifa Bancária' || $metodo === 'IOF' || $metodo === 'Juros') echo 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400';
+                                        else echo 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+                                        ?>">
+                                        <?= htmlspecialchars($metodo) ?>
+                                    </span>
+                                <?php endif; ?>
+                                <?php if ($temPadrao): ?>
+                                    <span class="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400 flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                         </svg>
-                                        <span x-text="expanded ? 'Menos' : 'Mais'"></span>
-                                    </button>
-                                    <button type="button" 
-                                            @click="excluirLinha(<?= $index ?>)"
-                                            class="px-3 py-2 text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50"
-                                            title="Excluir linha">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                        </svg>
-                                    </button>
+                                        Padrão
+                                        <?php 
+                                        $tipoPadraoEncontrado = $transacao['tipo_padrao_encontrado'] ?? null;
+                                        if ($tipoPadraoEncontrado === 'cnpj_cpf') echo '(CNPJ)';
+                                        elseif ($tipoPadraoEncontrado === 'nome') echo '(Beneficiário)';
+                                        elseif ($tipoPadraoEncontrado === 'memo') echo '(Descrição)';
+                                        ?>
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                            
+                            <!-- Espaço flexível -->
+                            <div class="flex-1"></div>
+                            
+                            <!-- Valor -->
+                            <div class="text-xl font-bold text-red-600 dark:text-red-400 whitespace-nowrap">
+                                R$ <?= number_format($transacao['valor'], 2, ',', '.') ?>
+                            </div>
+                            
+                            <!-- Ações -->
+                            <div class="flex items-center gap-2">
+                                <button type="button" 
+                                        @click="expanded = !expanded"
+                                        class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1 transition-all"
+                                        :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300': expanded }">
+                                    <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': expanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                    <span x-text="expanded ? 'Menos' : 'Mais'"></span>
+                                </button>
+                                <button type="button" 
+                                        @click="excluirLinha(<?= $index ?>)"
+                                        class="px-3 py-2 text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50"
+                                        title="Excluir linha">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Linha de Descrição -->
+                        <div class="ml-8 mb-4 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border-l-4 border-blue-500">
+                            <!-- Descrição principal (MEMO) -->
+                            <div class="font-medium text-gray-900 dark:text-gray-100">
+                                <?= htmlspecialchars($transacao['memo'] ?? $transacao['descricao_curta'] ?? $transacao['descricao'] ?? '') ?>
+                            </div>
+                            
+                            <!-- Nome/Beneficiário -->
+                            <?php if (!empty($transacao['nome'])): ?>
+                                <div class="text-sm text-gray-600 dark:text-gray-400 mt-1 flex items-center gap-1">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                    </svg>
+                                    <?= htmlspecialchars($transacao['nome']) ?>
                                 </div>
+                            <?php endif; ?>
+                            
+                            <div class="flex items-center gap-4 mt-1 text-xs text-gray-500 dark:text-gray-500">
+                                <!-- CNPJ/CPF se identificado -->
+                                <?php if (!empty($transacao['cnpj_cpf'])): ?>
+                                    <span class="font-mono">
+                                        <?php 
+                                        $doc = $transacao['cnpj_cpf'];
+                                        if (strlen($doc) === 14) {
+                                            echo substr($doc, 0, 2) . '.' . substr($doc, 2, 3) . '.' . substr($doc, 5, 3) . '/' . substr($doc, 8, 4) . '-' . substr($doc, 12, 2);
+                                        } elseif (strlen($doc) === 11) {
+                                            echo substr($doc, 0, 3) . '.' . substr($doc, 3, 3) . '.' . substr($doc, 6, 3) . '-' . substr($doc, 9, 2);
+                                        } else {
+                                            echo $doc;
+                                        }
+                                        ?>
+                                    </span>
+                                <?php endif; ?>
+                                
+                                <!-- Referência/Documento -->
+                                <?php if (!empty($transacao['numero_documento'])): ?>
+                                    <span>Doc: <?= htmlspecialchars($transacao['numero_documento']) ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <input type="hidden" name="transacoes[<?= $index ?>][empresa_id]" value="<?= $empresaId ?>">
+                        </div>
+                        
+                        <!-- Linha de Campos (Selects maiores) -->
+                        <div class="ml-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- Categoria -->
+                            <div class="relative" style="z-index: <?= 100 - $index ?>;">
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Categoria *</label>
+                                <select name="transacoes[<?= $index ?>][categoria_id]" 
+                                        id="categoria_<?= $index ?>"
+                                        required
+                                        data-placeholder="Selecione a categoria..."
+                                        class="select-search w-full">
+                                    <option value="">Selecione a categoria...</option>
+                                    <?php foreach ($categorias as $categoria): ?>
+                                        <option value="<?= $categoria['id'] ?>" 
+                                                <?= ($padrao && $padrao['categoria_id'] == $categoria['id']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($categoria['nome']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            
+                            <!-- Fornecedor -->
+                            <div class="relative" style="z-index: <?= 100 - $index ?>;">
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Fornecedor</label>
+                                <select name="transacoes[<?= $index ?>][fornecedor_id]"
+                                        id="fornecedor_<?= $index ?>"
+                                        data-placeholder="Selecione o fornecedor..."
+                                        class="select-search w-full">
+                                    <option value="">Selecione o fornecedor...</option>
+                                    <?php foreach ($fornecedores as $fornecedor): ?>
+                                        <option value="<?= $fornecedor['id'] ?>" 
+                                                <?= ($padrao && $padrao['fornecedor_id'] == $fornecedor['id']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($fornecedor['nome_razao_social']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            
+                            <!-- Vencimento -->
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vencimento *</label>
+                                <input type="date" 
+                                       name="transacoes[<?= $index ?>][data_vencimento]" 
+                                       value="<?= $transacao['data'] ?>"
+                                       required
+                                       class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                             </div>
                         </div>
                     </div>
