@@ -48,7 +48,10 @@ class HomeController extends Controller
             // Totais gerais (com base nas empresas filtradas)
             $totalEmpresas = count($todasEmpresas);
             $empresasFiltro = $empresasFiltradas ? count($empresasFiltradas) : $totalEmpresas;
-            $totalUsuarios = $this->contarPorEmpresas($usuarioModel, 'findAll', $empresasIds);
+            
+            // Usuários são globais - contar todos os ativos uma única vez
+            $todosUsuarios = $usuarioModel->findAll(['ativo' => 1]);
+            $totalUsuarios = count($todosUsuarios);
             $totalFornecedores = $this->contarPorEmpresas($fornecedorModel, 'findAll', $empresasIds);
             $totalClientes = $this->contarPorEmpresas($clienteModel, 'findAll', $empresasIds);
             $totalCategorias = $this->contarPorEmpresas($categoriaModel, 'findAll', $empresasIds);
@@ -83,9 +86,10 @@ class HomeController extends Controller
             }
             
             // Buscar dados com filtro de empresas
-            $usuarios = $this->buscarPorEmpresas($usuarioModel, 'findAll', $empresasIds);
-            $usuariosAtivos = count(array_filter($usuarios, fn($u) => $u['ativo'] == 1));
-            $usuariosInativos = count(array_filter($usuarios, fn($u) => $u['ativo'] == 0));
+            // Usuários são globais - usar os já buscados acima
+            $usuariosAtivos = count($todosUsuarios); // Já filtrados por ativo = 1
+            $todosUsuariosInativos = $usuarioModel->findAll(['ativo' => 0]);
+            $usuariosInativos = count($todosUsuariosInativos);
             
             $fornecedores = $this->buscarPorEmpresas($fornecedorModel, 'findAll', $empresasIds);
             $fornecedoresPF = count(array_filter($fornecedores, fn($f) => $f['tipo_pessoa'] == 'fisica'));
@@ -466,11 +470,35 @@ class HomeController extends Controller
     private function buscarPorEmpresas($model, $method, $empresasIds)
     {
         $resultado = [];
+        $idsJaAdicionados = []; // Para evitar duplicatas
         
         foreach ($empresasIds as $empresaId) {
-            $dados = $model->$method($empresaId);
+            // Verificar qual modelo estamos usando e chamar o método correto
+            $modelClass = get_class($model);
+            
+            if (strpos($modelClass, 'Usuario') !== false) {
+                // Usuario usa findAll com filtros ou findByEmpresa
+                if ($method === 'findAll') {
+                    $dados = $model->findByEmpresa($empresaId);
+                } else {
+                    $dados = $model->$method($empresaId);
+                }
+            } else {
+                // Outros modelos aceitam empresa_id como primeiro parâmetro
+                $dados = $model->$method($empresaId);
+            }
+            
             if (!empty($dados)) {
-                $resultado = array_merge($resultado, $dados);
+                foreach ($dados as $item) {
+                    // Evitar duplicatas baseado no ID
+                    $itemId = $item['id'] ?? null;
+                    if ($itemId && !in_array($itemId, $idsJaAdicionados)) {
+                        $resultado[] = $item;
+                        $idsJaAdicionados[] = $itemId;
+                    } elseif (!$itemId) {
+                        $resultado[] = $item;
+                    }
+                }
             }
         }
         
