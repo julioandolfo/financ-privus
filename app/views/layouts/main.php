@@ -131,8 +131,8 @@
             border: 1px solid rgb(209 213 219);
             padding: 0.65rem 1rem;
             font-size: 0.875rem;
-            background-color: white;
-            color: rgb(17 24 39);
+            background-color: white !important;
+            color: rgb(17 24 39) !important;
             min-height: 48px;
             transition: all 0.15s ease;
         }
@@ -144,18 +144,20 @@
             box-shadow: 0 0 0 2px rgb(59 130 246 / 0.2);
             outline: none;
         }
-        .ts-wrapper .ts-control input {
-            color: rgb(17 24 39);
+        .ts-wrapper .ts-control input,
+        .ts-wrapper .ts-control input[type="text"] {
+            color: rgb(17 24 39) !important;
+            background: transparent !important;
         }
         .ts-wrapper .ts-control input::placeholder {
-            color: rgb(156 163 175);
+            color: rgb(107 114 128) !important;
         }
         .ts-dropdown {
             border-radius: 0.75rem;
             border: 1px solid rgb(209 213 219);
             box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
             margin-top: 4px;
-            background-color: white;
+            background-color: white !important;
         }
         .ts-dropdown .ts-dropdown-content {
             max-height: 250px;
@@ -165,33 +167,33 @@
             padding: 0.625rem 0.875rem;
             border-radius: 0.5rem;
             font-size: 0.875rem;
-            color: rgb(55 65 81);
+            color: rgb(55 65 81) !important;
             cursor: pointer;
         }
         .ts-dropdown .option:hover,
         .ts-dropdown .option.active {
-            background-color: rgb(239 246 255);
-            color: rgb(29 78 216);
+            background-color: rgb(239 246 255) !important;
+            color: rgb(29 78 216) !important;
         }
         .ts-dropdown .option.selected {
-            background-color: rgb(59 130 246);
-            color: white;
+            background-color: rgb(59 130 246) !important;
+            color: white !important;
         }
         .ts-wrapper .ts-control .item {
-            background: transparent;
-            color: rgb(17 24 39);
+            background: transparent !important;
+            color: rgb(17 24 39) !important;
         }
         .ts-dropdown .no-results {
             padding: 0.625rem 0.875rem;
-            color: rgb(107 114 128);
+            color: rgb(107 114 128) !important;
             font-size: 0.875rem;
         }
         
         /* Dark Mode para Tom Select */
         .dark .ts-wrapper .ts-control {
-            background-color: rgb(55 65 81);
+            background-color: rgb(55 65 81) !important;
             border-color: rgb(75 85 99);
-            color: rgb(243 244 246);
+            color: rgb(243 244 246) !important;
         }
         .dark .ts-wrapper .ts-control:hover {
             border-color: rgb(107 114 128);
@@ -199,33 +201,35 @@
         .dark .ts-wrapper.focus .ts-control {
             border-color: rgb(59 130 246);
         }
-        .dark .ts-wrapper .ts-control input {
-            color: rgb(243 244 246);
+        .dark .ts-wrapper .ts-control input,
+        .dark .ts-wrapper .ts-control input[type="text"] {
+            color: rgb(243 244 246) !important;
+            background: transparent !important;
         }
         .dark .ts-wrapper .ts-control input::placeholder {
-            color: rgb(156 163 175);
+            color: rgb(156 163 175) !important;
         }
         .dark .ts-dropdown {
-            background-color: rgb(55 65 81);
+            background-color: rgb(55 65 81) !important;
             border-color: rgb(75 85 99);
         }
         .dark .ts-dropdown .option {
-            color: rgb(229 231 235);
+            color: rgb(229 231 235) !important;
         }
         .dark .ts-dropdown .option:hover,
         .dark .ts-dropdown .option.active {
-            background-color: rgb(75 85 99);
-            color: rgb(147 197 253);
+            background-color: rgb(75 85 99) !important;
+            color: rgb(147 197 253) !important;
         }
         .dark .ts-dropdown .option.selected {
-            background-color: rgb(59 130 246);
-            color: white;
+            background-color: rgb(59 130 246) !important;
+            color: white !important;
         }
         .dark .ts-wrapper .ts-control .item {
-            color: rgb(243 244 246);
+            color: rgb(243 244 246) !important;
         }
         .dark .ts-dropdown .no-results {
-            color: rgb(156 163 175);
+            color: rgb(156 163 175) !important;
         }
     </style>
 </head>
