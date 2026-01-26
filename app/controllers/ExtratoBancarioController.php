@@ -110,16 +110,55 @@ class ExtratoBancarioController extends Controller
             $transacoesComPadroes = [];
             
             foreach ($debitos as $transacao) {
-                $descricaoNormalizada = PadraoImportacaoExtrato::normalizarDescricao($transacao['descricao']);
-                $padrao = $this->padraoModel->findByDescricao($descricaoNormalizada, $usuarioId, $empresaId);
+                $padrao = null;
+                $tipoPadraoEncontrado = null;
                 
-                // Se não encontrou exato, tenta similar
-                if (!$padrao) {
-                    $padrao = $this->padraoModel->findSimilar($transacao['descricao'], $usuarioId, $empresaId);
+                // 1. Primeiro tenta por CNPJ/CPF (mais específico)
+                if (!empty($transacao['cnpj_cpf'])) {
+                    $descricaoNormalizada = PadraoImportacaoExtrato::normalizarDescricao($transacao['cnpj_cpf']);
+                    $padrao = $this->padraoModel->findByDescricao($descricaoNormalizada, $usuarioId, $empresaId);
+                    if ($padrao) {
+                        $tipoPadraoEncontrado = 'cnpj_cpf';
+                    }
                 }
                 
-                $transacao['descricao_normalizada'] = $descricaoNormalizada;
+                // 2. Se não encontrou, tenta por NAME (beneficiário)
+                if (!$padrao && !empty($transacao['nome'])) {
+                    $descricaoNormalizada = PadraoImportacaoExtrato::normalizarDescricao($transacao['nome']);
+                    $padrao = $this->padraoModel->findByDescricao($descricaoNormalizada, $usuarioId, $empresaId);
+                    if ($padrao) {
+                        $tipoPadraoEncontrado = 'nome';
+                    }
+                }
+                
+                // 3. Se não encontrou, tenta por MEMO (descrição curta)
+                if (!$padrao && !empty($transacao['memo'])) {
+                    $descricaoNormalizada = PadraoImportacaoExtrato::normalizarDescricao($transacao['memo']);
+                    $padrao = $this->padraoModel->findByDescricao($descricaoNormalizada, $usuarioId, $empresaId);
+                    if ($padrao) {
+                        $tipoPadraoEncontrado = 'memo';
+                    }
+                }
+                
+                // 4. Se não encontrou, tenta por descrição completa
+                if (!$padrao) {
+                    $descricaoNormalizada = PadraoImportacaoExtrato::normalizarDescricao($transacao['descricao']);
+                    $padrao = $this->padraoModel->findByDescricao($descricaoNormalizada, $usuarioId, $empresaId);
+                    if ($padrao) {
+                        $tipoPadraoEncontrado = 'descricao';
+                    }
+                }
+                
+                // 5. Última tentativa: busca similar
+                if (!$padrao) {
+                    $padrao = $this->padraoModel->findSimilar($transacao['descricao'], $usuarioId, $empresaId);
+                    if ($padrao) {
+                        $tipoPadraoEncontrado = 'similar';
+                    }
+                }
+                
                 $transacao['padrao'] = $padrao;
+                $transacao['tipo_padrao_encontrado'] = $tipoPadraoEncontrado;
                 $transacao['selecionada'] = true; // Por padrão, todas selecionadas
                 
                 $transacoesComPadroes[] = $transacao;
@@ -168,6 +207,10 @@ class ExtratoBancarioController extends Controller
         $contasBancarias = $this->contaBancariaModel->findAll($empresaId);
         $formasPagamento = $this->formaPagamentoModel->findAll();
         
+        // Buscar todas as empresas do usuário para o rateio
+        $usuarioModel = new \App\Models\Usuario();
+        $empresas = $usuarioModel->getEmpresas($usuarioId);
+        
         return $this->view('extrato_bancario/revisar', [
             'transacoes' => $transacoes,
             'empresa' => $empresa,
@@ -175,6 +218,7 @@ class ExtratoBancarioController extends Controller
             'arquivoNome' => $arquivoNome,
             'categorias' => $categorias,
             'centrosCusto' => $centrosCusto,
+            'empresas' => $empresas,
             'fornecedores' => $fornecedores,
             'contasBancarias' => $contasBancarias,
             'formasPagamento' => $formasPagamento,
@@ -213,13 +257,38 @@ class ExtratoBancarioController extends Controller
         }
         
         $transacao = $_SESSION['extrato_transacoes'][$indice];
-        $descricaoNormalizada = $transacao['descricao_normalizada'] ?? PadraoImportacaoExtrato::normalizarDescricao($transacao['descricao']);
+        
+        // Determina qual campo usar para o padrão baseado na escolha do usuário
+        $tipoPadrao = $request->post('tipo_padrao') ?? 'memo';
+        
+        switch ($tipoPadrao) {
+            case 'nome':
+                // Por beneficiário (NAME)
+                $descricaoParaPadrao = $transacao['nome'] ?? $transacao['descricao'];
+                break;
+            case 'cnpj_cpf':
+                // Por CNPJ/CPF
+                $descricaoParaPadrao = $transacao['cnpj_cpf'] ?? $transacao['descricao'];
+                break;
+            case 'descricao':
+                // Descrição completa
+                $descricaoParaPadrao = $transacao['descricao'];
+                break;
+            case 'memo':
+            default:
+                // Por MEMO (descrição curta) - padrão
+                $descricaoParaPadrao = $transacao['memo'] ?? $transacao['descricao_curta'] ?? $transacao['descricao'];
+                break;
+        }
+        
+        $descricaoNormalizada = PadraoImportacaoExtrato::normalizarDescricao($descricaoParaPadrao);
         
         $padraoData = [
             'usuario_id' => $usuarioId,
             'empresa_id' => $request->post('empresa_id'),
             'descricao_padrao' => $descricaoNormalizada,
-            'descricao_original' => $transacao['descricao'],
+            'descricao_original' => $descricaoParaPadrao,
+            'tipo_padrao' => $tipoPadrao, // Salva o tipo de padrão usado
             'categoria_id' => !empty($request->post('categoria_id')) ? $request->post('categoria_id') : null,
             'centro_custo_id' => !empty($request->post('centro_custo_id')) ? $request->post('centro_custo_id') : null,
             'fornecedor_id' => !empty($request->post('fornecedor_id')) ? $request->post('fornecedor_id') : null,
@@ -299,13 +368,33 @@ class ExtratoBancarioController extends Controller
                     
                     // Se marcou como padrão, salvar padrão
                     if (!empty($dados['salvar_padrao'])) {
-                        $descricaoNormalizada = $transacao['descricao_normalizada'] ?? PadraoImportacaoExtrato::normalizarDescricao($transacao['descricao']);
+                        // Determina qual campo usar para o padrão baseado na escolha do usuário
+                        $tipoPadrao = $dados['tipo_padrao'] ?? 'memo';
+                        
+                        switch ($tipoPadrao) {
+                            case 'nome':
+                                $descricaoParaPadrao = $transacao['nome'] ?? $transacao['descricao'];
+                                break;
+                            case 'cnpj_cpf':
+                                $descricaoParaPadrao = $transacao['cnpj_cpf'] ?? $transacao['descricao'];
+                                break;
+                            case 'descricao':
+                                $descricaoParaPadrao = $transacao['descricao'];
+                                break;
+                            case 'memo':
+                            default:
+                                $descricaoParaPadrao = $transacao['memo'] ?? $transacao['descricao_curta'] ?? $transacao['descricao'];
+                                break;
+                        }
+                        
+                        $descricaoNormalizada = PadraoImportacaoExtrato::normalizarDescricao($descricaoParaPadrao);
                         
                         $padraoData = [
                             'usuario_id' => $usuarioId,
                             'empresa_id' => $dados['empresa_id'],
                             'descricao_padrao' => $descricaoNormalizada,
-                            'descricao_original' => $transacao['descricao'],
+                            'descricao_original' => $descricaoParaPadrao,
+                            'tipo_padrao' => $tipoPadrao,
                             'categoria_id' => $dados['categoria_id'],
                             'centro_custo_id' => !empty($dados['centro_custo_id']) ? $dados['centro_custo_id'] : null,
                             'fornecedor_id' => !empty($dados['fornecedor_id']) ? $dados['fornecedor_id'] : null,

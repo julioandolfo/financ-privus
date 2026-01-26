@@ -61,12 +61,14 @@ class ExtratoParserService
             if (preg_match('/<TRNTYPE>(.*?)</', $transacao, $match)) {
                 $trnType = trim($match[1]);
                 $item['tipo'] = in_array($trnType, ['CREDIT', 'DEP', 'INT']) ? 'credito' : 'debito';
+                $item['tipo_original'] = $trnType;
             }
             
             // Data
             if (preg_match('/<DTPOSTED>(.*?)</', $transacao, $match)) {
                 $data = trim($match[1]);
-                // Formato OFX: YYYYMMDD ou YYYYMMDDHHMMSS
+                // Formato OFX: YYYYMMDD ou YYYYMMDDHHMMSS (pode ter timezone)
+                $data = preg_replace('/\[.*\]/', '', $data); // Remove timezone
                 $ano = substr($data, 0, 4);
                 $mes = substr($data, 4, 2);
                 $dia = substr($data, 6, 2);
@@ -77,6 +79,7 @@ class ExtratoParserService
             if (preg_match('/<TRNAMT>(.*?)</', $transacao, $match)) {
                 $valor = trim($match[1]);
                 $item['valor'] = abs((float)$valor);
+                $item['valor_original'] = (float)$valor;
                 
                 // Se valor original era negativo, é débito
                 if ((float)$valor < 0) {
@@ -84,20 +87,127 @@ class ExtratoParserService
                 }
             }
             
-            // Descrição
-            if (preg_match('/<MEMO>(.*?)</', $transacao, $match)) {
-                $item['descricao'] = trim($match[1]);
-            } elseif (preg_match('/<NAME>(.*?)</', $transacao, $match)) {
-                $item['descricao'] = trim($match[1]);
+            // ID da transação
+            if (preg_match('/<FITID>(.*?)</', $transacao, $match)) {
+                $item['fitid'] = trim($match[1]);
             }
             
+            // Número do cheque/documento
+            if (preg_match('/<CHECKNUM>(.*?)</', $transacao, $match)) {
+                $checknum = trim($match[1]);
+                if ($checknum !== '0') {
+                    $item['numero_documento'] = $checknum;
+                }
+            }
+            
+            // Referência
+            if (preg_match('/<REFNUM>(.*?)</', $transacao, $match)) {
+                $item['referencia'] = trim($match[1]);
+            }
+            
+            // Nome (geralmente contém o beneficiário/pagador)
+            $nome = '';
+            if (preg_match('/<NAME>(.*?)</', $transacao, $match)) {
+                $nome = trim($match[1]);
+                $item['nome'] = $nome;
+            }
+            
+            // Memo (descrição da transação)
+            $memo = '';
+            if (preg_match('/<MEMO>(.*?)</', $transacao, $match)) {
+                $memo = trim($match[1]);
+                $item['memo'] = $memo;
+            }
+            
+            // Construir descrição enriquecida
+            $descricaoParts = [];
+            
+            // Primeiro o MEMO (tipo da operação)
+            if (!empty($memo)) {
+                $descricaoParts[] = $memo;
+            }
+            
+            // Depois o NAME (beneficiário/pagador)
+            if (!empty($nome)) {
+                // Extrair CNPJ/CPF se presente no nome
+                if (preg_match('/(\d{2}\.\d{3}\.\d{3}[\/ ]\d{4}[-]?\d{2})/', $nome, $cnpjMatch)) {
+                    $item['cnpj_cpf'] = preg_replace('/[^\d]/', '', $cnpjMatch[1]);
+                }
+                $descricaoParts[] = $nome;
+            }
+            
+            // Adicionar referência se for relevante (não for "Pix" ou "0")
+            if (!empty($item['referencia']) && !in_array($item['referencia'], ['Pix', '0', $item['numero_documento'] ?? ''])) {
+                $descricaoParts[] = "Ref: " . $item['referencia'];
+            }
+            
+            // Combinar partes da descrição
+            if (!empty($descricaoParts)) {
+                $item['descricao'] = implode(' | ', $descricaoParts);
+            } else {
+                $item['descricao'] = 'Transação sem descrição';
+            }
+            
+            // Guardar descrição curta (só memo) para identificação de padrões
+            $item['descricao_curta'] = $memo ?: $nome ?: 'Sem descrição';
+            
+            // Identificar tipo de pagamento
+            $item['metodo_pagamento'] = self::identificarMetodoPagamento($memo, $nome, $item['referencia'] ?? '');
+            
             // Validar se tem dados mínimos
-            if (!empty($item['data']) && !empty($item['valor']) && !empty($item['descricao'])) {
+            if (!empty($item['data']) && !empty($item['valor'])) {
+                if (empty($item['descricao'])) {
+                    $item['descricao'] = 'Transação ' . ($item['tipo'] === 'debito' ? 'Débito' : 'Crédito');
+                }
                 $itens[] = $item;
             }
         }
         
         return $itens;
+    }
+    
+    /**
+     * Identifica o método de pagamento baseado na descrição
+     */
+    private static function identificarMetodoPagamento($memo, $nome, $referencia)
+    {
+        $texto = strtoupper($memo . ' ' . $nome . ' ' . $referencia);
+        
+        if (strpos($texto, 'PIX') !== false) {
+            return 'PIX';
+        }
+        if (strpos($texto, 'TED') !== false) {
+            return 'TED';
+        }
+        if (strpos($texto, 'DOC') !== false) {
+            return 'DOC';
+        }
+        if (strpos($texto, 'BOLETO') !== false || strpos($texto, 'TÍTULO') !== false || strpos($texto, 'TIT.COMPE') !== false) {
+            return 'Boleto';
+        }
+        if (strpos($texto, 'DÉBITO AUTOMÁTICO') !== false || strpos($texto, 'DEB.AUT') !== false) {
+            return 'Débito Automático';
+        }
+        if (strpos($texto, 'TARIFA') !== false) {
+            return 'Tarifa Bancária';
+        }
+        if (strpos($texto, 'IOF') !== false) {
+            return 'IOF';
+        }
+        if (strpos($texto, 'JUROS') !== false) {
+            return 'Juros';
+        }
+        if (strpos($texto, 'CHEQUE') !== false) {
+            return 'Cheque';
+        }
+        if (strpos($texto, 'SAQUE') !== false) {
+            return 'Saque';
+        }
+        if (strpos($texto, 'CARTÃO') !== false || strpos($texto, 'CARTAO') !== false) {
+            return 'Cartão';
+        }
+        
+        return 'Outros';
     }
     
     /**
