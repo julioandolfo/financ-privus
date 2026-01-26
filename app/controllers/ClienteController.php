@@ -16,13 +16,30 @@ class ClienteController extends Controller
     {
         try {
             $this->clienteModel = new Cliente();
-            $clientes = $this->clienteModel->findAll();
+            $empresaId = $request->get('empresa_id');
+            $ajax = $request->get('ajax');
+            
+            $clientes = $this->clienteModel->findAll($empresaId);
+            
+            // Se for requisição AJAX, retorna JSON
+            if ($ajax) {
+                return $response->json([
+                    'success' => true,
+                    'clientes' => $clientes
+                ]);
+            }
             
             return $this->render('clientes/index', [
                 'title' => 'Gerenciar Clientes',
                 'clientes' => $clientes
             ]);
         } catch (\Exception $e) {
+            if ($request->get('ajax')) {
+                return $response->json([
+                    'success' => false,
+                    'error' => $e->getMessage()
+                ]);
+            }
             $_SESSION['error'] = 'Erro ao carregar clientes: ' . $e->getMessage();
             $response->redirect('/');
         }

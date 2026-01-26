@@ -76,7 +76,13 @@
     <script src="<?= htmlspecialchars($masksPath) ?>"></script>
     <script src="/assets/js/cep.js"></script>
     <script src="/assets/js/cnpj.js"></script>
+    <script src="/assets/js/select-search.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Tom Select (alternativa moderna ao Select2) -->
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         body { 
@@ -114,6 +120,112 @@
         /* Garantir que o main ocupe o espaço disponível */
         main {
             flex: 1;
+        }
+        
+        /* Tom Select - Estilos customizados para integração com Tailwind e Dark Mode */
+        .ts-wrapper {
+            font-family: 'Inter', sans-serif;
+        }
+        .ts-wrapper .ts-control {
+            border-radius: 0.75rem;
+            border: 1px solid rgb(209 213 219);
+            padding: 0.65rem 1rem;
+            font-size: 0.875rem;
+            background-color: white;
+            color: rgb(17 24 39);
+            min-height: 48px;
+            transition: all 0.15s ease;
+        }
+        .ts-wrapper .ts-control:hover {
+            border-color: rgb(156 163 175);
+        }
+        .ts-wrapper.focus .ts-control {
+            border-color: rgb(59 130 246);
+            box-shadow: 0 0 0 2px rgb(59 130 246 / 0.2);
+            outline: none;
+        }
+        .ts-wrapper .ts-control input {
+            color: rgb(17 24 39);
+        }
+        .ts-wrapper .ts-control input::placeholder {
+            color: rgb(156 163 175);
+        }
+        .ts-dropdown {
+            border-radius: 0.75rem;
+            border: 1px solid rgb(209 213 219);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            margin-top: 4px;
+            background-color: white;
+        }
+        .ts-dropdown .ts-dropdown-content {
+            max-height: 250px;
+            padding: 0.25rem;
+        }
+        .ts-dropdown .option {
+            padding: 0.625rem 0.875rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            color: rgb(55 65 81);
+            cursor: pointer;
+        }
+        .ts-dropdown .option:hover,
+        .ts-dropdown .option.active {
+            background-color: rgb(239 246 255);
+            color: rgb(29 78 216);
+        }
+        .ts-dropdown .option.selected {
+            background-color: rgb(59 130 246);
+            color: white;
+        }
+        .ts-wrapper .ts-control .item {
+            background: transparent;
+            color: rgb(17 24 39);
+        }
+        .ts-dropdown .no-results {
+            padding: 0.625rem 0.875rem;
+            color: rgb(107 114 128);
+            font-size: 0.875rem;
+        }
+        
+        /* Dark Mode para Tom Select */
+        .dark .ts-wrapper .ts-control {
+            background-color: rgb(55 65 81);
+            border-color: rgb(75 85 99);
+            color: rgb(243 244 246);
+        }
+        .dark .ts-wrapper .ts-control:hover {
+            border-color: rgb(107 114 128);
+        }
+        .dark .ts-wrapper.focus .ts-control {
+            border-color: rgb(59 130 246);
+        }
+        .dark .ts-wrapper .ts-control input {
+            color: rgb(243 244 246);
+        }
+        .dark .ts-wrapper .ts-control input::placeholder {
+            color: rgb(156 163 175);
+        }
+        .dark .ts-dropdown {
+            background-color: rgb(55 65 81);
+            border-color: rgb(75 85 99);
+        }
+        .dark .ts-dropdown .option {
+            color: rgb(229 231 235);
+        }
+        .dark .ts-dropdown .option:hover,
+        .dark .ts-dropdown .option.active {
+            background-color: rgb(75 85 99);
+            color: rgb(147 197 253);
+        }
+        .dark .ts-dropdown .option.selected {
+            background-color: rgb(59 130 246);
+            color: white;
+        }
+        .dark .ts-wrapper .ts-control .item {
+            color: rgb(243 244 246);
+        }
+        .dark .ts-dropdown .no-results {
+            color: rgb(156 163 175);
         }
     </style>
 </head>

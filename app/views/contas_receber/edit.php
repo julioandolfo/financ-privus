@@ -43,14 +43,9 @@ $old = $this->session->get('old') ?? [];
                     <!-- Cliente -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cliente</label>
-                        <select name="cliente_id"
-                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
-                            <option value="">Selecione...</option>
-                            <?php foreach ($clientes as $cliente): ?>
-                                <option value="<?= $cliente['id'] ?>" <?= ($old['cliente_id'] ?? $conta['cliente_id']) == $cliente['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($cliente['nome_razao_social']) ?>
-                                </option>
-                            <?php endforeach; ?>
+                        <select name="cliente_id" id="cliente_id" data-placeholder="Carregando..."
+                                class="select-search w-full">
+                            <option value="">Carregando...</option>
                         </select>
                     </div>
 
@@ -59,8 +54,8 @@ $old = $this->session->get('old') ?? [];
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Categoria <span class="text-red-500">*</span>
                         </label>
-                        <select name="categoria_id" id="categoria_id" required
-                                class="w-full px-4 py-3 rounded-xl border <?= isset($errors['categoria_id']) ? 'border-red-500' : 'border-gray-300 dark:border-gray-600' ?> bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                        <select name="categoria_id" id="categoria_id" required data-placeholder="Carregando..."
+                                class="select-search w-full">
                             <option value="">Carregando...</option>
                         </select>
                         <?php if (isset($errors['categoria_id'])): ?>
@@ -71,8 +66,8 @@ $old = $this->session->get('old') ?? [];
                     <!-- Centro de Custo -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Centro de Custo</label>
-                        <select name="centro_custo_id" id="centro_custo_id"
-                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                        <select name="centro_custo_id" id="centro_custo_id" data-placeholder="Carregando..."
+                                class="select-search w-full">
                             <option value="">Carregando...</option>
                         </select>
                     </div>
@@ -187,12 +182,15 @@ function contaReceberForm() {
     return {
         valorTotal: <?= $old['valor_total'] ?? $conta['valor_total'] ?>,
         dataCompetencia: '<?= $old['data_competencia'] ?? $conta['data_competencia'] ?>',
+        categoriaIdAtual: <?= json_encode($old['categoria_id'] ?? $conta['categoria_id'] ?? '') ?>,
+        centroCustoIdAtual: <?= json_encode($old['centro_custo_id'] ?? $conta['centro_custo_id'] ?? '') ?>,
+        clienteIdAtual: <?= json_encode($old['cliente_id'] ?? $conta['cliente_id'] ?? '') ?>,
         
         init() {
-            // Carregar categorias e centros automaticamente ao abrir a página
+            // Carregar categorias, centros e clientes automaticamente ao abrir a página
             const empresaId = document.querySelector('select[name="empresa_id"]').value;
             if (empresaId) {
-                this.carregarCategoriasECentros(empresaId);
+                this.carregarDadosEmpresa(empresaId);
             }
         },
         
@@ -200,32 +198,24 @@ function contaReceberForm() {
             // Placeholder para lógica de rateio se necessário
         },
         
-        async carregarCategoriasECentros(empresaId) {
+        async carregarDadosEmpresa(empresaId) {
             if (!empresaId) {
                 this.limparSelects();
                 return;
             }
-            
-            const categoriaAtualId = document.getElementById('categoria_id').value;
-            const centroAtualId = document.getElementById('centro_custo_id').value;
             
             // Carregar categorias de receita
             try {
                 const respCategorias = await fetch(`/categorias?ajax=1&empresa_id=${empresaId}&tipo=receita`);
                 const dataCategorias = await respCategorias.json();
                 
-                const selectCategoria = document.getElementById('categoria_id');
-                selectCategoria.innerHTML = '<option value="">Selecione...</option>';
-                
+                const options = [{value: '', text: 'Selecione...'}];
                 if (dataCategorias.success && dataCategorias.categorias) {
                     dataCategorias.categorias.forEach(cat => {
-                        const option = document.createElement('option');
-                        option.value = cat.id;
-                        option.textContent = cat.nome;
-                        if (cat.id == categoriaAtualId) option.selected = true;
-                        selectCategoria.appendChild(option);
+                        options.push({value: cat.id, text: cat.nome});
                     });
                 }
+                refreshSelectSearch('categoria_id', options, this.categoriaIdAtual);
             } catch (error) {
                 console.error('Erro ao carregar categorias:', error);
             }
@@ -235,26 +225,47 @@ function contaReceberForm() {
                 const respCentros = await fetch(`/centros-custo?ajax=1&empresa_id=${empresaId}`);
                 const dataCentros = await respCentros.json();
                 
-                const selectCentro = document.getElementById('centro_custo_id');
-                selectCentro.innerHTML = '<option value="">Selecione...</option>';
-                
+                const options = [{value: '', text: 'Selecione...'}];
                 if (dataCentros.success && dataCentros.centros) {
                     dataCentros.centros.forEach(centro => {
-                        const option = document.createElement('option');
-                        option.value = centro.id;
-                        option.textContent = centro.nome;
-                        if (centro.id == centroAtualId) option.selected = true;
-                        selectCentro.appendChild(option);
+                        options.push({value: centro.id, text: centro.nome});
                     });
                 }
+                refreshSelectSearch('centro_custo_id', options, this.centroCustoIdAtual);
             } catch (error) {
                 console.error('Erro ao carregar centros de custo:', error);
             }
+            
+            // Carregar clientes
+            try {
+                const respClientes = await fetch(`/clientes?ajax=1&empresa_id=${empresaId}`);
+                const dataClientes = await respClientes.json();
+                
+                const options = [{value: '', text: 'Selecione...'}];
+                if (dataClientes.success && dataClientes.clientes) {
+                    dataClientes.clientes.forEach(cliente => {
+                        options.push({value: cliente.id, text: cliente.nome_razao_social});
+                    });
+                }
+                refreshSelectSearch('cliente_id', options, this.clienteIdAtual);
+            } catch (error) {
+                console.error('Erro ao carregar clientes:', error);
+            }
+        },
+        
+        carregarCategoriasECentros(empresaId) {
+            // Limpar valores atuais ao trocar empresa
+            this.categoriaIdAtual = '';
+            this.centroCustoIdAtual = '';
+            this.clienteIdAtual = '';
+            this.carregarDadosEmpresa(empresaId);
         },
         
         limparSelects() {
-            document.getElementById('categoria_id').innerHTML = '<option value="">Selecione uma empresa primeiro...</option>';
-            document.getElementById('centro_custo_id').innerHTML = '<option value="">Selecione uma empresa primeiro...</option>';
+            const emptyOptions = [{value: '', text: 'Selecione uma empresa primeiro...'}];
+            refreshSelectSearch('categoria_id', emptyOptions);
+            refreshSelectSearch('centro_custo_id', emptyOptions);
+            refreshSelectSearch('cliente_id', emptyOptions);
         }
     }
 }
