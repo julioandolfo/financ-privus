@@ -48,16 +48,19 @@ class PadraoImportacaoExtrato extends Model
     public function findSimilar($descricao, $usuarioId, $empresaId)
     {
         $sql = "SELECT * FROM {$this->table} 
-                WHERE (descricao_padrao LIKE :descricao OR descricao_original LIKE :descricao)
+                WHERE (descricao_padrao LIKE :descricao_padrao OR descricao_original LIKE :descricao_original)
                 AND usuario_id = :usuario_id 
                 AND empresa_id = :empresa_id 
                 AND ativo = 1 
                 ORDER BY usos DESC, ultimo_uso_em DESC 
                 LIMIT 1";
         
+        $descricaoLike = '%' . $descricao . '%';
+        
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
-            'descricao' => '%' . $descricao . '%',
+            'descricao_padrao' => $descricaoLike,
+            'descricao_original' => $descricaoLike,
             'usuario_id' => $usuarioId,
             'empresa_id' => $empresaId
         ]);
@@ -83,6 +86,72 @@ class PadraoImportacaoExtrato extends Model
             $data['ultimo_uso_em'] = date('Y-m-d H:i:s');
             return $this->create($data);
         }
+    }
+    
+    /**
+     * Cria novo padrão
+     */
+    public function create($data)
+    {
+        $columns = [
+            'usuario_id', 'empresa_id', 'descricao_padrao', 'descricao_original',
+            'categoria_id', 'centro_custo_id', 'fornecedor_id', 'conta_bancaria_id',
+            'forma_pagamento_id', 'tem_rateio', 'observacoes_padrao', 'usos', 'ultimo_uso_em'
+        ];
+        
+        $insertData = [];
+        $placeholders = [];
+        
+        foreach ($columns as $column) {
+            if (array_key_exists($column, $data)) {
+                $insertData[$column] = $data[$column];
+                $placeholders[] = ":{$column}";
+            }
+        }
+        
+        $columnNames = implode(', ', array_keys($insertData));
+        $placeholderStr = implode(', ', $placeholders);
+        
+        $sql = "INSERT INTO {$this->table} ({$columnNames}) VALUES ({$placeholderStr})";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($insertData);
+        
+        return $this->db->lastInsertId();
+    }
+    
+    /**
+     * Atualiza padrão existente
+     */
+    public function update($id, $data)
+    {
+        $columns = [
+            'categoria_id', 'centro_custo_id', 'fornecedor_id', 'conta_bancaria_id',
+            'forma_pagamento_id', 'tem_rateio', 'observacoes_padrao', 'usos', 'ultimo_uso_em'
+        ];
+        
+        $updateData = ['id' => $id];
+        $setParts = [];
+        
+        foreach ($columns as $column) {
+            if (array_key_exists($column, $data)) {
+                $updateData[$column] = $data[$column];
+                $setParts[] = "{$column} = :{$column}";
+            }
+        }
+        
+        if (empty($setParts)) {
+            return $id; // Nada para atualizar
+        }
+        
+        $setStr = implode(', ', $setParts);
+        
+        $sql = "UPDATE {$this->table} SET {$setStr} WHERE id = :id";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($updateData);
+        
+        return $id;
     }
     
     /**
