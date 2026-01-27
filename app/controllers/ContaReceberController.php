@@ -173,7 +173,43 @@ class ContaReceberController extends Controller
                 $this->contaReceberModel->atualizarRateio($contaReceberId, 1);
             }
             
-            $_SESSION['success'] = 'Conta a receber criada com sucesso!';
+            // Se marcou como já recebido, registra o recebimento
+            if (isset($data['ja_recebido']) && $data['ja_recebido'] == 1) {
+                // Valida dados de recebimento
+                if (empty($data['data_recebimento']) || empty($data['forma_recebimento_id']) || empty($data['conta_bancaria_id'])) {
+                    $this->contaReceberModel->cancelar($contaReceberId);
+                    $this->session->set('errors', ['ja_recebido' => 'Para marcar como já recebido, preencha a data, forma de recebimento e conta bancária']);
+                    $this->session->set('old', $data);
+                    $response->redirect('/contas-receber/create');
+                    return;
+                }
+                
+                $valorTotal = floatval($data['valor_total']);
+                
+                // Atualiza status para recebido
+                $this->contaReceberModel->atualizarRecebimento($contaReceberId, $valorTotal, $data['data_recebimento'], 'recebido');
+                
+                // Cria movimentação de caixa
+                $this->movimentacaoService = new MovimentacaoService();
+                $dadosBaixa = [
+                    'empresa_id' => $data['empresa_id'],
+                    'categoria_id' => $data['categoria_id'],
+                    'centro_custo_id' => $data['centro_custo_id'] ?? null,
+                    'conta_bancaria_id' => $data['conta_bancaria_id'],
+                    'descricao' => "Recebimento: " . $data['descricao'],
+                    'valor' => $valorTotal,
+                    'data_movimento' => $data['data_recebimento'],
+                    'data_competencia' => $data['data_competencia'],
+                    'forma_pagamento_id' => $data['forma_recebimento_id'],
+                    'observacoes' => $data['observacoes_recebimento'] ?? null
+                ];
+                
+                $this->movimentacaoService->criarMovimentacaoRecebimento($contaReceberId, $dadosBaixa);
+                
+                $_SESSION['success'] = 'Conta a receber criada e registrada como recebida com sucesso!';
+            } else {
+                $_SESSION['success'] = 'Conta a receber criada com sucesso!';
+            }
             $response->redirect('/contas-receber');
             
         } catch (\Exception $e) {

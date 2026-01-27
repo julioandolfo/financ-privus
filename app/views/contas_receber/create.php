@@ -224,6 +224,79 @@ $old = $this->session->get('old') ?? [];
                           placeholder="Observações adicionais..."><?= htmlspecialchars($old['observacoes'] ?? '') ?></textarea>
             </div>
 
+            <!-- Já Recebido -->
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Registrar como Já Recebido</h2>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" name="ja_recebido" value="1" x-model="jaRecebido"
+                               class="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Já foi recebido</span>
+                    </label>
+                </div>
+
+                <div x-show="jaRecebido" x-transition class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-700">
+                    <p class="text-sm text-blue-700 dark:text-blue-300 mb-4">
+                        <svg class="w-5 h-5 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Esta conta será registrada como já recebida. Preencha os dados do recebimento abaixo.
+                    </p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Data do Recebimento -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Data do Recebimento <span class="text-red-500">*</span>
+                            </label>
+                            <input type="date" name="data_recebimento" value="<?= $old['data_recebimento'] ?? date('Y-m-d') ?>"
+                                   :required="jaRecebido"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- Forma de Recebimento -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Forma de Recebimento <span class="text-red-500">*</span>
+                            </label>
+                            <select name="forma_recebimento_id" :required="jaRecebido"
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                                <option value="">Selecione...</option>
+                                <?php foreach ($formasRecebimento as $forma): ?>
+                                    <option value="<?= $forma['id'] ?>" <?= ($old['forma_recebimento_id'] ?? '') == $forma['id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($forma['nome']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <!-- Conta Bancária -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Conta Bancária <span class="text-red-500">*</span>
+                            </label>
+                            <select name="conta_bancaria_id" :required="jaRecebido"
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                                <option value="">Selecione...</option>
+                                <?php foreach ($contasBancarias as $conta_banc): ?>
+                                    <option value="<?= $conta_banc['id'] ?>" <?= ($old['conta_bancaria_id'] ?? '') == $conta_banc['id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($conta_banc['banco_nome'] . ' - Ag: ' . $conta_banc['agencia'] . ' Cc: ' . $conta_banc['conta']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <!-- Observações do Recebimento -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Observações do Recebimento</label>
+                            <input type="text" name="observacoes_recebimento" value="<?= htmlspecialchars($old['observacoes_recebimento'] ?? '') ?>"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+                                   placeholder="Ex: Recebido via PIX">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Botões -->
             <div class="flex items-center justify-end space-x-4">
                 <a href="/contas-receber" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium">
@@ -241,6 +314,7 @@ $old = $this->session->get('old') ?? [];
 function contaReceberForm() {
     return {
         temRateio: false,
+        jaRecebido: <?= isset($old['ja_recebido']) && $old['ja_recebido'] ? 'true' : 'false' ?>,
         valorTotal: 0,
         dataCompetencia: '<?= date('Y-m-d') ?>',
         rateios: [],

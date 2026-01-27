@@ -130,16 +130,16 @@ return [
     'POST /contas-bancarias/{id}' => ['handler' => 'ContaBancariaController@update', 'middleware' => ['AuthMiddleware']],
     'POST /contas-bancarias/{id}/delete' => ['handler' => 'ContaBancariaController@destroy', 'middleware' => ['AuthMiddleware']],
     
-    // Contas a Pagar (protegido)
+    // Contas a Pagar (protegido) - Rotas específicas primeiro
     'GET /contas-pagar' => ['handler' => 'ContaPagarController@index', 'middleware' => ['AuthMiddleware']],
     'GET /contas-pagar/create' => ['handler' => 'ContaPagarController@create', 'middleware' => ['AuthMiddleware']],
     'POST /contas-pagar' => ['handler' => 'ContaPagarController@store', 'middleware' => ['AuthMiddleware']],
-    'GET /contas-pagar/{id}' => ['handler' => 'ContaPagarController@show', 'middleware' => ['AuthMiddleware']],
     'GET /contas-pagar/{id}/edit' => ['handler' => 'ContaPagarController@edit', 'middleware' => ['AuthMiddleware']],
-    'POST /contas-pagar/{id}' => ['handler' => 'ContaPagarController@update', 'middleware' => ['AuthMiddleware']],
-    'POST /contas-pagar/{id}/delete' => ['handler' => 'ContaPagarController@destroy', 'middleware' => ['AuthMiddleware']],
     'GET /contas-pagar/{id}/baixar' => ['handler' => 'ContaPagarController@baixar', 'middleware' => ['AuthMiddleware']],
     'POST /contas-pagar/{id}/baixar' => ['handler' => 'ContaPagarController@efetuarBaixa', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-pagar/{id}/delete' => ['handler' => 'ContaPagarController@destroy', 'middleware' => ['AuthMiddleware']],
+    'GET /contas-pagar/{id}' => ['handler' => 'ContaPagarController@show', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-pagar/{id}' => ['handler' => 'ContaPagarController@update', 'middleware' => ['AuthMiddleware']],
     
     // Importação de Extrato Bancário (protegido)
     'GET /extrato-bancario' => ['handler' => 'ExtratoBancarioController@index', 'middleware' => ['AuthMiddleware']],
@@ -149,16 +149,16 @@ return [
     'POST /extrato-bancario/salvar-padrao' => ['handler' => 'ExtratoBancarioController@salvarPadrao', 'middleware' => ['AuthMiddleware']],
     'POST /extrato-bancario/cadastrar' => ['handler' => 'ExtratoBancarioController@cadastrar', 'middleware' => ['AuthMiddleware']],
     
-    // Contas a Receber (protegido)
+    // Contas a Receber (protegido) - Rotas específicas primeiro
     'GET /contas-receber' => ['handler' => 'ContaReceberController@index', 'middleware' => ['AuthMiddleware']],
     'GET /contas-receber/create' => ['handler' => 'ContaReceberController@create', 'middleware' => ['AuthMiddleware']],
     'POST /contas-receber' => ['handler' => 'ContaReceberController@store', 'middleware' => ['AuthMiddleware']],
-    'GET /contas-receber/{id}' => ['handler' => 'ContaReceberController@show', 'middleware' => ['AuthMiddleware']],
     'GET /contas-receber/{id}/edit' => ['handler' => 'ContaReceberController@edit', 'middleware' => ['AuthMiddleware']],
-    'POST /contas-receber/{id}' => ['handler' => 'ContaReceberController@update', 'middleware' => ['AuthMiddleware']],
-    'POST /contas-receber/{id}/delete' => ['handler' => 'ContaReceberController@destroy', 'middleware' => ['AuthMiddleware']],
     'GET /contas-receber/{id}/baixar' => ['handler' => 'ContaReceberController@baixar', 'middleware' => ['AuthMiddleware']],
     'POST /contas-receber/{id}/baixar' => ['handler' => 'ContaReceberController@efetuarBaixa', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-receber/{id}/delete' => ['handler' => 'ContaReceberController@destroy', 'middleware' => ['AuthMiddleware']],
+    'GET /contas-receber/{id}' => ['handler' => 'ContaReceberController@show', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-receber/{id}' => ['handler' => 'ContaReceberController@update', 'middleware' => ['AuthMiddleware']],
     
     // Fluxo de Caixa (protegido)
     'GET /fluxo-caixa' => ['handler' => 'FluxoCaixaController@index', 'middleware' => ['AuthMiddleware']],

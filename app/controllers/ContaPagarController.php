@@ -173,7 +173,43 @@ class ContaPagarController extends Controller
                 $this->contaPagarModel->atualizarRateio($contaPagarId, 1);
             }
             
-            $_SESSION['success'] = 'Conta a pagar criada com sucesso!';
+            // Se marcou como já pago, registra o pagamento
+            if (isset($data['ja_pago']) && $data['ja_pago'] == 1) {
+                // Valida dados de pagamento
+                if (empty($data['data_pagamento']) || empty($data['forma_pagamento_id']) || empty($data['conta_bancaria_id'])) {
+                    $this->contaPagarModel->cancelar($contaPagarId);
+                    $this->session->set('errors', ['ja_pago' => 'Para marcar como já pago, preencha a data, forma de pagamento e conta bancária']);
+                    $this->session->set('old', $data);
+                    $response->redirect('/contas-pagar/create');
+                    return;
+                }
+                
+                $valorTotal = floatval($data['valor_total']);
+                
+                // Atualiza status para pago
+                $this->contaPagarModel->atualizarPagamento($contaPagarId, $valorTotal, $data['data_pagamento'], 'pago');
+                
+                // Cria movimentação de caixa
+                $this->movimentacaoService = new MovimentacaoService();
+                $dadosBaixa = [
+                    'empresa_id' => $data['empresa_id'],
+                    'categoria_id' => $data['categoria_id'],
+                    'centro_custo_id' => $data['centro_custo_id'] ?? null,
+                    'conta_bancaria_id' => $data['conta_bancaria_id'],
+                    'descricao' => "Pagamento: " . $data['descricao'],
+                    'valor' => $valorTotal,
+                    'data_movimento' => $data['data_pagamento'],
+                    'data_competencia' => $data['data_competencia'],
+                    'forma_pagamento_id' => $data['forma_pagamento_id'],
+                    'observacoes' => $data['observacoes_pagamento'] ?? null
+                ];
+                
+                $this->movimentacaoService->criarMovimentacaoPagamento($contaPagarId, $dadosBaixa);
+                
+                $_SESSION['success'] = 'Conta a pagar criada e registrada como paga com sucesso!';
+            } else {
+                $_SESSION['success'] = 'Conta a pagar criada com sucesso!';
+            }
             $response->redirect('/contas-pagar');
             
         } catch (\Exception $e) {

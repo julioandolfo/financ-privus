@@ -118,7 +118,7 @@ $saldoRestante = $conta['valor_total'] - $conta['valor_pago'];
                             <option value="">Selecione...</option>
                             <?php foreach ($contasBancarias as $conta_banc): ?>
                                 <option value="<?= $conta_banc['id'] ?>" <?= ($old['conta_bancaria_id'] ?? '') == $conta_banc['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($conta_banc['banco'] . ' - Ag: ' . $conta_banc['agencia'] . ' Cc: ' . $conta_banc['conta']) ?>
+                                    <?= htmlspecialchars($conta_banc['banco_nome'] . ' - Ag: ' . $conta_banc['agencia'] . ' Cc: ' . $conta_banc['conta']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
