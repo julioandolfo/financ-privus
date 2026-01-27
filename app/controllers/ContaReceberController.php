@@ -267,13 +267,6 @@ class ContaReceberController extends Controller
                 return;
             }
             
-            // Não permite editar conta já recebida
-            if ($contaReceber['status'] == 'recebido') {
-                $_SESSION['error'] = 'Não é possível editar uma conta já recebida!';
-                $response->redirect('/contas-receber/' . $id);
-                return;
-            }
-            
             $this->empresaModel = new Empresa();
             $this->clienteModel = new Cliente();
             $this->categoriaModel = new CategoriaFinanceira();

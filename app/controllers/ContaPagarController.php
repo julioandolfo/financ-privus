@@ -278,13 +278,6 @@ class ContaPagarController extends Controller
                 return;
             }
             
-            // Não permite editar conta já paga
-            if ($contaPagar['status'] == 'pago') {
-                $_SESSION['error'] = 'Não é possível editar uma conta já paga!';
-                $response->redirect('/contas-pagar/' . $id);
-                return;
-            }
-            
             $this->empresaModel = new Empresa();
             $this->fornecedorModel = new Fornecedor();
             $this->categoriaModel = new CategoriaFinanceira();
