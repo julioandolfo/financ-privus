@@ -241,12 +241,23 @@ class ContaPagarController extends Controller
             // Busca movimentações (histórico de pagamentos)
             $this->movimentacaoService = new MovimentacaoService();
             $movimentacoes = $this->movimentacaoService->buscarPorContaPagar($id);
+
+            $this->formaPagamentoModel = new FormaPagamento();
+            $this->contaBancariaModel = new ContaBancaria();
+
+            $formasPagamento = $this->formaPagamentoModel->findAll();
+            $contasBancarias = $this->contaBancariaModel->findAll();
+
+            $openBaixaModal = $request->get('acao') === 'baixar';
             
             return $this->render('contas_pagar/show', [
                 'title' => 'Detalhes da Conta a Pagar',
                 'conta' => $contaPagar,
                 'rateios' => $rateios,
-                'movimentacoes' => $movimentacoes
+                'movimentacoes' => $movimentacoes,
+                'formasPagamento' => $formasPagamento,
+                'contasBancarias' => $contasBancarias,
+                'openBaixaModal' => $openBaixaModal
             ]);
             
         } catch (\Exception $e) {
@@ -398,12 +409,6 @@ class ContaPagarController extends Controller
     public function baixar(Request $request, Response $response, $id)
     {
         try {
-            // Debug: verificar se o layout existe
-            $layoutPath = __DIR__ . '/../views/layouts/main.php';
-            if (!file_exists($layoutPath)) {
-                error_log("BAIXAR DEBUG: Layout não encontrado em: " . $layoutPath);
-            }
-            
             $this->contaPagarModel = new ContaPagar();
             $contaPagar = $this->contaPagarModel->findById($id);
             
@@ -420,24 +425,11 @@ class ContaPagarController extends Controller
                 return;
             }
             
-            $this->formaPagamentoModel = new FormaPagamento();
-            $this->contaBancariaModel = new ContaBancaria();
-            
-            $formasPagamento = $this->formaPagamentoModel->findAll();
-            $contasBancarias = $this->contaBancariaModel->findAll();
-            
-            $valorRestante = $contaPagar['valor_total'] - $contaPagar['valor_pago'];
-            
-            return $this->render('contas_pagar/baixar', [
-                'title' => 'Baixar Conta a Pagar',
-                'conta' => $contaPagar,
-                'formasPagamento' => $formasPagamento,
-                'contasBancarias' => $contasBancarias
-            ]);
+            // Redireciona para a tela de detalhes com modal de baixa
+            $response->redirect("/contas-pagar/{$id}?acao=baixar");
             
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Erro ao carregar formulário de baixa: ' . $e->getMessage();
-            error_log("BAIXAR ERROR: " . $e->getMessage());
             $response->redirect('/contas-pagar');
         }
     }
@@ -455,7 +447,7 @@ class ContaPagarController extends Controller
             if (!empty($errors)) {
                 $this->session->set('errors', $errors);
                 $this->session->set('old', $data);
-                $response->redirect("/contas-pagar/{$id}/baixar");
+                $response->redirect("/contas-pagar/{$id}?acao=baixar");
                 return;
             }
             
@@ -500,7 +492,7 @@ class ContaPagarController extends Controller
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Erro ao registrar pagamento: ' . $e->getMessage();
             $this->session->set('old', $data ?? []);
-            $response->redirect("/contas-pagar/{$id}/baixar");
+            $response->redirect("/contas-pagar/{$id}?acao=baixar");
         }
     }
 
