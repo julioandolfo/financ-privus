@@ -154,11 +154,17 @@ class ContaPagar extends Model
         
         $stmt = $this->db->prepare($sql);
         
+        // Converte strings vazias para null em campos opcionais de FK
+        $fornecedorId = !empty($data['fornecedor_id']) ? $data['fornecedor_id'] : null;
+        $centroCustoId = !empty($data['centro_custo_id']) ? $data['centro_custo_id'] : null;
+        $formaPagamentoId = !empty($data['forma_pagamento_id']) ? $data['forma_pagamento_id'] : null;
+        $contaBancariaId = !empty($data['conta_bancaria_id']) ? $data['conta_bancaria_id'] : null;
+        
         $success = $stmt->execute([
             $data['empresa_id'],
-            $data['fornecedor_id'] ?? null,
+            $fornecedorId,
             $data['categoria_id'],
-            $data['centro_custo_id'] ?? null,
+            $centroCustoId,
             $data['numero_documento'],
             $data['descricao'],
             $data['valor_total'],
@@ -166,10 +172,10 @@ class ContaPagar extends Model
             $data['data_emissao'],
             $data['data_competencia'],
             $data['data_vencimento'],
-            $data['data_pagamento'] ?? null,
+            !empty($data['data_pagamento']) ? $data['data_pagamento'] : null,
             $data['status'] ?? 'pendente',
-            $data['forma_pagamento_id'] ?? null,
-            $data['conta_bancaria_id'] ?? null,
+            $formaPagamentoId,
+            $contaBancariaId,
             $data['tem_rateio'] ?? 0,
             $data['observacoes'] ?? null,
             $data['usuario_cadastro_id']
@@ -201,19 +207,25 @@ class ContaPagar extends Model
         
         $stmt = $this->db->prepare($sql);
         
+        // Converte strings vazias para null em campos opcionais de FK
+        $fornecedorId = !empty($data['fornecedor_id']) ? $data['fornecedor_id'] : null;
+        $centroCustoId = !empty($data['centro_custo_id']) ? $data['centro_custo_id'] : null;
+        $formaPagamentoId = !empty($data['forma_pagamento_id']) ? $data['forma_pagamento_id'] : null;
+        $contaBancariaId = !empty($data['conta_bancaria_id']) ? $data['conta_bancaria_id'] : null;
+        
         return $stmt->execute([
             $data['empresa_id'],
-            $data['fornecedor_id'] ?? null,
+            $fornecedorId,
             $data['categoria_id'],
-            $data['centro_custo_id'] ?? null,
+            $centroCustoId,
             $data['numero_documento'],
             $data['descricao'],
             $data['valor_total'],
             $data['data_emissao'],
             $data['data_competencia'],
             $data['data_vencimento'],
-            $data['forma_pagamento_id'] ?? null,
-            $data['conta_bancaria_id'] ?? null,
+            $formaPagamentoId,
+            $contaBancariaId,
             $data['observacoes'] ?? null,
             $id
         ]);

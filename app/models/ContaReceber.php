@@ -146,11 +146,16 @@ class ContaReceber extends Model
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
         
         $stmt = $this->db->prepare($sql);
+        
+        // Converte strings vazias para null em campos opcionais de FK
+        $clienteId = !empty($data['cliente_id']) ? $data['cliente_id'] : null;
+        $centroCustoId = !empty($data['centro_custo_id']) ? $data['centro_custo_id'] : null;
+        
         $stmt->execute([
             $data['empresa_id'],
-            $data['cliente_id'] ?? null,
+            $clienteId,
             $data['categoria_id'],
-            $data['centro_custo_id'] ?? null,
+            $centroCustoId,
             $data['numero_documento'],
             $data['descricao'],
             $data['valor_total'],
@@ -179,11 +184,16 @@ class ContaReceber extends Model
                 WHERE id = ?";
         
         $stmt = $this->db->prepare($sql);
+        
+        // Converte strings vazias para null em campos opcionais de FK
+        $clienteId = !empty($data['cliente_id']) ? $data['cliente_id'] : null;
+        $centroCustoId = !empty($data['centro_custo_id']) ? $data['centro_custo_id'] : null;
+        
         return $stmt->execute([
             $data['empresa_id'],
-            $data['cliente_id'] ?? null,
+            $clienteId,
             $data['categoria_id'],
-            $data['centro_custo_id'] ?? null,
+            $centroCustoId,
             $data['numero_documento'],
             $data['descricao'],
             $data['valor_total'],
