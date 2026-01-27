@@ -111,8 +111,20 @@ abstract class Controller
             throw new \Exception("View não encontrada: {$view}");
         }
         
-        // Define caminho do layout
+        // Define caminho do layout - tenta múltiplos caminhos possíveis
         $layoutFile = __DIR__ . '/../views/layouts/' . $layout . '.php';
+        
+        // Fallback: tenta caminho alternativo se o primeiro não existir
+        if (!file_exists($layoutFile)) {
+            $altLayoutFile = realpath(__DIR__ . '/../views/layouts/') . '/' . $layout . '.php';
+            if ($altLayoutFile && file_exists($altLayoutFile)) {
+                $layoutFile = $altLayoutFile;
+            } else {
+                // Log para debug
+                error_log("RENDER ERROR: Layout não encontrado. Caminho tentado: " . $layoutFile);
+                error_log("RENDER ERROR: __DIR__ = " . __DIR__);
+            }
+        }
         
         if (file_exists($layoutFile)) {
             // Renderiza view dentro do layout
@@ -128,7 +140,8 @@ abstract class Controller
             // Renderiza o layout com o conteúdo
             include $layoutFile;
         } else {
-            // Renderiza apenas a view
+            // Layout não encontrado - renderiza apenas a view com aviso
+            error_log("RENDER WARNING: Renderizando view sem layout. Layout file: " . $layoutFile);
             include $viewFile;
         }
         

@@ -398,6 +398,12 @@ class ContaPagarController extends Controller
     public function baixar(Request $request, Response $response, $id)
     {
         try {
+            // Debug: verificar se o layout existe
+            $layoutPath = __DIR__ . '/../views/layouts/main.php';
+            if (!file_exists($layoutPath)) {
+                error_log("BAIXAR DEBUG: Layout não encontrado em: " . $layoutPath);
+            }
+            
             $this->contaPagarModel = new ContaPagar();
             $contaPagar = $this->contaPagarModel->findById($id);
             
@@ -431,6 +437,7 @@ class ContaPagarController extends Controller
             
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Erro ao carregar formulário de baixa: ' . $e->getMessage();
+            error_log("BAIXAR ERROR: " . $e->getMessage());
             $response->redirect('/contas-pagar');
         }
     }

@@ -31,7 +31,27 @@ class CategoriaController extends Controller
                 'nome' => $nome
             ];
             
-            // Paginação (apenas para view flat)
+            // Se for requisição AJAX (para dropdowns), retorna TODAS as categorias sem paginação
+            if ($ajax) {
+                // Para AJAX, busca todas as categorias sem limite
+                $categorias = $this->categoriaModel->findAll($empresaId, $tipo, null, 0, $searchFilters);
+                
+                // Adiciona nome da empresa em cada categoria
+                $this->empresaModel = new Empresa();
+                foreach ($categorias as &$categoria) {
+                    if (!empty($categoria['empresa_id'])) {
+                        $empresa = $this->empresaModel->findById($categoria['empresa_id']);
+                        $categoria['empresa_nome'] = $empresa ? $empresa['nome_fantasia'] : 'N/A';
+                    }
+                }
+                
+                return $response->json([
+                    'success' => true,
+                    'categorias' => $categorias
+                ]);
+            }
+            
+            // Paginação (apenas para view flat na listagem normal)
             $page = max(1, (int)$request->get('page', 1));
             $perPage = 20;
             $offset = ($page - 1) * $perPage;
@@ -46,23 +66,6 @@ class CategoriaController extends Controller
                 $categorias = $this->categoriaModel->findAll($empresaId, $tipo, $perPage, $offset, $searchFilters);
                 $total = $this->categoriaModel->count($empresaId, $tipo, $searchFilters);
                 $totalPages = ceil($total / $perPage);
-            }
-            
-            // Se for requisição AJAX, retorna JSON com nome da empresa
-            if ($ajax) {
-                // Adiciona nome da empresa em cada categoria
-                foreach ($categorias as &$categoria) {
-                    if (!empty($categoria['empresa_id'])) {
-                        $this->empresaModel = new Empresa();
-                        $empresa = $this->empresaModel->findById($categoria['empresa_id']);
-                        $categoria['empresa_nome'] = $empresa ? $empresa['nome_fantasia'] : 'N/A';
-                    }
-                }
-                
-                return $response->json([
-                    'success' => true,
-                    'categorias' => $categorias
-                ]);
             }
             
             $this->empresaModel = new Empresa();
