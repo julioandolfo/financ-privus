@@ -16,7 +16,7 @@ return [
     
     // Sessão
     'session_name' => 'financeiro_session',
-    'session_lifetime' => 7200, // 2 horas
+    'session_lifetime' => 2592000, // 30 dias - usuário permanece logado até clicar em sair ou limpar cookies
     
     // Segurança
     'csrf_token_name' => 'csrf_token',

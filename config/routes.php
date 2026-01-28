@@ -328,6 +328,19 @@ return [
     'GET /api/v1/contas-bancarias/{id}' => ['handler' => 'ApiRestController@contasBancariasShow', 'middleware' => ['ApiAuthMiddleware']],
     'POST /api/v1/contas-bancarias' => ['handler' => 'ApiRestController@contasBancariasStore', 'middleware' => ['ApiAuthMiddleware']],
     
+    // Empresas (GET para consulta de IDs)
+    'GET /api/v1/empresas' => ['handler' => 'ApiRestController@empresasIndex', 'middleware' => ['ApiAuthMiddleware']],
+    'GET /api/v1/empresas/{id}' => ['handler' => 'ApiRestController@empresasShow', 'middleware' => ['ApiAuthMiddleware']],
+    
+    // Formas de Pagamento (GET para consulta)
+    'GET /api/v1/formas-pagamento' => ['handler' => 'ApiRestController@formasPagamentoIndex', 'middleware' => ['ApiAuthMiddleware']],
+    'GET /api/v1/formas-pagamento/{id}' => ['handler' => 'ApiRestController@formasPagamentoShow', 'middleware' => ['ApiAuthMiddleware']],
+    
+    // Parcelas de Contas a Receber
+    'GET /api/v1/contas-receber/{id}/parcelas' => ['handler' => 'ApiRestController@parcelasReceberIndex', 'middleware' => ['ApiAuthMiddleware']],
+    'GET /api/v1/parcelas-receber/{id}' => ['handler' => 'ApiRestController@parcelasReceberShow', 'middleware' => ['ApiAuthMiddleware']],
+    'POST /api/v1/parcelas-receber/{id}/baixar' => ['handler' => 'ApiRestController@parcelasReceberBaixar', 'middleware' => ['ApiAuthMiddleware']],
+    
     // ========================================
     // SINCRONIZAÇÃO BANCÁRIA (Open Banking)
     // ========================================

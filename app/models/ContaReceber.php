@@ -141,15 +141,17 @@ class ContaReceber extends Model
     {
         $sql = "INSERT INTO {$this->table} 
                 (empresa_id, cliente_id, categoria_id, centro_custo_id, numero_documento, 
-                 descricao, valor_total, valor_recebido, data_emissao, data_competencia, 
-                 data_vencimento, status, observacoes, usuario_cadastro_id, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+                 descricao, valor_total, valor_recebido, desconto, data_emissao, data_competencia, 
+                 data_vencimento, status, observacoes, regiao, segmento, numero_parcelas, 
+                 parcela_atual, conta_origem_id, usuario_cadastro_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
         
         $stmt = $this->db->prepare($sql);
         
         // Converte strings vazias para null em campos opcionais de FK
         $clienteId = !empty($data['cliente_id']) ? $data['cliente_id'] : null;
         $centroCustoId = !empty($data['centro_custo_id']) ? $data['centro_custo_id'] : null;
+        $contaOrigemId = !empty($data['conta_origem_id']) ? $data['conta_origem_id'] : null;
         
         $stmt->execute([
             $data['empresa_id'],
@@ -160,11 +162,17 @@ class ContaReceber extends Model
             $data['descricao'],
             $data['valor_total'],
             $data['valor_recebido'] ?? 0,
+            $data['desconto'] ?? 0,
             $data['data_emissao'],
             $data['data_competencia'],
             $data['data_vencimento'],
             $data['status'] ?? 'pendente',
             $data['observacoes'] ?? null,
+            $data['regiao'] ?? null,
+            $data['segmento'] ?? null,
+            $data['numero_parcelas'] ?? 1,
+            $data['parcela_atual'] ?? 1,
+            $contaOrigemId,
             $data['usuario_cadastro_id']
         ]);
         
@@ -178,9 +186,10 @@ class ContaReceber extends Model
     {
         $sql = "UPDATE {$this->table} SET
                 empresa_id = ?, cliente_id = ?, categoria_id = ?, centro_custo_id = ?,
-                numero_documento = ?, descricao = ?, valor_total = ?,
+                numero_documento = ?, descricao = ?, valor_total = ?, desconto = ?,
                 data_emissao = ?, data_competencia = ?, data_vencimento = ?,
-                observacoes = ?, updated_at = NOW()
+                observacoes = ?, regiao = ?, segmento = ?, numero_parcelas = ?,
+                parcela_atual = ?, conta_origem_id = ?, updated_at = NOW()
                 WHERE id = ?";
         
         $stmt = $this->db->prepare($sql);
@@ -188,6 +197,7 @@ class ContaReceber extends Model
         // Converte strings vazias para null em campos opcionais de FK
         $clienteId = !empty($data['cliente_id']) ? $data['cliente_id'] : null;
         $centroCustoId = !empty($data['centro_custo_id']) ? $data['centro_custo_id'] : null;
+        $contaOrigemId = !empty($data['conta_origem_id']) ? $data['conta_origem_id'] : null;
         
         return $stmt->execute([
             $data['empresa_id'],
@@ -197,10 +207,16 @@ class ContaReceber extends Model
             $data['numero_documento'],
             $data['descricao'],
             $data['valor_total'],
+            $data['desconto'] ?? 0,
             $data['data_emissao'],
             $data['data_competencia'],
             $data['data_vencimento'],
             $data['observacoes'] ?? null,
+            $data['regiao'] ?? null,
+            $data['segmento'] ?? null,
+            $data['numero_parcelas'] ?? 1,
+            $data['parcela_atual'] ?? 1,
+            $contaOrigemId,
             $id
         ]);
     }
@@ -560,5 +576,107 @@ class ContaReceber extends Model
     public function getDb()
     {
         return $this->db;
+    }
+    
+    /**
+     * Cria conta com parcelas
+     * @param array $data Dados da conta
+     * @param array $parcelas Array de parcelas com data_vencimento e valor
+     * @return array ['conta_id' => int, 'parcelas_ids' => array]
+     */
+    public function createWithParcelas($data, $parcelas)
+    {
+        $this->db->beginTransaction();
+        
+        try {
+            // Define número de parcelas
+            $data['numero_parcelas'] = count($parcelas);
+            $data['parcela_atual'] = 1;
+            
+            // Calcula valor total se não informado
+            if (empty($data['valor_total'])) {
+                $data['valor_total'] = array_sum(array_column($parcelas, 'valor'));
+            }
+            
+            // Cria a conta principal
+            $contaId = $this->create($data);
+            
+            // Cria as parcelas
+            $parcelaModel = new ParcelaReceber();
+            $parcelasIds = [];
+            
+            foreach ($parcelas as $index => $parcela) {
+                $parcelaId = $parcelaModel->create([
+                    'conta_receber_id' => $contaId,
+                    'empresa_id' => $data['empresa_id'],
+                    'numero_parcela' => $index + 1,
+                    'valor_parcela' => $parcela['valor'],
+                    'data_vencimento' => $parcela['data_vencimento'],
+                    'desconto' => $parcela['desconto'] ?? 0,
+                    'observacoes' => $parcela['observacoes'] ?? null
+                ]);
+                $parcelasIds[] = $parcelaId;
+            }
+            
+            $this->db->commit();
+            
+            return [
+                'conta_id' => $contaId,
+                'parcelas_ids' => $parcelasIds
+            ];
+            
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+    
+    /**
+     * Gera parcelas automaticamente para uma conta existente
+     */
+    public function gerarParcelas($id, $numeroParcelas, $intervalo = 30)
+    {
+        $conta = $this->findById($id);
+        if (!$conta) {
+            return false;
+        }
+        
+        $parcelaModel = new ParcelaReceber();
+        
+        // Excluir parcelas existentes
+        $parcelaModel->deleteByContaReceber($id);
+        
+        // Gerar novas parcelas
+        $ids = $parcelaModel->gerarParcelas(
+            $id,
+            $conta['empresa_id'],
+            $conta['valor_total'] - ($conta['desconto'] ?? 0),
+            $numeroParcelas,
+            $conta['data_vencimento'],
+            $intervalo
+        );
+        
+        // Atualizar número de parcelas na conta
+        $this->execute("UPDATE {$this->table} SET numero_parcelas = ? WHERE id = ?", [$numeroParcelas, $id]);
+        
+        return $ids;
+    }
+    
+    /**
+     * Retorna parcelas de uma conta
+     */
+    public function getParcelas($id)
+    {
+        $parcelaModel = new ParcelaReceber();
+        return $parcelaModel->findByContaReceber($id);
+    }
+    
+    /**
+     * Executa uma query SQL
+     */
+    private function execute($sql, $params = [])
+    {
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute($params);
     }
 }

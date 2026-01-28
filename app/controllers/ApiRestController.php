@@ -6,9 +6,11 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Models\ContaPagar;
 use App\Models\ContaReceber;
+use App\Models\ParcelaReceber;
 use App\Models\Produto;
 use App\Models\Cliente;
 use App\Models\Fornecedor;
+use App\Models\Empresa;
 use App\Models\PedidoVinculado;
 use App\Models\PedidoItem;
 use App\Models\MovimentacaoCaixa;
@@ -263,6 +265,9 @@ class ApiRestController extends Controller
         if (!isset($input['status'])) {
             $input['status'] = 'pendente';
         }
+        if (!isset($input['desconto'])) {
+            $input['desconto'] = 0;
+        }
         
         // 🚀 NOVO: Auto-cadastro completo (Cliente + Produtos + Pedido)
         $clienteCriado = false;
@@ -392,7 +397,23 @@ class ApiRestController extends Controller
         }
         
         $model = new ContaReceber();
-        $id = $model->create($input);
+        $parcelasIds = [];
+        
+        // 🚀 NOVO: Suporte a Parcelas
+        if (isset($input['parcelas']) && is_array($input['parcelas']) && count($input['parcelas']) > 0) {
+            // Criar conta com parcelas
+            $result = $model->createWithParcelas($input, $input['parcelas']);
+            $id = $result['conta_id'];
+            $parcelasIds = $result['parcelas_ids'];
+        } elseif (isset($input['numero_parcelas']) && $input['numero_parcelas'] > 1) {
+            // Gerar parcelas automaticamente
+            $id = $model->create($input);
+            $intervalo = $input['intervalo_parcelas'] ?? 30;
+            $parcelasIds = $model->gerarParcelas($id, $input['numero_parcelas'], $intervalo);
+        } else {
+            // Criar conta simples (sem parcelas)
+            $id = $model->create($input);
+        }
         
         // Resposta detalhada
         $data = [
@@ -400,6 +421,12 @@ class ApiRestController extends Controller
             'conta_receber_id' => $id,
             'message' => 'Conta criada com sucesso'
         ];
+        
+        // Adicionar informações de parcelas
+        if (!empty($parcelasIds)) {
+            $data['parcelas_ids'] = $parcelasIds;
+            $data['numero_parcelas'] = count($parcelasIds);
+        }
         
         // Adicionar informações do auto-cadastro
         if ($pedidoId) {
@@ -425,6 +452,7 @@ class ApiRestController extends Controller
         if ($clienteCriado) $mensagens[] = 'Cliente cadastrado automaticamente';
         if ($produtosCriados > 0) $mensagens[] = "{$produtosCriados} produto(s) criado(s) automaticamente";
         if ($pedidoId) $mensagens[] = "Pedido #{$input['pedido']['numero_pedido'] ?? $pedidoId} vinculado";
+        if (!empty($parcelasIds)) $mensagens[] = count($parcelasIds) . " parcela(s) gerada(s)";
         
         $data['message'] = implode('. ', $mensagens) . '.';
         
@@ -454,26 +482,6 @@ class ApiRestController extends Controller
         }
         
         // Validação básica (mais flexível para update)
-        $errors = $this->validateContaReceber($input, $id);
-        if (!empty($errors)) {
-            $data = ['success' => false, 'errors' => $errors];
-            $this->logSuccess($request, 400, $data);
-            return $response->json($data, 400);
-        }
-        
-        $model->update($id, $input);
-        
-        $data = ['success' => true, 'message' => 'Conta atualizada com sucesso'];
-        $this->logSuccess($request, 200, $data);
-        $response->json($data);
-    }
-            $data = ['success' => false, 'error' => 'Conta não encontrada'];
-            $this->logSuccess($request, 404, $data);
-            return $response->json($data, 404);
-        }
-        
-        $input = json_decode(file_get_contents('php://input'), true);
-        
         $errors = $this->validateContaReceber($input, $id);
         if (!empty($errors)) {
             $data = ['success' => false, 'errors' => $errors];
@@ -1419,5 +1427,178 @@ class ApiRestController extends Controller
         }
         
         return $errors;
+    }
+
+    // =====================================================
+    // EMPRESAS (GET para consulta)
+    // =====================================================
+
+    public function empresasIndex(Request $request, Response $response)
+    {
+        $token = $this->authenticate($request, $response);
+        
+        $model = new Empresa();
+        
+        // Se o token está vinculado a uma empresa específica, só retorna ela
+        if ($token['empresa_id']) {
+            $empresa = $model->findById($token['empresa_id']);
+            $empresas = $empresa ? [$empresa] : [];
+        } else {
+            // Token com acesso a todas as empresas
+            $empresas = $model->findAll(['ativo' => 1]);
+        }
+        
+        // Retornar apenas campos essenciais
+        $resultado = array_map(function($emp) {
+            return [
+                'id' => $emp['id'],
+                'codigo' => $emp['codigo'],
+                'razao_social' => $emp['razao_social'],
+                'nome_fantasia' => $emp['nome_fantasia'],
+                'cnpj' => $emp['cnpj'],
+                'ativo' => $emp['ativo']
+            ];
+        }, $empresas);
+        
+        $data = ['success' => true, 'data' => $resultado, 'total' => count($resultado)];
+        $this->logSuccess($request, 200, $data);
+        $response->json($data);
+    }
+
+    public function empresasShow(Request $request, Response $response, $id)
+    {
+        $token = $this->authenticate($request, $response);
+        
+        $model = new Empresa();
+        $empresa = $model->findById($id);
+        
+        if (!$empresa || ($token['empresa_id'] && $empresa['id'] != $token['empresa_id'])) {
+            $data = ['success' => false, 'error' => 'Empresa não encontrada'];
+            $this->logSuccess($request, 404, $data);
+            return $response->json($data, 404);
+        }
+        
+        $data = ['success' => true, 'data' => $empresa];
+        $this->logSuccess($request, 200, $data);
+        $response->json($data);
+    }
+
+    // =====================================================
+    // FORMAS DE PAGAMENTO (GET para consulta)
+    // =====================================================
+
+    public function formasPagamentoIndex(Request $request, Response $response)
+    {
+        $token = $this->authenticate($request, $response);
+        
+        $model = new FormaPagamento();
+        $empresaId = $token['empresa_id'];
+        
+        $formas = $model->findAll($empresaId);
+        
+        $data = ['success' => true, 'data' => $formas, 'total' => count($formas)];
+        $this->logSuccess($request, 200, $data);
+        $response->json($data);
+    }
+
+    public function formasPagamentoShow(Request $request, Response $response, $id)
+    {
+        $token = $this->authenticate($request, $response);
+        
+        $model = new FormaPagamento();
+        $forma = $model->findById($id);
+        
+        if (!$forma || ($token['empresa_id'] && $forma['empresa_id'] != $token['empresa_id'])) {
+            $data = ['success' => false, 'error' => 'Forma de pagamento não encontrada'];
+            $this->logSuccess($request, 404, $data);
+            return $response->json($data, 404);
+        }
+        
+        $data = ['success' => true, 'data' => $forma];
+        $this->logSuccess($request, 200, $data);
+        $response->json($data);
+    }
+
+    // =====================================================
+    // PARCELAS DE CONTAS A RECEBER
+    // =====================================================
+
+    public function parcelasReceberIndex(Request $request, Response $response, $contaId)
+    {
+        $token = $this->authenticate($request, $response);
+        
+        // Verificar se a conta existe e pertence à empresa do token
+        $contaModel = new ContaReceber();
+        $conta = $contaModel->findById($contaId);
+        
+        if (!$conta || ($token['empresa_id'] && $conta['empresa_id'] != $token['empresa_id'])) {
+            $data = ['success' => false, 'error' => 'Conta não encontrada'];
+            $this->logSuccess($request, 404, $data);
+            return $response->json($data, 404);
+        }
+        
+        $parcelaModel = new ParcelaReceber();
+        $parcelas = $parcelaModel->findByContaReceber($contaId);
+        $resumo = $parcelaModel->getResumoByContaReceber($contaId);
+        
+        $data = [
+            'success' => true, 
+            'data' => $parcelas, 
+            'resumo' => $resumo,
+            'total' => count($parcelas)
+        ];
+        $this->logSuccess($request, 200, $data);
+        $response->json($data);
+    }
+
+    public function parcelasReceberShow(Request $request, Response $response, $id)
+    {
+        $token = $this->authenticate($request, $response);
+        
+        $parcelaModel = new ParcelaReceber();
+        $parcela = $parcelaModel->findById($id);
+        
+        if (!$parcela || ($token['empresa_id'] && $parcela['empresa_id'] != $token['empresa_id'])) {
+            $data = ['success' => false, 'error' => 'Parcela não encontrada'];
+            $this->logSuccess($request, 404, $data);
+            return $response->json($data, 404);
+        }
+        
+        $data = ['success' => true, 'data' => $parcela];
+        $this->logSuccess($request, 200, $data);
+        $response->json($data);
+    }
+
+    public function parcelasReceberBaixar(Request $request, Response $response, $id)
+    {
+        $token = $this->authenticate($request, $response);
+        
+        $parcelaModel = new ParcelaReceber();
+        $parcela = $parcelaModel->findById($id);
+        
+        if (!$parcela || ($token['empresa_id'] && $parcela['empresa_id'] != $token['empresa_id'])) {
+            $data = ['success' => false, 'error' => 'Parcela não encontrada'];
+            $this->logSuccess($request, 404, $data);
+            return $response->json($data, 404);
+        }
+        
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        $valorRecebido = $input['valor_recebido'] ?? $parcela['valor_parcela'];
+        $dataRecebimento = $input['data_recebimento'] ?? date('Y-m-d');
+        $formaRecebimentoId = $input['forma_recebimento_id'] ?? null;
+        $contaBancariaId = $input['conta_bancaria_id'] ?? null;
+        
+        $result = $parcelaModel->registrarRecebimento($id, $valorRecebido, $dataRecebimento, $formaRecebimentoId, $contaBancariaId);
+        
+        if ($result) {
+            $data = ['success' => true, 'message' => 'Recebimento registrado com sucesso'];
+            $this->logSuccess($request, 200, $data);
+            $response->json($data);
+        } else {
+            $data = ['success' => false, 'error' => 'Erro ao registrar recebimento'];
+            $this->logSuccess($request, 500, $data);
+            $response->json($data, 500);
+        }
     }
 }

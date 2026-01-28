@@ -16,6 +16,9 @@ class Session
         if (!self::$started) {
             $config = require __DIR__ . '/../../config/config.php';
             
+            // Configura o tempo de vida da sessão no servidor (garbage collection)
+            ini_set('session.gc_maxlifetime', $config['session_lifetime']);
+            
             session_name($config['session_name']);
             session_set_cookie_params([
                 'lifetime' => $config['session_lifetime'],
@@ -27,6 +30,23 @@ class Session
             ]);
             
             session_start();
+            
+            // Regenera o cookie da sessão para estender a validade a cada requisição
+            if (isset($_COOKIE[$config['session_name']])) {
+                setcookie(
+                    $config['session_name'],
+                    session_id(),
+                    [
+                        'expires' => time() + $config['session_lifetime'],
+                        'path' => '/',
+                        'domain' => '',
+                        'secure' => isset($_SERVER['HTTPS']),
+                        'httponly' => true,
+                        'samesite' => 'Lax'
+                    ]
+                );
+            }
+            
             self::$started = true;
         }
     }

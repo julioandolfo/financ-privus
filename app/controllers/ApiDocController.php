@@ -61,9 +61,21 @@ class ApiDocController extends Controller
         return [
             'info' => [
                 'title' => 'API Financeiro Empresarial',
-                'version' => '1.1.0',
+                'version' => '1.2.0',
                 'description' => 'API RESTful para integração com o Sistema Financeiro Empresarial. Gerencie contas a pagar/receber, produtos, clientes, fornecedores e movimentações financeiras. ⭐ NOVO: Suporte a pedidos com produtos, auto-cadastro via SKU e cálculo automático de lucro/margem.',
                 'changelog' => [
+                    'v1.2.0 (Janeiro 2026)' => [
+                        '🚀 Suporte a PARCELAS em Contas a Receber',
+                        '✅ Gerar parcelas automaticamente (número + intervalo)',
+                        '✅ Informar parcelas personalizadas (valores e datas específicas)',
+                        '✅ Endpoints para listar e baixar parcelas individualmente',
+                        '✅ Campo desconto em Contas a Receber',
+                        '✅ Campo região para segmentação geográfica',
+                        '✅ Campo segmento para segmentação de mercado',
+                        '✅ Endpoint GET /api/v1/empresas para consultar IDs',
+                        '✅ Endpoint GET /api/v1/categorias para consultar IDs',
+                        '✅ Endpoint GET /api/v1/formas-pagamento para consultar IDs',
+                    ],
                     'v1.1.0 (Janeiro 2026)' => [
                         '🚀 Auto-cadastro COMPLETO: Cliente + Produtos + Pedido + Conta em UMA requisição',
                         '✅ Auto-criar cliente por CPF/CNPJ (busca ou cria)',
@@ -244,7 +256,7 @@ class ApiDocController extends Controller
                 
                 'contas_receber' => [
                     'name' => 'Contas a Receber',
-                    'description' => 'Gerenciamento de contas a receber com auto-cadastro COMPLETO: Cliente (por CPF/CNPJ) + Produtos (por SKU) + Pedido em uma única requisição!',
+                    'description' => 'Gerenciamento de contas a receber com suporte a PARCELAS, desconto, região e segmento. Auto-cadastro COMPLETO: Cliente (por CPF/CNPJ) + Produtos (por SKU) + Pedido + Parcelas em uma única requisição!',
                     'base_url' => '/api/v1/contas-receber',
                     'methods' => [
                         [
@@ -254,31 +266,160 @@ class ApiDocController extends Controller
                             'params' => [
                                 ['name' => 'status', 'type' => 'string', 'required' => false, 'description' => 'Filtrar por status (pendente, recebido, vencido, parcial, cancelado)'],
                                 ['name' => 'cliente_id', 'type' => 'integer', 'required' => false, 'description' => 'Filtrar por cliente'],
+                                ['name' => 'regiao', 'type' => 'string', 'required' => false, 'description' => '🆕 Filtrar por região'],
+                                ['name' => 'segmento', 'type' => 'string', 'required' => false, 'description' => '🆕 Filtrar por segmento'],
                                 ['name' => 'data_inicio', 'type' => 'date', 'required' => false, 'description' => 'Data inicial (YYYY-MM-DD)'],
                                 ['name' => 'data_fim', 'type' => 'date', 'required' => false, 'description' => 'Data final (YYYY-MM-DD)'],
                             ],
                         ],
                         [
+                            'method' => 'GET',
+                            'endpoint' => '/api/v1/contas-receber/{id}/parcelas',
+                            'description' => '🆕 Lista todas as parcelas de uma conta a receber',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID da conta a receber'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'data' => [
+                                    ['id' => 1, 'numero_parcela' => 1, 'valor_parcela' => 500.00, 'data_vencimento' => '2026-02-15', 'status' => 'pendente'],
+                                    ['id' => 2, 'numero_parcela' => 2, 'valor_parcela' => 500.00, 'data_vencimento' => '2026-03-15', 'status' => 'pendente'],
+                                ],
+                                'resumo' => [
+                                    'total_parcelas' => 2,
+                                    'valor_total' => 1000.00,
+                                    'total_recebido' => 0,
+                                    'parcelas_pendentes' => 2,
+                                    'parcelas_recebidas' => 0
+                                ]
+                            ]
+                        ],
+                        [
+                            'method' => 'POST',
+                            'endpoint' => '/api/v1/parcelas-receber/{id}/baixar',
+                            'description' => '🆕 Registra recebimento de uma parcela específica',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID da parcela'],
+                            ],
+                            'body' => [
+                                'valor_recebido' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor recebido (padrão: valor da parcela)'],
+                                'data_recebimento' => ['type' => 'date', 'required' => false, 'description' => 'Data do recebimento (padrão: hoje)'],
+                                'forma_recebimento_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da forma de pagamento'],
+                                'conta_bancaria_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da conta bancária'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'message' => 'Recebimento registrado com sucesso'
+                            ]
+                        ],
+                        [
                             'method' => 'POST',
                             'endpoint' => '/api/v1/contas-receber',
-                            'description' => 'Cria uma nova conta a receber SIMPLES (sem produtos)',
+                            'description' => 'Cria uma nova conta a receber SIMPLES (sem parcelas)',
                             'body' => [
-                                'empresa_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da empresa'],
+                                'empresa_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da empresa (use GET /api/v1/empresas para listar)'],
                                 'cliente_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID do cliente'],
-                                'categoria_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da categoria financeira'],
+                                'categoria_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da categoria financeira (use GET /api/v1/categorias para listar)'],
                                 'descricao' => ['type' => 'string', 'required' => true, 'description' => 'Descrição da conta'],
                                 'valor_total' => ['type' => 'decimal', 'required' => true, 'description' => 'Valor total da conta'],
+                                'desconto' => ['type' => 'decimal', 'required' => false, 'description' => '🆕 Valor do desconto. Padrão: 0'],
                                 'numero_documento' => ['type' => 'string', 'required' => false, 'description' => 'Número do documento (nota fiscal, etc)'],
                                 'data_emissao' => ['type' => 'date', 'required' => false, 'description' => 'Data de emissão (YYYY-MM-DD). Padrão: data atual'],
                                 'data_competencia' => ['type' => 'date', 'required' => true, 'description' => 'Data de competência (YYYY-MM-DD)'],
                                 'data_vencimento' => ['type' => 'date', 'required' => true, 'description' => 'Data de vencimento (YYYY-MM-DD)'],
+                                'regiao' => ['type' => 'string', 'required' => false, 'description' => '🆕 Região do cliente/venda (ex: Sul, Sudeste, Centro-Oeste)'],
+                                'segmento' => ['type' => 'string', 'required' => false, 'description' => '🆕 Segmento do negócio (ex: Varejo, Atacado, E-commerce)'],
                                 'centro_custo_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID do centro de custo'],
                                 'observacoes' => ['type' => 'text', 'required' => false, 'description' => 'Observações adicionais'],
                             ],
                             'response' => [
                                 'success' => true,
                                 'message' => 'Conta a receber criada com sucesso!',
-                                'data' => ['id' => 1]
+                                'conta_receber_id' => 1
+                            ]
+                        ],
+                        [
+                            'method' => 'POST',
+                            'endpoint' => '/api/v1/contas-receber',
+                            'description' => '🆕 Cria conta a receber COM PARCELAS (gera automaticamente ou informadas)',
+                            'body' => [
+                                'empresa_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da empresa'],
+                                'cliente_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID do cliente'],
+                                'categoria_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da categoria financeira'],
+                                'descricao' => ['type' => 'string', 'required' => true, 'description' => 'Descrição da conta'],
+                                'valor_total' => ['type' => 'decimal', 'required' => true, 'description' => 'Valor total da conta'],
+                                'desconto' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor do desconto'],
+                                'data_competencia' => ['type' => 'date', 'required' => true, 'description' => 'Data de competência'],
+                                'data_vencimento' => ['type' => 'date', 'required' => true, 'description' => 'Data de vencimento da primeira parcela'],
+                                'regiao' => ['type' => 'string', 'required' => false, 'description' => 'Região do cliente/venda'],
+                                'segmento' => ['type' => 'string', 'required' => false, 'description' => 'Segmento do negócio'],
+                                'numero_parcelas' => ['type' => 'integer', 'required' => true, 'description' => '🆕 Número de parcelas (gera automaticamente)'],
+                                'intervalo_parcelas' => ['type' => 'integer', 'required' => false, 'description' => '🆕 Intervalo em dias entre parcelas. Padrão: 30'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'conta_receber_id' => 1,
+                                'parcelas_ids' => [1, 2, 3],
+                                'numero_parcelas' => 3,
+                                'message' => 'Conta a receber criada com sucesso! 3 parcela(s) gerada(s).'
+                            ],
+                            'example' => [
+                                'empresa_id' => 1,
+                                'cliente_id' => 10,
+                                'categoria_id' => 5,
+                                'descricao' => 'Venda parcelada em 3x',
+                                'valor_total' => 3000.00,
+                                'desconto' => 100.00,
+                                'data_competencia' => '2026-01-26',
+                                'data_vencimento' => '2026-02-15',
+                                'regiao' => 'Sudeste',
+                                'segmento' => 'Varejo',
+                                'numero_parcelas' => 3,
+                                'intervalo_parcelas' => 30
+                            ]
+                        ],
+                        [
+                            'method' => 'POST',
+                            'endpoint' => '/api/v1/contas-receber',
+                            'description' => '🆕 Cria conta com PARCELAS PERSONALIZADAS (datas e valores específicos)',
+                            'body' => [
+                                'empresa_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da empresa'],
+                                'cliente_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID do cliente'],
+                                'categoria_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da categoria financeira'],
+                                'descricao' => ['type' => 'string', 'required' => true, 'description' => 'Descrição da conta'],
+                                'data_competencia' => ['type' => 'date', 'required' => true, 'description' => 'Data de competência'],
+                                'data_vencimento' => ['type' => 'date', 'required' => true, 'description' => 'Data de vencimento geral'],
+                                'regiao' => ['type' => 'string', 'required' => false, 'description' => 'Região'],
+                                'segmento' => ['type' => 'string', 'required' => false, 'description' => 'Segmento'],
+                                'parcelas' => ['type' => 'array', 'required' => true, 'description' => '🆕 Array de parcelas com valores e datas personalizadas', 'items' => [
+                                    'valor' => ['type' => 'decimal', 'required' => true, 'description' => 'Valor da parcela'],
+                                    'data_vencimento' => ['type' => 'date', 'required' => true, 'description' => 'Data de vencimento da parcela'],
+                                    'desconto' => ['type' => 'decimal', 'required' => false, 'description' => 'Desconto na parcela'],
+                                    'observacoes' => ['type' => 'string', 'required' => false, 'description' => 'Observações da parcela'],
+                                ]],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'conta_receber_id' => 1,
+                                'parcelas_ids' => [1, 2, 3, 4],
+                                'numero_parcelas' => 4,
+                                'message' => 'Conta a receber criada com sucesso! 4 parcela(s) gerada(s).'
+                            ],
+                            'example' => [
+                                'empresa_id' => 1,
+                                'cliente_id' => 10,
+                                'categoria_id' => 5,
+                                'descricao' => 'Venda com parcelas personalizadas',
+                                'data_competencia' => '2026-01-26',
+                                'data_vencimento' => '2026-02-15',
+                                'regiao' => 'Sul',
+                                'segmento' => 'Atacado',
+                                'parcelas' => [
+                                    ['valor' => 500.00, 'data_vencimento' => '2026-02-15', 'observacoes' => 'Entrada'],
+                                    ['valor' => 800.00, 'data_vencimento' => '2026-03-15'],
+                                    ['valor' => 800.00, 'data_vencimento' => '2026-04-15'],
+                                    ['valor' => 900.00, 'data_vencimento' => '2026-05-15', 'observacoes' => 'Última parcela']
+                                ]
                             ]
                         ],
                         [
@@ -754,6 +895,84 @@ class ApiDocController extends Controller
                                 'valor' => ['type' => 'decimal', 'required' => true],
                                 'descricao' => ['type' => 'string', 'required' => true],
                                 'data' => ['type' => 'date', 'required' => true],
+                            ],
+                        ],
+                    ]
+                ],
+                
+                'empresas' => [
+                    'name' => '🆕 Empresas',
+                    'description' => 'Consulta de empresas cadastradas - útil para obter IDs de empresas para uso em outros endpoints',
+                    'base_url' => '/api/v1/empresas',
+                    'methods' => [
+                        [
+                            'method' => 'GET',
+                            'endpoint' => '/api/v1/empresas',
+                            'description' => 'Lista todas as empresas que o token tem acesso',
+                            'response' => [
+                                'success' => true,
+                                'data' => [
+                                    [
+                                        'id' => 1,
+                                        'codigo' => 'EMP001',
+                                        'razao_social' => 'Empresa Exemplo LTDA',
+                                        'nome_fantasia' => 'Empresa Exemplo',
+                                        'cnpj' => '12.345.678/0001-90',
+                                        'ativo' => true
+                                    ]
+                                ],
+                                'total' => 1
+                            ]
+                        ],
+                        [
+                            'method' => 'GET',
+                            'endpoint' => '/api/v1/empresas/{id}',
+                            'description' => 'Busca uma empresa específica',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID da empresa'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'data' => [
+                                    'id' => 1,
+                                    'codigo' => 'EMP001',
+                                    'razao_social' => 'Empresa Exemplo LTDA',
+                                    'nome_fantasia' => 'Empresa Exemplo',
+                                    'cnpj' => '12.345.678/0001-90',
+                                    'ativo' => true,
+                                    'configuracoes' => null
+                                ]
+                            ]
+                        ],
+                    ]
+                ],
+                
+                'formas_pagamento' => [
+                    'name' => '🆕 Formas de Pagamento',
+                    'description' => 'Consulta de formas de pagamento/recebimento cadastradas',
+                    'base_url' => '/api/v1/formas-pagamento',
+                    'methods' => [
+                        [
+                            'method' => 'GET',
+                            'endpoint' => '/api/v1/formas-pagamento',
+                            'description' => 'Lista todas as formas de pagamento',
+                            'response' => [
+                                'success' => true,
+                                'data' => [
+                                    ['id' => 1, 'nome' => 'Dinheiro', 'tipo' => 'ambos', 'ativo' => true],
+                                    ['id' => 2, 'nome' => 'PIX', 'tipo' => 'ambos', 'ativo' => true],
+                                    ['id' => 3, 'nome' => 'Cartão de Crédito', 'tipo' => 'recebimento', 'ativo' => true],
+                                    ['id' => 4, 'nome' => 'Boleto', 'tipo' => 'ambos', 'ativo' => true],
+                                ],
+                                'total' => 4
+                            ]
+                        ],
+                        [
+                            'method' => 'GET',
+                            'endpoint' => '/api/v1/formas-pagamento/{id}',
+                            'description' => 'Busca uma forma de pagamento específica',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID da forma de pagamento'],
                             ],
                         ],
                     ]
