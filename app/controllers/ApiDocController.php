@@ -425,7 +425,7 @@ class ApiDocController extends Controller
                         [
                             'method' => 'POST',
                             'endpoint' => '/api/v1/contas-receber',
-                            'description' => '🚀 COMPLETO: Cria TUDO em UMA requisição (Cliente + Produtos + Pedido + Conta)',
+                            'description' => '🚀 COMPLETO: Cria TUDO em UMA requisição (Cliente + Produtos + Pedido + Parcelas + Conta)',
                             'body' => [
                                 'empresa_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da empresa'],
                                 'categoria_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da categoria financeira'],
@@ -434,6 +434,17 @@ class ApiDocController extends Controller
                                 'data_emissao' => ['type' => 'date', 'required' => false, 'description' => 'Data de emissão (padrão: hoje)'],
                                 'data_competencia' => ['type' => 'date', 'required' => true, 'description' => 'Data de competência (YYYY-MM-DD)'],
                                 'numero_documento' => ['type' => 'string', 'required' => false, 'description' => 'Número da NF/Recibo'],
+                                'desconto' => ['type' => 'decimal', 'required' => false, 'description' => '🆕 Valor do desconto total'],
+                                'regiao' => ['type' => 'string', 'required' => false, 'description' => '🆕 Região (ex: Sul, Sudeste)'],
+                                'segmento' => ['type' => 'string', 'required' => false, 'description' => '🆕 Segmento (ex: Varejo, Atacado)'],
+                                'numero_parcelas' => ['type' => 'integer', 'required' => false, 'description' => '🆕 Número de parcelas (gera automaticamente). Se não informado, cria conta única'],
+                                'intervalo_parcelas' => ['type' => 'integer', 'required' => false, 'description' => '🆕 Intervalo em dias entre parcelas. Padrão: 30'],
+                                'parcelas' => ['type' => 'array', 'required' => false, 'description' => '🆕 Array de parcelas personalizadas (alternativa ao numero_parcelas)', 'items' => [
+                                    'valor' => ['type' => 'decimal', 'required' => true, 'description' => 'Valor da parcela'],
+                                    'data_vencimento' => ['type' => 'date', 'required' => true, 'description' => 'Data de vencimento'],
+                                    'desconto' => ['type' => 'decimal', 'required' => false, 'description' => 'Desconto na parcela'],
+                                    'observacoes' => ['type' => 'string', 'required' => false, 'description' => 'Observações'],
+                                ]],
                                 'criar_pedido' => ['type' => 'boolean', 'required' => true, 'description' => 'true para criar pedido'],
                                 'cliente' => ['type' => 'object', 'required' => true, 'description' => '🚀 Dados do cliente (busca/cria por CPF/CNPJ)', 'fields' => [
                                     'cpf_cnpj' => ['type' => 'string', 'required' => true, 'description' => 'CPF ou CNPJ (busca existente ou cria novo)'],
@@ -462,19 +473,26 @@ class ApiDocController extends Controller
                                 'cliente_criado' => true,
                                 'produtos_criados' => 2,
                                 'produtos_vinculados' => 2,
+                                'parcelas_ids' => [1, 2, 3],
+                                'numero_parcelas' => 3,
                                 'valor_total' => 900.00,
                                 'valor_custo_total' => 540.00,
                                 'lucro' => 360.00,
                                 'margem_lucro' => 66.67,
-                                'message' => 'Venda completa criada! Cliente e 2 produtos criados automaticamente.'
+                                'message' => 'Venda completa criada! Cliente cadastrado, 2 produtos criados, 3 parcelas geradas.'
                             ],
                             'example' => [
                                 'empresa_id' => 1,
                                 'categoria_id' => 15,
-                                'descricao' => 'Venda completa via API',
+                                'descricao' => 'Venda completa parcelada via API',
                                 'data_vencimento' => '2026-02-28',
                                 'data_competencia' => '2026-01-20',
                                 'numero_documento' => 'NF-999',
+                                'desconto' => 50.00,
+                                'regiao' => 'Sudeste',
+                                'segmento' => 'E-commerce',
+                                'numero_parcelas' => 3,
+                                'intervalo_parcelas' => 30,
                                 'criar_pedido' => true,
                                 'cliente' => [
                                     'cpf_cnpj' => '123.456.789-00',
