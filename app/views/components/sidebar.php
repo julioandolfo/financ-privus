@@ -116,6 +116,16 @@ $menuItems = [
                 'active' => $isActive('/contas-receber')
             ],
             [
+                'title' => 'Despesas Recorrentes',
+                'path' => '/despesas-recorrentes',
+                'active' => $isActive('/despesas-recorrentes')
+            ],
+            [
+                'title' => 'Receitas Recorrentes',
+                'path' => '/receitas-recorrentes',
+                'active' => $isActive('/receitas-recorrentes')
+            ],
+            [
                 'title' => 'Movimentações de Caixa',
                 'path' => '/movimentacoes-caixa',
                 'active' => $isActive('/movimentacoes-caixa')

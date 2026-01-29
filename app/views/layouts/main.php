@@ -259,6 +259,96 @@
                     <?php endif; ?>
                 </div>
                 <div class="flex items-center space-x-4">
+                    <?php if (isset($_SESSION['usuario_id'])): ?>
+                    <!-- Sino de Notificações -->
+                    <div class="relative" x-data="notificacoesDropdown()" x-init="init()">
+                        <button 
+                            @click="toggle()"
+                            class="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors duration-200 relative"
+                            aria-label="Notificações"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                            </svg>
+                            <!-- Badge contador -->
+                            <span 
+                                x-show="naoLidas > 0" 
+                                x-text="naoLidas > 99 ? '99+' : naoLidas"
+                                class="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[18px]"
+                            ></span>
+                        </button>
+                        
+                        <!-- Dropdown de Notificações -->
+                        <div 
+                            x-show="open"
+                            @click.away="open = false"
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="transform opacity-0 scale-95"
+                            x-transition:enter-end="transform opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75"
+                            x-transition:leave-start="transform opacity-100 scale-100"
+                            x-transition:leave-end="transform opacity-0 scale-95"
+                            class="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden z-50"
+                            style="display: none;"
+                        >
+                            <!-- Header -->
+                            <div class="px-4 py-3 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between bg-gray-50 dark:bg-slate-900">
+                                <h3 class="font-semibold text-gray-900 dark:text-white">Notificações</h3>
+                                <button 
+                                    @click="marcarTodasLidas()" 
+                                    x-show="naoLidas > 0"
+                                    class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                                >
+                                    Marcar todas como lidas
+                                </button>
+                            </div>
+                            
+                            <!-- Lista de Notificações -->
+                            <div class="max-h-80 overflow-y-auto">
+                                <template x-if="notificacoes.length === 0">
+                                    <div class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                                        <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                                        </svg>
+                                        <p class="text-sm">Nenhuma notificação</p>
+                                    </div>
+                                </template>
+                                
+                                <template x-for="notif in notificacoes" :key="notif.id">
+                                    <div 
+                                        :class="notif.lida == 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''"
+                                        class="px-4 py-3 border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+                                        @click="abrirNotificacao(notif)"
+                                    >
+                                        <div class="flex items-start space-x-3">
+                                            <div :class="notif.cor_classe" class="p-2 rounded-full flex-shrink-0">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="notif.icone_classe"></path>
+                                                </svg>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium text-gray-900 dark:text-white truncate" x-text="notif.titulo"></p>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 line-clamp-2" x-text="notif.mensagem"></p>
+                                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1" x-text="notif.tempo_relativo"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                            
+                            <!-- Footer -->
+                            <div class="px-4 py-3 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900">
+                                <a href="/notificacoes" class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 font-medium flex items-center justify-center">
+                                    Ver todas as notificações
+                                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    
                     <!-- Toggle de Tema com Dropdown -->
                     <div class="relative" x-data="{ open: false }">
                         <button 
@@ -403,5 +493,162 @@
             </div>
         </div>
     </footer>
+
+    <!-- Container de Toast Notifications -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[9999] flex flex-col space-y-2 max-w-sm"></div>
+
+    <!-- Scripts de Notificações -->
+    <script>
+    // Sistema de Notificações Dropdown
+    function notificacoesDropdown() {
+        return {
+            open: false,
+            notificacoes: [],
+            naoLidas: 0,
+            pollingInterval: null,
+            
+            init() {
+                this.carregarNotificacoes();
+                // Polling a cada 60 segundos
+                this.pollingInterval = setInterval(() => {
+                    this.atualizarContador();
+                }, 60000);
+            },
+            
+            toggle() {
+                this.open = !this.open;
+                if (this.open) {
+                    this.carregarNotificacoes();
+                }
+            },
+            
+            async carregarNotificacoes() {
+                try {
+                    const response = await fetch('/notificacoes/dropdown');
+                    const data = await response.json();
+                    this.notificacoes = data.notificacoes || [];
+                    this.naoLidas = data.nao_lidas || 0;
+                } catch (error) {
+                    console.error('Erro ao carregar notificações:', error);
+                }
+            },
+            
+            async atualizarContador() {
+                try {
+                    const response = await fetch('/notificacoes/contar');
+                    const data = await response.json();
+                    const novoCount = data.count || 0;
+                    
+                    // Se tiver novas notificações, mostra toast
+                    if (novoCount > this.naoLidas) {
+                        this.carregarNotificacoes();
+                        window.toastNotify && window.toastNotify('Nova notificação', 'Você tem novas notificações', 'info');
+                    }
+                    
+                    this.naoLidas = novoCount;
+                } catch (error) {
+                    console.error('Erro ao atualizar contador:', error);
+                }
+            },
+            
+            async marcarTodasLidas() {
+                try {
+                    await fetch('/notificacoes/marcar-todas-lidas', { method: 'POST' });
+                    this.naoLidas = 0;
+                    this.notificacoes = this.notificacoes.map(n => ({ ...n, lida: 1 }));
+                } catch (error) {
+                    console.error('Erro ao marcar como lidas:', error);
+                }
+            },
+            
+            async abrirNotificacao(notif) {
+                // Marca como lida
+                if (notif.lida == 0) {
+                    await fetch('/notificacoes/' + notif.id + '/lida', { method: 'POST' });
+                    this.naoLidas = Math.max(0, this.naoLidas - 1);
+                    notif.lida = 1;
+                }
+                
+                // Redireciona se tiver link
+                if (notif.link_url) {
+                    window.location.href = notif.link_url;
+                }
+                
+                this.open = false;
+            }
+        }
+    }
+    
+    // Sistema de Toast Notifications
+    window.toastNotify = function(titulo, mensagem, tipo = 'info', duracao = 5000) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        
+        const cores = {
+            info: 'bg-blue-500',
+            success: 'bg-green-500',
+            warning: 'bg-yellow-500',
+            error: 'bg-red-500'
+        };
+        
+        const icones = {
+            info: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+            success: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+            warning: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+            error: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'
+        };
+        
+        const toast = document.createElement('div');
+        toast.className = `transform transition-all duration-300 ease-out translate-x-full opacity-0 flex items-start p-4 rounded-xl shadow-2xl ${cores[tipo]} text-white min-w-[300px]`;
+        toast.innerHTML = `
+            <div class="flex-shrink-0 mr-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${icones[tipo]}"></path>
+                </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-semibold text-sm">${titulo}</p>
+                <p class="text-sm opacity-90 mt-0.5">${mensagem}</p>
+            </div>
+            <button class="flex-shrink-0 ml-3 focus:outline-none hover:opacity-75" onclick="this.parentElement.remove()">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        `;
+        
+        container.appendChild(toast);
+        
+        // Anima entrada
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-x-full', 'opacity-0');
+        });
+        
+        // Remove após duração
+        setTimeout(() => {
+            toast.classList.add('translate-x-full', 'opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, duracao);
+        
+        // Limita quantidade de toasts
+        const toasts = container.children;
+        while (toasts.length > 3) {
+            toasts[0].remove();
+        }
+    };
+    
+    // Mostra toast de sessão se existir
+    document.addEventListener('DOMContentLoaded', function() {
+        <?php if (isset($_SESSION['toast_success'])): ?>
+            window.toastNotify('Sucesso', '<?= addslashes($_SESSION['toast_success']) ?>', 'success');
+            <?php unset($_SESSION['toast_success']); ?>
+        <?php endif; ?>
+        
+        <?php if (isset($_SESSION['toast_error'])): ?>
+            window.toastNotify('Erro', '<?= addslashes($_SESSION['toast_error']) ?>', 'error');
+            <?php unset($_SESSION['toast_error']); ?>
+        <?php endif; ?>
+    });
+    </script>
 </body>
 </html>

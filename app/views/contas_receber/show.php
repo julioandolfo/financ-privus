@@ -116,6 +116,85 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                 </div>
             </div>
 
+            <!-- Parcelamento -->
+            <?php if (!empty($resumoParcelas)): ?>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
+                    <span class="inline-flex items-center">
+                        <svg class="w-6 h-6 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        Parcelamento
+                        <span class="ml-2 text-sm font-normal text-gray-500">
+                            (Parcela <?= $conta['parcela_numero'] ?> de <?= $conta['total_parcelas'] ?>)
+                        </span>
+                    </span>
+                </h2>
+                
+                <!-- Resumo -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Total do Parcelamento</p>
+                        <p class="text-xl font-bold text-gray-900 dark:text-gray-100"><?= formatarMoeda($resumoParcelas['valor_total']) ?></p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Total Recebido</p>
+                        <p class="text-xl font-bold text-green-600"><?= formatarMoeda($resumoParcelas['valor_recebido']) ?></p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Restante</p>
+                        <p class="text-xl font-bold text-red-600"><?= formatarMoeda($resumoParcelas['valor_restante']) ?></p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Progresso</p>
+                        <p class="text-xl font-bold text-indigo-600"><?= $resumoParcelas['parcelas_recebidas'] ?>/<?= $resumoParcelas['total_parcelas'] ?></p>
+                    </div>
+                </div>
+                
+                <!-- Lista de Parcelas -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                <th class="text-left pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Parcela</th>
+                                <th class="text-left pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Vencimento</th>
+                                <th class="text-right pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Valor</th>
+                                <th class="text-center pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Status</th>
+                                <th class="text-center pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                            <?php foreach ($resumoParcelas['parcelas'] as $parcela): ?>
+                            <tr class="<?= $parcela['id'] == $conta['id'] ? 'bg-indigo-50 dark:bg-indigo-900/20' : '' ?>">
+                                <td class="py-3 text-gray-900 dark:text-gray-100">
+                                    <span class="font-semibold"><?= $parcela['parcela_numero'] ?>/<?= $parcela['total_parcelas'] ?></span>
+                                    <?php if ($parcela['id'] == $conta['id']): ?>
+                                        <span class="ml-2 text-xs bg-indigo-600 text-white px-2 py-0.5 rounded">Atual</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="py-3 text-gray-600 dark:text-gray-400">
+                                    <?= formatarData($parcela['data_vencimento']) ?>
+                                    <?php if (estaVencido($parcela['data_vencimento']) && $parcela['status'] != 'recebido'): ?>
+                                        <span class="ml-1 text-red-600 text-xs font-bold">VENCIDA</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="py-3 text-right font-semibold text-gray-900 dark:text-gray-100"><?= formatarMoeda($parcela['valor_total']) ?></td>
+                                <td class="py-3 text-center"><?= formatarStatusBadge($parcela['status']) ?></td>
+                                <td class="py-3 text-center">
+                                    <?php if ($parcela['id'] != $conta['id']): ?>
+                                        <a href="/contas-receber/<?= $parcela['id'] ?>" class="text-blue-600 hover:text-blue-800 text-sm">
+                                            Ver
+                                        </a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Rateios -->
             <?php if (!empty($rateios)): ?>
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">

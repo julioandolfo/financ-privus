@@ -224,6 +224,115 @@ $old = $this->session->get('old') ?? [];
                           placeholder="Observações adicionais..."><?= htmlspecialchars($old['observacoes'] ?? '') ?></textarea>
             </div>
 
+            <!-- Parcelamento -->
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Parcelamento</h2>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" name="eh_parcelado" value="1" x-model="ehParcelado"
+                               class="w-5 h-5 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Parcelar esta conta</span>
+                    </label>
+                </div>
+
+                <div x-show="ehParcelado" x-transition class="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-6 border border-indigo-200 dark:border-indigo-700">
+                    <p class="text-sm text-indigo-700 dark:text-indigo-300 mb-4">
+                        <svg class="w-5 h-5 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        Configure as parcelas. O sistema gerará automaticamente as contas a receber para cada parcela.
+                    </p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Quantidade de Parcelas -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Quantidade de Parcelas <span class="text-red-500">*</span>
+                            </label>
+                            <input type="number" name="parcelas_quantidade" min="2" max="120" 
+                                   x-model="parcelasQuantidade" @input="calcularPreviewParcelas()"
+                                   value="<?= $old['parcelas_quantidade'] ?? '2' ?>"
+                                   :required="ehParcelado"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500">
+                        </div>
+
+                        <!-- Primeiro Vencimento -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Primeiro Vencimento <span class="text-red-500">*</span>
+                            </label>
+                            <input type="date" name="parcelas_primeiro_vencimento" 
+                                   value="<?= $old['parcelas_primeiro_vencimento'] ?? date('Y-m-d', strtotime('+30 days')) ?>"
+                                   :required="ehParcelado"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500">
+                        </div>
+
+                        <!-- Intervalo -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Intervalo entre Parcelas</label>
+                            <select name="parcelas_intervalo" x-model="parcelasIntervalo"
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500">
+                                <option value="mensal" <?= ($old['parcelas_intervalo'] ?? 'mensal') == 'mensal' ? 'selected' : '' ?>>Mensal (30 dias)</option>
+                                <option value="quinzenal" <?= ($old['parcelas_intervalo'] ?? '') == 'quinzenal' ? 'selected' : '' ?>>Quinzenal (15 dias)</option>
+                                <option value="semanal" <?= ($old['parcelas_intervalo'] ?? '') == 'semanal' ? 'selected' : '' ?>>Semanal (7 dias)</option>
+                                <option value="personalizado" <?= ($old['parcelas_intervalo'] ?? '') == 'personalizado' ? 'selected' : '' ?>>Personalizado</option>
+                            </select>
+                        </div>
+
+                        <!-- Dias Personalizados -->
+                        <div x-show="parcelasIntervalo === 'personalizado'" x-transition>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Dias entre Parcelas</label>
+                            <input type="number" name="parcelas_intervalo_dias" min="1" max="365"
+                                   value="<?= $old['parcelas_intervalo_dias'] ?? '30' ?>"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500">
+                        </div>
+
+                        <!-- Tipo de Valor -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Valor</label>
+                            <select name="parcelas_tipo_valor" x-model="parcelasTipoValor" @change="calcularPreviewParcelas()"
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500">
+                                <option value="diluido" <?= ($old['parcelas_tipo_valor'] ?? 'diluido') == 'diluido' ? 'selected' : '' ?>>Diluído (Valor Total ÷ Parcelas)</option>
+                                <option value="total_por_parcela" <?= ($old['parcelas_tipo_valor'] ?? '') == 'total_por_parcela' ? 'selected' : '' ?>>Valor Total por Parcela</option>
+                            </select>
+                        </div>
+
+                        <!-- Status Inicial -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status Inicial das Parcelas</label>
+                            <select name="parcelas_status_inicial"
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500">
+                                <option value="pendente" <?= ($old['parcelas_status_inicial'] ?? 'pendente') == 'pendente' ? 'selected' : '' ?>>Pendente</option>
+                                <option value="recebido" <?= ($old['parcelas_status_inicial'] ?? '') == 'recebido' ? 'selected' : '' ?>>Já Recebido (todas as parcelas)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Preview das Parcelas -->
+                    <div class="mt-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-indigo-100 dark:border-indigo-800">
+                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Resumo do Parcelamento</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                                <span class="text-gray-500 dark:text-gray-400">Valor Total:</span>
+                                <p class="font-bold text-gray-900 dark:text-gray-100">R$ <span x-text="valorTotal ? parseFloat(valorTotal).toFixed(2) : '0.00'"></span></p>
+                            </div>
+                            <div>
+                                <span class="text-gray-500 dark:text-gray-400">Nº Parcelas:</span>
+                                <p class="font-bold text-gray-900 dark:text-gray-100" x-text="parcelasQuantidade || 0"></p>
+                            </div>
+                            <div>
+                                <span class="text-gray-500 dark:text-gray-400">Valor por Parcela:</span>
+                                <p class="font-bold text-indigo-600 dark:text-indigo-400">R$ <span x-text="valorParcela"></span></p>
+                            </div>
+                            <div>
+                                <span class="text-gray-500 dark:text-gray-400">Total Final:</span>
+                                <p class="font-bold text-gray-900 dark:text-gray-100">R$ <span x-text="totalFinal"></span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Já Recebido -->
             <div class="mb-8">
                 <div class="flex items-center justify-between mb-4">
@@ -315,11 +424,32 @@ function contaReceberForm() {
     return {
         temRateio: false,
         jaRecebido: <?= isset($old['ja_recebido']) && $old['ja_recebido'] ? 'true' : 'false' ?>,
+        ehParcelado: <?= isset($old['eh_parcelado']) && $old['eh_parcelado'] ? 'true' : 'false' ?>,
         valorTotal: 0,
         dataCompetencia: '<?= date('Y-m-d') ?>',
         rateios: [],
         totalRateado: 0,
         totalPercentual: 0,
+        
+        // Variáveis de parcelamento
+        parcelasQuantidade: <?= $old['parcelas_quantidade'] ?? 2 ?>,
+        parcelasIntervalo: '<?= $old['parcelas_intervalo'] ?? 'mensal' ?>',
+        parcelasTipoValor: '<?= $old['parcelas_tipo_valor'] ?? 'diluido' ?>',
+        valorParcela: '0.00',
+        totalFinal: '0.00',
+        
+        calcularPreviewParcelas() {
+            const valor = parseFloat(this.valorTotal) || 0;
+            const qtd = parseInt(this.parcelasQuantidade) || 1;
+            
+            if (this.parcelasTipoValor === 'diluido') {
+                this.valorParcela = (valor / qtd).toFixed(2);
+                this.totalFinal = valor.toFixed(2);
+            } else {
+                this.valorParcela = valor.toFixed(2);
+                this.totalFinal = (valor * qtd).toFixed(2);
+            }
+        },
         
         toggleRateio() {
             if (this.temRateio && this.rateios.length === 0) {
@@ -352,6 +482,7 @@ function contaReceberForm() {
             this.rateios.forEach((rateio, index) => {
                 this.calcularPercentual(index);
             });
+            this.calcularPreviewParcelas();
         },
         
         calcularTotais() {

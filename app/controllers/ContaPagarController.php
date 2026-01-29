@@ -35,20 +35,21 @@ class ContaPagarController extends Controller
             $this->empresaModel = new Empresa();
             $this->fornecedorModel = new Fornecedor();
             $this->categoriaModel = new CategoriaFinanceira();
+            $this->centroCustoModel = new CentroCusto();
+            $this->formaPagamentoModel = new FormaPagamento();
             
-            // Verifica se está em modo consolidação
-            $empresasIds = $_SESSION['empresas_consolidacao'] ?? [];
-            $empresaId = $request->get('empresa_id');
+            $empresaAtual = $_SESSION['usuario_empresa_id'] ?? null;
             
             // Prepara filtros
             $filters = [];
-            if (!empty($empresasIds)) {
-                $filters['empresas_ids'] = $empresasIds;
-            } elseif ($empresaId) {
+            
+            // Filtro de empresa
+            $empresaId = $request->get('empresa_id');
+            if ($empresaId) {
                 $filters['empresa_id'] = $empresaId;
             }
             
-            // Outros filtros
+            // Filtros básicos
             if ($request->get('status')) {
                 $filters['status'] = $request->get('status');
             }
@@ -58,21 +59,62 @@ class ContaPagarController extends Controller
             if ($request->get('categoria_id')) {
                 $filters['categoria_id'] = $request->get('categoria_id');
             }
+            if ($request->get('centro_custo_id')) {
+                $filters['centro_custo_id'] = $request->get('centro_custo_id');
+            }
+            if ($request->get('forma_pagamento_id')) {
+                $filters['forma_pagamento_id'] = $request->get('forma_pagamento_id');
+            }
+            if ($request->get('tipo_custo')) {
+                $filters['tipo_custo'] = $request->get('tipo_custo');
+            }
+            
+            // Filtros de data
             if ($request->get('data_inicio')) {
                 $filters['data_vencimento_inicio'] = $request->get('data_inicio');
             }
             if ($request->get('data_fim')) {
                 $filters['data_vencimento_fim'] = $request->get('data_fim');
             }
+            
+            // Filtros de valor
+            if ($request->get('valor_min')) {
+                $filters['valor_min'] = $request->get('valor_min');
+            }
+            if ($request->get('valor_max')) {
+                $filters['valor_max'] = $request->get('valor_max');
+            }
+            
+            // Filtro de parcelamento
+            if ($request->get('parcelamento')) {
+                $filters['parcelamento'] = $request->get('parcelamento');
+            }
+            
+            // Busca
             if ($request->get('search')) {
                 $filters['search'] = $request->get('search');
+            }
+            
+            // Ordenação
+            if ($request->get('ordenar')) {
+                $filters['ordenar'] = $request->get('ordenar');
+            }
+            
+            // Paginação
+            $porPagina = $request->get('por_pagina') ?? 25;
+            if ($porPagina !== 'todos') {
+                $filters['limite'] = (int) $porPagina;
             }
             
             $contasPagar = $this->contaPagarModel->findAll($filters);
             $empresas = $this->empresaModel->findAll(['ativo' => 1]);
             $fornecedores = $this->fornecedorModel->findAll(['ativo' => 1]);
-            $empresaAtual = $_SESSION['usuario_empresa_id'] ?? null;
             $categorias = $this->categoriaModel->findAll($empresaAtual, 'despesa');
+            $centrosCusto = $this->centroCustoModel->findAll($empresaAtual);
+            $formasPagamento = $this->formaPagamentoModel->findAll();
+            
+            // Retorna os filtros aplicados para a view
+            $filtersApplied = $request->all();
             
             return $this->render('contas_pagar/index', [
                 'title' => 'Contas a Pagar',
@@ -80,7 +122,9 @@ class ContaPagarController extends Controller
                 'empresas' => $empresas,
                 'fornecedores' => $fornecedores,
                 'categorias' => $categorias,
-                'filters' => $filters
+                'centrosCusto' => $centrosCusto,
+                'formasPagamento' => $formasPagamento,
+                'filters' => $filtersApplied
             ]);
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Erro ao carregar contas a pagar: ' . $e->getMessage();
@@ -140,8 +184,48 @@ class ContaPagarController extends Controller
             $data['status'] = 'pendente';
             $data['valor_pago'] = 0;
             
-            // Cria conta a pagar
             $this->contaPagarModel = new ContaPagar();
+            
+            // Verifica se é parcelado
+            if (isset($data['eh_parcelado']) && $data['eh_parcelado'] == 1) {
+                // Valida campos de parcelamento
+                if (empty($data['parcelas_quantidade']) || $data['parcelas_quantidade'] < 2) {
+                    $this->session->set('errors', ['parcelas_quantidade' => 'Informe pelo menos 2 parcelas']);
+                    $this->session->set('old', $data);
+                    $response->redirect('/contas-pagar/create');
+                    return;
+                }
+                
+                if (empty($data['parcelas_primeiro_vencimento'])) {
+                    $this->session->set('errors', ['parcelas_primeiro_vencimento' => 'Informe a data do primeiro vencimento']);
+                    $this->session->set('old', $data);
+                    $response->redirect('/contas-pagar/create');
+                    return;
+                }
+                
+                // Prepara configuração de parcelas
+                $configParcelas = [
+                    'quantidade' => $data['parcelas_quantidade'],
+                    'primeiro_vencimento' => $data['parcelas_primeiro_vencimento'],
+                    'intervalo' => $data['parcelas_intervalo'] ?? 'mensal',
+                    'intervalo_dias' => $data['parcelas_intervalo_dias'] ?? 30,
+                    'tipo_valor' => $data['parcelas_tipo_valor'] ?? 'diluido',
+                    'status_inicial' => $data['parcelas_status_inicial'] ?? 'pendente'
+                ];
+                
+                // Cria as parcelas
+                $resultado = $this->contaPagarModel->criarParcelas($data, $configParcelas);
+                
+                if (empty($resultado['parcelas_ids'])) {
+                    throw new \Exception('Erro ao criar parcelas');
+                }
+                
+                $_SESSION['success'] = "Parcelamento criado com sucesso! {$resultado['total_parcelas']} parcelas geradas.";
+                $response->redirect('/contas-pagar');
+                return;
+            }
+            
+            // Cria conta a pagar normal (não parcelada)
             $contaPagarId = $this->contaPagarModel->create($data);
             
             if (!$contaPagarId) {
@@ -210,6 +294,26 @@ class ContaPagarController extends Controller
             } else {
                 $_SESSION['success'] = 'Conta a pagar criada com sucesso!';
             }
+            
+            // Se marcou para tornar recorrente, cria a despesa recorrente
+            if (isset($data['tornar_recorrente']) && $data['tornar_recorrente'] == 1) {
+                $recorrenciaService = new \Includes\Services\RecorrenciaService();
+                $contaPagar = $this->contaPagarModel->findById($contaPagarId);
+                
+                $configRecorrencia = [
+                    'frequencia' => $data['recorrencia_frequencia'] ?? 'mensal',
+                    'dia_mes' => $data['recorrencia_dia_mes'] ?? date('j'),
+                    'data_inicio' => $data['recorrencia_data_inicio'] ?? date('Y-m-d'),
+                    'antecedencia_dias' => 5,
+                    'status_inicial' => 'pendente',
+                    'criar_automaticamente' => 1
+                ];
+                
+                $recorrenciaService->criarDespesaRecorrenteDeContaPagar($contaPagar, $configRecorrencia, $_SESSION['usuario_id']);
+                
+                $_SESSION['success'] .= ' Despesa recorrente criada!';
+            }
+            
             $response->redirect('/contas-pagar');
             
         } catch (\Exception $e) {
@@ -238,6 +342,12 @@ class ContaPagarController extends Controller
                 $rateios = $this->rateioModel->findByContaPagar($id);
             }
             
+            // Busca informações de parcelamento se houver
+            $resumoParcelas = null;
+            if (!empty($contaPagar['grupo_parcela_id'])) {
+                $resumoParcelas = $this->contaPagarModel->getResumoParcelas($contaPagar['grupo_parcela_id']);
+            }
+            
             // Busca movimentações (histórico de pagamentos)
             $this->movimentacaoService = new MovimentacaoService();
             $movimentacoes = $this->movimentacaoService->buscarPorContaPagar($id);
@@ -254,6 +364,7 @@ class ContaPagarController extends Controller
                 'title' => 'Detalhes da Conta a Pagar',
                 'conta' => $contaPagar,
                 'rateios' => $rateios,
+                'resumoParcelas' => $resumoParcelas,
                 'movimentacoes' => $movimentacoes,
                 'formasPagamento' => $formasPagamento,
                 'contasBancarias' => $contasBancarias,

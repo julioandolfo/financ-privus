@@ -98,6 +98,23 @@ $old = $this->session->get('old') ?? [];
                         <?php endif; ?>
                     </div>
 
+                    <!-- Tipo de Custo -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Custo</label>
+                        <div class="flex items-center space-x-6 mt-3">
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="radio" name="tipo_custo" value="variavel" <?= ($old['tipo_custo'] ?? $conta['tipo_custo'] ?? 'variavel') == 'variavel' ? 'checked' : '' ?>
+                                       class="w-5 h-5 text-blue-600 focus:ring-2 focus:ring-blue-500">
+                                <span class="text-gray-700 dark:text-gray-300">Variável</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="radio" name="tipo_custo" value="fixo" <?= ($old['tipo_custo'] ?? $conta['tipo_custo'] ?? '') == 'fixo' ? 'checked' : '' ?>
+                                       class="w-5 h-5 text-orange-600 focus:ring-2 focus:ring-orange-500">
+                                <span class="text-gray-700 dark:text-gray-300">Fixo</span>
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- Descrição -->
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

@@ -366,5 +366,47 @@ return [
     // Logs do Sistema (protegido - apenas admin)
     'GET /logs' => ['handler' => 'LogController@index', 'middleware' => ['AuthMiddleware']],
     'POST /logs/limpar' => ['handler' => 'LogController@limpar', 'middleware' => ['AuthMiddleware']],
+    
+    // ========================================
+    // NOTIFICAÇÕES
+    // ========================================
+    'GET /notificacoes' => ['handler' => 'NotificacaoController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /notificacoes/configuracoes' => ['handler' => 'NotificacaoController@configuracoes', 'middleware' => ['AuthMiddleware']],
+    'POST /notificacoes/configuracoes' => ['handler' => 'NotificacaoController@salvarConfiguracoes', 'middleware' => ['AuthMiddleware']],
+    'GET /notificacoes/dropdown' => ['handler' => 'NotificacaoController@dropdown', 'middleware' => ['AuthMiddleware']],
+    'GET /notificacoes/contar' => ['handler' => 'NotificacaoController@contarNaoLidas', 'middleware' => ['AuthMiddleware']],
+    'POST /notificacoes/marcar-todas-lidas' => ['handler' => 'NotificacaoController@marcarTodasLidas', 'middleware' => ['AuthMiddleware']],
+    'POST /notificacoes/push/salvar' => ['handler' => 'NotificacaoController@salvarPushSubscription', 'middleware' => ['AuthMiddleware']],
+    'POST /notificacoes/push/remover' => ['handler' => 'NotificacaoController@removerPushSubscription', 'middleware' => ['AuthMiddleware']],
+    'POST /notificacoes/{id}/lida' => ['handler' => 'NotificacaoController@marcarLida', 'middleware' => ['AuthMiddleware']],
+    'POST /notificacoes/{id}/delete' => ['handler' => 'NotificacaoController@delete', 'middleware' => ['AuthMiddleware']],
+    
+    // ========================================
+    // DESPESAS RECORRENTES
+    // ========================================
+    'GET /despesas-recorrentes' => ['handler' => 'DespesaRecorrenteController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /despesas-recorrentes/create' => ['handler' => 'DespesaRecorrenteController@create', 'middleware' => ['AuthMiddleware']],
+    'POST /despesas-recorrentes' => ['handler' => 'DespesaRecorrenteController@store', 'middleware' => ['AuthMiddleware']],
+    'GET /despesas-recorrentes/{id}' => ['handler' => 'DespesaRecorrenteController@show', 'middleware' => ['AuthMiddleware']],
+    'GET /despesas-recorrentes/{id}/edit' => ['handler' => 'DespesaRecorrenteController@edit', 'middleware' => ['AuthMiddleware']],
+    'POST /despesas-recorrentes/{id}' => ['handler' => 'DespesaRecorrenteController@update', 'middleware' => ['AuthMiddleware']],
+    'POST /despesas-recorrentes/{id}/toggle' => ['handler' => 'DespesaRecorrenteController@toggle', 'middleware' => ['AuthMiddleware']],
+    'POST /despesas-recorrentes/{id}/delete' => ['handler' => 'DespesaRecorrenteController@delete', 'middleware' => ['AuthMiddleware']],
+    'POST /despesas-recorrentes/{id}/gerar' => ['handler' => 'DespesaRecorrenteController@gerarManual', 'middleware' => ['AuthMiddleware']],
+    'POST /despesas-recorrentes/{id}/reajuste' => ['handler' => 'DespesaRecorrenteController@aplicarReajuste', 'middleware' => ['AuthMiddleware']],
+    
+    // ========================================
+    // RECEITAS RECORRENTES
+    // ========================================
+    'GET /receitas-recorrentes' => ['handler' => 'ReceitaRecorrenteController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /receitas-recorrentes/create' => ['handler' => 'ReceitaRecorrenteController@create', 'middleware' => ['AuthMiddleware']],
+    'POST /receitas-recorrentes' => ['handler' => 'ReceitaRecorrenteController@store', 'middleware' => ['AuthMiddleware']],
+    'GET /receitas-recorrentes/{id}' => ['handler' => 'ReceitaRecorrenteController@show', 'middleware' => ['AuthMiddleware']],
+    'GET /receitas-recorrentes/{id}/edit' => ['handler' => 'ReceitaRecorrenteController@edit', 'middleware' => ['AuthMiddleware']],
+    'POST /receitas-recorrentes/{id}' => ['handler' => 'ReceitaRecorrenteController@update', 'middleware' => ['AuthMiddleware']],
+    'POST /receitas-recorrentes/{id}/toggle' => ['handler' => 'ReceitaRecorrenteController@toggle', 'middleware' => ['AuthMiddleware']],
+    'POST /receitas-recorrentes/{id}/delete' => ['handler' => 'ReceitaRecorrenteController@delete', 'middleware' => ['AuthMiddleware']],
+    'POST /receitas-recorrentes/{id}/gerar' => ['handler' => 'ReceitaRecorrenteController@gerarManual', 'middleware' => ['AuthMiddleware']],
+    'POST /receitas-recorrentes/{id}/reajuste' => ['handler' => 'ReceitaRecorrenteController@aplicarReajuste', 'middleware' => ['AuthMiddleware']],
 ];
 

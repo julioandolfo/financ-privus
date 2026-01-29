@@ -170,25 +170,23 @@ class HomeController extends Controller
             $receitasUltimos30Dias = 0;
             $despesasUltimos30Dias = 0;
             
-            foreach ($empresasIds as $empresaId) {
-                // Receitas (contas recebidas)
-                $contasRecebidas = $contaReceberModel->findAll($empresaId);
-                foreach ($contasRecebidas as $conta) {
-                    if ($conta['status'] === 'recebido' && 
-                        $conta['data_recebimento'] >= $dataInicio && 
-                        $conta['data_recebimento'] <= $dataFim) {
-                        $receitasUltimos30Dias += $conta['valor'];
-                    }
+            // Receitas (contas recebidas) - busca todas as empresas de uma vez
+            $contasRecebidas = $contaReceberModel->findAll(['empresas_ids' => $empresasIds]);
+            foreach ($contasRecebidas as $conta) {
+                if ($conta['status'] === 'recebido' && 
+                    $conta['data_recebimento'] >= $dataInicio && 
+                    $conta['data_recebimento'] <= $dataFim) {
+                    $receitasUltimos30Dias += $conta['valor'];
                 }
-                
-                // Despesas (contas pagas)
-                $contasPagas = $contaPagarModel->findAll($empresaId);
-                foreach ($contasPagas as $conta) {
-                    if ($conta['status'] === 'pago' && 
-                        $conta['data_pagamento'] >= $dataInicio && 
-                        $conta['data_pagamento'] <= $dataFim) {
-                        $despesasUltimos30Dias += $conta['valor'];
-                    }
+            }
+            
+            // Despesas (contas pagas) - busca todas as empresas de uma vez
+            $contasPagas = $contaPagarModel->findAll(['empresas_ids' => $empresasIds]);
+            foreach ($contasPagas as $conta) {
+                if ($conta['status'] === 'pago' && 
+                    $conta['data_pagamento'] >= $dataInicio && 
+                    $conta['data_pagamento'] <= $dataFim) {
+                    $despesasUltimos30Dias += $conta['valor'];
                 }
             }
             
@@ -242,38 +240,29 @@ class HomeController extends Controller
             $runway = $burnRate > 0 ? ($saldoTotal / $burnRate) : 999;
             
             // TICKET MÉDIO (Receita total / número de contas recebidas)
-            $totalContasRecebidas = 0;
-            foreach ($empresasIds as $empresaId) {
-                $contas = $contaReceberModel->findAll($empresaId);
-                $totalContasRecebidas += count(array_filter($contas, function($c) use ($dataInicio, $dataFim) {
-                    return $c['status'] === 'recebido' && 
-                           $c['data_recebimento'] >= $dataInicio && 
-                           $c['data_recebimento'] <= $dataFim;
-                }));
-            }
+            // Reutiliza $contasRecebidas já buscadas acima
+            $totalContasRecebidas = count(array_filter($contasRecebidas, function($c) use ($dataInicio, $dataFim) {
+                return $c['status'] === 'recebido' && 
+                       $c['data_recebimento'] >= $dataInicio && 
+                       $c['data_recebimento'] <= $dataFim;
+            }));
             $ticketMedio = $totalContasRecebidas > 0 ? 
                 ($receitasUltimos30Dias / $totalContasRecebidas) : 0;
             
             // INADIMPLÊNCIA
+            // Reutiliza $contasRecebidas já buscadas acima
             $totalContasVencidas = 0;
             $valorContasVencidas = 0;
-            foreach ($empresasIds as $empresaId) {
-                $contas = $contaReceberModel->findAll($empresaId);
-                foreach ($contas as $conta) {
-                    if ($conta['status'] === 'pendente' && $conta['data_vencimento'] < date('Y-m-d')) {
-                        $totalContasVencidas++;
-                        $valorContasVencidas += $conta['valor'];
-                    }
+            foreach ($contasRecebidas as $conta) {
+                if ($conta['status'] === 'pendente' && $conta['data_vencimento'] < date('Y-m-d')) {
+                    $totalContasVencidas++;
+                    $valorContasVencidas += $conta['valor'];
                 }
             }
             
-            $totalContasReceber = 0;
-            $valorTotalReceber = 0;
-            foreach ($empresasIds as $empresaId) {
-                $contas = $contaReceberModel->findAll($empresaId);
-                $totalContasReceber += count($contas);
-                $valorTotalReceber += array_sum(array_column($contas, 'valor'));
-            }
+            // Total geral de contas a receber
+            $totalContasReceber = count($contasRecebidas);
+            $valorTotalReceber = array_sum(array_column($contasRecebidas, 'valor'));
             
             $taxaInadimplencia = $valorTotalReceber > 0 ? 
                 ($valorContasVencidas / $valorTotalReceber) * 100 : 0;

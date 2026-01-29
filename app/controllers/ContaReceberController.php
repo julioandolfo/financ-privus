@@ -35,20 +35,21 @@ class ContaReceberController extends Controller
             $this->empresaModel = new Empresa();
             $this->clienteModel = new Cliente();
             $this->categoriaModel = new CategoriaFinanceira();
+            $this->centroCustoModel = new CentroCusto();
+            $this->formaPagamentoModel = new FormaPagamento();
             
-            // Verifica se está em modo consolidação
-            $empresasIds = $_SESSION['empresas_consolidacao'] ?? [];
-            $empresaId = $request->get('empresa_id');
+            $empresaAtual = $_SESSION['usuario_empresa_id'] ?? null;
             
             // Prepara filtros
             $filters = [];
-            if (!empty($empresasIds)) {
-                $filters['empresas_ids'] = $empresasIds;
-            } elseif ($empresaId) {
+            
+            // Filtro de empresa
+            $empresaId = $request->get('empresa_id');
+            if ($empresaId) {
                 $filters['empresa_id'] = $empresaId;
             }
             
-            // Outros filtros
+            // Filtros básicos
             if ($request->get('status')) {
                 $filters['status'] = $request->get('status');
             }
@@ -58,21 +59,60 @@ class ContaReceberController extends Controller
             if ($request->get('categoria_id')) {
                 $filters['categoria_id'] = $request->get('categoria_id');
             }
+            if ($request->get('centro_custo_id')) {
+                $filters['centro_custo_id'] = $request->get('centro_custo_id');
+            }
+            
+            // Filtros de data
             if ($request->get('data_inicio')) {
                 $filters['data_vencimento_inicio'] = $request->get('data_inicio');
             }
             if ($request->get('data_fim')) {
                 $filters['data_vencimento_fim'] = $request->get('data_fim');
             }
+            
+            // Filtros de valor
+            if ($request->get('valor_min')) {
+                $filters['valor_min'] = $request->get('valor_min');
+            }
+            if ($request->get('valor_max')) {
+                $filters['valor_max'] = $request->get('valor_max');
+            }
+            
+            // Filtro de parcelamento
+            if ($request->get('parcelamento')) {
+                $filters['parcelamento'] = $request->get('parcelamento');
+            }
+            
+            // Filtro de origem
+            if ($request->get('origem')) {
+                $filters['origem'] = $request->get('origem');
+            }
+            
+            // Busca
             if ($request->get('search')) {
                 $filters['search'] = $request->get('search');
+            }
+            
+            // Ordenação
+            if ($request->get('ordenar')) {
+                $filters['ordenar'] = $request->get('ordenar');
+            }
+            
+            // Paginação
+            $porPagina = $request->get('por_pagina') ?? 25;
+            if ($porPagina !== 'todos') {
+                $filters['limite'] = (int) $porPagina;
             }
             
             $contasReceber = $this->contaReceberModel->findAll($filters);
             $empresas = $this->empresaModel->findAll(['ativo' => 1]);
             $clientes = $this->clienteModel->findAll(['ativo' => 1]);
-            $empresaAtual = $_SESSION['usuario_empresa_id'] ?? null;
             $categorias = $this->categoriaModel->findAll($empresaAtual, 'receita');
+            $centrosCusto = $this->centroCustoModel->findAll($empresaAtual);
+            
+            // Retorna os filtros aplicados para a view
+            $filtersApplied = $request->all();
             
             return $this->render('contas_receber/index', [
                 'title' => 'Contas a Receber',
@@ -80,7 +120,8 @@ class ContaReceberController extends Controller
                 'empresas' => $empresas,
                 'clientes' => $clientes,
                 'categorias' => $categorias,
-                'filters' => $filters
+                'centrosCusto' => $centrosCusto,
+                'filters' => $filtersApplied
             ]);
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Erro ao carregar contas a receber: ' . $e->getMessage();
@@ -140,8 +181,48 @@ class ContaReceberController extends Controller
             $data['status'] = 'pendente';
             $data['valor_recebido'] = 0;
             
-            // Cria conta a receber
             $this->contaReceberModel = new ContaReceber();
+            
+            // Verifica se é parcelado
+            if (isset($data['eh_parcelado']) && $data['eh_parcelado'] == 1) {
+                // Valida campos de parcelamento
+                if (empty($data['parcelas_quantidade']) || $data['parcelas_quantidade'] < 2) {
+                    $this->session->set('errors', ['parcelas_quantidade' => 'Informe pelo menos 2 parcelas']);
+                    $this->session->set('old', $data);
+                    $response->redirect('/contas-receber/create');
+                    return;
+                }
+                
+                if (empty($data['parcelas_primeiro_vencimento'])) {
+                    $this->session->set('errors', ['parcelas_primeiro_vencimento' => 'Informe a data do primeiro vencimento']);
+                    $this->session->set('old', $data);
+                    $response->redirect('/contas-receber/create');
+                    return;
+                }
+                
+                // Prepara configuração de parcelas
+                $configParcelas = [
+                    'quantidade' => $data['parcelas_quantidade'],
+                    'primeiro_vencimento' => $data['parcelas_primeiro_vencimento'],
+                    'intervalo' => $data['parcelas_intervalo'] ?? 'mensal',
+                    'intervalo_dias' => $data['parcelas_intervalo_dias'] ?? 30,
+                    'tipo_valor' => $data['parcelas_tipo_valor'] ?? 'diluido',
+                    'status_inicial' => $data['parcelas_status_inicial'] ?? 'pendente'
+                ];
+                
+                // Cria as parcelas
+                $resultado = $this->contaReceberModel->criarParcelas($data, $configParcelas);
+                
+                if (empty($resultado['parcelas_ids'])) {
+                    throw new \Exception('Erro ao criar parcelas');
+                }
+                
+                $_SESSION['success'] = "Parcelamento criado com sucesso! {$resultado['total_parcelas']} parcelas geradas.";
+                $response->redirect('/contas-receber');
+                return;
+            }
+            
+            // Cria conta a receber normal (não parcelada)
             $contaReceberId = $this->contaReceberModel->create($data);
             
             if (!$contaReceberId) {
@@ -238,6 +319,12 @@ class ContaReceberController extends Controller
                 $rateios = $this->rateioModel->findByContaReceber($id);
             }
             
+            // Busca informações de parcelamento se houver
+            $resumoParcelas = null;
+            if (!empty($contaReceber['grupo_parcela_id'])) {
+                $resumoParcelas = $this->contaReceberModel->getResumoParcelas($contaReceber['grupo_parcela_id']);
+            }
+            
             // Busca movimentações (histórico de recebimentos)
             $this->movimentacaoService = new MovimentacaoService();
             $movimentacoes = $this->movimentacaoService->buscarPorContaReceber($id);
@@ -246,6 +333,7 @@ class ContaReceberController extends Controller
                 'title' => 'Detalhes da Conta a Receber',
                 'conta' => $contaReceber,
                 'rateios' => $rateios,
+                'resumoParcelas' => $resumoParcelas,
                 'movimentacoes' => $movimentacoes
             ]);
             

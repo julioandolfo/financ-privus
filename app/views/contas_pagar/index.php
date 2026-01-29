@@ -8,21 +8,20 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
 ?>
 
 <div class="max-w-7xl mx-auto animate-fade-in">
-    <!-- Header com Seletor de Consolidação -->
+    <!-- Header -->
     <div class="bg-gradient-to-r from-red-600 to-rose-600 rounded-2xl shadow-xl p-8 mb-8">
         <div class="flex justify-between items-center">
             <div>
                 <h1 class="text-3xl font-bold text-white mb-2">Contas a Pagar</h1>
-                <p class="text-red-100">
-                    <?php if ($modoConsolidacao): ?>
-                        Visualizando <?= $empresasAtivas ?> empresas consolidadas
-                    <?php else: ?>
-                        Gerencie suas despesas e pagamentos
-                    <?php endif; ?>
-                </p>
+                <p class="text-red-100">Gerencie suas despesas e pagamentos</p>
             </div>
             <div class="flex items-center space-x-4">
-                <?php include __DIR__ . '/../components/seletor-consolidacao.php'; ?>
+                <a href="/despesas-recorrentes" class="bg-white/20 text-white px-4 py-2 rounded-xl font-medium hover:bg-white/30 transition-all flex items-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span>Recorrentes</span>
+                </a>
                 <a href="/contas-pagar/create" class="bg-white text-red-600 px-6 py-3 rounded-xl font-semibold hover:bg-red-50 transition-all shadow-lg hover:shadow-xl flex items-center space-x-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -34,17 +33,36 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
     </div>
 
     <!-- Filtros Avançados -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 mb-8" x-data="{ showFilters: false }">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Filtros</h2>
-            <button @click="showFilters = !showFilters" class="text-blue-600 hover:text-blue-700 font-medium">
-                <span x-show="!showFilters">Mostrar Filtros</span>
-                <span x-show="showFilters">Ocultar Filtros</span>
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 mb-8" x-data="{ showFilters: <?= !empty(array_filter($filters ?? [])) ? 'true' : 'false' ?> }">
+        <!-- Filtros Rápidos -->
+        <div class="flex flex-wrap items-center gap-3 mb-4">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Filtros rápidos:</span>
+            <a href="/contas-pagar?status=pendente" class="px-3 py-1.5 text-sm rounded-full <?= ($filters['status'] ?? '') == 'pendente' ? 'bg-yellow-500 text-white' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' ?> hover:opacity-80 transition-opacity">
+                Pendentes
+            </a>
+            <a href="/contas-pagar?status=vencido" class="px-3 py-1.5 text-sm rounded-full <?= ($filters['status'] ?? '') == 'vencido' ? 'bg-red-500 text-white' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' ?> hover:opacity-80 transition-opacity">
+                Vencidas
+            </a>
+            <a href="/contas-pagar?status=pago" class="px-3 py-1.5 text-sm rounded-full <?= ($filters['status'] ?? '') == 'pago' ? 'bg-green-500 text-white' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' ?> hover:opacity-80 transition-opacity">
+                Pagas
+            </a>
+            <a href="/contas-pagar?data_inicio=<?= date('Y-m-01') ?>&data_fim=<?= date('Y-m-t') ?>" class="px-3 py-1.5 text-sm rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 hover:opacity-80 transition-opacity">
+                Este Mês
+            </a>
+            <a href="/contas-pagar?data_inicio=<?= date('Y-m-d') ?>&data_fim=<?= date('Y-m-d', strtotime('+7 days')) ?>" class="px-3 py-1.5 text-sm rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 hover:opacity-80 transition-opacity">
+                Próximos 7 dias
+            </a>
+            <div class="flex-1"></div>
+            <button @click="showFilters = !showFilters" class="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                </svg>
+                <span x-text="showFilters ? 'Ocultar Filtros Avançados' : 'Filtros Avançados'"></span>
             </button>
         </div>
         
         <form method="GET" action="/contas-pagar" x-show="showFilters" x-transition>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <!-- Status -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
@@ -52,14 +70,13 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                         <option value="">Todos</option>
                         <option value="pendente" <?= ($filters['status'] ?? '') == 'pendente' ? 'selected' : '' ?>>Pendente</option>
                         <option value="vencido" <?= ($filters['status'] ?? '') == 'vencido' ? 'selected' : '' ?>>Vencido</option>
-                        <option value="parcial" <?= ($filters['status'] ?? '') == 'parcial' ? 'selected' : '' ?>>Parcial</option>
+                        <option value="parcial" <?= ($filters['status'] ?? '') == 'parcial' ? 'selected' : '' ?>>Parcialmente Pago</option>
                         <option value="pago" <?= ($filters['status'] ?? '') == 'pago' ? 'selected' : '' ?>>Pago</option>
                         <option value="cancelado" <?= ($filters['status'] ?? '') == 'cancelado' ? 'selected' : '' ?>>Cancelado</option>
                     </select>
                 </div>
 
-                <?php if (!$modoConsolidacao): ?>
-                <!-- Empresa (só aparece se não estiver em modo consolidação) -->
+                <!-- Empresa -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Empresa</label>
                     <select name="empresa_id" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
@@ -71,7 +88,6 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <?php endif; ?>
 
                 <!-- Fornecedor -->
                 <div>
@@ -99,36 +115,135 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                     </select>
                 </div>
 
-                <!-- Data Início -->
+                <!-- Tipo de Custo -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Início</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Custo</label>
+                    <select name="tipo_custo" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <option value="">Todos</option>
+                        <option value="variavel" <?= ($filters['tipo_custo'] ?? '') == 'variavel' ? 'selected' : '' ?>>Variável</option>
+                        <option value="fixo" <?= ($filters['tipo_custo'] ?? '') == 'fixo' ? 'selected' : '' ?>>Fixo</option>
+                    </select>
+                </div>
+
+                <!-- Centro de Custo -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Centro de Custo</label>
+                    <select name="centro_custo_id" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <option value="">Todos</option>
+                        <?php foreach ($centrosCusto ?? [] as $cc): ?>
+                            <option value="<?= $cc['id'] ?>" <?= ($filters['centro_custo_id'] ?? '') == $cc['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($cc['nome']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <!-- Parcelamento -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Parcelamento</label>
+                    <select name="parcelamento" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <option value="">Todos</option>
+                        <option value="sim" <?= ($filters['parcelamento'] ?? '') == 'sim' ? 'selected' : '' ?>>Parceladas</option>
+                        <option value="nao" <?= ($filters['parcelamento'] ?? '') == 'nao' ? 'selected' : '' ?>>Não Parceladas</option>
+                    </select>
+                </div>
+
+                <!-- Forma de Pagamento -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Forma de Pagamento</label>
+                    <select name="forma_pagamento_id" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <option value="">Todas</option>
+                        <?php foreach ($formasPagamento ?? [] as $forma): ?>
+                            <option value="<?= $forma['id'] ?>" <?= ($filters['forma_pagamento_id'] ?? '') == $forma['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($forma['nome']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <!-- Data Vencimento - Início -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Vencimento De</label>
                     <input type="date" name="data_inicio" value="<?= $filters['data_inicio'] ?? '' ?>" 
                            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                 </div>
 
-                <!-- Data Fim -->
+                <!-- Data Vencimento - Fim -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Fim</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Vencimento Até</label>
                     <input type="date" name="data_fim" value="<?= $filters['data_fim'] ?? '' ?>" 
                            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                 </div>
 
+                <!-- Valor Mínimo -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Valor Mínimo (R$)</label>
+                    <input type="number" name="valor_min" value="<?= $filters['valor_min'] ?? '' ?>" step="0.01" min="0"
+                           placeholder="0,00"
+                           class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                </div>
+
+                <!-- Valor Máximo -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Valor Máximo (R$)</label>
+                    <input type="number" name="valor_max" value="<?= $filters['valor_max'] ?? '' ?>" step="0.01" min="0"
+                           placeholder="0,00"
+                           class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                </div>
+
+                <!-- Ordenar Por -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ordenar Por</label>
+                    <select name="ordenar" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <option value="vencimento_asc" <?= ($filters['ordenar'] ?? '') == 'vencimento_asc' ? 'selected' : '' ?>>Vencimento (mais próximo)</option>
+                        <option value="vencimento_desc" <?= ($filters['ordenar'] ?? '') == 'vencimento_desc' ? 'selected' : '' ?>>Vencimento (mais distante)</option>
+                        <option value="valor_asc" <?= ($filters['ordenar'] ?? '') == 'valor_asc' ? 'selected' : '' ?>>Valor (menor primeiro)</option>
+                        <option value="valor_desc" <?= ($filters['ordenar'] ?? '') == 'valor_desc' ? 'selected' : '' ?>>Valor (maior primeiro)</option>
+                        <option value="cadastro_desc" <?= ($filters['ordenar'] ?? '') == 'cadastro_desc' ? 'selected' : '' ?>>Mais recentes</option>
+                        <option value="fornecedor_asc" <?= ($filters['ordenar'] ?? '') == 'fornecedor_asc' ? 'selected' : '' ?>>Fornecedor (A-Z)</option>
+                    </select>
+                </div>
+
+                <!-- Itens por Página -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Itens por Página</label>
+                    <select name="por_pagina" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <option value="25" <?= ($filters['por_pagina'] ?? '25') == '25' ? 'selected' : '' ?>>25</option>
+                        <option value="50" <?= ($filters['por_pagina'] ?? '') == '50' ? 'selected' : '' ?>>50</option>
+                        <option value="100" <?= ($filters['por_pagina'] ?? '') == '100' ? 'selected' : '' ?>>100</option>
+                        <option value="todos" <?= ($filters['por_pagina'] ?? '') == 'todos' ? 'selected' : '' ?>>Todos</option>
+                    </select>
+                </div>
+
                 <!-- Busca -->
-                <div class="md:col-span-3">
+                <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Buscar</label>
                     <input type="text" name="search" value="<?= $filters['search'] ?? '' ?>" 
-                           placeholder="Descrição ou número do documento..."
+                           placeholder="Descrição, nº documento, observações..."
                            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                 </div>
             </div>
 
-            <div class="flex justify-end space-x-4 mt-6">
-                <a href="/contas-pagar" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium">
-                    Limpar
-                </a>
-                <button type="submit" class="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-medium">
-                    Filtrar
-                </button>
+            <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div class="text-sm text-gray-500 dark:text-gray-400">
+                    <?php 
+                    $filtrosAtivos = count(array_filter($filters ?? []));
+                    if ($filtrosAtivos > 0): 
+                    ?>
+                        <span class="font-medium text-blue-600"><?= $filtrosAtivos ?> filtro(s) ativo(s)</span>
+                    <?php endif; ?>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="/contas-pagar" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium">
+                        Limpar Filtros
+                    </a>
+                    <button type="submit" class="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-medium flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        Aplicar Filtros
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -172,11 +287,23 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                             <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                                 <div><?= htmlspecialchars(truncarTexto($conta['descricao'], 50)) ?></div>
                                 <div class="text-xs text-gray-500">Doc: <?= htmlspecialchars($conta['numero_documento']) ?></div>
-                                <?php if ($conta['tem_rateio']): ?>
-                                    <span class="inline-block mt-1 px-2 py-1 text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 rounded-full">
-                                        Rateado
-                                    </span>
-                                <?php endif; ?>
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    <?php if (!empty($conta['eh_parcelado']) && $conta['eh_parcelado']): ?>
+                                        <span class="inline-block px-2 py-0.5 text-xs bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-400 rounded-full">
+                                            Parcela <?= $conta['parcela_numero'] ?>/<?= $conta['total_parcelas'] ?>
+                                        </span>
+                                    <?php endif; ?>
+                                    <?php if (($conta['tipo_custo'] ?? 'variavel') === 'fixo'): ?>
+                                        <span class="inline-block px-2 py-0.5 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400 rounded-full">
+                                            Fixo
+                                        </span>
+                                    <?php endif; ?>
+                                    <?php if ($conta['tem_rateio']): ?>
+                                        <span class="inline-block px-2 py-0.5 text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 rounded-full">
+                                            Rateado
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                                 <?= htmlspecialchars($conta['categoria_nome']) ?>

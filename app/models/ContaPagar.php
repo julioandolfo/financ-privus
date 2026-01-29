@@ -105,6 +105,12 @@ class ContaPagar extends Model
             $params[] = $searchTerm;
         }
         
+        // Filtro por tipo de custo (fixo/variável)
+        if (isset($filters['tipo_custo']) && $filters['tipo_custo'] !== '') {
+            $sql .= " AND cp.tipo_custo = ?";
+            $params[] = $filters['tipo_custo'];
+        }
+        
         $sql .= " ORDER BY cp.data_vencimento DESC, cp.id DESC";
         
         $stmt = $this->db->prepare($sql);
@@ -148,9 +154,11 @@ class ContaPagar extends Model
                 (empresa_id, fornecedor_id, categoria_id, centro_custo_id, numero_documento,
                  descricao, valor_total, valor_pago, data_emissao, data_competencia,
                  data_vencimento, data_pagamento, status, forma_pagamento_id,
-                 conta_bancaria_id, tem_rateio, observacoes, usuario_cadastro_id) 
+                 conta_bancaria_id, tem_rateio, observacoes, tipo_custo,
+                 eh_parcelado, total_parcelas, parcela_numero, grupo_parcela_id,
+                 usuario_cadastro_id) 
                 VALUES 
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $this->db->prepare($sql);
         
@@ -178,10 +186,159 @@ class ContaPagar extends Model
             $contaBancariaId,
             $data['tem_rateio'] ?? 0,
             $data['observacoes'] ?? null,
+            $data['tipo_custo'] ?? 'variavel',
+            $data['eh_parcelado'] ?? 0,
+            $data['total_parcelas'] ?? null,
+            $data['parcela_numero'] ?? null,
+            $data['grupo_parcela_id'] ?? null,
             $data['usuario_cadastro_id']
         ]);
         
         return $success ? $this->db->lastInsertId() : false;
+    }
+    
+    /**
+     * Cria múltiplas parcelas de uma conta a pagar
+     */
+    public function criarParcelas($dadosBase, $configParcelas)
+    {
+        $grupoParcela = $this->gerarGrupoParcelaId();
+        $totalParcelas = (int) $configParcelas['quantidade'];
+        $valorTotal = (float) $dadosBase['valor_total'];
+        $primeiroVencimento = $configParcelas['primeiro_vencimento'];
+        $intervalo = $configParcelas['intervalo']; // mensal, quinzenal, semanal, ou dias
+        $intervaloDias = $configParcelas['intervalo_dias'] ?? 30;
+        $tipoValor = $configParcelas['tipo_valor']; // total_por_parcela ou diluido
+        $statusInicial = $configParcelas['status_inicial'] ?? 'pendente';
+        
+        // Calcular valor por parcela
+        if ($tipoValor === 'diluido') {
+            $valorParcela = round($valorTotal / $totalParcelas, 2);
+            // Ajustar última parcela para compensar arredondamento
+            $valorUltimaParcela = $valorTotal - ($valorParcela * ($totalParcelas - 1));
+        } else {
+            $valorParcela = $valorTotal;
+            $valorUltimaParcela = $valorTotal;
+        }
+        
+        $parcelasIds = [];
+        $dataVencimento = new \DateTime($primeiroVencimento);
+        
+        for ($i = 1; $i <= $totalParcelas; $i++) {
+            $dadosParcela = $dadosBase;
+            $dadosParcela['valor_total'] = ($i == $totalParcelas) ? $valorUltimaParcela : $valorParcela;
+            $dadosParcela['data_vencimento'] = $dataVencimento->format('Y-m-d');
+            $dadosParcela['descricao'] = $dadosBase['descricao'] . " (Parcela {$i}/{$totalParcelas})";
+            $dadosParcela['numero_documento'] = $dadosBase['numero_documento'] . "-{$i}/{$totalParcelas}";
+            $dadosParcela['eh_parcelado'] = 1;
+            $dadosParcela['total_parcelas'] = $totalParcelas;
+            $dadosParcela['parcela_numero'] = $i;
+            $dadosParcela['grupo_parcela_id'] = $grupoParcela;
+            $dadosParcela['status'] = $statusInicial;
+            $dadosParcela['valor_pago'] = 0;
+            
+            $parcelaId = $this->create($dadosParcela);
+            if ($parcelaId) {
+                $parcelasIds[] = $parcelaId;
+            }
+            
+            // Calcular próximo vencimento
+            switch ($intervalo) {
+                case 'mensal':
+                    $dataVencimento->modify('+1 month');
+                    break;
+                case 'quinzenal':
+                    $dataVencimento->modify('+15 days');
+                    break;
+                case 'semanal':
+                    $dataVencimento->modify('+7 days');
+                    break;
+                case 'personalizado':
+                    $dataVencimento->modify("+{$intervaloDias} days");
+                    break;
+                default:
+                    $dataVencimento->modify('+1 month');
+            }
+        }
+        
+        return [
+            'grupo_parcela_id' => $grupoParcela,
+            'parcelas_ids' => $parcelasIds,
+            'total_parcelas' => $totalParcelas
+        ];
+    }
+    
+    /**
+     * Gera um ID único para agrupar parcelas
+     */
+    private function gerarGrupoParcelaId()
+    {
+        return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0x0fff) | 0x4000,
+            mt_rand(0, 0x3fff) | 0x8000,
+            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        );
+    }
+    
+    /**
+     * Busca todas as parcelas de um grupo
+     */
+    public function findByGrupoParcela($grupoParcela)
+    {
+        $sql = "SELECT cp.*, 
+                       e.nome_fantasia as empresa_nome,
+                       f.nome_razao_social as fornecedor_nome
+                FROM {$this->table} cp
+                JOIN empresas e ON cp.empresa_id = e.id
+                LEFT JOIN fornecedores f ON cp.fornecedor_id = f.id
+                WHERE cp.grupo_parcela_id = ?
+                ORDER BY cp.parcela_numero ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$grupoParcela]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+    
+    /**
+     * Retorna resumo do parcelamento
+     */
+    public function getResumoParcelas($grupoParcela)
+    {
+        $parcelas = $this->findByGrupoParcela($grupoParcela);
+        
+        if (empty($parcelas)) {
+            return null;
+        }
+        
+        $totalParcelas = count($parcelas);
+        $valorTotal = 0;
+        $valorPago = 0;
+        $parcelasPagas = 0;
+        $parcelasPendentes = 0;
+        
+        foreach ($parcelas as $parcela) {
+            $valorTotal += $parcela['valor_total'];
+            $valorPago += $parcela['valor_pago'];
+            
+            if ($parcela['status'] === 'pago') {
+                $parcelasPagas++;
+            } else {
+                $parcelasPendentes++;
+            }
+        }
+        
+        return [
+            'grupo_parcela_id' => $grupoParcela,
+            'total_parcelas' => $totalParcelas,
+            'parcelas_pagas' => $parcelasPagas,
+            'parcelas_pendentes' => $parcelasPendentes,
+            'valor_total' => $valorTotal,
+            'valor_pago' => $valorPago,
+            'valor_restante' => $valorTotal - $valorPago,
+            'parcelas' => $parcelas
+        ];
     }
     
     /**
@@ -202,7 +359,8 @@ class ContaPagar extends Model
                 data_vencimento = ?,
                 forma_pagamento_id = ?,
                 conta_bancaria_id = ?,
-                observacoes = ?
+                observacoes = ?,
+                tipo_custo = ?
                 WHERE id = ?";
         
         $stmt = $this->db->prepare($sql);
@@ -227,6 +385,7 @@ class ContaPagar extends Model
             $formaPagamentoId,
             $contaBancariaId,
             $data['observacoes'] ?? null,
+            $data['tipo_custo'] ?? 'variavel',
             $id
         ]);
     }
