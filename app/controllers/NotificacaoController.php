@@ -6,7 +6,6 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Models\Notificacao;
 use App\Models\NotificacaoConfig;
-use Includes\Services\NotificacaoService;
 
 /**
  * Controller para Notificações
@@ -15,7 +14,6 @@ class NotificacaoController extends Controller
 {
     private $notificacaoModel;
     private $configModel;
-    private $notificacaoService;
     
     /**
      * Log de debug
