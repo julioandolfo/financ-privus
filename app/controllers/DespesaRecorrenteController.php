@@ -161,7 +161,7 @@ class DespesaRecorrenteController extends Controller
         $data = $request->all();
         
         // Validações
-        $errors = $this->validate($data);
+        $errors = $this->validateData($data);
         if (!empty($errors)) {
             $_SESSION['errors'] = $errors;
             $_SESSION['old'] = $data;
@@ -270,7 +270,7 @@ class DespesaRecorrenteController extends Controller
         $data = $request->all();
         
         // Validações
-        $errors = $this->validate($data);
+        $errors = $this->validateData($data);
         if (!empty($errors)) {
             $_SESSION['errors'] = $errors;
             $response->redirect("/despesas-recorrentes/{$id}/edit");
@@ -375,9 +375,9 @@ class DespesaRecorrenteController extends Controller
     }
     
     /**
-     * Validação
+     * Validação dos dados da despesa recorrente
      */
-    private function validate($data)
+    private function validateData($data)
     {
         $errors = [];
         

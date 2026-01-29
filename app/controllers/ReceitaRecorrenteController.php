@@ -104,7 +104,7 @@ class ReceitaRecorrenteController extends Controller
         $data = $request->all();
         
         // Validações
-        $errors = $this->validate($data);
+        $errors = $this->validateData($data);
         if (!empty($errors)) {
             $_SESSION['errors'] = $errors;
             $_SESSION['old'] = $data;
@@ -198,7 +198,7 @@ class ReceitaRecorrenteController extends Controller
         $data = $request->all();
         
         // Validações
-        $errors = $this->validate($data);
+        $errors = $this->validateData($data);
         if (!empty($errors)) {
             $_SESSION['errors'] = $errors;
             $response->redirect("/receitas-recorrentes/{$id}/edit");
@@ -286,7 +286,7 @@ class ReceitaRecorrenteController extends Controller
     /**
      * Validação
      */
-    private function validate($data)
+    private function validateData($data)
     {
         $errors = [];
         
