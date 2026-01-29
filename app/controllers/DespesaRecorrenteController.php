@@ -30,14 +30,6 @@ class DespesaRecorrenteController extends Controller
     public function __construct()
     {
         parent::__construct();
-        $this->despesaRecorrenteModel = new DespesaRecorrente();
-        $this->empresaModel = new Empresa();
-        $this->fornecedorModel = new Fornecedor();
-        $this->categoriaModel = new CategoriaFinanceira();
-        $this->centroCustoModel = new CentroCusto();
-        $this->formaPagamentoModel = new FormaPagamento();
-        $this->contaBancariaModel = new ContaBancaria();
-        $this->recorrenciaService = new RecorrenciaService();
     }
     
     /**
@@ -45,26 +37,45 @@ class DespesaRecorrenteController extends Controller
      */
     public function index(Request $request, Response $response)
     {
-        $empresaId = $request->get('empresa_id') ?? $_SESSION['usuario_empresa_id'] ?? null;
-        $ativo = $request->get('ativo') ?? '';
-        
-        $filtros = [];
-        if ($empresaId) $filtros['empresa_id'] = $empresaId;
-        if ($ativo !== '') $filtros['ativo'] = $ativo;
-        
-        $despesas = $this->despesaRecorrenteModel->findAll($filtros);
-        $empresas = $this->empresaModel->findAll(['ativo' => 1]);
-        
-        // Calcula resumo
-        $resumo = $this->recorrenciaService->getResumo($empresaId);
-        
-        return $this->render('despesas_recorrentes/index', [
-            'title' => 'Despesas Recorrentes',
-            'despesas' => $despesas,
-            'empresas' => $empresas,
-            'filtros' => $filtros,
-            'resumo' => $resumo
-        ]);
+        try {
+            $this->despesaRecorrenteModel = new DespesaRecorrente();
+            $this->empresaModel = new Empresa();
+            
+            $empresaId = $request->get('empresa_id') ?? $_SESSION['usuario_empresa_id'] ?? null;
+            $ativo = $request->get('ativo') ?? '';
+            
+            $filtros = [];
+            if ($empresaId) $filtros['empresa_id'] = $empresaId;
+            if ($ativo !== '') $filtros['ativo'] = $ativo;
+            
+            $despesas = $this->despesaRecorrenteModel->findAll($filtros);
+            $empresas = $this->empresaModel->findAll(['ativo' => 1]);
+            
+            // Calcula resumo
+            $resumo = [
+                'despesas_count' => count($despesas),
+                'receitas_count' => 0,
+                'total_despesas' => array_sum(array_column($despesas, 'valor')),
+                'total_receitas' => 0,
+                'saldo_previsto' => 0 - array_sum(array_column($despesas, 'valor'))
+            ];
+            
+            return $this->render('despesas_recorrentes/index', [
+                'title' => 'Despesas Recorrentes',
+                'despesas' => $despesas,
+                'empresas' => $empresas,
+                'filtros' => $filtros,
+                'resumo' => $resumo
+            ]);
+        } catch (\Exception $e) {
+            // Se a tabela não existe, mostra mensagem amigável
+            if (strpos($e->getMessage(), "doesn't exist") !== false || strpos($e->getMessage(), 'Base table') !== false) {
+                $_SESSION['error'] = 'A tabela de despesas recorrentes ainda não foi criada. Execute as queries SQL fornecidas.';
+            } else {
+                $_SESSION['error'] = 'Erro ao carregar despesas recorrentes: ' . $e->getMessage();
+            }
+            $response->redirect('/');
+        }
     }
     
     /**
@@ -72,28 +83,40 @@ class DespesaRecorrenteController extends Controller
      */
     public function create(Request $request, Response $response)
     {
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        
-        $empresas = $this->empresaModel->findAll(['ativo' => 1]);
-        $fornecedores = $this->fornecedorModel->findAll(['ativo' => 1]);
-        $categorias = $this->categoriaModel->findAll($empresaId, 'despesa');
-        $centrosCusto = $this->centroCustoModel->findAll($empresaId);
-        $formasPagamento = $this->formaPagamentoModel->findAll();
-        $contasBancarias = $this->contaBancariaModel->findAll();
-        
-        $old = $_SESSION['old'] ?? [];
-        unset($_SESSION['old']);
-        
-        return $this->render('despesas_recorrentes/create', [
-            'title' => 'Nova Despesa Recorrente',
-            'empresas' => $empresas,
-            'fornecedores' => $fornecedores,
-            'categorias' => $categorias,
-            'centrosCusto' => $centrosCusto,
-            'formasPagamento' => $formasPagamento,
-            'contasBancarias' => $contasBancarias,
-            'old' => $old
-        ]);
+        try {
+            $this->empresaModel = new Empresa();
+            $this->fornecedorModel = new Fornecedor();
+            $this->categoriaModel = new CategoriaFinanceira();
+            $this->centroCustoModel = new CentroCusto();
+            $this->formaPagamentoModel = new FormaPagamento();
+            $this->contaBancariaModel = new ContaBancaria();
+            
+            $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
+            
+            $empresas = $this->empresaModel->findAll(['ativo' => 1]);
+            $fornecedores = $this->fornecedorModel->findAll(['ativo' => 1]);
+            $categorias = $this->categoriaModel->findAll($empresaId, 'despesa');
+            $centrosCusto = $this->centroCustoModel->findAll($empresaId);
+            $formasPagamento = $this->formaPagamentoModel->findAll();
+            $contasBancarias = $this->contaBancariaModel->findAll();
+            
+            $old = $_SESSION['old'] ?? [];
+            unset($_SESSION['old']);
+            
+            return $this->render('despesas_recorrentes/create', [
+                'title' => 'Nova Despesa Recorrente',
+                'empresas' => $empresas,
+                'fornecedores' => $fornecedores,
+                'categorias' => $categorias,
+                'centrosCusto' => $centrosCusto,
+                'formasPagamento' => $formasPagamento,
+                'contasBancarias' => $contasBancarias,
+                'old' => $old
+            ]);
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao carregar formulário: ' . $e->getMessage();
+            $response->redirect('/despesas-recorrentes');
+        }
     }
     
     /**
@@ -115,6 +138,7 @@ class DespesaRecorrenteController extends Controller
         $data['usuario_cadastro_id'] = $_SESSION['usuario_id'];
         
         try {
+            $this->despesaRecorrenteModel = new DespesaRecorrente();
             $id = $this->despesaRecorrenteModel->create($data);
             
             if (!$id) {
@@ -136,6 +160,7 @@ class DespesaRecorrenteController extends Controller
      */
     public function show(Request $request, Response $response, $id)
     {
+        $this->despesaRecorrenteModel = new DespesaRecorrente();
         $despesa = $this->despesaRecorrenteModel->findById($id);
         
         if (!$despesa) {
@@ -161,33 +186,46 @@ class DespesaRecorrenteController extends Controller
      */
     public function edit(Request $request, Response $response, $id)
     {
-        $despesa = $this->despesaRecorrenteModel->findById($id);
-        
-        if (!$despesa) {
-            $_SESSION['error'] = 'Despesa recorrente não encontrada!';
+        try {
+            $this->despesaRecorrenteModel = new DespesaRecorrente();
+            $this->empresaModel = new Empresa();
+            $this->fornecedorModel = new Fornecedor();
+            $this->categoriaModel = new CategoriaFinanceira();
+            $this->centroCustoModel = new CentroCusto();
+            $this->formaPagamentoModel = new FormaPagamento();
+            $this->contaBancariaModel = new ContaBancaria();
+            
+            $despesa = $this->despesaRecorrenteModel->findById($id);
+            
+            if (!$despesa) {
+                $_SESSION['error'] = 'Despesa recorrente não encontrada!';
+                $response->redirect('/despesas-recorrentes');
+                return;
+            }
+            
+            $empresaId = $despesa['empresa_id'];
+            
+            $empresas = $this->empresaModel->findAll(['ativo' => 1]);
+            $fornecedores = $this->fornecedorModel->findAll(['ativo' => 1]);
+            $categorias = $this->categoriaModel->findAll($empresaId, 'despesa');
+            $centrosCusto = $this->centroCustoModel->findAll($empresaId);
+            $formasPagamento = $this->formaPagamentoModel->findAll();
+            $contasBancarias = $this->contaBancariaModel->findAll();
+            
+            return $this->render('despesas_recorrentes/edit', [
+                'title' => 'Editar Despesa Recorrente',
+                'despesa' => $despesa,
+                'empresas' => $empresas,
+                'fornecedores' => $fornecedores,
+                'categorias' => $categorias,
+                'centrosCusto' => $centrosCusto,
+                'formasPagamento' => $formasPagamento,
+                'contasBancarias' => $contasBancarias
+            ]);
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro: ' . $e->getMessage();
             $response->redirect('/despesas-recorrentes');
-            return;
         }
-        
-        $empresaId = $despesa['empresa_id'];
-        
-        $empresas = $this->empresaModel->findAll(['ativo' => 1]);
-        $fornecedores = $this->fornecedorModel->findAll(['ativo' => 1]);
-        $categorias = $this->categoriaModel->findAll($empresaId, 'despesa');
-        $centrosCusto = $this->centroCustoModel->findAll($empresaId);
-        $formasPagamento = $this->formaPagamentoModel->findAll();
-        $contasBancarias = $this->contaBancariaModel->findAll();
-        
-        return $this->render('despesas_recorrentes/edit', [
-            'title' => 'Editar Despesa Recorrente',
-            'despesa' => $despesa,
-            'empresas' => $empresas,
-            'fornecedores' => $fornecedores,
-            'categorias' => $categorias,
-            'centrosCusto' => $centrosCusto,
-            'formasPagamento' => $formasPagamento,
-            'contasBancarias' => $contasBancarias
-        ]);
     }
     
     /**
@@ -206,6 +244,7 @@ class DespesaRecorrenteController extends Controller
         }
         
         try {
+            $this->despesaRecorrenteModel = new DespesaRecorrente();
             $this->despesaRecorrenteModel->update($id, $data);
             
             $_SESSION['success'] = 'Despesa recorrente atualizada com sucesso!';
@@ -222,9 +261,14 @@ class DespesaRecorrenteController extends Controller
      */
     public function toggle(Request $request, Response $response, $id)
     {
-        $this->despesaRecorrenteModel->toggleAtivo($id);
-        
-        $_SESSION['success'] = 'Status alterado com sucesso!';
+        try {
+            $this->despesaRecorrenteModel = new DespesaRecorrente();
+            $this->despesaRecorrenteModel->toggleAtivo($id);
+            
+            $_SESSION['success'] = 'Status alterado com sucesso!';
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro: ' . $e->getMessage();
+        }
         $response->redirect('/despesas-recorrentes');
     }
     
@@ -233,9 +277,14 @@ class DespesaRecorrenteController extends Controller
      */
     public function delete(Request $request, Response $response, $id)
     {
-        $this->despesaRecorrenteModel->delete($id);
-        
-        $_SESSION['success'] = 'Despesa recorrente excluída com sucesso!';
+        try {
+            $this->despesaRecorrenteModel = new DespesaRecorrente();
+            $this->despesaRecorrenteModel->delete($id);
+            
+            $_SESSION['success'] = 'Despesa recorrente excluída com sucesso!';
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro: ' . $e->getMessage();
+        }
         $response->redirect('/despesas-recorrentes');
     }
     
@@ -244,15 +293,18 @@ class DespesaRecorrenteController extends Controller
      */
     public function gerarManual(Request $request, Response $response, $id)
     {
-        $despesa = $this->despesaRecorrenteModel->findById($id);
-        
-        if (!$despesa) {
-            $_SESSION['error'] = 'Despesa recorrente não encontrada!';
-            $response->redirect('/despesas-recorrentes');
-            return;
-        }
-        
         try {
+            $this->despesaRecorrenteModel = new DespesaRecorrente();
+            $this->recorrenciaService = new RecorrenciaService();
+            
+            $despesa = $this->despesaRecorrenteModel->findById($id);
+            
+            if (!$despesa) {
+                $_SESSION['error'] = 'Despesa recorrente não encontrada!';
+                $response->redirect('/despesas-recorrentes');
+                return;
+            }
+            
             $contaId = $this->recorrenciaService->gerarDespesa($despesa);
             
             $_SESSION['success'] = 'Conta a pagar gerada com sucesso!';
@@ -269,17 +321,22 @@ class DespesaRecorrenteController extends Controller
      */
     public function aplicarReajuste(Request $request, Response $response, $id)
     {
-        $despesa = $this->despesaRecorrenteModel->findById($id);
+        try {
+            $this->despesaRecorrenteModel = new DespesaRecorrente();
+            $despesa = $this->despesaRecorrenteModel->findById($id);
         
-        if (!$despesa || !$despesa['reajuste_ativo']) {
-            $_SESSION['error'] = 'Reajuste não disponível para esta despesa!';
-            $response->redirect('/despesas-recorrentes/' . $id);
-            return;
+            if (!$despesa || !$despesa['reajuste_ativo']) {
+                $_SESSION['error'] = 'Reajuste não disponível para esta despesa!';
+                $response->redirect('/despesas-recorrentes/' . $id);
+                return;
+            }
+            
+            $this->despesaRecorrenteModel->aplicarReajuste($id);
+            
+            $_SESSION['success'] = 'Reajuste aplicado com sucesso!';
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro: ' . $e->getMessage();
         }
-        
-        $this->despesaRecorrenteModel->aplicarReajuste($id);
-        
-        $_SESSION['success'] = 'Reajuste aplicado com sucesso!';
         $response->redirect('/despesas-recorrentes/' . $id);
     }
     

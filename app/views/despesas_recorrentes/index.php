@@ -1,4 +1,8 @@
 <?php
+// Carrega helpers
+require_once __DIR__ . '/../../../includes/helpers/formata_dados.php';
+require_once __DIR__ . '/../../../includes/helpers/functions.php';
+
 function formatarFrequencia($freq) {
     $frequencias = [
         'diaria' => 'Diária',

@@ -19,6 +19,7 @@ use App\Models\Produto;
 use App\Models\PedidoVinculado;
 use App\Models\ConexaoBancaria;
 use App\Models\TransacaoPendente;
+use App\Models\LogSistema;
 
 class HomeController extends Controller
 {
@@ -166,29 +167,80 @@ class HomeController extends Controller
             $dataInicio = date('Y-m-d', strtotime('-30 days'));
             $dataFim = date('Y-m-d');
             
+            // LOG: Início do cálculo das métricas financeiras
+            LogSistema::debug('Dashboard', 'metricas_financeiras', 'Iniciando cálculo de métricas financeiras', [
+                'empresas_ids' => $empresasIds,
+                'total_empresas' => count($empresasIds),
+                'periodo' => ['inicio' => $dataInicio, 'fim' => $dataFim]
+            ]);
+            
             // Receitas e Despesas (últimos 30 dias)
             $receitasUltimos30Dias = 0;
             $despesasUltimos30Dias = 0;
             
             // Receitas (contas recebidas) - busca todas as empresas de uma vez
             $contasRecebidas = $contaReceberModel->findAll(['empresas_ids' => $empresasIds]);
+            
+            // LOG: Contas a receber encontradas
+            LogSistema::debug('Dashboard', 'contas_receber', 'Contas a receber encontradas', [
+                'total_contas' => count($contasRecebidas),
+                'filtro_usado' => ['empresas_ids' => $empresasIds]
+            ]);
+            
+            // Detalhe dos status das contas recebidas
+            $statusContasReceber = [];
             foreach ($contasRecebidas as $conta) {
+                $status = $conta['status'] ?? 'sem_status';
+                if (!isset($statusContasReceber[$status])) {
+                    $statusContasReceber[$status] = ['count' => 0, 'valor' => 0];
+                }
+                $statusContasReceber[$status]['count']++;
+                $statusContasReceber[$status]['valor'] += $conta['valor_total'] ?? 0;
+                
                 if ($conta['status'] === 'recebido' && 
                     $conta['data_recebimento'] >= $dataInicio && 
                     $conta['data_recebimento'] <= $dataFim) {
-                    $receitasUltimos30Dias += $conta['valor'];
+                    $receitasUltimos30Dias += $conta['valor_total'] ?? 0;
                 }
             }
             
+            // LOG: Detalhamento por status - Contas a Receber
+            LogSistema::debug('Dashboard', 'contas_receber_status', 'Distribuição de contas a receber por status', [
+                'status_distribuicao' => $statusContasReceber,
+                'receitas_30_dias' => $receitasUltimos30Dias
+            ]);
+            
             // Despesas (contas pagas) - busca todas as empresas de uma vez
             $contasPagas = $contaPagarModel->findAll(['empresas_ids' => $empresasIds]);
+            
+            // LOG: Contas a pagar encontradas
+            LogSistema::debug('Dashboard', 'contas_pagar', 'Contas a pagar encontradas', [
+                'total_contas' => count($contasPagas),
+                'filtro_usado' => ['empresas_ids' => $empresasIds]
+            ]);
+            
+            // Detalhe dos status das contas pagas
+            $statusContasPagar = [];
             foreach ($contasPagas as $conta) {
+                $status = $conta['status'] ?? 'sem_status';
+                if (!isset($statusContasPagar[$status])) {
+                    $statusContasPagar[$status] = ['count' => 0, 'valor' => 0];
+                }
+                $statusContasPagar[$status]['count']++;
+                $statusContasPagar[$status]['valor'] += $conta['valor_total'] ?? 0;
+                
                 if ($conta['status'] === 'pago' && 
                     $conta['data_pagamento'] >= $dataInicio && 
                     $conta['data_pagamento'] <= $dataFim) {
-                    $despesasUltimos30Dias += $conta['valor'];
+                    $despesasUltimos30Dias += $conta['valor_total'] ?? 0;
                 }
             }
+            
+            // LOG: Detalhamento por status - Contas a Pagar
+            LogSistema::debug('Dashboard', 'contas_pagar_status', 'Distribuição de contas a pagar por status', [
+                'status_distribuicao' => $statusContasPagar,
+                'despesas_30_dias' => $despesasUltimos30Dias
+            ]);
             
             // LUCRO BRUTO (últimos 30 dias)
             $lucroBruto = $receitasUltimos30Dias - $despesasUltimos30Dias;
@@ -256,16 +308,37 @@ class HomeController extends Controller
             foreach ($contasRecebidas as $conta) {
                 if ($conta['status'] === 'pendente' && $conta['data_vencimento'] < date('Y-m-d')) {
                     $totalContasVencidas++;
-                    $valorContasVencidas += $conta['valor'];
+                    $valorContasVencidas += $conta['valor_total'] ?? 0;
                 }
             }
             
             // Total geral de contas a receber
             $totalContasReceber = count($contasRecebidas);
-            $valorTotalReceber = array_sum(array_column($contasRecebidas, 'valor'));
+            $valorTotalReceber = array_sum(array_column($contasRecebidas, 'valor_total'));
             
             $taxaInadimplencia = $valorTotalReceber > 0 ? 
                 ($valorContasVencidas / $valorTotalReceber) * 100 : 0;
+            
+            // LOG: Resumo final das métricas financeiras
+            LogSistema::debug('Dashboard', 'metricas_resumo', 'Métricas financeiras calculadas', [
+                'receitas_30_dias' => $receitasUltimos30Dias,
+                'despesas_30_dias' => $despesasUltimos30Dias,
+                'lucro_bruto' => $lucroBruto,
+                'lucro_liquido' => $lucroLiquido,
+                'ebitda' => $ebitda,
+                'margem_bruta' => $margemBruta,
+                'margem_liquida' => $margemLiquida,
+                'ticket_medio' => $ticketMedio,
+                'total_contas_recebidas_periodo' => $totalContasRecebidas,
+                'total_contas_receber' => $totalContasReceber,
+                'valor_total_receber' => $valorTotalReceber,
+                'contas_vencidas' => $totalContasVencidas,
+                'valor_inadimplencia' => $valorContasVencidas,
+                'taxa_inadimplencia' => $taxaInadimplencia,
+                'saldo_bancos' => $saldoTotal,
+                'burn_rate' => $burnRate,
+                'runway_meses' => $runway
+            ]);
             
             // MÉTRICAS DE SINCRONIZAÇÃO BANCÁRIA (TODAS AS EMPRESAS DO USUÁRIO)
             $conexaoBancariaModel = new ConexaoBancaria();
