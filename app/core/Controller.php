@@ -98,6 +98,17 @@ abstract class Controller
      */
     protected function render($view, $data = [], $layout = 'main')
     {
+        // Função de log
+        $logToFile = function($message, $context = []) {
+            $logFile = dirname(__DIR__) . '/../logs/app_debug.log';
+            $timestamp = date('Y-m-d H:i:s');
+            $contextStr = !empty($context) ? ' | ' . json_encode($context, JSON_UNESCAPED_UNICODE) : '';
+            $logMessage = "[{$timestamp}] [Controller] {$message}{$contextStr}" . PHP_EOL;
+            @file_put_contents($logFile, $logMessage, FILE_APPEND);
+        };
+        
+        $logToFile('render() chamado', ['view' => $view, 'layout' => $layout]);
+        
         // Guarda caminho da view antes de extrair variáveis do array $data
         $viewPath = $view;
         
@@ -106,6 +117,7 @@ abstract class Controller
         
         // Define caminho da view
         $viewFile = __DIR__ . '/../views/' . str_replace('.', '/', $viewPath) . '.php';
+        $logToFile('View file path', ['path' => $viewFile, 'exists' => file_exists($viewFile)]);
         
         if (!file_exists($viewFile)) {
             throw new \Exception("View não encontrada: {$view}");
@@ -113,6 +125,7 @@ abstract class Controller
         
         // Define caminho do layout - tenta múltiplos caminhos possíveis
         $layoutFile = __DIR__ . '/../views/layouts/' . $layout . '.php';
+        $logToFile('Layout file path', ['path' => $layoutFile, 'exists' => file_exists($layoutFile)]);
         
         // Fallback: tenta caminho alternativo se o primeiro não existir
         if (!file_exists($layoutFile)) {
@@ -128,8 +141,16 @@ abstract class Controller
         
         if (file_exists($layoutFile)) {
             // Renderiza view dentro do layout
+            $logToFile('Incluindo view...');
             ob_start();
-            include $viewFile;
+            try {
+                include $viewFile;
+                $logToFile('View incluída com sucesso');
+            } catch (\Throwable $e) {
+                ob_end_clean();
+                $logToFile('ERRO ao incluir view', ['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()]);
+                throw $e;
+            }
             $content = ob_get_clean();
             
             // Define $title se não estiver definido
@@ -138,12 +159,21 @@ abstract class Controller
             }
             
             // Renderiza o layout com o conteúdo
-            include $layoutFile;
+            $logToFile('Incluindo layout...');
+            try {
+                include $layoutFile;
+                $logToFile('Layout incluído com sucesso');
+            } catch (\Throwable $e) {
+                $logToFile('ERRO ao incluir layout', ['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()]);
+                throw $e;
+            }
         } else {
             // Layout não encontrado - renderiza apenas a view com aviso
             error_log("RENDER WARNING: Renderizando view sem layout. Layout file: " . $layoutFile);
             include $viewFile;
         }
+        
+        $logToFile('render() completo');
         
         // Encerra a execução após renderizar
         exit;

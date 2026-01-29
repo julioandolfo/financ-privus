@@ -27,9 +27,22 @@ class DespesaRecorrenteController extends Controller
     private $contaBancariaModel;
     private $recorrenciaService;
     
+    /**
+     * Log de debug
+     */
+    private function logDebug($message, $context = [])
+    {
+        $logFile = __DIR__ . '/../../logs/despesas_recorrentes.log';
+        $timestamp = date('Y-m-d H:i:s');
+        $contextStr = !empty($context) ? ' | ' . json_encode($context, JSON_UNESCAPED_UNICODE) : '';
+        $logMessage = "[{$timestamp}] {$message}{$contextStr}" . PHP_EOL;
+        file_put_contents($logFile, $logMessage, FILE_APPEND);
+    }
+    
     public function __construct()
     {
         parent::__construct();
+        $this->logDebug('Constructor chamado');
     }
     
     /**
@@ -37,19 +50,32 @@ class DespesaRecorrenteController extends Controller
      */
     public function index(Request $request, Response $response)
     {
+        $this->logDebug('=== INDEX INICIADO ===');
+        
         try {
+            $this->logDebug('Tentando criar DespesaRecorrente model');
             $this->despesaRecorrenteModel = new DespesaRecorrente();
+            $this->logDebug('DespesaRecorrente model criado com sucesso');
+            
+            $this->logDebug('Tentando criar Empresa model');
             $this->empresaModel = new Empresa();
+            $this->logDebug('Empresa model criado com sucesso');
             
             $empresaId = $request->get('empresa_id') ?? $_SESSION['usuario_empresa_id'] ?? null;
             $ativo = $request->get('ativo') ?? '';
+            $this->logDebug('Parâmetros', ['empresa_id' => $empresaId, 'ativo' => $ativo]);
             
             $filtros = [];
             if ($empresaId) $filtros['empresa_id'] = $empresaId;
             if ($ativo !== '') $filtros['ativo'] = $ativo;
             
+            $this->logDebug('Buscando despesas recorrentes');
             $despesas = $this->despesaRecorrenteModel->findAll($filtros);
+            $this->logDebug('Despesas encontradas', ['count' => count($despesas)]);
+            
+            $this->logDebug('Buscando empresas');
             $empresas = $this->empresaModel->findAll(['ativo' => 1]);
+            $this->logDebug('Empresas encontradas', ['count' => count($empresas)]);
             
             // Calcula resumo
             $resumo = [
@@ -60,6 +86,7 @@ class DespesaRecorrenteController extends Controller
                 'saldo_previsto' => 0 - array_sum(array_column($despesas, 'valor'))
             ];
             
+            $this->logDebug('Renderizando view');
             return $this->render('despesas_recorrentes/index', [
                 'title' => 'Despesas Recorrentes',
                 'despesas' => $despesas,
@@ -68,6 +95,13 @@ class DespesaRecorrenteController extends Controller
                 'resumo' => $resumo
             ]);
         } catch (\Exception $e) {
+            $this->logDebug('ERRO NO INDEX', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             // Se a tabela não existe, mostra mensagem amigável
             if (strpos($e->getMessage(), "doesn't exist") !== false || strpos($e->getMessage(), 'Base table') !== false) {
                 $_SESSION['error'] = 'A tabela de despesas recorrentes ainda não foi criada. Execute as queries SQL fornecidas.';

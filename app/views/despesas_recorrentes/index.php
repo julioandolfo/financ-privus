@@ -1,7 +1,23 @@
 <?php
 // Carrega helpers
-require_once __DIR__ . '/../../../includes/helpers/formata_dados.php';
-require_once __DIR__ . '/../../../includes/helpers/functions.php';
+$logFile = __DIR__ . '/../../../logs/despesas_recorrentes.log';
+file_put_contents($logFile, "[" . date('Y-m-d H:i:s') . "] View index.php iniciada\n", FILE_APPEND);
+
+try {
+    require_once __DIR__ . '/../../../includes/helpers/formata_dados.php';
+    file_put_contents($logFile, "[" . date('Y-m-d H:i:s') . "] formata_dados.php carregado\n", FILE_APPEND);
+} catch (Exception $e) {
+    file_put_contents($logFile, "[" . date('Y-m-d H:i:s') . "] ERRO formata_dados: " . $e->getMessage() . "\n", FILE_APPEND);
+}
+
+try {
+    require_once __DIR__ . '/../../../includes/helpers/functions.php';
+    file_put_contents($logFile, "[" . date('Y-m-d H:i:s') . "] functions.php carregado\n", FILE_APPEND);
+} catch (Exception $e) {
+    file_put_contents($logFile, "[" . date('Y-m-d H:i:s') . "] ERRO functions: " . $e->getMessage() . "\n", FILE_APPEND);
+}
+
+file_put_contents($logFile, "[" . date('Y-m-d H:i:s') . "] Variáveis: despesas=" . (isset($despesas) ? count($despesas) : 'N/A') . ", empresas=" . (isset($empresas) ? count($empresas) : 'N/A') . "\n", FILE_APPEND);
 
 function formatarFrequencia($freq) {
     $frequencias = [

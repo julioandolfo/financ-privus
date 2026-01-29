@@ -160,10 +160,30 @@ spl_autoload_register(function ($class) {
 // Inicia aplicação
 use App\Core\App;
 
+// Log personalizado para /logs
+function logToFile($message, $context = []) {
+    $logFile = APP_ROOT . '/logs/app_debug.log';
+    $timestamp = date('Y-m-d H:i:s');
+    $contextStr = !empty($context) ? ' | ' . json_encode($context, JSON_UNESCAPED_UNICODE) : '';
+    $logMessage = "[{$timestamp}] {$message}{$contextStr}" . PHP_EOL;
+    @file_put_contents($logFile, $logMessage, FILE_APPEND);
+}
+
+logToFile('=== NOVA REQUISIÇÃO ===', ['uri' => $_SERVER['REQUEST_URI'] ?? 'N/A', 'method' => $_SERVER['REQUEST_METHOD'] ?? 'N/A']);
+
 try {
+    logToFile('Criando App...');
     $app = new App();
+    logToFile('App criada, executando run()...');
     $app->run();
+    logToFile('Run() completado');
 } catch (Throwable $e) {
+    logToFile('ERRO CAPTURADO', [
+        'message' => $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine(),
+        'trace' => $e->getTraceAsString()
+    ]);
     // Log do erro
     $errorLog = APP_ROOT . '/storage/logs/error.log';
     $logDir = dirname($errorLog);

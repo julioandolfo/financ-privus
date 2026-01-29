@@ -12,11 +12,25 @@ class App
     private $request;
     private $response;
     
+    /**
+     * Log de debug
+     */
+    private function logDebug($message, $context = [])
+    {
+        $logFile = dirname(__DIR__) . '/../logs/app_debug.log';
+        $timestamp = date('Y-m-d H:i:s');
+        $contextStr = !empty($context) ? ' | ' . json_encode($context, JSON_UNESCAPED_UNICODE) : '';
+        $logMessage = "[{$timestamp}] [App] {$message}{$contextStr}" . PHP_EOL;
+        @file_put_contents($logFile, $logMessage, FILE_APPEND);
+    }
+    
     public function __construct()
     {
+        $this->logDebug('Constructor iniciando...');
         $this->request = new Request();
         $this->response = new Response();
         $this->router = new Router($this->request);
+        $this->logDebug('Constructor completo');
     }
     
     /**
@@ -25,11 +39,15 @@ class App
     public function run()
     {
         try {
+            $this->logDebug('Run() iniciando...');
+            
             // Carrega rotas
             $this->loadRoutes();
+            $this->logDebug('Rotas carregadas');
             
             // Resolve rota
             $route = $this->router->resolve();
+            $this->logDebug('Rota resolvida', ['route' => $route ? json_encode($route) : 'null']);
             
             if (!$route) {
                 $this->response->setStatusCode(404);
@@ -72,6 +90,8 @@ class App
             $method = $route['method'];
             $params = $route['params'] ?? [];
             
+            $this->logDebug('Preparando controller', ['controller' => $controller, 'method' => $method, 'params' => $params]);
+            
             // Verifica se a classe existe, senão tenta carregar
             if (!class_exists($controller)) {
                 // Tenta carregar o controller explicitamente
@@ -102,15 +122,19 @@ class App
                 }
             }
             
+            $this->logDebug('Instanciando controller...');
             $controllerInstance = new $controller();
+            $this->logDebug('Controller instanciado');
             
             if (!method_exists($controllerInstance, $method)) {
                 throw new Exception("Método {$method} não encontrado no controller {$controller}");
             }
             
+            $this->logDebug('Injetando Request e Response...');
             // Injeta Request e Response no controller
             $controllerInstance->setRequest($this->request);
             $controllerInstance->setResponse($this->response);
+            $this->logDebug('Injeção completa');
             
             // Prepara parâmetros para o método
             $reflection = new \ReflectionMethod($controllerInstance, $method);
@@ -147,9 +171,16 @@ class App
             }
             
             // Chama método do controller
+            $this->logDebug('Chamando método do controller...', ['method' => $method, 'params_count' => count($callParams)]);
             call_user_func_array([$controllerInstance, $method], $callParams);
+            $this->logDebug('Método executado com sucesso');
             
-        } catch (Throwable $e) {
+        } catch (\Throwable $e) {
+            $this->logDebug('ERRO NO APP', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
             $this->handleException($e);
         }
     }
@@ -178,8 +209,13 @@ class App
     /**
      * Trata exceções
      */
-    private function handleException(Throwable $e)
+    private function handleException(\Throwable $e)
     {
+        $this->logDebug('handleException chamado', [
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ]);
         // Garante que o diretório de logs existe
         $logDir = dirname(__DIR__) . '/../storage/logs';
         if (!is_dir($logDir)) {
