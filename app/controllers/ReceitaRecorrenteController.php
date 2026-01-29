@@ -30,14 +30,6 @@ class ReceitaRecorrenteController extends Controller
     public function __construct()
     {
         parent::__construct();
-        $this->receitaRecorrenteModel = new ReceitaRecorrente();
-        $this->empresaModel = new Empresa();
-        $this->clienteModel = new Cliente();
-        $this->categoriaModel = new CategoriaFinanceira();
-        $this->centroCustoModel = new CentroCusto();
-        $this->formaPagamentoModel = new FormaPagamento();
-        $this->contaBancariaModel = new ContaBancaria();
-        $this->recorrenciaService = new RecorrenciaService();
     }
     
     /**
@@ -45,26 +37,41 @@ class ReceitaRecorrenteController extends Controller
      */
     public function index(Request $request, Response $response)
     {
-        $empresaId = $request->get('empresa_id') ?? $_SESSION['usuario_empresa_id'] ?? null;
-        $ativo = $request->get('ativo') ?? '';
-        
-        $filtros = [];
-        if ($empresaId) $filtros['empresa_id'] = $empresaId;
-        if ($ativo !== '') $filtros['ativo'] = $ativo;
-        
-        $receitas = $this->receitaRecorrenteModel->findAll($filtros);
-        $empresas = $this->empresaModel->findAll(['ativo' => 1]);
-        
-        // Calcula resumo
-        $resumo = $this->recorrenciaService->getResumo($empresaId);
-        
-        return $this->render('receitas_recorrentes/index', [
-            'title' => 'Receitas Recorrentes',
-            'receitas' => $receitas,
-            'empresas' => $empresas,
-            'filtros' => $filtros,
-            'resumo' => $resumo
-        ]);
+        try {
+            $this->receitaRecorrenteModel = new ReceitaRecorrente();
+            $this->empresaModel = new Empresa();
+            
+            $empresaId = $request->get('empresa_id') ?? $_SESSION['usuario_empresa_id'] ?? null;
+            $ativo = $request->get('ativo') ?? '';
+            
+            $filtros = [];
+            if ($empresaId) $filtros['empresa_id'] = $empresaId;
+            if ($ativo !== '') $filtros['ativo'] = $ativo;
+            
+            $receitas = $this->receitaRecorrenteModel->findAll($filtros);
+            $empresas = $this->empresaModel->findAll(['ativo' => 1]);
+            
+            // Calcula resumo
+            $resumo = [
+                'receitas_count' => count($receitas),
+                'total_receitas' => array_sum(array_column($receitas, 'valor'))
+            ];
+            
+            return $this->render('receitas_recorrentes/index', [
+                'title' => 'Receitas Recorrentes',
+                'receitas' => $receitas,
+                'empresas' => $empresas,
+                'filtros' => $filtros,
+                'resumo' => $resumo
+            ]);
+        } catch (\Exception $e) {
+            if (strpos($e->getMessage(), "doesn't exist") !== false || strpos($e->getMessage(), 'Base table') !== false) {
+                $_SESSION['error'] = 'A tabela de receitas recorrentes ainda não foi criada. Execute as queries SQL fornecidas.';
+            } else {
+                $_SESSION['error'] = 'Erro ao carregar receitas recorrentes: ' . $e->getMessage();
+            }
+            $response->redirect('/');
+        }
     }
     
     /**
@@ -72,28 +79,40 @@ class ReceitaRecorrenteController extends Controller
      */
     public function create(Request $request, Response $response)
     {
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        
-        $empresas = $this->empresaModel->findAll(['ativo' => 1]);
-        $clientes = $this->clienteModel->findAll(['ativo' => 1]);
-        $categorias = $this->categoriaModel->findAll($empresaId, 'receita');
-        $centrosCusto = $this->centroCustoModel->findAll($empresaId);
-        $formasPagamento = $this->formaPagamentoModel->findAll();
-        $contasBancarias = $this->contaBancariaModel->findAll();
-        
-        $old = $_SESSION['old'] ?? [];
-        unset($_SESSION['old']);
-        
-        return $this->render('receitas_recorrentes/create', [
-            'title' => 'Nova Receita Recorrente',
-            'empresas' => $empresas,
-            'clientes' => $clientes,
-            'categorias' => $categorias,
-            'centrosCusto' => $centrosCusto,
-            'formasPagamento' => $formasPagamento,
-            'contasBancarias' => $contasBancarias,
-            'old' => $old
-        ]);
+        try {
+            $this->empresaModel = new Empresa();
+            $this->clienteModel = new Cliente();
+            $this->categoriaModel = new CategoriaFinanceira();
+            $this->centroCustoModel = new CentroCusto();
+            $this->formaPagamentoModel = new FormaPagamento();
+            $this->contaBancariaModel = new ContaBancaria();
+            
+            $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
+            
+            $empresas = $this->empresaModel->findAll(['ativo' => 1]);
+            $clientes = $this->clienteModel->findAll(['ativo' => 1]);
+            $categorias = $this->categoriaModel->findAll($empresaId, 'receita');
+            $centrosCusto = $this->centroCustoModel->findAll($empresaId);
+            $formasPagamento = $this->formaPagamentoModel->findAll();
+            $contasBancarias = $this->contaBancariaModel->findAll();
+            
+            $old = $_SESSION['old'] ?? [];
+            unset($_SESSION['old']);
+            
+            return $this->render('receitas_recorrentes/create', [
+                'title' => 'Nova Receita Recorrente',
+                'empresas' => $empresas,
+                'clientes' => $clientes,
+                'categorias' => $categorias,
+                'centrosCusto' => $centrosCusto,
+                'formasPagamento' => $formasPagamento,
+                'contasBancarias' => $contasBancarias,
+                'old' => $old
+            ]);
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao carregar formulário: ' . $e->getMessage();
+            $response->redirect('/receitas-recorrentes');
+        }
     }
     
     /**
@@ -115,6 +134,7 @@ class ReceitaRecorrenteController extends Controller
         $data['usuario_cadastro_id'] = $_SESSION['usuario_id'];
         
         try {
+            $this->receitaRecorrenteModel = new ReceitaRecorrente();
             $id = $this->receitaRecorrenteModel->create($data);
             
             if (!$id) {
@@ -136,24 +156,30 @@ class ReceitaRecorrenteController extends Controller
      */
     public function show(Request $request, Response $response, $id)
     {
-        $receita = $this->receitaRecorrenteModel->findById($id);
-        
-        if (!$receita) {
-            $_SESSION['error'] = 'Receita recorrente não encontrada!';
+        try {
+            $this->receitaRecorrenteModel = new ReceitaRecorrente();
+            $receita = $this->receitaRecorrenteModel->findById($id);
+            
+            if (!$receita) {
+                $_SESSION['error'] = 'Receita recorrente não encontrada!';
+                $response->redirect('/receitas-recorrentes');
+                return;
+            }
+            
+            // Busca contas geradas
+            $contasGeradas = $this->receitaRecorrenteModel->buscarContasGeradas($id, 20);
+            $totalGeradas = $this->receitaRecorrenteModel->contarContasGeradas($id);
+            
+            return $this->render('receitas_recorrentes/show', [
+                'title' => 'Receita Recorrente - ' . $receita['descricao'],
+                'receita' => $receita,
+                'contasGeradas' => $contasGeradas,
+                'totalGeradas' => $totalGeradas
+            ]);
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro: ' . $e->getMessage();
             $response->redirect('/receitas-recorrentes');
-            return;
         }
-        
-        // Busca contas geradas
-        $contasGeradas = $this->receitaRecorrenteModel->buscarContasGeradas($id, 20);
-        $totalGeradas = $this->receitaRecorrenteModel->contarContasGeradas($id);
-        
-        return $this->render('receitas_recorrentes/show', [
-            'title' => 'Receita Recorrente - ' . $receita['descricao'],
-            'receita' => $receita,
-            'contasGeradas' => $contasGeradas,
-            'totalGeradas' => $totalGeradas
-        ]);
     }
     
     /**
@@ -161,33 +187,46 @@ class ReceitaRecorrenteController extends Controller
      */
     public function edit(Request $request, Response $response, $id)
     {
-        $receita = $this->receitaRecorrenteModel->findById($id);
-        
-        if (!$receita) {
-            $_SESSION['error'] = 'Receita recorrente não encontrada!';
+        try {
+            $this->receitaRecorrenteModel = new ReceitaRecorrente();
+            $this->empresaModel = new Empresa();
+            $this->clienteModel = new Cliente();
+            $this->categoriaModel = new CategoriaFinanceira();
+            $this->centroCustoModel = new CentroCusto();
+            $this->formaPagamentoModel = new FormaPagamento();
+            $this->contaBancariaModel = new ContaBancaria();
+            
+            $receita = $this->receitaRecorrenteModel->findById($id);
+            
+            if (!$receita) {
+                $_SESSION['error'] = 'Receita recorrente não encontrada!';
+                $response->redirect('/receitas-recorrentes');
+                return;
+            }
+            
+            $empresaId = $receita['empresa_id'];
+            
+            $empresas = $this->empresaModel->findAll(['ativo' => 1]);
+            $clientes = $this->clienteModel->findAll(['ativo' => 1]);
+            $categorias = $this->categoriaModel->findAll($empresaId, 'receita');
+            $centrosCusto = $this->centroCustoModel->findAll($empresaId);
+            $formasPagamento = $this->formaPagamentoModel->findAll();
+            $contasBancarias = $this->contaBancariaModel->findAll();
+            
+            return $this->render('receitas_recorrentes/edit', [
+                'title' => 'Editar Receita Recorrente',
+                'receita' => $receita,
+                'empresas' => $empresas,
+                'clientes' => $clientes,
+                'categorias' => $categorias,
+                'centrosCusto' => $centrosCusto,
+                'formasPagamento' => $formasPagamento,
+                'contasBancarias' => $contasBancarias
+            ]);
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro: ' . $e->getMessage();
             $response->redirect('/receitas-recorrentes');
-            return;
         }
-        
-        $empresaId = $receita['empresa_id'];
-        
-        $empresas = $this->empresaModel->findAll(['ativo' => 1]);
-        $clientes = $this->clienteModel->findAll(['ativo' => 1]);
-        $categorias = $this->categoriaModel->findAll($empresaId, 'receita');
-        $centrosCusto = $this->centroCustoModel->findAll($empresaId);
-        $formasPagamento = $this->formaPagamentoModel->findAll();
-        $contasBancarias = $this->contaBancariaModel->findAll();
-        
-        return $this->render('receitas_recorrentes/edit', [
-            'title' => 'Editar Receita Recorrente',
-            'receita' => $receita,
-            'empresas' => $empresas,
-            'clientes' => $clientes,
-            'categorias' => $categorias,
-            'centrosCusto' => $centrosCusto,
-            'formasPagamento' => $formasPagamento,
-            'contasBancarias' => $contasBancarias
-        ]);
     }
     
     /**
@@ -206,6 +245,7 @@ class ReceitaRecorrenteController extends Controller
         }
         
         try {
+            $this->receitaRecorrenteModel = new ReceitaRecorrente();
             $this->receitaRecorrenteModel->update($id, $data);
             
             $_SESSION['success'] = 'Receita recorrente atualizada com sucesso!';
@@ -222,9 +262,14 @@ class ReceitaRecorrenteController extends Controller
      */
     public function toggle(Request $request, Response $response, $id)
     {
-        $this->receitaRecorrenteModel->toggleAtivo($id);
-        
-        $_SESSION['success'] = 'Status alterado com sucesso!';
+        try {
+            $this->receitaRecorrenteModel = new ReceitaRecorrente();
+            $this->receitaRecorrenteModel->toggleAtivo($id);
+            
+            $_SESSION['success'] = 'Status alterado com sucesso!';
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro: ' . $e->getMessage();
+        }
         $response->redirect('/receitas-recorrentes');
     }
     

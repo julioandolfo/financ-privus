@@ -58,16 +58,31 @@ class ContaReceber extends Model
             $params[] = $filters['empresa_id'];
         }
         
-        // Filtro por cliente
-        if (isset($filters['cliente_id'])) {
+        // Filtro por cliente (por ID ou por nome consolidado)
+        if (isset($filters['cliente_id']) && $filters['cliente_id'] !== '') {
             $sql .= " AND cr.cliente_id = ?";
             $params[] = $filters['cliente_id'];
+        } elseif (isset($filters['cliente_nome']) && $filters['cliente_nome'] !== '') {
+            $sql .= " AND cl.nome_razao_social = ?";
+            $params[] = $filters['cliente_nome'];
         }
         
-        // Filtro por categoria
-        if (isset($filters['categoria_id'])) {
+        // Filtro por categoria (por ID ou por nome consolidado)
+        if (isset($filters['categoria_id']) && $filters['categoria_id'] !== '') {
             $sql .= " AND cr.categoria_id = ?";
             $params[] = $filters['categoria_id'];
+        } elseif (isset($filters['categoria_nome']) && $filters['categoria_nome'] !== '') {
+            $sql .= " AND c.nome = ?";
+            $params[] = $filters['categoria_nome'];
+        }
+        
+        // Filtro por centro de custo (por ID ou por nome consolidado)
+        if (isset($filters['centro_custo_id']) && $filters['centro_custo_id'] !== '') {
+            $sql .= " AND cr.centro_custo_id = ?";
+            $params[] = $filters['centro_custo_id'];
+        } elseif (isset($filters['centro_custo_nome']) && $filters['centro_custo_nome'] !== '') {
+            $sql .= " AND cc.nome = ?";
+            $params[] = $filters['centro_custo_nome'];
         }
         
         // Filtro por status

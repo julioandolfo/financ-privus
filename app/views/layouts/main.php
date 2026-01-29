@@ -648,7 +648,125 @@
             window.toastNotify('Erro', '<?= addslashes($_SESSION['toast_error']) ?>', 'error');
             <?php unset($_SESSION['toast_error']); ?>
         <?php endif; ?>
+        
+        // Sistema de Web Push Notifications
+        <?php if (isset($_SESSION['usuario_id'])): ?>
+        initWebPush();
+        <?php endif; ?>
     });
+    
+    // Inicializa Web Push Notifications
+    async function initWebPush() {
+        // Verifica se o navegador suporta notificações
+        if (!('Notification' in window)) {
+            console.log('Este navegador não suporta notificações');
+            return;
+        }
+        
+        // Verifica se Service Workers são suportados
+        if (!('serviceWorker' in navigator)) {
+            console.log('Service Workers não são suportados');
+            return;
+        }
+        
+        // Se já tem permissão, não faz nada
+        if (Notification.permission === 'granted') {
+            console.log('Notificações já autorizadas');
+            return;
+        }
+        
+        // Se foi negado, não pergunta novamente
+        if (Notification.permission === 'denied') {
+            console.log('Notificações foram bloqueadas pelo usuário');
+            return;
+        }
+        
+        // Aguarda 3 segundos antes de mostrar o prompt (para não ser intrusivo)
+        setTimeout(() => {
+            mostrarPromptNotificacao();
+        }, 3000);
+    }
+    
+    function mostrarPromptNotificacao() {
+        // Cria o banner de solicitação customizado
+        const banner = document.createElement('div');
+        banner.id = 'notification-banner';
+        banner.className = 'fixed bottom-20 right-4 z-[9998] max-w-sm bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 animate-slide-in';
+        banner.innerHTML = `
+            <div class="flex items-start space-x-3">
+                <div class="flex-shrink-0 p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h4 class="font-semibold text-gray-900 dark:text-white text-sm">Ativar Notificações</h4>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Receba alertas sobre vencimentos, pagamentos e outras novidades importantes.</p>
+                    <div class="flex space-x-2 mt-3">
+                        <button onclick="solicitarPermissaoNotificacao()" class="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                            Ativar
+                        </button>
+                        <button onclick="fecharBannerNotificacao()" class="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+                            Agora não
+                        </button>
+                    </div>
+                </div>
+                <button onclick="fecharBannerNotificacao()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(banner);
+        
+        // Adiciona animação CSS se não existir
+        if (!document.getElementById('notification-banner-styles')) {
+            const style = document.createElement('style');
+            style.id = 'notification-banner-styles';
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                .animate-slide-in { animation: slideIn 0.3s ease-out; }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+    
+    function fecharBannerNotificacao() {
+        const banner = document.getElementById('notification-banner');
+        if (banner) {
+            banner.style.transform = 'translateX(100%)';
+            banner.style.opacity = '0';
+            banner.style.transition = 'all 0.3s ease-in';
+            setTimeout(() => banner.remove(), 300);
+        }
+        // Salva no localStorage para não mostrar novamente nesta sessão
+        localStorage.setItem('notificationBannerDismissed', Date.now());
+    }
+    
+    async function solicitarPermissaoNotificacao() {
+        fecharBannerNotificacao();
+        
+        try {
+            const permission = await Notification.requestPermission();
+            
+            if (permission === 'granted') {
+                window.toastNotify('Notificações ativadas!', 'Você receberá alertas importantes.', 'success');
+                
+                // Aqui poderia registrar o service worker e a subscription
+                // Para implementação completa de Web Push
+                console.log('Permissão concedida para notificações');
+            } else if (permission === 'denied') {
+                window.toastNotify('Notificações bloqueadas', 'Você pode reativar nas configurações do navegador.', 'warning');
+            }
+        } catch (error) {
+            console.error('Erro ao solicitar permissão:', error);
+        }
+    }
     </script>
 </body>
 </html>

@@ -53,14 +53,24 @@ class ContaReceberController extends Controller
             if ($request->get('status')) {
                 $filters['status'] = $request->get('status');
             }
+            
+            // Filtros por ID ou por Nome (consolidado)
             if ($request->get('cliente_id')) {
                 $filters['cliente_id'] = $request->get('cliente_id');
+            } elseif ($request->get('cliente_nome')) {
+                $filters['cliente_nome'] = $request->get('cliente_nome');
             }
+            
             if ($request->get('categoria_id')) {
                 $filters['categoria_id'] = $request->get('categoria_id');
+            } elseif ($request->get('categoria_nome')) {
+                $filters['categoria_nome'] = $request->get('categoria_nome');
             }
+            
             if ($request->get('centro_custo_id')) {
                 $filters['centro_custo_id'] = $request->get('centro_custo_id');
+            } elseif ($request->get('centro_custo_nome')) {
+                $filters['centro_custo_nome'] = $request->get('centro_custo_nome');
             }
             
             // Filtros de data

@@ -17,12 +17,22 @@ class NotificacaoController extends Controller
     private $configModel;
     private $notificacaoService;
     
+    /**
+     * Log de debug
+     */
+    private function logDebug($message, $context = [])
+    {
+        $logFile = dirname(__DIR__) . '/../logs/notificacoes.log';
+        $timestamp = date('Y-m-d H:i:s');
+        $contextStr = !empty($context) ? ' | ' . json_encode($context, JSON_UNESCAPED_UNICODE) : '';
+        $logMessage = "[{$timestamp}] {$message}{$contextStr}" . PHP_EOL;
+        @file_put_contents($logFile, $logMessage, FILE_APPEND);
+    }
+    
     public function __construct()
     {
         parent::__construct();
-        $this->notificacaoModel = new Notificacao();
-        $this->configModel = new NotificacaoConfig();
-        $this->notificacaoService = new NotificacaoService();
+        $this->logDebug('Constructor chamado');
     }
     
     /**
@@ -30,26 +40,61 @@ class NotificacaoController extends Controller
      */
     public function index(Request $request, Response $response)
     {
-        $usuarioId = $_SESSION['usuario_id'];
-        $pagina = (int) ($request->get('pagina') ?? 1);
-        $tipo = $request->get('tipo') ?? '';
-        $lida = $request->get('lida') ?? '';
+        $this->logDebug('=== INDEX NOTIFICAÇÕES ===');
         
-        $filtros = [];
-        if ($tipo) $filtros['tipo'] = $tipo;
-        if ($lida !== '') $filtros['lida'] = $lida;
-        
-        $notificacoes = $this->notificacaoModel->findAll($usuarioId, $filtros, $pagina);
-        $total = $this->notificacaoModel->countAll($usuarioId, $filtros);
-        
-        return $this->render('notificacoes/index', [
-            'title' => 'Notificações',
-            'notificacoes' => $notificacoes,
-            'total' => $total,
-            'pagina' => $pagina,
-            'porPagina' => 20,
-            'filtros' => $filtros
-        ]);
+        try {
+            $this->logDebug('Iniciando models...');
+            $this->notificacaoModel = new Notificacao();
+            $this->logDebug('Notificacao model OK');
+            
+            $usuarioId = $_SESSION['usuario_id'] ?? null;
+            $this->logDebug('Usuario ID', ['id' => $usuarioId]);
+            
+            if (!$usuarioId) {
+                $this->logDebug('Usuário não logado');
+                $response->redirect('/login');
+                return;
+            }
+            
+            $pagina = (int) ($request->get('pagina') ?? 1);
+            $tipo = $request->get('tipo') ?? '';
+            $lida = $request->get('lida') ?? '';
+            
+            $filtros = [];
+            if ($tipo) $filtros['tipo'] = $tipo;
+            if ($lida !== '') $filtros['lida'] = $lida;
+            
+            $this->logDebug('Buscando notificações', ['filtros' => $filtros, 'pagina' => $pagina]);
+            $notificacoes = $this->notificacaoModel->findAll($usuarioId, $filtros, $pagina);
+            $this->logDebug('Notificações encontradas', ['count' => count($notificacoes)]);
+            
+            $total = $this->notificacaoModel->countAll($usuarioId, $filtros);
+            $this->logDebug('Total', ['total' => $total]);
+            
+            $this->logDebug('Renderizando view...');
+            return $this->render('notificacoes/index', [
+                'title' => 'Notificações',
+                'notificacoes' => $notificacoes,
+                'total' => $total,
+                'pagina' => $pagina,
+                'porPagina' => 20,
+                'filtros' => $filtros
+            ]);
+        } catch (\Exception $e) {
+            $this->logDebug('ERRO NO INDEX', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            if (strpos($e->getMessage(), "doesn't exist") !== false || strpos($e->getMessage(), 'Base table') !== false) {
+                $_SESSION['error'] = 'A tabela de notificações ainda não foi criada. Execute as queries SQL.';
+            } else {
+                $_SESSION['error'] = 'Erro ao carregar notificações: ' . $e->getMessage();
+            }
+            $response->redirect('/');
+        }
     }
     
     /**
@@ -57,13 +102,22 @@ class NotificacaoController extends Controller
      */
     public function configuracoes(Request $request, Response $response)
     {
-        $usuarioId = $_SESSION['usuario_id'];
-        $config = $this->configModel->findByUsuario($usuarioId);
-        
-        return $this->render('notificacoes/configuracoes', [
-            'title' => 'Configurações de Notificações',
-            'config' => $config
-        ]);
+        try {
+            $this->logDebug('=== CONFIGURAÇÕES ===');
+            $this->configModel = new NotificacaoConfig();
+            
+            $usuarioId = $_SESSION['usuario_id'];
+            $config = $this->configModel->findByUsuario($usuarioId);
+            
+            return $this->render('notificacoes/configuracoes', [
+                'title' => 'Configurações de Notificações',
+                'config' => $config
+            ]);
+        } catch (\Exception $e) {
+            $this->logDebug('ERRO CONFIGURAÇÕES', ['error' => $e->getMessage()]);
+            $_SESSION['error'] = 'Erro ao carregar configurações: ' . $e->getMessage();
+            $response->redirect('/');
+        }
     }
     
     /**
@@ -71,26 +125,32 @@ class NotificacaoController extends Controller
      */
     public function salvarConfiguracoes(Request $request, Response $response)
     {
-        $usuarioId = $_SESSION['usuario_id'];
-        $data = $request->all();
-        
-        // Prepara dados
-        $configData = [
-            'notificar_vencimentos' => isset($data['notificar_vencimentos']) ? 1 : 0,
-            'antecedencia_vencimento' => (int) ($data['antecedencia_vencimento'] ?? 3),
-            'notificar_vencidas' => isset($data['notificar_vencidas']) ? 1 : 0,
-            'notificar_recorrencias' => isset($data['notificar_recorrencias']) ? 1 : 0,
-            'notificar_recebimentos' => isset($data['notificar_recebimentos']) ? 1 : 0,
-            'notificar_fluxo_caixa' => isset($data['notificar_fluxo_caixa']) ? 1 : 0,
-            'som_ativo' => isset($data['som_ativo']) ? 1 : 0,
-            'agrupar_notificacoes' => isset($data['agrupar_notificacoes']) ? 1 : 0,
-            'horario_silencio_inicio' => $data['horario_silencio_inicio'] ?? null,
-            'horario_silencio_fim' => $data['horario_silencio_fim'] ?? null
-        ];
-        
-        $this->configModel->update($usuarioId, $configData);
-        
-        $_SESSION['success'] = 'Configurações salvas com sucesso!';
+        try {
+            $this->configModel = new NotificacaoConfig();
+            $usuarioId = $_SESSION['usuario_id'];
+            $data = $request->all();
+            
+            // Prepara dados
+            $configData = [
+                'notificar_vencimentos' => isset($data['notificar_vencimentos']) ? 1 : 0,
+                'antecedencia_vencimento' => (int) ($data['antecedencia_vencimento'] ?? 3),
+                'notificar_vencidas' => isset($data['notificar_vencidas']) ? 1 : 0,
+                'notificar_recorrencias' => isset($data['notificar_recorrencias']) ? 1 : 0,
+                'notificar_recebimentos' => isset($data['notificar_recebimentos']) ? 1 : 0,
+                'notificar_fluxo_caixa' => isset($data['notificar_fluxo_caixa']) ? 1 : 0,
+                'som_ativo' => isset($data['som_ativo']) ? 1 : 0,
+                'agrupar_notificacoes' => isset($data['agrupar_notificacoes']) ? 1 : 0,
+                'horario_silencio_inicio' => $data['horario_silencio_inicio'] ?? null,
+                'horario_silencio_fim' => $data['horario_silencio_fim'] ?? null
+            ];
+            
+            $this->configModel->update($usuarioId, $configData);
+            
+            $_SESSION['success'] = 'Configurações salvas com sucesso!';
+        } catch (\Exception $e) {
+            $this->logDebug('ERRO SALVAR CONFIGURAÇÕES', ['error' => $e->getMessage()]);
+            $_SESSION['error'] = 'Erro: ' . $e->getMessage();
+        }
         $response->redirect('/notificacoes/configuracoes');
     }
     
@@ -99,19 +159,55 @@ class NotificacaoController extends Controller
      */
     public function dropdown(Request $request, Response $response)
     {
-        $usuarioId = $_SESSION['usuario_id'];
-        $dados = $this->notificacaoService->buscarParaDropdown($usuarioId);
-        
-        // Formata para exibição
-        foreach ($dados['notificacoes'] as &$notif) {
-            $notif['tempo_relativo'] = NotificacaoService::tempoRelativo($notif['created_at']);
-            $notif['icone_classe'] = $this->getIconeClasse($notif['icone']);
-            $notif['cor_classe'] = $this->getCorClasse($notif['cor']);
+        try {
+            $this->notificacaoModel = new Notificacao();
+            $usuarioId = $_SESSION['usuario_id'] ?? null;
+            
+            if (!$usuarioId) {
+                header('Content-Type: application/json');
+                echo json_encode(['notificacoes' => [], 'nao_lidas' => 0]);
+                exit;
+            }
+            
+            // Busca notificações diretamente do model
+            $notificacoes = $this->notificacaoModel->findAll($usuarioId, [], 1, 10);
+            $naoLidas = $this->notificacaoModel->contarNaoLidas($usuarioId);
+            
+            // Formata para exibição
+            foreach ($notificacoes as &$notif) {
+                $notif['tempo_relativo'] = $this->tempoRelativo($notif['created_at']);
+                $notif['icone_classe'] = $this->getIconeClasse($notif['icone'] ?? 'bell');
+                $notif['cor_classe'] = $this->getCorClasse($notif['cor'] ?? 'blue');
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode([
+                'notificacoes' => $notificacoes,
+                'nao_lidas' => $naoLidas
+            ]);
+            exit;
+        } catch (\Exception $e) {
+            $this->logDebug('ERRO DROPDOWN', ['error' => $e->getMessage()]);
+            header('Content-Type: application/json');
+            echo json_encode(['notificacoes' => [], 'nao_lidas' => 0, 'error' => $e->getMessage()]);
+            exit;
         }
+    }
+    
+    /**
+     * Calcula tempo relativo
+     */
+    private function tempoRelativo($data)
+    {
+        $timestamp = strtotime($data);
+        $diff = time() - $timestamp;
         
-        header('Content-Type: application/json');
-        echo json_encode($dados);
-        exit;
+        if ($diff < 60) return 'Agora';
+        if ($diff < 3600) return floor($diff / 60) . ' min atrás';
+        if ($diff < 86400) return floor($diff / 3600) . 'h atrás';
+        if ($diff < 604800) return floor($diff / 86400) . 'd atrás';
+        
+        return date('d/m/Y', $timestamp);
     }
     
     /**
@@ -119,7 +215,12 @@ class NotificacaoController extends Controller
      */
     public function marcarLida(Request $request, Response $response, $id)
     {
-        $this->notificacaoModel->marcarComoLida($id);
+        try {
+            $this->notificacaoModel = new Notificacao();
+            $this->notificacaoModel->marcarComoLida($id);
+        } catch (\Exception $e) {
+            $this->logDebug('ERRO MARCAR LIDA', ['error' => $e->getMessage()]);
+        }
         
         if ($request->isAjax()) {
             header('Content-Type: application/json');
@@ -131,12 +232,39 @@ class NotificacaoController extends Controller
     }
     
     /**
+     * API: Conta notificações não lidas
+     */
+    public function contarNaoLidas(Request $request, Response $response)
+    {
+        try {
+            $this->notificacaoModel = new Notificacao();
+            $usuarioId = $_SESSION['usuario_id'] ?? null;
+            
+            $count = $usuarioId ? $this->notificacaoModel->contarNaoLidas($usuarioId) : 0;
+            
+            header('Content-Type: application/json');
+            echo json_encode(['count' => $count]);
+            exit;
+        } catch (\Exception $e) {
+            $this->logDebug('ERRO CONTAR', ['error' => $e->getMessage()]);
+            header('Content-Type: application/json');
+            echo json_encode(['count' => 0]);
+            exit;
+        }
+    }
+    
+    /**
      * API: Marca todas como lidas
      */
     public function marcarTodasLidas(Request $request, Response $response)
     {
-        $usuarioId = $_SESSION['usuario_id'];
-        $this->notificacaoModel->marcarTodasComoLidas($usuarioId);
+        try {
+            $this->notificacaoModel = new Notificacao();
+            $usuarioId = $_SESSION['usuario_id'];
+            $this->notificacaoModel->marcarTodasComoLidas($usuarioId);
+        } catch (\Exception $e) {
+            $this->logDebug('ERRO MARCAR TODAS', ['error' => $e->getMessage()]);
+        }
         
         if ($request->isAjax()) {
             header('Content-Type: application/json');
@@ -153,7 +281,12 @@ class NotificacaoController extends Controller
      */
     public function delete(Request $request, Response $response, $id)
     {
-        $this->notificacaoModel->delete($id);
+        try {
+            $this->notificacaoModel = new Notificacao();
+            $this->notificacaoModel->delete($id);
+        } catch (\Exception $e) {
+            $this->logDebug('ERRO DELETE', ['error' => $e->getMessage()]);
+        }
         
         if ($request->isAjax()) {
             header('Content-Type: application/json');
@@ -170,25 +303,33 @@ class NotificacaoController extends Controller
      */
     public function salvarPushSubscription(Request $request, Response $response)
     {
-        $usuarioId = $_SESSION['usuario_id'];
-        $data = json_decode(file_get_contents('php://input'), true);
-        
-        if (empty($data['endpoint'])) {
+        try {
+            $this->configModel = new NotificacaoConfig();
+            $usuarioId = $_SESSION['usuario_id'];
+            $data = json_decode(file_get_contents('php://input'), true);
+            
+            if (empty($data['endpoint'])) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'error' => 'Endpoint inválido']);
+                exit;
+            }
+            
+            $this->configModel->salvarSubscription(
+                $usuarioId,
+                $data['endpoint'],
+                $data['keys']['p256dh'] ?? '',
+                $data['keys']['auth'] ?? ''
+            );
+            
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'error' => 'Endpoint inválido']);
+            echo json_encode(['success' => true]);
+            exit;
+        } catch (\Exception $e) {
+            $this->logDebug('ERRO SALVAR PUSH', ['error' => $e->getMessage()]);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
             exit;
         }
-        
-        $this->configModel->salvarSubscription(
-            $usuarioId,
-            $data['endpoint'],
-            $data['keys']['p256dh'] ?? '',
-            $data['keys']['auth'] ?? ''
-        );
-        
-        header('Content-Type: application/json');
-        echo json_encode(['success' => true]);
-        exit;
     }
     
     /**
@@ -196,25 +337,20 @@ class NotificacaoController extends Controller
      */
     public function removerPushSubscription(Request $request, Response $response)
     {
-        $usuarioId = $_SESSION['usuario_id'];
-        $this->configModel->removerSubscription($usuarioId);
-        
-        header('Content-Type: application/json');
-        echo json_encode(['success' => true]);
-        exit;
-    }
-    
-    /**
-     * API: Conta não lidas (para atualização periódica)
-     */
-    public function contarNaoLidas(Request $request, Response $response)
-    {
-        $usuarioId = $_SESSION['usuario_id'];
-        $count = $this->notificacaoModel->contarNaoLidas($usuarioId);
-        
-        header('Content-Type: application/json');
-        echo json_encode(['count' => $count]);
-        exit;
+        try {
+            $this->configModel = new NotificacaoConfig();
+            $usuarioId = $_SESSION['usuario_id'];
+            $this->configModel->removerSubscription($usuarioId);
+            
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true]);
+            exit;
+        } catch (\Exception $e) {
+            $this->logDebug('ERRO REMOVER PUSH', ['error' => $e->getMessage()]);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            exit;
+        }
     }
     
     /**

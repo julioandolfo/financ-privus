@@ -59,16 +59,31 @@ class ContaPagar extends Model
             $params[] = $filters['status'];
         }
         
-        // Filtro por fornecedor
+        // Filtro por fornecedor (por ID ou por nome consolidado)
         if (isset($filters['fornecedor_id']) && $filters['fornecedor_id'] !== '') {
             $sql .= " AND cp.fornecedor_id = ?";
             $params[] = $filters['fornecedor_id'];
+        } elseif (isset($filters['fornecedor_nome']) && $filters['fornecedor_nome'] !== '') {
+            $sql .= " AND f.nome_razao_social = ?";
+            $params[] = $filters['fornecedor_nome'];
         }
         
-        // Filtro por categoria
+        // Filtro por categoria (por ID ou por nome consolidado)
         if (isset($filters['categoria_id']) && $filters['categoria_id'] !== '') {
             $sql .= " AND cp.categoria_id = ?";
             $params[] = $filters['categoria_id'];
+        } elseif (isset($filters['categoria_nome']) && $filters['categoria_nome'] !== '') {
+            $sql .= " AND c.nome = ?";
+            $params[] = $filters['categoria_nome'];
+        }
+        
+        // Filtro por centro de custo (por ID ou por nome consolidado)
+        if (isset($filters['centro_custo_id']) && $filters['centro_custo_id'] !== '') {
+            $sql .= " AND cp.centro_custo_id = ?";
+            $params[] = $filters['centro_custo_id'];
+        } elseif (isset($filters['centro_custo_nome']) && $filters['centro_custo_nome'] !== '') {
+            $sql .= " AND cc.nome = ?";
+            $params[] = $filters['centro_custo_nome'];
         }
         
         // Filtro por data de competência

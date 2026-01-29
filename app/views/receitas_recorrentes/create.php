@@ -9,14 +9,14 @@ $meses = [
 ];
 ?>
 
-<div class="container mx-auto max-w-5xl" x-data="despesaRecorrenteForm()">
+<div class="container mx-auto max-w-5xl" x-data="receitaRecorrenteForm()">
     <!-- Header -->
     <div class="flex justify-between items-center mb-8">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Nova Despesa Recorrente</h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-1">Configure uma despesa que se repete automaticamente</p>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Nova Receita Recorrente</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">Configure uma receita que se repete automaticamente</p>
         </div>
-        <a href="/despesas-recorrentes" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+        <a href="/receitas-recorrentes" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
             ← Voltar
         </a>
     </div>
@@ -31,14 +31,14 @@ $meses = [
         </div>
     <?php endif; ?>
 
-    <form method="POST" action="/despesas-recorrentes">
+    <form method="POST" action="/receitas-recorrentes">
         <!-- Dados Básicos -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
             <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                <svg class="w-6 h-6 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-6 h-6 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                 </svg>
-                Dados da Despesa
+                Dados da Receita
             </h2>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -55,12 +55,12 @@ $meses = [
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Fornecedor</label>
-                    <select name="fornecedor_id" id="select_fornecedor" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cliente</label>
+                    <select name="cliente_id" id="select_cliente" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                         <option value="">Selecione (opcional)...</option>
-                        <?php foreach ($fornecedores as $fornecedor): ?>
-                            <option value="<?= $fornecedor['id'] ?>" <?= ($old['fornecedor_id'] ?? '') == $fornecedor['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($fornecedor['nome_razao_social']) ?>
+                        <?php foreach ($clientes ?? [] as $cliente): ?>
+                            <option value="<?= $cliente['id'] ?>" <?= ($old['cliente_id'] ?? '') == $cliente['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($cliente['nome_razao_social']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -70,7 +70,7 @@ $meses = [
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Categoria <span class="text-red-500">*</span></label>
                     <select name="categoria_id" id="select_categoria" required class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                         <option value="">Selecione...</option>
-                        <?php foreach ($categorias as $categoria): ?>
+                        <?php foreach ($categorias ?? [] as $categoria): ?>
                             <option value="<?= $categoria['id'] ?>" <?= ($old['categoria_id'] ?? '') == $categoria['id'] ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($categoria['nome']) ?>
                             </option>
@@ -82,7 +82,7 @@ $meses = [
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Centro de Custo</label>
                     <select name="centro_custo_id" id="select_centro_custo" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                         <option value="">Selecione (opcional)...</option>
-                        <?php foreach ($centrosCusto as $cc): ?>
+                        <?php foreach ($centrosCusto ?? [] as $cc): ?>
                             <option value="<?= $cc['id'] ?>" <?= ($old['centro_custo_id'] ?? '') == $cc['id'] ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($cc['nome']) ?>
                             </option>
@@ -94,7 +94,7 @@ $meses = [
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descrição <span class="text-red-500">*</span></label>
                     <input type="text" name="descricao" value="<?= htmlspecialchars($old['descricao'] ?? '') ?>" required
                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                           placeholder="Ex: Aluguel do escritório">
+                           placeholder="Ex: Mensalidade cliente ABC">
                 </div>
                 
                 <div>
@@ -102,20 +102,6 @@ $meses = [
                     <input type="number" name="valor" value="<?= $old['valor'] ?? '' ?>" step="0.01" min="0.01" required
                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                            placeholder="0,00">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Custo</label>
-                    <div class="flex space-x-4 mt-3">
-                        <label class="flex items-center cursor-pointer">
-                            <input type="radio" name="tipo_custo" value="variavel" <?= ($old['tipo_custo'] ?? 'variavel') == 'variavel' ? 'checked' : '' ?> class="mr-2">
-                            <span class="text-gray-700 dark:text-gray-300">Variável</span>
-                        </label>
-                        <label class="flex items-center cursor-pointer">
-                            <input type="radio" name="tipo_custo" value="fixo" <?= ($old['tipo_custo'] ?? '') == 'fixo' ? 'checked' : '' ?> class="mr-2">
-                            <span class="text-gray-700 dark:text-gray-300">Fixo</span>
-                        </label>
-                    </div>
                 </div>
                 
                 <div class="md:col-span-2">
@@ -202,8 +188,8 @@ $meses = [
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Antecedência de Criação</label>
                     <select name="antecedencia_dias" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                        <?php foreach ([1, 3, 5, 7, 10, 15, 30] as $dias): ?>
-                            <option value="<?= $dias ?>" <?= ($old['antecedencia_dias'] ?? 5) == $dias ? 'selected' : '' ?>><?= $dias ?> dias antes</option>
+                        <?php foreach ([1, 3, 5, 7, 10, 15, 30] as $d): ?>
+                            <option value="<?= $d ?>" <?= ($old['antecedencia_dias'] ?? 5) == $d ? 'selected' : '' ?>><?= $d ?> dias antes</option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -221,7 +207,7 @@ $meses = [
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status Inicial</label>
                     <select name="status_inicial" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                         <option value="pendente" <?= ($old['status_inicial'] ?? 'pendente') == 'pendente' ? 'selected' : '' ?>>Pendente</option>
-                        <option value="pago" <?= ($old['status_inicial'] ?? '') == 'pago' ? 'selected' : '' ?>>Já Pago (baixa automática)</option>
+                        <option value="recebido" <?= ($old['status_inicial'] ?? '') == 'recebido' ? 'selected' : '' ?>>Já Recebido (baixa automática)</option>
                     </select>
                 </div>
             </div>
@@ -270,22 +256,22 @@ $meses = [
             </div>
         </div>
 
-        <!-- Pagamento Automático -->
+        <!-- Recebimento Automático -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
             <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                 <svg class="w-6 h-6 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
                 </svg>
-                Pagamento Automático (opcional)
+                Recebimento Automático (opcional)
             </h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Se o status inicial for "Já Pago", configure como será registrado o pagamento</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Se o status inicial for "Já Recebido", configure como será registrado o recebimento</p>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Forma de Pagamento</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Forma de Recebimento</label>
                     <select name="forma_pagamento_id" id="select_forma_pagamento" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                         <option value="">Selecione...</option>
-                        <?php foreach ($formasPagamento as $forma): ?>
+                        <?php foreach ($formasPagamento ?? [] as $forma): ?>
                             <option value="<?= $forma['id'] ?>" <?= ($old['forma_pagamento_id'] ?? '') == $forma['id'] ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($forma['nome']) ?>
                             </option>
@@ -297,7 +283,7 @@ $meses = [
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Conta Bancária</label>
                     <select name="conta_bancaria_id" id="select_conta_bancaria" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                         <option value="">Selecione...</option>
-                        <?php foreach ($contasBancarias as $conta): ?>
+                        <?php foreach ($contasBancarias ?? [] as $conta): ?>
                             <option value="<?= $conta['id'] ?>" <?= ($old['conta_bancaria_id'] ?? '') == $conta['id'] ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($conta['banco_nome'] . ' - Ag: ' . $conta['agencia'] . ' Cc: ' . $conta['conta']) ?>
                             </option>
@@ -309,18 +295,18 @@ $meses = [
 
         <!-- Botões -->
         <div class="flex justify-end space-x-4">
-            <a href="/despesas-recorrentes" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+            <a href="/receitas-recorrentes" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
                 Cancelar
             </a>
-            <button type="submit" class="px-8 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl hover:from-red-700 hover:to-rose-700 transition-all font-medium shadow-lg">
-                Criar Despesa Recorrente
+            <button type="submit" class="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all font-medium shadow-lg">
+                Criar Receita Recorrente
             </button>
         </div>
     </form>
 </div>
 
 <script>
-function despesaRecorrenteForm() {
+function receitaRecorrenteForm() {
     return {
         frequencia: '<?= $old['frequencia'] ?? 'mensal' ?>',
         reajusteAtivo: <?= isset($old['reajuste_ativo']) && $old['reajuste_ativo'] ? 'true' : 'false' ?>
@@ -343,7 +329,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Campos para aplicar Tom Select
     const selectFields = [
         '#select_empresa',
-        '#select_fornecedor',
+        '#select_cliente',
         '#select_categoria',
         '#select_centro_custo',
         '#select_forma_pagamento',

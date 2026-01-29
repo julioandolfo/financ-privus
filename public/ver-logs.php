@@ -54,6 +54,7 @@ if (isset($_GET['clear'])) {
 $logFiles = [
     'app_debug.log' => $logsDir . '/app_debug.log',
     'despesas_recorrentes.log' => $logsDir . '/despesas_recorrentes.log',
+    'notificacoes.log' => $logsDir . '/notificacoes.log',
     'error.log' => $storageLogsDir . '/error.log'
 ];
 

@@ -53,15 +53,26 @@ class ContaPagarController extends Controller
             if ($request->get('status')) {
                 $filters['status'] = $request->get('status');
             }
+            
+            // Filtros por ID ou por Nome (consolidado)
             if ($request->get('fornecedor_id')) {
                 $filters['fornecedor_id'] = $request->get('fornecedor_id');
+            } elseif ($request->get('fornecedor_nome')) {
+                $filters['fornecedor_nome'] = $request->get('fornecedor_nome');
             }
+            
             if ($request->get('categoria_id')) {
                 $filters['categoria_id'] = $request->get('categoria_id');
+            } elseif ($request->get('categoria_nome')) {
+                $filters['categoria_nome'] = $request->get('categoria_nome');
             }
+            
             if ($request->get('centro_custo_id')) {
                 $filters['centro_custo_id'] = $request->get('centro_custo_id');
+            } elseif ($request->get('centro_custo_nome')) {
+                $filters['centro_custo_nome'] = $request->get('centro_custo_nome');
             }
+            
             if ($request->get('forma_pagamento_id')) {
                 $filters['forma_pagamento_id'] = $request->get('forma_pagamento_id');
             }
