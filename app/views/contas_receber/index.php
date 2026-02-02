@@ -16,6 +16,12 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                 <p class="text-green-100">Gerencie suas receitas e recebimentos</p>
             </div>
             <div class="flex items-center space-x-4">
+                <a href="/contas-receber/deletados" class="bg-white/20 text-white px-4 py-2 rounded-xl font-medium hover:bg-white/30 transition-all flex items-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    <span>Deletados</span>
+                </a>
                 <a href="/receitas-recorrentes" class="bg-white/20 text-white px-4 py-2 rounded-xl font-medium hover:bg-white/30 transition-all flex items-center space-x-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -357,6 +363,11 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                                             </svg>
                                         </a>
                                     <?php endif; ?>
+                                    <a href="/contas-receber/<?= $conta['id'] ?>/historico" class="text-purple-600 hover:text-purple-900 dark:hover:text-purple-400" title="Histórico">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </a>
                                     <?php if ($conta['status'] != 'cancelado'): ?>
                                         <a href="/contas-receber/<?= $conta['id'] ?>/edit" class="text-yellow-600 hover:text-yellow-900 dark:hover:text-yellow-400" title="Editar">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -364,15 +375,13 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                                             </svg>
                                         </a>
                                     <?php endif; ?>
-                                    <?php if ($conta['status'] != 'recebido' && $conta['status'] != 'cancelado'): ?>
-                                        <form method="POST" action="/contas-receber/<?= $conta['id'] ?>/delete" class="inline" onsubmit="return confirm('Tem certeza que deseja cancelar esta conta?')">
-                                            <button type="submit" class="text-red-600 hover:text-red-900 dark:hover:text-red-400" title="Cancelar">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                                </svg>
-                                            </button>
-                                        </form>
-                                    <?php endif; ?>
+                                    <form method="POST" action="/contas-receber/<?= $conta['id'] ?>/delete" class="inline" onsubmit="return confirm('Tem certeza que deseja DELETAR esta conta?\n\nEla será movida para Registros Deletados e poderá ser restaurada.')">
+                                        <button type="submit" class="text-red-600 hover:text-red-900 dark:hover:text-red-400" title="Deletar">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>

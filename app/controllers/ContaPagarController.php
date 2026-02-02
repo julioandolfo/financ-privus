@@ -243,6 +243,16 @@ class ContaPagarController extends Controller
                 throw new \Exception('Erro ao criar conta a pagar');
             }
             
+            // Registrar auditoria
+            \App\Models\Auditoria::registrar(
+                'contas_pagar',
+                $contaPagarId,
+                'create',
+                null,
+                $this->contaPagarModel->findById($contaPagarId),
+                'Conta a pagar criada'
+            );
+            
             // Se tem rateio, salva os rateios
             if (isset($data['tem_rateio']) && $data['tem_rateio'] == 1 && !empty($data['rateios'])) {
                 $this->rateioService = new RateioService();
@@ -456,7 +466,18 @@ class ContaPagarController extends Controller
             
             // Atualiza conta a pagar
             $this->contaPagarModel = new ContaPagar();
+            $dadosAntes = $this->contaPagarModel->findById($id);
             $this->contaPagarModel->update($id, $data);
+            
+            // Registrar auditoria
+            \App\Models\Auditoria::registrar(
+                'contas_pagar',
+                $id,
+                'update',
+                $dadosAntes,
+                $this->contaPagarModel->findById($id),
+                'Conta a pagar atualizada'
+            );
             
             // Atualiza rateios se necessário
             if (isset($data['tem_rateio']) && $data['tem_rateio'] == 1 && !empty($data['rateios'])) {
@@ -686,7 +707,18 @@ class ContaPagarController extends Controller
             }
             
             // Atualiza conta
+            $dadosAntes = $contaPagar;
             $this->contaPagarModel->atualizarPagamento($id, $valorPago, $data['data_pagamento'], $status);
+            
+            // Registrar auditoria do pagamento
+            \App\Models\Auditoria::registrar(
+                'contas_pagar',
+                $id,
+                'make_payment',
+                $dadosAntes,
+                $this->contaPagarModel->findById($id),
+                "Pagamento de R$ " . number_format($valorPagamento, 2, ',', '.')
+            );
             
             // Cria movimentação de caixa
             $this->movimentacaoService = new MovimentacaoService();

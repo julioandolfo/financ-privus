@@ -40,7 +40,7 @@ class ContaPagar extends Model
                 LEFT JOIN contas_bancarias cb ON cp.conta_bancaria_id = cb.id
                 LEFT JOIN formas_pagamento fp ON cp.forma_pagamento_id = fp.id
                 JOIN usuarios u ON cp.usuario_cadastro_id = u.id
-                WHERE 1=1";
+                WHERE cp.deleted_at IS NULL";
         $params = [];
         
         // Filtro por empresa ou consolidação
@@ -498,11 +498,12 @@ class ContaPagar extends Model
     public function getCountPorStatus($empresasIds = null)
     {
         $sql = "SELECT status, COUNT(*) as total
-                FROM {$this->table}";
+                FROM {$this->table}
+                WHERE deleted_at IS NULL";
         
         if ($empresasIds) {
             $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
-            $sql .= " WHERE empresa_id IN ($placeholders)";
+            $sql .= " AND empresa_id IN ($placeholders)";
         }
         
         $sql .= " GROUP BY status";
@@ -532,7 +533,8 @@ class ContaPagar extends Model
     {
         $sql = "SELECT SUM(valor_total - valor_pago) as total
                 FROM {$this->table}
-                WHERE status IN ('pendente', 'parcial', 'vencido')";
+                WHERE status IN ('pendente', 'parcial', 'vencido')
+                  AND deleted_at IS NULL";
         
         if ($empresasIds) {
             $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
@@ -555,7 +557,8 @@ class ContaPagar extends Model
     {
         $sql = "SELECT SUM(valor_pago) as total
                 FROM {$this->table}
-                WHERE status IN ('parcial', 'pago')";
+                WHERE status IN ('parcial', 'pago')
+                  AND deleted_at IS NULL";
         
         if ($empresasIds) {
             $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
@@ -580,7 +583,8 @@ class ContaPagar extends Model
                        SUM(valor_total - valor_pago) as valor_total
                 FROM {$this->table}
                 WHERE status IN ('pendente', 'parcial')
-                  AND data_vencimento < CURDATE()";
+                  AND data_vencimento < CURDATE()
+                  AND deleted_at IS NULL";
         
         if ($empresasIds) {
             $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
@@ -608,7 +612,8 @@ class ContaPagar extends Model
                        SUM(valor_total - valor_pago) as valor_total
                 FROM {$this->table}
                 WHERE status IN ('pendente', 'parcial')
-                  AND data_vencimento BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)";
+                  AND data_vencimento BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)
+                  AND deleted_at IS NULL";
         
         $params = [$dias];
         
@@ -649,11 +654,11 @@ class ContaPagar extends Model
      */
     public function count($empresasIds = null)
     {
-        $sql = "SELECT COUNT(*) FROM {$this->table}";
+        $sql = "SELECT COUNT(*) FROM {$this->table} WHERE deleted_at IS NULL";
         
         if ($empresasIds) {
             $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
-            $sql .= " WHERE empresa_id IN ($placeholders)";
+            $sql .= " AND empresa_id IN ($placeholders)";
             $stmt = $this->db->prepare($sql);
             $stmt->execute($empresasIds);
             return $stmt->fetchColumn();

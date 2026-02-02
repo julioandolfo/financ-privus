@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../../includes/helpers/formata_dados.php';
 require_once __DIR__ . '/../../../includes/helpers/functions.php';
 ?>
 
-<div class="max-w-6xl mx-auto animate-fade-in">
+<div class="max-w-6xl mx-auto animate-fade-in" x-data="{ showCancelModal: false }" @keydown.escape.window="showCancelModal = false">
     <!-- Header -->
     <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl shadow-xl p-8 mb-8">
         <div class="flex justify-between items-center">
@@ -21,7 +21,7 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                     </a>
                 <?php endif; ?>
                 <?php if ($conta['status'] == 'recebido' || $conta['status'] == 'parcial'): ?>
-                    <button @click="$refs.cancelReceiptModal.showModal()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg flex items-center space-x-2">
+                    <button @click="showCancelModal = true" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg flex items-center space-x-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
                         </svg>
@@ -323,8 +323,13 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
 </div>
 
 <!-- Modal de Cancelar Recebimento -->
-<dialog x-ref="cancelReceiptModal" class="rounded-2xl shadow-2xl backdrop:bg-gray-900/50 p-0 border-0 w-full max-w-md">
-    <div class="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden">
+<div x-show="showCancelModal" 
+     x-cloak
+     class="fixed inset-0 z-50 overflow-y-auto"
+     @click.self="showCancelModal = false">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-gray-900/50 transition-opacity"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
         <div class="bg-gradient-to-r from-yellow-600 to-orange-600 px-6 py-4">
             <h3 class="text-xl font-bold text-white">⚠️ Cancelar Recebimento</h3>
         </div>
@@ -355,7 +360,7 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
             </div>
             
             <div class="flex items-center justify-end space-x-3">
-                <button type="button" @click="$refs.cancelReceiptModal.close()" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">
+                <button type="button" @click="showCancelModal = false" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">
                     Cancelar
                 </button>
                 <button type="submit" class="px-6 py-2 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-lg hover:from-yellow-700 hover:to-orange-700 shadow-lg">
@@ -364,4 +369,5 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
             </div>
         </form>
     </div>
-</dialog>
+    </div>
+</div>

@@ -239,6 +239,16 @@ class ContaReceberController extends Controller
                 throw new \Exception('Erro ao criar conta a receber');
             }
             
+            // Registrar auditoria
+            \App\Models\Auditoria::registrar(
+                'contas_receber',
+                $contaReceberId,
+                'create',
+                null,
+                $this->contaReceberModel->findById($contaReceberId),
+                'Conta a receber criada'
+            );
+            
             // Se tem rateio, salva os rateios
             if (isset($data['tem_rateio']) && $data['tem_rateio'] == 1 && !empty($data['rateios'])) {
                 $this->rateioService = new RateioService();
@@ -421,7 +431,18 @@ class ContaReceberController extends Controller
             
             // Atualiza conta a receber
             $this->contaReceberModel = new ContaReceber();
+            $dadosAntes = $this->contaReceberModel->findById($id);
             $this->contaReceberModel->update($id, $data);
+            
+            // Registrar auditoria
+            \App\Models\Auditoria::registrar(
+                'contas_receber',
+                $id,
+                'update',
+                $dadosAntes,
+                $this->contaReceberModel->findById($id),
+                'Conta a receber atualizada'
+            );
             
             // Atualiza rateios se necessário
             if (isset($data['tem_rateio']) && $data['tem_rateio'] == 1 && !empty($data['rateios'])) {
@@ -661,7 +682,18 @@ class ContaReceberController extends Controller
             }
             
             // Atualiza conta
+            $dadosAntes = $contaReceber;
             $this->contaReceberModel->atualizarRecebimento($id, $valorRecebido, $data['data_recebimento'], $status);
+            
+            // Registrar auditoria do recebimento
+            \App\Models\Auditoria::registrar(
+                'contas_receber',
+                $id,
+                'make_receipt',
+                $dadosAntes,
+                $this->contaReceberModel->findById($id),
+                "Recebimento de R$ " . number_format($valorRecebimento, 2, ',', '.')
+            );
             
             // Cria movimentação de caixa
             $this->movimentacaoService = new MovimentacaoService();

@@ -16,22 +16,22 @@ class AddSoftDeleteContas extends Migration
         echo "Adicionando soft delete nas contas a pagar...\n";
         
         // Contas a Pagar
-        $this->addColumn('contas_pagar', [
-            'deleted_at TIMESTAMP NULL DEFAULT NULL',
-            'deleted_by INT NULL',
-            'deleted_reason TEXT NULL',
-            'INDEX idx_deleted_at (deleted_at)'
-        ]);
+        $sql = "ALTER TABLE contas_pagar 
+                ADD COLUMN deleted_at TIMESTAMP NULL DEFAULT NULL,
+                ADD COLUMN deleted_by INT NULL,
+                ADD COLUMN deleted_reason TEXT NULL,
+                ADD INDEX idx_deleted_at (deleted_at)";
+        $this->db->exec($sql);
         
         echo "Adicionando soft delete nas contas a receber...\n";
         
         // Contas a Receber
-        $this->addColumn('contas_receber', [
-            'deleted_at TIMESTAMP NULL DEFAULT NULL',
-            'deleted_by INT NULL',
-            'deleted_reason TEXT NULL',
-            'INDEX idx_deleted_at (deleted_at)'
-        ]);
+        $sql = "ALTER TABLE contas_receber 
+                ADD COLUMN deleted_at TIMESTAMP NULL DEFAULT NULL,
+                ADD COLUMN deleted_by INT NULL,
+                ADD COLUMN deleted_reason TEXT NULL,
+                ADD INDEX idx_deleted_at (deleted_at)";
+        $this->db->exec($sql);
         
         echo "Soft delete adicionado com sucesso!\n";
     }
@@ -40,8 +40,19 @@ class AddSoftDeleteContas extends Migration
     {
         echo "Removendo soft delete das contas...\n";
         
-        $this->dropColumn('contas_pagar', ['deleted_at', 'deleted_by', 'deleted_reason']);
-        $this->dropColumn('contas_receber', ['deleted_at', 'deleted_by', 'deleted_reason']);
+        $sql1 = "ALTER TABLE contas_pagar 
+                 DROP COLUMN deleted_at, 
+                 DROP COLUMN deleted_by, 
+                 DROP COLUMN deleted_reason,
+                 DROP INDEX idx_deleted_at";
+        $this->db->exec($sql1);
+        
+        $sql2 = "ALTER TABLE contas_receber 
+                 DROP COLUMN deleted_at, 
+                 DROP COLUMN deleted_by, 
+                 DROP COLUMN deleted_reason,
+                 DROP INDEX idx_deleted_at";
+        $this->db->exec($sql2);
         
         echo "Soft delete removido!\n";
     }
