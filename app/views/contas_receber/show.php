@@ -320,54 +320,54 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
             </div>
         </div>
     </div>
-</div>
 
-<!-- Modal de Cancelar Recebimento -->
-<div x-show="showCancelModal" 
-     x-cloak
-     class="fixed inset-0 z-50 overflow-y-auto"
-     @click.self="showCancelModal = false">
-    <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="fixed inset-0 bg-gray-900/50 transition-opacity"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
-        <div class="bg-gradient-to-r from-yellow-600 to-orange-600 px-6 py-4">
-            <h3 class="text-xl font-bold text-white">⚠️ Cancelar Recebimento</h3>
-        </div>
-        
-        <form method="POST" action="/contas-receber/<?= $conta['id'] ?>/cancelar-recebimento" class="p-6">
-            <div class="mb-6">
-                <p class="text-gray-700 dark:text-gray-300 mb-4">
-                    Tem certeza que deseja cancelar o recebimento desta conta?
-                </p>
-                <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4">
-                    <p class="text-sm text-yellow-800 dark:text-yellow-200">
-                        <strong>Atenção:</strong> Esta ação irá:
-                    </p>
-                    <ul class="list-disc list-inside text-sm text-yellow-700 dark:text-yellow-300 mt-2 space-y-1">
-                        <li>Reverter o status para "Pendente"</li>
-                        <li>Zerar o valor recebido</li>
-                        <li>Remover a data de recebimento</li>
-                        <li>Registrar no histórico de auditoria</li>
-                    </ul>
+    <!-- Modal de Cancelar Recebimento -->
+    <div x-show="showCancelModal" 
+         x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto"
+         @click.self="showCancelModal = false">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-gray-900/50 transition-opacity"></div>
+            <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+                <div class="bg-gradient-to-r from-yellow-600 to-orange-600 px-6 py-4">
+                    <h3 class="text-xl font-bold text-white">⚠️ Cancelar Recebimento</h3>
                 </div>
                 
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Motivo do Cancelamento <span class="text-red-600">*</span>
-                </label>
-                <textarea name="motivo" rows="3" required
-                          placeholder="Ex: Recebimento duplicado, erro no valor, etc."
-                          class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-yellow-500"></textarea>
+                <form method="POST" action="/contas-receber/<?= $conta['id'] ?>/cancelar-recebimento" class="p-6">
+                    <div class="mb-6">
+                        <p class="text-gray-700 dark:text-gray-300 mb-4">
+                            Tem certeza que deseja cancelar o recebimento desta conta?
+                        </p>
+                        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4">
+                            <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                                <strong>Atenção:</strong> Esta ação irá:
+                            </p>
+                            <ul class="list-disc list-inside text-sm text-yellow-700 dark:text-yellow-300 mt-2 space-y-1">
+                                <li>Reverter o status para "Pendente"</li>
+                                <li>Zerar o valor recebido</li>
+                                <li>Remover a data de recebimento</li>
+                                <li>Registrar no histórico de auditoria</li>
+                            </ul>
+                        </div>
+                        
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Motivo do Cancelamento <span class="text-red-600">*</span>
+                        </label>
+                        <textarea name="motivo" rows="3" required
+                                  placeholder="Ex: Recebimento duplicado, erro no valor, etc."
+                                  class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-yellow-500"></textarea>
+                    </div>
+                    
+                    <div class="flex items-center justify-end space-x-3">
+                        <button type="button" @click="showCancelModal = false" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="px-6 py-2 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-lg hover:from-yellow-700 hover:to-orange-700 shadow-lg">
+                            Confirmar Cancelamento
+                        </button>
+                    </div>
+                </form>
             </div>
-            
-            <div class="flex items-center justify-end space-x-3">
-                <button type="button" @click="showCancelModal = false" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">
-                    Cancelar
-                </button>
-                <button type="submit" class="px-6 py-2 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-lg hover:from-yellow-700 hover:to-orange-700 shadow-lg">
-                    Confirmar Cancelamento
-                </button>
-            </div>
-        </form>
-    </div>
+        </div>
     </div>
 </div>
