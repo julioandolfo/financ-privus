@@ -28,6 +28,14 @@ $saldoRestante = $conta['valor_total'] - $conta['valor_pago'];
                         <span>Baixar/Pagar</span>
                     </a>
                 <?php endif; ?>
+                <?php if ($conta['status'] == 'pago' || $conta['status'] == 'parcial'): ?>
+                    <button @click="$refs.cancelPaymentModal.showModal()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg flex items-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                        </svg>
+                        <span>Cancelar Pagamento</span>
+                    </button>
+                <?php endif; ?>
                 <?php if ($conta['status'] != 'cancelado'): ?>
                     <a href="/contas-pagar/<?= $conta['id'] ?>/edit" class="bg-white text-red-600 px-6 py-3 rounded-xl font-semibold hover:bg-red-50 transition-all shadow-lg flex items-center space-x-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -36,6 +44,12 @@ $saldoRestante = $conta['valor_total'] - $conta['valor_pago'];
                         <span>Editar</span>
                     </a>
                 <?php endif; ?>
+                <a href="/contas-pagar/<?= $conta['id'] ?>/historico" class="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-semibold transition-all flex items-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>Histórico</span>
+                </a>
                 <a href="/contas-pagar" class="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-semibold transition-all flex items-center space-x-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -479,6 +493,50 @@ $saldoRestante = $conta['valor_total'] - $conta['valor_pago'];
         </div>
     </div>
 </div>
+
+<!-- Modal de Cancelar Pagamento -->
+<dialog x-ref="cancelPaymentModal" class="rounded-2xl shadow-2xl backdrop:bg-gray-900/50 p-0 border-0 w-full max-w-md">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden">
+        <div class="bg-gradient-to-r from-yellow-600 to-orange-600 px-6 py-4">
+            <h3 class="text-xl font-bold text-white">⚠️ Cancelar Pagamento</h3>
+        </div>
+        
+        <form method="POST" action="/contas-pagar/<?= $conta['id'] ?>/cancelar-pagamento" class="p-6">
+            <div class="mb-6">
+                <p class="text-gray-700 dark:text-gray-300 mb-4">
+                    Tem certeza que deseja cancelar o pagamento desta conta?
+                </p>
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4">
+                    <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                        <strong>Atenção:</strong> Esta ação irá:
+                    </p>
+                    <ul class="list-disc list-inside text-sm text-yellow-700 dark:text-yellow-300 mt-2 space-y-1">
+                        <li>Reverter o status para "Pendente"</li>
+                        <li>Zerar o valor pago</li>
+                        <li>Remover a data de pagamento</li>
+                        <li>Registrar no histórico de auditoria</li>
+                    </ul>
+                </div>
+                
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Motivo do Cancelamento <span class="text-red-600">*</span>
+                </label>
+                <textarea name="motivo" rows="3" required
+                          placeholder="Ex: Pagamento duplicado, erro no valor, etc."
+                          class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-yellow-500"></textarea>
+            </div>
+            
+            <div class="flex items-center justify-end space-x-3">
+                <button type="button" @click="$refs.cancelPaymentModal.close()" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-6 py-2 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-lg hover:from-yellow-700 hover:to-orange-700 shadow-lg">
+                    Confirmar Cancelamento
+                </button>
+            </div>
+        </form>
+    </div>
+</dialog>
 
 <?php
 $this->session->delete('old');

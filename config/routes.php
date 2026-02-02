@@ -132,11 +132,15 @@ return [
     
     // Contas a Pagar (protegido) - Rotas específicas primeiro
     'GET /contas-pagar' => ['handler' => 'ContaPagarController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /contas-pagar/deletados' => ['handler' => 'ContaPagarController@deletados', 'middleware' => ['AuthMiddleware']],
     'GET /contas-pagar/create' => ['handler' => 'ContaPagarController@create', 'middleware' => ['AuthMiddleware']],
     'POST /contas-pagar' => ['handler' => 'ContaPagarController@store', 'middleware' => ['AuthMiddleware']],
     'GET /contas-pagar/{id}/edit' => ['handler' => 'ContaPagarController@edit', 'middleware' => ['AuthMiddleware']],
     'GET /contas-pagar/{id}/baixar' => ['handler' => 'ContaPagarController@baixar', 'middleware' => ['AuthMiddleware']],
     'POST /contas-pagar/{id}/baixar' => ['handler' => 'ContaPagarController@efetuarBaixa', 'middleware' => ['AuthMiddleware']],
+    'GET /contas-pagar/{id}/historico' => ['handler' => 'ContaPagarController@historico', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-pagar/{id}/cancelar-pagamento' => ['handler' => 'ContaPagarController@cancelarPagamento', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-pagar/{id}/restore' => ['handler' => 'ContaPagarController@restore', 'middleware' => ['AuthMiddleware']],
     'POST /contas-pagar/{id}/delete' => ['handler' => 'ContaPagarController@destroy', 'middleware' => ['AuthMiddleware']],
     'GET /contas-pagar/{id}' => ['handler' => 'ContaPagarController@show', 'middleware' => ['AuthMiddleware']],
     'POST /contas-pagar/{id}' => ['handler' => 'ContaPagarController@update', 'middleware' => ['AuthMiddleware']],
@@ -151,11 +155,15 @@ return [
     
     // Contas a Receber (protegido) - Rotas específicas primeiro
     'GET /contas-receber' => ['handler' => 'ContaReceberController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /contas-receber/deletados' => ['handler' => 'ContaReceberController@deletados', 'middleware' => ['AuthMiddleware']],
     'GET /contas-receber/create' => ['handler' => 'ContaReceberController@create', 'middleware' => ['AuthMiddleware']],
     'POST /contas-receber' => ['handler' => 'ContaReceberController@store', 'middleware' => ['AuthMiddleware']],
     'GET /contas-receber/{id}/edit' => ['handler' => 'ContaReceberController@edit', 'middleware' => ['AuthMiddleware']],
     'GET /contas-receber/{id}/baixar' => ['handler' => 'ContaReceberController@baixar', 'middleware' => ['AuthMiddleware']],
     'POST /contas-receber/{id}/baixar' => ['handler' => 'ContaReceberController@efetuarBaixa', 'middleware' => ['AuthMiddleware']],
+    'GET /contas-receber/{id}/historico' => ['handler' => 'ContaReceberController@historico', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-receber/{id}/cancelar-recebimento' => ['handler' => 'ContaReceberController@cancelarRecebimento', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-receber/{id}/restore' => ['handler' => 'ContaReceberController@restore', 'middleware' => ['AuthMiddleware']],
     'POST /contas-receber/{id}/delete' => ['handler' => 'ContaReceberController@destroy', 'middleware' => ['AuthMiddleware']],
     'GET /contas-receber/{id}' => ['handler' => 'ContaReceberController@show', 'middleware' => ['AuthMiddleware']],
     'POST /contas-receber/{id}' => ['handler' => 'ContaReceberController@update', 'middleware' => ['AuthMiddleware']],

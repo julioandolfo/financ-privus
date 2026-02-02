@@ -466,21 +466,125 @@ class ContaReceberController extends Controller
             $this->contaReceberModel = new ContaReceber();
             $contaReceber = $this->contaReceberModel->findById($id);
             
-            // Não permite excluir conta já recebida
-            if ($contaReceber['status'] == 'recebido' || $contaReceber['status'] == 'parcial') {
-                $_SESSION['error'] = 'Não é possível excluir uma conta já recebida ou parcialmente recebida!';
+            if (!$contaReceber) {
+                $_SESSION['error'] = 'Conta a receber não encontrada!';
                 $response->redirect('/contas-receber');
                 return;
             }
             
-            $this->contaReceberModel->cancelar($id);
-            $_SESSION['success'] = 'Conta a receber cancelada com sucesso!';
+            $motivo = $request->post('motivo', 'Registro excluído pelo usuário');
+            
+            // Soft delete - não remove do banco, apenas marca como deletado
+            $this->contaReceberModel->softDelete($id, $motivo);
+            $_SESSION['success'] = 'Conta a receber excluída com sucesso! (É possível restaurar em Registros Deletados)';
             
         } catch (\Exception $e) {
-            $_SESSION['error'] = 'Erro ao cancelar conta a receber: ' . $e->getMessage();
+            $_SESSION['error'] = 'Erro ao excluir conta a receber: ' . $e->getMessage();
         }
         
         $response->redirect('/contas-receber');
+    }
+    
+    /**
+     * Restaura uma conta deletada
+     */
+    public function restore(Request $request, Response $response, $id)
+    {
+        try {
+            $this->contaReceberModel = new ContaReceber();
+            
+            $this->contaReceberModel->restore($id);
+            $_SESSION['success'] = 'Conta a receber restaurada com sucesso!';
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao restaurar conta a receber: ' . $e->getMessage();
+        }
+        
+        $response->redirect('/contas-receber/deletados');
+    }
+    
+    /**
+     * Cancela um recebimento já realizado
+     */
+    public function cancelarRecebimento(Request $request, Response $response, $id)
+    {
+        try {
+            $this->contaReceberModel = new ContaReceber();
+            $contaReceber = $this->contaReceberModel->findById($id);
+            
+            if (!$contaReceber) {
+                $_SESSION['error'] = 'Conta a receber não encontrada!';
+                $response->redirect('/contas-receber');
+                return;
+            }
+            
+            $motivo = $request->post('motivo', 'Recebimento cancelado pelo usuário');
+            
+            $this->contaReceberModel->cancelarRecebimento($id, $motivo);
+            $_SESSION['success'] = 'Recebimento cancelado com sucesso! A conta voltou para status "Pendente".';
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao cancelar recebimento: ' . $e->getMessage();
+        }
+        
+        $response->redirect('/contas-receber/' . $id);
+    }
+    
+    /**
+     * Lista registros deletados
+     */
+    public function deletados(Request $request, Response $response)
+    {
+        try {
+            $this->contaReceberModel = new ContaReceber();
+            
+            // Buscar empresas do usuário
+            $empresaModel = new \App\Models\Empresa();
+            $empresas = $empresaModel->findAll(['ativo' => 1]);
+            $empresasIds = array_column($empresas, 'id');
+            
+            $contasDeletadas = $this->contaReceberModel->findDeleted($empresasIds);
+            
+            return $this->render('contas_receber/deletados', [
+                'title' => 'Contas a Receber - Registros Deletados',
+                'contas' => $contasDeletadas
+            ]);
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao carregar registros deletados: ' . $e->getMessage();
+            $response->redirect('/contas-receber');
+        }
+    }
+    
+    /**
+     * Visualiza histórico de auditoria de uma conta
+     */
+    public function historico(Request $request, Response $response, $id)
+    {
+        try {
+            $this->contaReceberModel = new ContaReceber();
+            $auditoriaModel = new \App\Models\Auditoria();
+            
+            $conta = $this->contaReceberModel->findByIdWithDeleted($id);
+            
+            if (!$conta) {
+                $_SESSION['error'] = 'Conta a receber não encontrada!';
+                $response->redirect('/contas-receber');
+                return;
+            }
+            
+            $historico = $auditoriaModel->getHistorico('contas_receber', $id);
+            
+            return $this->render('contas_receber/historico', [
+                'title' => 'Histórico de Auditoria - Conta a Receber #' . $id,
+                'conta' => $conta,
+                'historico' => $historico
+            ]);
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao carregar histórico: ' . $e->getMessage();
+            $response->redirect('/contas-receber');
+        }
     }
     
     /**

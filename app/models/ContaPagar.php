@@ -761,4 +761,164 @@ class ContaPagar extends Model
     {
         return $this->db;
     }
+    
+    /**
+     * SOFT DELETE - Marca registro como deletado sem remover do banco
+     */
+    public function softDelete($id, $motivo = null)
+    {
+        $sql = "UPDATE {$this->table} SET 
+                deleted_at = NOW(), 
+                deleted_by = ?,
+                deleted_reason = ?
+                WHERE id = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $usuarioId = $_SESSION['usuario_id'] ?? null;
+        
+        $success = $stmt->execute([$usuarioId, $motivo, $id]);
+        
+        if ($success) {
+            // Registrar na auditoria
+            require_once __DIR__ . '/Auditoria.php';
+            \App\Models\Auditoria::registrar(
+                'contas_pagar',
+                $id,
+                'delete',
+                $this->findById($id),
+                null,
+                $motivo
+            );
+        }
+        
+        return $success;
+    }
+    
+    /**
+     * RESTAURAR - Remove a marcação de deletado
+     */
+    public function restore($id)
+    {
+        $dadosAntes = $this->findById($id);
+        
+        $sql = "UPDATE {$this->table} SET 
+                deleted_at = NULL, 
+                deleted_by = NULL,
+                deleted_reason = NULL
+                WHERE id = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $success = $stmt->execute([$id]);
+        
+        if ($success) {
+            // Registrar na auditoria
+            require_once __DIR__ . '/Auditoria.php';
+            \App\Models\Auditoria::registrar(
+                'contas_pagar',
+                $id,
+                'restore',
+                $dadosAntes,
+                $this->findById($id),
+                'Registro restaurado'
+            );
+        }
+        
+        return $success;
+    }
+    
+    /**
+     * CANCELAR PAGAMENTO - Reverte uma baixa já realizada
+     */
+    public function cancelarPagamento($id, $motivo = null)
+    {
+        $dadosAntes = $this->findById($id);
+        
+        // Validações
+        if ($dadosAntes['status'] !== 'pago' && $dadosAntes['status'] !== 'parcial') {
+            throw new \Exception('Somente contas pagas ou parcialmente pagas podem ter o pagamento cancelado');
+        }
+        
+        $sql = "UPDATE {$this->table} SET 
+                valor_pago = 0,
+                data_pagamento = NULL,
+                status = 'pendente'
+                WHERE id = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $success = $stmt->execute([$id]);
+        
+        if ($success) {
+            // Registrar na auditoria
+            require_once __DIR__ . '/Auditoria.php';
+            \App\Models\Auditoria::registrar(
+                'contas_pagar',
+                $id,
+                'cancel_payment',
+                $dadosAntes,
+                $this->findById($id),
+                $motivo ?? 'Pagamento cancelado'
+            );
+        }
+        
+        return $success;
+    }
+    
+    /**
+     * Busca incluindo registros deletados
+     */
+    public function findByIdWithDeleted($id)
+    {
+        $sql = "SELECT cp.*, 
+                       e.nome_fantasia as empresa_nome,
+                       f.nome_razao_social as fornecedor_nome,
+                       c.nome as categoria_nome,
+                       cc.nome as centro_custo_nome,
+                       cb.banco_nome,
+                       fp.nome as forma_pagamento_nome,
+                       u.nome as usuario_cadastro_nome,
+                       ud.nome as usuario_deletou_nome
+                FROM {$this->table} cp
+                JOIN empresas e ON cp.empresa_id = e.id
+                LEFT JOIN fornecedores f ON cp.fornecedor_id = f.id
+                JOIN categorias_financeiras c ON cp.categoria_id = c.id
+                LEFT JOIN centros_custo cc ON cp.centro_custo_id = cc.id
+                LEFT JOIN contas_bancarias cb ON cp.conta_bancaria_id = cb.id
+                LEFT JOIN formas_pagamento fp ON cp.forma_pagamento_id = fp.id
+                JOIN usuarios u ON cp.usuario_cadastro_id = u.id
+                LEFT JOIN usuarios ud ON cp.deleted_by = ud.id
+                WHERE cp.id = ? LIMIT 1";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    /**
+     * Busca apenas registros deletados
+     */
+    public function findDeleted($empresasIds = [])
+    {
+        $sql = "SELECT cp.*, 
+                       e.nome_fantasia as empresa_nome,
+                       f.nome_razao_social as fornecedor_nome,
+                       u.nome as usuario_deletou_nome
+                FROM {$this->table} cp
+                JOIN empresas e ON cp.empresa_id = e.id
+                LEFT JOIN fornecedores f ON cp.fornecedor_id = f.id
+                LEFT JOIN usuarios u ON cp.deleted_by = u.id
+                WHERE cp.deleted_at IS NOT NULL";
+        
+        $params = [];
+        if (!empty($empresasIds)) {
+            $placeholders = implode(',', array_fill(0, count($empresasIds), '?'));
+            $sql .= " AND cp.empresa_id IN ({$placeholders})";
+            $params = $empresasIds;
+        }
+        
+        $sql .= " ORDER BY cp.deleted_at DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
 }

@@ -501,21 +501,125 @@ class ContaPagarController extends Controller
             $this->contaPagarModel = new ContaPagar();
             $contaPagar = $this->contaPagarModel->findById($id);
             
-            // Não permite excluir conta já paga
-            if ($contaPagar['status'] == 'pago' || $contaPagar['status'] == 'parcial') {
-                $_SESSION['error'] = 'Não é possível excluir uma conta já paga ou parcialmente paga!';
+            if (!$contaPagar) {
+                $_SESSION['error'] = 'Conta a pagar não encontrada!';
                 $response->redirect('/contas-pagar');
                 return;
             }
             
-            $this->contaPagarModel->cancelar($id);
-            $_SESSION['success'] = 'Conta a pagar cancelada com sucesso!';
+            $motivo = $request->post('motivo', 'Registro excluído pelo usuário');
+            
+            // Soft delete - não remove do banco, apenas marca como deletado
+            $this->contaPagarModel->softDelete($id, $motivo);
+            $_SESSION['success'] = 'Conta a pagar excluída com sucesso! (É possível restaurar em Registros Deletados)';
             
         } catch (\Exception $e) {
-            $_SESSION['error'] = 'Erro ao cancelar conta a pagar: ' . $e->getMessage();
+            $_SESSION['error'] = 'Erro ao excluir conta a pagar: ' . $e->getMessage();
         }
         
         $response->redirect('/contas-pagar');
+    }
+    
+    /**
+     * Restaura uma conta deletada
+     */
+    public function restore(Request $request, Response $response, $id)
+    {
+        try {
+            $this->contaPagarModel = new ContaPagar();
+            
+            $this->contaPagarModel->restore($id);
+            $_SESSION['success'] = 'Conta a pagar restaurada com sucesso!';
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao restaurar conta a pagar: ' . $e->getMessage();
+        }
+        
+        $response->redirect('/contas-pagar/deletados');
+    }
+    
+    /**
+     * Cancela um pagamento já realizado
+     */
+    public function cancelarPagamento(Request $request, Response $response, $id)
+    {
+        try {
+            $this->contaPagarModel = new ContaPagar();
+            $contaPagar = $this->contaPagarModel->findById($id);
+            
+            if (!$contaPagar) {
+                $_SESSION['error'] = 'Conta a pagar não encontrada!';
+                $response->redirect('/contas-pagar');
+                return;
+            }
+            
+            $motivo = $request->post('motivo', 'Pagamento cancelado pelo usuário');
+            
+            $this->contaPagarModel->cancelarPagamento($id, $motivo);
+            $_SESSION['success'] = 'Pagamento cancelado com sucesso! A conta voltou para status "Pendente".';
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao cancelar pagamento: ' . $e->getMessage();
+        }
+        
+        $response->redirect('/contas-pagar/' . $id);
+    }
+    
+    /**
+     * Lista registros deletados
+     */
+    public function deletados(Request $request, Response $response)
+    {
+        try {
+            $this->contaPagarModel = new ContaPagar();
+            
+            // Buscar empresas do usuário
+            $empresaModel = new \App\Models\Empresa();
+            $empresas = $empresaModel->findAll(['ativo' => 1]);
+            $empresasIds = array_column($empresas, 'id');
+            
+            $contasDeletadas = $this->contaPagarModel->findDeleted($empresasIds);
+            
+            return $this->render('contas_pagar/deletados', [
+                'title' => 'Contas a Pagar - Registros Deletados',
+                'contas' => $contasDeletadas
+            ]);
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao carregar registros deletados: ' . $e->getMessage();
+            $response->redirect('/contas-pagar');
+        }
+    }
+    
+    /**
+     * Visualiza histórico de auditoria de uma conta
+     */
+    public function historico(Request $request, Response $response, $id)
+    {
+        try {
+            $this->contaPagarModel = new ContaPagar();
+            $auditoriaModel = new \App\Models\Auditoria();
+            
+            $conta = $this->contaPagarModel->findByIdWithDeleted($id);
+            
+            if (!$conta) {
+                $_SESSION['error'] = 'Conta a pagar não encontrada!';
+                $response->redirect('/contas-pagar');
+                return;
+            }
+            
+            $historico = $auditoriaModel->getHistorico('contas_pagar', $id);
+            
+            return $this->render('contas_pagar/historico', [
+                'title' => 'Histórico de Auditoria - Conta a Pagar #' . $id,
+                'conta' => $conta,
+                'historico' => $historico
+            ]);
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao carregar histórico: ' . $e->getMessage();
+            $response->redirect('/contas-pagar');
+        }
     }
     
     /**

@@ -845,4 +845,165 @@ class ContaReceber extends Model
         $stmt = $this->db->prepare($sql);
         return $stmt->execute($params);
     }
+    
+    /**
+     * SOFT DELETE - Marca registro como deletado sem remover do banco
+     */
+    public function softDelete($id, $motivo = null)
+    {
+        $sql = "UPDATE {$this->table} SET 
+                deleted_at = NOW(), 
+                deleted_by = ?,
+                deleted_reason = ?
+                WHERE id = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $usuarioId = $_SESSION['usuario_id'] ?? null;
+        
+        $success = $stmt->execute([$usuarioId, $motivo, $id]);
+        
+        if ($success) {
+            // Registrar na auditoria
+            require_once __DIR__ . '/Auditoria.php';
+            \App\Models\Auditoria::registrar(
+                'contas_receber',
+                $id,
+                'delete',
+                $this->findById($id),
+                null,
+                $motivo
+            );
+        }
+        
+        return $success;
+    }
+    
+    /**
+     * RESTAURAR - Remove a marcação de deletado
+     */
+    public function restore($id)
+    {
+        $dadosAntes = $this->findByIdWithDeleted($id);
+        
+        $sql = "UPDATE {$this->table} SET 
+                deleted_at = NULL, 
+                deleted_by = NULL,
+                deleted_reason = NULL
+                WHERE id = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $success = $stmt->execute([$id]);
+        
+        if ($success) {
+            // Registrar na auditoria
+            require_once __DIR__ . '/Auditoria.php';
+            \App\Models\Auditoria::registrar(
+                'contas_receber',
+                $id,
+                'restore',
+                $dadosAntes,
+                $this->findById($id),
+                'Registro restaurado'
+            );
+        }
+        
+        return $success;
+    }
+    
+    /**
+     * CANCELAR RECEBIMENTO - Reverte uma baixa já realizada
+     */
+    public function cancelarRecebimento($id, $motivo = null)
+    {
+        $dadosAntes = $this->findById($id);
+        
+        // Validações
+        if ($dadosAntes['status'] !== 'recebido' && $dadosAntes['status'] !== 'parcial') {
+            throw new \Exception('Somente contas recebidas ou parcialmente recebidas podem ter o recebimento cancelado');
+        }
+        
+        $sql = "UPDATE {$this->table} SET 
+                valor_recebido = 0,
+                data_recebimento = NULL,
+                status = 'pendente'
+                WHERE id = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $success = $stmt->execute([$id]);
+        
+        if ($success) {
+            // Registrar na auditoria
+            require_once __DIR__ . '/Auditoria.php';
+            \App\Models\Auditoria::registrar(
+                'contas_receber',
+                $id,
+                'cancel_receipt',
+                $dadosAntes,
+                $this->findById($id),
+                $motivo ?? 'Recebimento cancelado'
+            );
+        }
+        
+        return $success;
+    }
+    
+    /**
+     * Busca incluindo registros deletados
+     */
+    public function findByIdWithDeleted($id)
+    {
+        $sql = "SELECT cr.*, 
+                       e.nome_fantasia as empresa_nome,
+                       c.nome_razao_social as cliente_nome,
+                       cat.nome as categoria_nome,
+                       cc.nome as centro_custo_nome,
+                       cb.banco_nome,
+                       fp.nome as forma_recebimento_nome,
+                       u.nome as usuario_cadastro_nome,
+                       ud.nome as usuario_deletou_nome,
+                       (SELECT COUNT(*) FROM rateios_recebimentos WHERE conta_receber_id = cr.id) > 0 as tem_rateio
+                FROM {$this->table} cr
+                JOIN empresas e ON cr.empresa_id = e.id
+                LEFT JOIN clientes c ON cr.cliente_id = c.id
+                JOIN categorias_financeiras cat ON cr.categoria_id = cat.id
+                LEFT JOIN centros_custo cc ON cr.centro_custo_id = cc.id
+                LEFT JOIN contas_bancarias cb ON cr.conta_bancaria_id = cb.id
+                LEFT JOIN formas_pagamento fp ON cr.forma_recebimento_id = fp.id
+                JOIN usuarios u ON cr.usuario_cadastro_id = u.id
+                LEFT JOIN usuarios ud ON cr.deleted_by = ud.id
+                WHERE cr.id = ? LIMIT 1";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    /**
+     * Busca apenas registros deletados
+     */
+    public function findDeleted($empresasIds = [])
+    {
+        $sql = "SELECT cr.*, 
+                       e.nome_fantasia as empresa_nome,
+                       c.nome_razao_social as cliente_nome,
+                       u.nome as usuario_deletou_nome
+                FROM {$this->table} cr
+                JOIN empresas e ON cr.empresa_id = e.id
+                LEFT JOIN clientes c ON cr.cliente_id = c.id
+                LEFT JOIN usuarios u ON cr.deleted_by = u.id
+                WHERE cr.deleted_at IS NOT NULL";
+        
+        $params = [];
+        if (!empty($empresasIds)) {
+            $placeholders = implode(',', array_fill(0, count($empresasIds), '?'));
+            $sql .= " AND cr.empresa_id IN ({$placeholders})";
+            $params = $empresasIds;
+        }
+        
+        $sql .= " ORDER BY cr.deleted_at DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
 }
