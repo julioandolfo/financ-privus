@@ -9,10 +9,10 @@ $saldoRestante = $conta['valor_total'] - $conta['valor_pago'];
 
 <div class="max-w-6xl mx-auto animate-fade-in" x-data="{
     showBaixaModal: <?= !empty($openBaixaModal) ? 'true' : 'false' ?>,
-    showCancelPaymentModal: false,
+    showCancelModal: false,
     saldoRestante: <?= (float) $saldoRestante ?>,
     valorPagamento: <?= isset($old['valor_pagamento']) ? (float) $old['valor_pagamento'] : (float) $saldoRestante ?>
-}" @keydown.escape.window="showBaixaModal = false; showCancelPaymentModal = false">
+}" @keydown.escape.window="showBaixaModal = false; showCancelModal = false">
     <!-- Header -->
     <div class="bg-gradient-to-r from-red-600 to-rose-600 rounded-2xl shadow-xl p-8 mb-8">
         <div class="flex justify-between items-center">
