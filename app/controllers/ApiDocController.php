@@ -182,6 +182,29 @@ class ApiDocController extends Controller
                             ]
                         ],
                         [
+                            'method' => 'GET',
+                            'endpoint' => '/api/v1/contas-pagar/{id}',
+                            'description' => 'Busca uma conta a pagar específica',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID da conta a pagar'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'data' => [
+                                    'id' => 1,
+                                    'empresa_id' => 1,
+                                    'fornecedor_id' => 5,
+                                    'categoria_id' => 10,
+                                    'descricao' => 'Pagamento fornecedor',
+                                    'valor_total' => 1500.00,
+                                    'valor_pago' => 0,
+                                    'data_vencimento' => '2026-02-15',
+                                    'status' => 'pendente',
+                                    'numero_documento' => 'NF-12345'
+                                ]
+                            ]
+                        ],
+                        [
                             'method' => 'POST',
                             'endpoint' => '/api/v1/contas-pagar',
                             'description' => 'Cria uma nova conta a pagar',
@@ -208,6 +231,17 @@ class ApiDocController extends Controller
                                 'success' => true,
                                 'message' => 'Conta a pagar criada com sucesso!',
                                 'data' => ['id' => 1]
+                            ],
+                            'example' => [
+                                'empresa_id' => 1,
+                                'fornecedor_id' => 5,
+                                'categoria_id' => 10,
+                                'descricao' => 'Compra de materiais',
+                                'valor_total' => 1500.00,
+                                'numero_documento' => 'NF-12345',
+                                'data_competencia' => '2026-01-26',
+                                'data_vencimento' => '2026-02-15',
+                                'observacoes' => 'Pagamento via boleto'
                             ]
                         ],
                         [
@@ -580,6 +614,76 @@ class ApiDocController extends Controller
                                         ]
                                     ]
                                 ]
+                            ]
+                        ],
+                        [
+                            'method' => 'GET',
+                            'endpoint' => '/api/v1/contas-receber/{id}',
+                            'description' => 'Busca uma conta a receber específica',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID da conta a receber'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'data' => [
+                                    'id' => 1,
+                                    'empresa_id' => 1,
+                                    'cliente_id' => 10,
+                                    'categoria_id' => 5,
+                                    'descricao' => 'Venda de produtos',
+                                    'valor_total' => 1500.00,
+                                    'valor_recebido' => 0,
+                                    'desconto' => 50.00,
+                                    'frete' => 30.00,
+                                    'data_vencimento' => '2026-02-15',
+                                    'status' => 'pendente',
+                                    'regiao' => 'Sudeste',
+                                    'segmento' => 'Varejo'
+                                ]
+                            ]
+                        ],
+                        [
+                            'method' => 'PUT',
+                            'endpoint' => '/api/v1/contas-receber/{id}',
+                            'description' => 'Atualiza uma conta a receber existente',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID da conta a receber'],
+                            ],
+                            'body' => [
+                                'cliente_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID do cliente'],
+                                'categoria_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da categoria financeira'],
+                                'descricao' => ['type' => 'string', 'required' => false, 'description' => 'Descrição da conta'],
+                                'valor_total' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor total da conta'],
+                                'desconto' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor do desconto'],
+                                'frete' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor do frete'],
+                                'numero_documento' => ['type' => 'string', 'required' => false, 'description' => 'Número do documento'],
+                                'data_vencimento' => ['type' => 'date', 'required' => false, 'description' => 'Data de vencimento (YYYY-MM-DD)'],
+                                'data_competencia' => ['type' => 'date', 'required' => false, 'description' => 'Data de competência (YYYY-MM-DD)'],
+                                'regiao' => ['type' => 'string', 'required' => false, 'description' => 'Região'],
+                                'segmento' => ['type' => 'string', 'required' => false, 'description' => 'Segmento'],
+                                'observacoes' => ['type' => 'text', 'required' => false, 'description' => 'Observações'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'message' => 'Conta atualizada com sucesso'
+                            ],
+                            'example' => [
+                                'descricao' => 'Venda atualizada',
+                                'valor_total' => 1800.00,
+                                'desconto' => 100.00,
+                                'data_vencimento' => '2026-03-15'
+                            ]
+                        ],
+                        [
+                            'method' => 'DELETE',
+                            'endpoint' => '/api/v1/contas-receber/{id}',
+                            'description' => 'Exclui uma conta a receber',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID da conta a receber'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'message' => 'Conta excluída com sucesso'
                             ]
                         ],
                     ]
