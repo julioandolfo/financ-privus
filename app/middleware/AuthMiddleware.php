@@ -13,13 +13,12 @@ class AuthMiddleware
     /**
      * Verifica se o usuário está autenticado
      */
-    public function handle(Request $request, $next)
+    public function handle(Request $request, Response $response)
     {
         // Verifica se há usuário na sessão
         if (!isset($_SESSION['usuario_id']) || empty($_SESSION['usuario_id'])) {
             // Se for requisição AJAX, retorna JSON
             if ($request->isAjax()) {
-                $response = new Response();
                 $response->json([
                     'error' => true,
                     'message' => 'Não autenticado',
@@ -28,14 +27,16 @@ class AuthMiddleware
                 return false;
             }
             
+            // Salva URL para redirecionar após login
+            $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'] ?? '/';
+            
             // Redireciona para login
-            $response = new Response();
             $response->redirect('/login');
             return false;
         }
         
         // Usuário autenticado, continua
-        return $next($request);
+        return true;
     }
 }
 
