@@ -494,7 +494,10 @@ class ApiRestController extends Controller
         $mensagens = ['Conta a receber criada com sucesso!'];
         if ($clienteCriado) $mensagens[] = 'Cliente cadastrado automaticamente';
         if ($produtosCriados > 0) $mensagens[] = "{$produtosCriados} produto(s) criado(s) automaticamente";
-        if ($pedidoId) $mensagens[] = "Pedido #{$input['pedido']['numero_pedido'] ?? $pedidoId} vinculado";
+        if ($pedidoId) {
+            $numPedido = $input['pedido']['numero_pedido'] ?? $pedidoId;
+            $mensagens[] = "Pedido #{$numPedido} vinculado";
+        }
         if (!empty($parcelasIds)) $mensagens[] = count($parcelasIds) . " parcela(s) gerada(s)";
         
         $data['message'] = implode('. ', $mensagens) . '.';
