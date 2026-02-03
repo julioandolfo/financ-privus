@@ -66,8 +66,8 @@ class ParcelaReceber extends Model
     {
         $sql = "INSERT INTO {$this->table} 
                 (conta_receber_id, empresa_id, numero_parcela, valor_parcela, valor_recebido, 
-                 desconto, juros, multa, data_vencimento, status, observacoes, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+                 desconto, frete, juros, multa, data_vencimento, status, observacoes, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
@@ -77,6 +77,7 @@ class ParcelaReceber extends Model
             $data['valor_parcela'],
             $data['valor_recebido'] ?? 0,
             $data['desconto'] ?? 0,
+            $data['frete'] ?? 0,
             $data['juros'] ?? 0,
             $data['multa'] ?? 0,
             $data['data_vencimento'],

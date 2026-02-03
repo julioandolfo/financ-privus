@@ -268,6 +268,9 @@ class ApiRestController extends Controller
         if (!isset($input['desconto'])) {
             $input['desconto'] = 0;
         }
+        if (!isset($input['frete'])) {
+            $input['frete'] = 0;
+        }
         
         // 🚀 NOVO: Auto-cadastro completo (Cliente + Produtos + Pedido)
         $clienteCriado = false;
@@ -398,18 +401,53 @@ class ApiRestController extends Controller
         
         $model = new ContaReceber();
         $parcelasIds = [];
+        $parcelasDetalhes = [];
         
-        // 🚀 NOVO: Suporte a Parcelas
+        // 🚀 Suporte a Parcelas via Array Manual
         if (isset($input['parcelas']) && is_array($input['parcelas']) && count($input['parcelas']) > 0) {
-            // Criar conta com parcelas
-            $result = $model->createWithParcelas($input, $input['parcelas']);
-            $id = $result['conta_id'];
-            $parcelasIds = $result['parcelas_ids'];
-        } elseif (isset($input['numero_parcelas']) && $input['numero_parcelas'] > 1) {
-            // Gerar parcelas automaticamente
+            // Validar parcelas
+            $totalParcelas = 0;
+            foreach ($input['parcelas'] as $idx => $parcela) {
+                if (empty($parcela['valor']) || empty($parcela['data_vencimento'])) {
+                    $data = ['success' => false, 'error' => "Parcela " . ($idx + 1) . ": valor e data_vencimento são obrigatórios"];
+                    $this->logSuccess($request, 400, $data);
+                    return $response->json($data, 400);
+                }
+                $totalParcelas += floatval($parcela['valor']);
+            }
+            
+            // Atualizar valor_total se não informado (soma das parcelas + frete - desconto)
+            if (empty($input['valor_total'])) {
+                $input['valor_total'] = $totalParcelas;
+            }
+            
+            // Definir número de parcelas
+            $input['numero_parcelas'] = count($input['parcelas']);
+            
+            // Criar conta principal
             $id = $model->create($input);
-            $intervalo = $input['intervalo_parcelas'] ?? 30;
-            $parcelasIds = $model->gerarParcelas($id, $input['numero_parcelas'], $intervalo);
+            
+            // Criar as parcelas
+            $parcelaModel = new ParcelaReceber();
+            foreach ($input['parcelas'] as $idx => $parcela) {
+                $parcelaId = $parcelaModel->create([
+                    'conta_receber_id' => $id,
+                    'empresa_id' => $input['empresa_id'],
+                    'numero_parcela' => $idx + 1,
+                    'valor_parcela' => $parcela['valor'],
+                    'data_vencimento' => $parcela['data_vencimento'],
+                    'desconto' => $parcela['desconto'] ?? 0,
+                    'frete' => $parcela['frete'] ?? 0,
+                    'observacoes' => $parcela['observacoes'] ?? null
+                ]);
+                $parcelasIds[] = $parcelaId;
+                $parcelasDetalhes[] = [
+                    'id' => $parcelaId,
+                    'numero' => $idx + 1,
+                    'valor' => $parcela['valor'],
+                    'data_vencimento' => $parcela['data_vencimento']
+                ];
+            }
         } else {
             // Criar conta simples (sem parcelas)
             $id = $model->create($input);
@@ -426,7 +464,12 @@ class ApiRestController extends Controller
         if (!empty($parcelasIds)) {
             $data['parcelas_ids'] = $parcelasIds;
             $data['numero_parcelas'] = count($parcelasIds);
+            $data['parcelas'] = $parcelasDetalhes;
         }
+        
+        // Adicionar frete e desconto na resposta
+        $data['frete'] = $input['frete'] ?? 0;
+        $data['desconto'] = $input['desconto'] ?? 0;
         
         // Adicionar informações do auto-cadastro
         if ($pedidoId) {

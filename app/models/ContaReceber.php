@@ -156,11 +156,11 @@ class ContaReceber extends Model
     {
         $sql = "INSERT INTO {$this->table} 
                 (empresa_id, cliente_id, categoria_id, centro_custo_id, numero_documento, 
-                 descricao, valor_total, valor_recebido, desconto, data_emissao, data_competencia, 
+                 descricao, valor_total, valor_recebido, desconto, frete, data_emissao, data_competencia, 
                  data_vencimento, status, observacoes, regiao, segmento, numero_parcelas, 
                  parcela_atual, conta_origem_id, eh_parcelado, total_parcelas, parcela_numero,
                  grupo_parcela_id, usuario_cadastro_id, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
         
         $stmt = $this->db->prepare($sql);
         
@@ -179,6 +179,7 @@ class ContaReceber extends Model
             $data['valor_total'],
             $data['valor_recebido'] ?? 0,
             $data['desconto'] ?? 0,
+            $data['frete'] ?? 0,
             $data['data_emissao'],
             $data['data_competencia'],
             $data['data_vencimento'],
@@ -352,7 +353,7 @@ class ContaReceber extends Model
     {
         $sql = "UPDATE {$this->table} SET
                 empresa_id = ?, cliente_id = ?, categoria_id = ?, centro_custo_id = ?,
-                numero_documento = ?, descricao = ?, valor_total = ?, desconto = ?,
+                numero_documento = ?, descricao = ?, valor_total = ?, desconto = ?, frete = ?,
                 data_emissao = ?, data_competencia = ?, data_vencimento = ?,
                 observacoes = ?, regiao = ?, segmento = ?, numero_parcelas = ?,
                 parcela_atual = ?, conta_origem_id = ?, updated_at = NOW()
@@ -374,6 +375,7 @@ class ContaReceber extends Model
             $data['descricao'],
             $data['valor_total'],
             $data['desconto'] ?? 0,
+            $data['frete'] ?? 0,
             $data['data_emissao'],
             $data['data_competencia'],
             $data['data_vencimento'],
