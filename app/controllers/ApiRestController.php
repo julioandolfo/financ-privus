@@ -354,11 +354,14 @@ class ApiRestController extends Controller
                             $valorUnitario = $produtoData['valor_unitario'] ?? $produto['preco_venda'];
                             $custoUnitario = $produtoData['custo_unitario'] ?? $produto['custo_unitario'] ?? 0;
                             $valorTotal = $quantidade * $valorUnitario;
+                            $nomeProduto = $produtoData['nome'] ?? $produto['nome'] ?? 'Produto';
                             
                             // Criar item do pedido
                             $pedidoItemModel->create([
                                 'pedido_id' => $pedidoId,
                                 'produto_id' => $produto['id'],
+                                'codigo_produto_origem' => $produtoData['sku'] ?? $produto['sku'] ?? null,
+                                'nome_produto' => $nomeProduto,
                                 'quantidade' => $quantidade,
                                 'valor_unitario' => $valorUnitario,
                                 'custo_unitario' => $custoUnitario,
