@@ -41,6 +41,16 @@ function initSelectSearch(element, options = {}) {
         onInitialize: function() {
             // Adiciona classe para identificar que foi inicializado
             this.wrapper.classList.add('select-search-initialized');
+        },
+        onChange: function(value) {
+            // Sincroniza o valor de volta para o select original
+            // Isso garante que FormData capture o valor correto
+            const originalSelect = this.$input;
+            if (originalSelect) {
+                originalSelect.value = value || '';
+                // Dispara evento change para listeners
+                originalSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         }
     };
     

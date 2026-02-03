@@ -688,6 +688,25 @@ function extratoRevisarForm() {
             
             try {
                 const form = document.getElementById('cadastrarForm');
+                
+                // IMPORTANTE: Sincronizar valores do Tom Select de volta para os selects originais
+                document.querySelectorAll('.select-search').forEach(select => {
+                    if (select.tomselect) {
+                        const value = select.tomselect.getValue();
+                        select.value = value;
+                        // Garantir que o select tenha o atributo name
+                        if (select.name && value) {
+                            // Criar um input hidden adicional para garantir
+                            const hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.name = select.name;
+                            hiddenInput.value = value;
+                            hiddenInput.className = 'temp-hidden-input';
+                            select.parentNode.appendChild(hiddenInput);
+                        }
+                    }
+                });
+                
                 const formData = new FormData(form);
                 
                 const response = await fetch('/extrato-bancario/cadastrar', {
@@ -696,6 +715,9 @@ function extratoRevisarForm() {
                 });
                 
                 const data = await response.json();
+                
+                // Limpar inputs temporários
+                document.querySelectorAll('.temp-hidden-input').forEach(input => input.remove());
                 
                 if (data.success) {
                     window.location.href = '/contas-pagar';
