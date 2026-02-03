@@ -74,9 +74,7 @@ class App
                     $middlewareClass = "App\\Middleware\\{$middleware}";
                     if (class_exists($middlewareClass)) {
                         $middlewareInstance = new $middlewareClass();
-                        $result = $middlewareInstance->handle($this->request, function($req) {
-                            return true;
-                        });
+                        $result = $middlewareInstance->handle($this->request, $this->response);
                         
                         if ($result !== true) {
                             return;
