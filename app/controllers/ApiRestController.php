@@ -314,6 +314,7 @@ class ApiRestController extends Controller
                     'empresa_id' => $input['empresa_id'],
                     'cliente_id' => $clienteId ?? $input['cliente_id'] ?? null,
                     'numero_pedido' => $numeroPedido,
+                    'origem_id' => $numeroPedido,
                     'data_pedido' => $input['data_emissao'],
                     'status' => 'concluido',
                     'origem' => 'api',
