@@ -154,50 +154,101 @@ class ContaReceber extends Model
      */
     public function create($data)
     {
-        $sql = "INSERT INTO {$this->table} 
-                (empresa_id, cliente_id, categoria_id, centro_custo_id, numero_documento, 
-                 descricao, valor_total, valor_recebido, desconto, frete, data_emissao, data_competencia, 
-                 data_vencimento, status, observacoes, regiao, segmento, numero_parcelas, 
-                 parcela_atual, conta_origem_id, eh_parcelado, total_parcelas, parcela_numero,
-                 grupo_parcela_id, usuario_cadastro_id, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+        // Verifica quais colunas extras existem na tabela
+        $extraColumns = $this->getExtraColumns();
         
-        $stmt = $this->db->prepare($sql);
+        // Colunas base que sempre existem
+        $columns = [
+            'empresa_id', 'cliente_id', 'categoria_id', 'centro_custo_id', 'numero_documento',
+            'descricao', 'valor_total', 'valor_recebido', 'data_emissao', 'data_competencia',
+            'data_vencimento', 'status', 'observacoes', 'usuario_cadastro_id', 'data_cadastro'
+        ];
         
-        // Converte strings vazias para null em campos opcionais de FK
+        // Valores base
         $clienteId = !empty($data['cliente_id']) ? $data['cliente_id'] : null;
         $centroCustoId = !empty($data['centro_custo_id']) ? $data['centro_custo_id'] : null;
-        $contaOrigemId = !empty($data['conta_origem_id']) ? $data['conta_origem_id'] : null;
         
-        $stmt->execute([
+        $values = [
             $data['empresa_id'],
             $clienteId,
             $data['categoria_id'],
             $centroCustoId,
-            $data['numero_documento'],
+            $data['numero_documento'] ?? '',
             $data['descricao'],
             $data['valor_total'],
             $data['valor_recebido'] ?? 0,
-            $data['desconto'] ?? 0,
-            $data['frete'] ?? 0,
             $data['data_emissao'],
             $data['data_competencia'],
             $data['data_vencimento'],
             $data['status'] ?? 'pendente',
             $data['observacoes'] ?? null,
-            $data['regiao'] ?? null,
-            $data['segmento'] ?? null,
-            $data['numero_parcelas'] ?? 1,
-            $data['parcela_atual'] ?? 1,
-            $contaOrigemId,
-            $data['eh_parcelado'] ?? 0,
-            $data['total_parcelas'] ?? null,
-            $data['parcela_numero'] ?? null,
-            $data['grupo_parcela_id'] ?? null,
-            $data['usuario_cadastro_id']
-        ]);
+            $data['usuario_cadastro_id'],
+            date('Y-m-d H:i:s')
+        ];
+        
+        // Adiciona colunas extras se existirem
+        if (in_array('desconto', $extraColumns)) {
+            $columns[] = 'desconto';
+            $values[] = $data['desconto'] ?? 0;
+        }
+        if (in_array('frete', $extraColumns)) {
+            $columns[] = 'frete';
+            $values[] = $data['frete'] ?? 0;
+        }
+        if (in_array('regiao', $extraColumns)) {
+            $columns[] = 'regiao';
+            $values[] = $data['regiao'] ?? null;
+        }
+        if (in_array('segmento', $extraColumns)) {
+            $columns[] = 'segmento';
+            $values[] = $data['segmento'] ?? null;
+        }
+        if (in_array('numero_parcelas', $extraColumns)) {
+            $columns[] = 'numero_parcelas';
+            $values[] = $data['numero_parcelas'] ?? 1;
+        }
+        if (in_array('parcela_atual', $extraColumns)) {
+            $columns[] = 'parcela_atual';
+            $values[] = $data['parcela_atual'] ?? 1;
+        }
+        if (in_array('conta_origem_id', $extraColumns)) {
+            $columns[] = 'conta_origem_id';
+            $values[] = !empty($data['conta_origem_id']) ? $data['conta_origem_id'] : null;
+        }
+        if (in_array('pedido_id', $extraColumns)) {
+            $columns[] = 'pedido_id';
+            $values[] = $data['pedido_id'] ?? null;
+        }
+        
+        $placeholders = implode(', ', array_fill(0, count($columns), '?'));
+        $columnsList = implode(', ', $columns);
+        
+        $sql = "INSERT INTO {$this->table} ({$columnsList}) VALUES ({$placeholders})";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($values);
         
         return $this->db->lastInsertId();
+    }
+    
+    /**
+     * Verifica quais colunas extras existem na tabela
+     */
+    private function getExtraColumns()
+    {
+        static $columns = null;
+        
+        if ($columns === null) {
+            try {
+                $stmt = $this->db->query("DESCRIBE {$this->table}");
+                $result = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+                $columns = $result;
+            } catch (\Exception $e) {
+                $columns = [];
+            }
+        }
+        
+        return $columns;
     }
     
     /**
