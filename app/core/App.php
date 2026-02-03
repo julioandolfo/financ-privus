@@ -230,7 +230,25 @@ class App
         $errorMessage .= "Trace:\n" . $e->getTraceAsString() . "\n\n";
         @file_put_contents($errorLog, $errorMessage, FILE_APPEND);
         
-        if (defined('APP_DEBUG') && APP_DEBUG) {
+        // Verificar se é requisição de API
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
+        $isApiRequest = strpos($uri, '/api/') !== false;
+        
+        if ($isApiRequest) {
+            // Retornar erro detalhado em JSON para API
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'file' => basename($e->getFile()),
+                'line' => $e->getLine(),
+                'uri' => $_SERVER['REQUEST_URI'] ?? 'N/A',
+                'method' => $_SERVER['REQUEST_METHOD'] ?? 'N/A',
+                'trace' => explode("\n", $e->getTraceAsString())
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        } elseif (defined('APP_DEBUG') && APP_DEBUG) {
             echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Erro</title>";
             echo "<style>body{font-family:monospace;padding:20px;background:#f5f5f5;}pre{background:#fff;padding:15px;border:1px solid #ddd;border-radius:5px;overflow:auto;}</style>";
             echo "</head><body><h1 style='color:#d32f2f;'>Erro na Aplicação</h1>";
