@@ -75,7 +75,16 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Cliente</label>
-                        <p class="text-lg font-semibold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($conta['cliente_nome'] ?? 'Não informado') ?></p>
+                        <?php if (!empty($conta['cliente_id'])): ?>
+                            <a href="/clientes/<?= $conta['cliente_id'] ?>" class="text-lg font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:underline flex items-center space-x-2">
+                                <span><?= htmlspecialchars($conta['cliente_nome'] ?? 'Cliente #' . $conta['cliente_id']) ?></span>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                            </a>
+                        <?php else: ?>
+                            <p class="text-lg font-semibold text-gray-500 dark:text-gray-400">Não informado</p>
+                        <?php endif; ?>
                     </div>
                     
                     <div>
@@ -265,13 +274,14 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                                 <th class="text-right pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Recebido</th>
                                 <th class="text-center pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Status</th>
                                 <th class="text-left pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Forma Receb.</th>
+                                <th class="text-center pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Ações</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                             <?php foreach ($parcelas as $parcela): ?>
-                            <tr>
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                 <td class="py-3 text-gray-900 dark:text-gray-100">
-                                    <span class="font-semibold"><?= $parcela['numero_parcela'] ?></span>
+                                    <span class="font-semibold"><?= $parcela['numero_parcela'] ?>/<?= count($parcelas) ?></span>
                                 </td>
                                 <td class="py-3 text-gray-600 dark:text-gray-400">
                                     <?= formatarData($parcela['data_vencimento']) ?>
@@ -283,11 +293,105 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                                 <td class="py-3 text-right text-green-600 font-semibold"><?= formatarMoeda($parcela['valor_recebido'] ?? 0) ?></td>
                                 <td class="py-3 text-center"><?= formatarStatusBadge($parcela['status']) ?></td>
                                 <td class="py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars($parcela['forma_recebimento_nome'] ?? '-') ?></td>
+                                <td class="py-3 text-center">
+                                    <?php if ($parcela['status'] != 'recebido' && $parcela['status'] != 'cancelado'): ?>
+                                        <a href="/contas-receber/<?= $conta['id'] ?>/parcela/<?= $parcela['id'] ?>/baixar" 
+                                           class="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors"
+                                           title="Baixar/Receber esta parcela">
+                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                            </svg>
+                                            Baixar
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="text-gray-400 text-xs">-</span>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
+                
+                <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <p class="text-sm text-blue-700 dark:text-blue-300 flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Para contas parceladas, realize a baixa em cada parcela individualmente.
+                    </p>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Cliente Vinculado -->
+            <?php if (!empty($clienteVinculado)): ?>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                        <span class="inline-flex items-center">
+                            <svg class="w-6 h-6 mr-2 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                            Cliente Vinculado
+                        </span>
+                    </h2>
+                    <a href="/clientes/<?= $clienteVinculado['id'] ?>" class="text-cyan-600 hover:text-cyan-800 text-sm font-semibold flex items-center space-x-1">
+                        <span>Ver ficha completa</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                        </svg>
+                    </a>
+                </div>
+                
+                <!-- Info do Cliente -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-cyan-50 dark:bg-cyan-900/20 rounded-xl">
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Nome / Razão Social</p>
+                        <p class="text-lg font-bold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($clienteVinculado['nome_razao_social']) ?></p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">CPF / CNPJ</p>
+                        <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <?php if (!empty($clienteVinculado['cpf_cnpj'])): ?>
+                                <?= formatarCpfCnpj($clienteVinculado['cpf_cnpj']) ?>
+                            <?php else: ?>
+                                <span class="text-gray-400">Não informado</span>
+                            <?php endif; ?>
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Telefone</p>
+                        <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <?php if (!empty($clienteVinculado['telefone'])): ?>
+                                <?= formatarTelefone($clienteVinculado['telefone']) ?>
+                            <?php else: ?>
+                                <span class="text-gray-400">Não informado</span>
+                            <?php endif; ?>
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">E-mail</p>
+                        <p class="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
+                            <?php if (!empty($clienteVinculado['email'])): ?>
+                                <a href="mailto:<?= htmlspecialchars($clienteVinculado['email']) ?>" class="text-blue-600 hover:underline">
+                                    <?= htmlspecialchars($clienteVinculado['email']) ?>
+                                </a>
+                            <?php else: ?>
+                                <span class="text-gray-400">Não informado</span>
+                            <?php endif; ?>
+                        </p>
+                    </div>
+                </div>
+                
+                <?php if (!empty($clienteVinculado['codigo_cliente'])): ?>
+                <div class="mt-4 flex items-center text-sm text-gray-600 dark:text-gray-400">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
+                    </svg>
+                    Código do Cliente: <span class="font-semibold ml-1"><?= htmlspecialchars($clienteVinculado['codigo_cliente']) ?></span>
+                </div>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
 

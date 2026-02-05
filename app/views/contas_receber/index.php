@@ -329,6 +329,14 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                                             Parcela <?= $conta['parcela_numero'] ?>/<?= $conta['total_parcelas'] ?>
                                         </span>
                                     <?php endif; ?>
+                                    <?php if (!empty($conta['total_parcelas_tabela']) && $conta['total_parcelas_tabela'] > 0): ?>
+                                        <span class="inline-block px-2 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 rounded-full" title="<?= $conta['parcelas_recebidas_tabela'] ?> de <?= $conta['total_parcelas_tabela'] ?> parcelas recebidas">
+                                            <svg class="w-3 h-3 inline-block mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                            </svg>
+                                            <?= $conta['parcelas_recebidas_tabela'] ?>/<?= $conta['total_parcelas_tabela'] ?> parcelas
+                                        </span>
+                                    <?php endif; ?>
                                     <?php if ($conta['tem_rateio']): ?>
                                         <span class="inline-block px-2 py-0.5 text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 rounded-full">
                                             Rateado
@@ -357,11 +365,19 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                                         </svg>
                                     </a>
                                     <?php if ($conta['status'] != 'recebido' && $conta['status'] != 'cancelado'): ?>
-                                        <a href="/contas-receber/<?= $conta['id'] ?>/baixar" class="text-green-600 hover:text-green-900 dark:hover:text-green-400" title="Baixar/Receber">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                                            </svg>
-                                        </a>
+                                        <?php if (!empty($conta['total_parcelas_tabela']) && $conta['total_parcelas_tabela'] > 0): ?>
+                                            <a href="/contas-receber/<?= $conta['id'] ?>" class="text-blue-600 hover:text-blue-900 dark:hover:text-blue-400" title="Ver parcelas para baixar">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                                </svg>
+                                            </a>
+                                        <?php else: ?>
+                                            <a href="/contas-receber/<?= $conta['id'] ?>/baixar" class="text-green-600 hover:text-green-900 dark:hover:text-green-400" title="Baixar/Receber">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                                </svg>
+                                            </a>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                     <a href="/contas-receber/<?= $conta['id'] ?>/historico" class="text-purple-600 hover:text-purple-900 dark:hover:text-purple-400" title="Histórico">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

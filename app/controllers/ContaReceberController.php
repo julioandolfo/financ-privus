@@ -378,6 +378,13 @@ class ContaReceberController extends Controller
             $this->movimentacaoService = new MovimentacaoService();
             $movimentacoes = $this->movimentacaoService->buscarPorContaReceber($id);
             
+            // Busca dados completos do cliente vinculado
+            $clienteVinculado = null;
+            if (!empty($contaReceber['cliente_id'])) {
+                $this->clienteModel = new Cliente();
+                $clienteVinculado = $this->clienteModel->findById($contaReceber['cliente_id']);
+            }
+            
             return $this->render('contas_receber/show', [
                 'title' => 'Detalhes da Conta a Receber',
                 'conta' => $contaReceber,
@@ -387,7 +394,8 @@ class ContaReceberController extends Controller
                 'resumoParcelasTabela' => $resumoParcelasTabela,
                 'pedidoVinculado' => $pedidoVinculado,
                 'itensPedido' => $itensPedido,
-                'movimentacoes' => $movimentacoes
+                'movimentacoes' => $movimentacoes,
+                'clienteVinculado' => $clienteVinculado
             ]);
             
         } catch (\Exception $e) {
@@ -669,11 +677,21 @@ class ContaReceberController extends Controller
                 return;
             }
             
+            // Verifica se a conta tem parcelas - se tiver, redireciona para visualização
+            $parcelaModel = new ParcelaReceber();
+            $parcelas = $parcelaModel->findByContaReceber($id);
+            
+            if (!empty($parcelas)) {
+                $_SESSION['warning'] = 'Esta conta possui parcelas. Realize a baixa em cada parcela individualmente.';
+                $response->redirect('/contas-receber/' . $id);
+                return;
+            }
+            
             $this->formaPagamentoModel = new FormaPagamento();
             $this->contaBancariaModel = new ContaBancaria();
             
-            $formasRecebimento = $this->formaPagamentoModel->findAll();
-            $contasBancarias = $this->contaBancariaModel->findAll();
+            $formasRecebimento = $this->formaPagamentoModel->findAll($contaReceber['empresa_id']);
+            $contasBancarias = $this->contaBancariaModel->findAll($contaReceber['empresa_id']);
             
             return $this->render('contas_receber/baixar', [
                 'title' => 'Baixar Conta a Receber',
@@ -685,6 +703,147 @@ class ContaReceberController extends Controller
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Erro ao carregar formulário de baixa: ' . $e->getMessage();
             $response->redirect('/contas-receber');
+        }
+    }
+    
+    /**
+     * Formulário de baixa de parcela individual
+     */
+    public function baixarParcela(Request $request, Response $response, $contaId, $parcelaId)
+    {
+        try {
+            $this->contaReceberModel = new ContaReceber();
+            $contaReceber = $this->contaReceberModel->findById($contaId);
+            
+            if (!$contaReceber) {
+                $_SESSION['error'] = 'Conta a receber não encontrada!';
+                $response->redirect('/contas-receber');
+                return;
+            }
+            
+            $parcelaModel = new ParcelaReceber();
+            $parcela = $parcelaModel->findById($parcelaId);
+            
+            if (!$parcela || $parcela['conta_receber_id'] != $contaId) {
+                $_SESSION['error'] = 'Parcela não encontrada!';
+                $response->redirect('/contas-receber/' . $contaId);
+                return;
+            }
+            
+            if ($parcela['status'] == 'recebido') {
+                $_SESSION['error'] = 'Esta parcela já foi recebida!';
+                $response->redirect('/contas-receber/' . $contaId);
+                return;
+            }
+            
+            $this->formaPagamentoModel = new FormaPagamento();
+            $this->contaBancariaModel = new ContaBancaria();
+            
+            $formasRecebimento = $this->formaPagamentoModel->findAll($contaReceber['empresa_id']);
+            $contasBancarias = $this->contaBancariaModel->findAll($contaReceber['empresa_id']);
+            
+            return $this->render('contas_receber/baixar_parcela', [
+                'title' => 'Baixar Parcela',
+                'conta' => $contaReceber,
+                'parcela' => $parcela,
+                'formasRecebimento' => $formasRecebimento,
+                'contasBancarias' => $contasBancarias
+            ]);
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao carregar formulário de baixa: ' . $e->getMessage();
+            $response->redirect('/contas-receber/' . $contaId);
+        }
+    }
+    
+    /**
+     * Processa baixa de parcela individual
+     */
+    public function efetuarBaixaParcela(Request $request, Response $response, $contaId, $parcelaId)
+    {
+        try {
+            $data = $request->all();
+            
+            // Validações de baixa
+            $errors = $this->validateBaixa($data);
+            if (!empty($errors)) {
+                $this->session->set('errors', $errors);
+                $this->session->set('old', $data);
+                $response->redirect("/contas-receber/{$contaId}/parcela/{$parcelaId}/baixar");
+                return;
+            }
+            
+            $parcelaModel = new ParcelaReceber();
+            $parcela = $parcelaModel->findById($parcelaId);
+            
+            if (!$parcela || $parcela['conta_receber_id'] != $contaId) {
+                $_SESSION['error'] = 'Parcela não encontrada!';
+                $response->redirect('/contas-receber/' . $contaId);
+                return;
+            }
+            
+            $valorRecebimento = floatval($data['valor_recebimento']);
+            $valorJaRecebido = floatval($parcela['valor_recebido'] ?? 0);
+            $valorRecebido = $valorJaRecebido + $valorRecebimento;
+            $valorParcela = floatval($parcela['valor_parcela']);
+            
+            // Determina status da parcela
+            if ($valorRecebido >= $valorParcela) {
+                $statusParcela = 'recebido';
+            } else {
+                $statusParcela = 'parcial';
+            }
+            
+            // Atualiza parcela
+            $parcelaModel->update($parcelaId, [
+                'valor_recebido' => $valorRecebido,
+                'data_recebimento' => $data['data_recebimento'],
+                'status' => $statusParcela,
+                'forma_recebimento_id' => $data['forma_recebimento_id'] ?? null,
+                'conta_bancaria_id' => $data['conta_bancaria_id'] ?? null,
+                'observacoes' => $data['observacoes_recebimento'] ?? null
+            ]);
+            
+            // Atualiza status da conta principal baseado nas parcelas
+            $this->atualizarStatusContaPorParcelas($contaId);
+            
+            $_SESSION['success'] = 'Parcela recebida com sucesso!';
+            $response->redirect('/contas-receber/' . $contaId);
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao processar recebimento: ' . $e->getMessage();
+            $response->redirect("/contas-receber/{$contaId}/parcela/{$parcelaId}/baixar");
+        }
+    }
+    
+    /**
+     * Atualiza o status da conta principal baseado no status das parcelas
+     */
+    private function atualizarStatusContaPorParcelas($contaId)
+    {
+        $parcelaModel = new ParcelaReceber();
+        $resumo = $parcelaModel->getResumoByContaReceber($contaId);
+        
+        if (!$resumo || $resumo['total_parcelas'] == 0) {
+            return;
+        }
+        
+        $this->contaReceberModel = new ContaReceber();
+        
+        // Se todas as parcelas foram recebidas
+        if ($resumo['parcelas_recebidas'] == $resumo['total_parcelas']) {
+            $this->contaReceberModel->update($contaId, [
+                'status' => 'recebido',
+                'valor_recebido' => $resumo['total_recebido'],
+                'data_recebimento' => date('Y-m-d')
+            ]);
+        } 
+        // Se pelo menos uma parcela foi recebida (parcial ou total)
+        elseif ($resumo['total_recebido'] > 0) {
+            $this->contaReceberModel->update($contaId, [
+                'status' => 'parcial',
+                'valor_recebido' => $resumo['total_recebido']
+            ]);
         }
     }
     

@@ -4,58 +4,71 @@ $old = $this->session->get('old') ?? [];
 require_once __DIR__ . '/../../../includes/helpers/formata_dados.php';
 require_once __DIR__ . '/../../../includes/helpers/functions.php';
 
-$saldoRestante = $conta['valor_total'] - $conta['valor_recebido'];
+$saldoRestante = $parcela['valor_parcela'] - ($parcela['valor_recebido'] ?? 0);
 ?>
 
 <div class="max-w-4xl mx-auto animate-fade-in">
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <!-- Header -->
         <div class="bg-gradient-to-r from-blue-600 to-cyan-600 px-8 py-6">
-            <h1 class="text-3xl font-bold text-white">Baixar/Receber Conta</h1>
-            <p class="text-blue-100 mt-2">Registre o recebimento da receita</p>
+            <h1 class="text-3xl font-bold text-white">Baixar/Receber Parcela</h1>
+            <p class="text-blue-100 mt-2">Registre o recebimento da parcela <?= $parcela['numero_parcela'] ?></p>
         </div>
 
         <!-- Informações da Conta -->
-        <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-8 py-6 border-b border-gray-200 dark:border-gray-700">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-8 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
                 <div>
-                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Cliente</label>
-                    <p class="text-lg font-semibold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($conta['cliente_nome'] ?? 'Não informado') ?></p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Conta a Receber</p>
+                    <p class="text-lg font-semibold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($conta['descricao']) ?></p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Doc: <?= htmlspecialchars($conta['numero_documento']) ?></p>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Documento</label>
-                    <p class="text-lg font-semibold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($conta['numero_documento']) ?></p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Vencimento</label>
-                    <p class="text-lg font-semibold <?= estaVencido($conta['data_vencimento']) ? 'text-amber-600' : 'text-gray-900 dark:text-gray-100' ?>">
-                        <?= formatarData($conta['data_vencimento']) ?>
-                    </p>
-                </div>
-            </div>
-            
-            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Valor Total</label>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><?= formatarMoeda($conta['valor_total']) ?></p>
-                    </div>
-                    <?php if ($conta['status'] == 'parcial'): ?>
-                    <div class="text-center">
-                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Já Recebido</label>
-                        <p class="text-2xl font-bold text-blue-600"><?= formatarMoeda($conta['valor_recebido']) ?></p>
-                    </div>
-                    <?php endif; ?>
-                    <div class="text-right">
-                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Saldo Restante</label>
-                        <p class="text-2xl font-bold text-green-600"><?= formatarMoeda($saldoRestante) ?></p>
-                    </div>
-                </div>
+                <a href="/contas-receber/<?= $conta['id'] ?>" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    ← Voltar para conta
+                </a>
             </div>
         </div>
 
+        <!-- Informações da Parcela -->
+        <div class="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 px-8 py-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Parcela</label>
+                    <p class="text-2xl font-bold text-indigo-600"><?= $parcela['numero_parcela'] ?></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Vencimento</label>
+                    <p class="text-lg font-semibold <?= estaVencido($parcela['data_vencimento']) ? 'text-amber-600' : 'text-gray-900 dark:text-gray-100' ?>">
+                        <?= formatarData($parcela['data_vencimento']) ?>
+                        <?php if (estaVencido($parcela['data_vencimento'])): ?>
+                            <span class="text-xs font-bold">VENCIDA</span>
+                        <?php endif; ?>
+                    </p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Valor da Parcela</label>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><?= formatarMoeda($parcela['valor_parcela']) ?></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Saldo a Receber</label>
+                    <p class="text-2xl font-bold text-green-600"><?= formatarMoeda($saldoRestante) ?></p>
+                </div>
+            </div>
+            
+            <?php if (($parcela['valor_recebido'] ?? 0) > 0): ?>
+            <div class="mt-4 pt-4 border-t border-indigo-200 dark:border-indigo-700">
+                <p class="text-sm text-indigo-700 dark:text-indigo-300">
+                    <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Já foi recebido: <strong><?= formatarMoeda($parcela['valor_recebido']) ?></strong>
+                </p>
+            </div>
+            <?php endif; ?>
+        </div>
+
         <!-- Form -->
-        <form method="POST" action="/contas-receber/<?= $conta['id'] ?>/baixar" class="p-8" x-data="{ valorRecebimento: <?= $saldoRestante ?>, saldoRestante: <?= $saldoRestante ?> }">
+        <form method="POST" action="/contas-receber/<?= $conta['id'] ?>/parcela/<?= $parcela['id'] ?>/baixar" class="p-8" x-data="{ valorRecebimento: <?= $saldoRestante ?>, saldoRestante: <?= $saldoRestante ?> }">
             <div class="space-y-6">
                 <!-- Data do Recebimento -->
                 <div>
@@ -82,9 +95,6 @@ $saldoRestante = $conta['valor_total'] - $conta['valor_recebido'];
                     <div class="mt-2 flex space-x-2">
                         <button type="button" @click="valorRecebimento = saldoRestante" class="text-sm text-blue-600 hover:text-blue-700 font-medium">
                             Receber Total
-                        </button>
-                        <button type="button" @click="valorRecebimento = (saldoRestante / 2).toFixed(2)" class="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                            Receber Metade
                         </button>
                     </div>
                 </div>
@@ -137,31 +147,16 @@ $saldoRestante = $conta['valor_total'] - $conta['valor_recebido'];
                               placeholder="Informações adicionais sobre o recebimento..."><?= htmlspecialchars($old['observacoes_recebimento'] ?? '') ?></textarea>
                 </div>
 
-                <!-- Alerta de Recebimento Parcial -->
-                <div x-show="valorRecebimento < saldoRestante" class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl">
-                    <div class="flex items-start space-x-3">
-                        <svg class="w-6 h-6 text-yellow-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                        </svg>
-                        <div>
-                            <h4 class="font-semibold text-yellow-800 dark:text-yellow-300">Recebimento Parcial</h4>
-                            <p class="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
-                                Você está realizando um recebimento parcial. O status da conta será alterado para "Parcial" e você poderá realizar novos recebimentos posteriormente.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Alerta de Recebimento Total -->
+                <!-- Alerta de Recebimento -->
                 <div x-show="valorRecebimento >= saldoRestante" class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl">
                     <div class="flex items-start space-x-3">
                         <svg class="w-6 h-6 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                         <div>
-                            <h4 class="font-semibold text-green-800 dark:text-green-300">Recebimento Total</h4>
+                            <h4 class="font-semibold text-green-800 dark:text-green-300">Recebimento Total da Parcela</h4>
                             <p class="text-sm text-green-700 dark:text-green-400 mt-1">
-                                Você está recebendo a conta completamente. O status será alterado para "Recebido".
+                                A parcela será marcada como "Recebida".
                             </p>
                         </div>
                     </div>

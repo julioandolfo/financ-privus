@@ -36,7 +36,9 @@ class ContaReceber extends Model
                            WHEN cr.status IN ('pendente', 'parcial') AND cr.data_vencimento < CURDATE() THEN 'vencido'
                            ELSE cr.status
                        END as status,
-                       (SELECT COUNT(*) FROM rateios_recebimentos WHERE conta_receber_id = cr.id) > 0 as tem_rateio
+                       (SELECT COUNT(*) FROM rateios_recebimentos WHERE conta_receber_id = cr.id) > 0 as tem_rateio,
+                       (SELECT COUNT(*) FROM parcelas_receber WHERE conta_receber_id = cr.id) as total_parcelas_tabela,
+                       (SELECT COUNT(*) FROM parcelas_receber WHERE conta_receber_id = cr.id AND status = 'recebido') as parcelas_recebidas_tabela
                 FROM {$this->table} cr
                 JOIN empresas e ON cr.empresa_id = e.id
                 LEFT JOIN clientes c ON cr.cliente_id = c.id

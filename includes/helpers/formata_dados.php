@@ -44,6 +44,22 @@ function formatarCNPJ($cnpj) {
 }
 
 /**
+ * Formata CPF ou CNPJ automaticamente baseado no tamanho
+ * 
+ * @param string $documento CPF ou CNPJ a formatar
+ * @return string
+ */
+function formatarCpfCnpj($documento) {
+    $documento = preg_replace('/[^0-9]/', '', $documento);
+    if (strlen($documento) == 11) {
+        return formatarCPF($documento);
+    } elseif (strlen($documento) == 14) {
+        return formatarCNPJ($documento);
+    }
+    return $documento;
+}
+
+/**
  * Formata telefone ((11) 98765-4321 ou (11) 3456-7890)
  * 
  * @param string $telefone Telefone a formatar
