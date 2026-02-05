@@ -333,6 +333,10 @@ class ApiRestController extends Controller
                     $dataPedido = substr($dataPedido, 0, 10); // Extrai apenas YYYY-MM-DD
                 }
                 
+                // Capturar frete e desconto do pedido ou do input
+                $fretePedido = $pedidoData['frete'] ?? $input['frete'] ?? 0;
+                $descontoPedido = $pedidoData['desconto'] ?? $input['desconto'] ?? 0;
+                
                 $pedidoId = $pedidoModel->create([
                     'empresa_id' => $input['empresa_id'],
                     'cliente_id' => $clienteId ?? $input['cliente_id'] ?? null,
@@ -341,7 +345,10 @@ class ApiRestController extends Controller
                     'data_pedido' => $dataPedido,
                     'status' => 'concluido',
                     'origem' => 'api',
-                    'valor_total' => 0 // Será calculado
+                    'valor_total' => 0, // Será calculado
+                    'frete' => $fretePedido,
+                    'desconto' => $descontoPedido,
+                    'observacoes' => $pedidoData['observacoes'] ?? null
                 ]);
                 
                 $input['pedido_id'] = $pedidoId;
@@ -399,17 +406,18 @@ class ApiRestController extends Controller
                         }
                     }
                     
-                    // Atualizar valor_total e valor_custo_total do pedido
-                    $pedidoModel->updateTotais($pedidoId, $valorTotalPedido, $valorCustoTotal);
+                    // Atualizar valor_total e valor_custo_total do pedido (com frete e desconto)
+                    $pedidoModel->updateTotais($pedidoId, $valorTotalPedido, $valorCustoTotal, $fretePedido, $descontoPedido);
                     
                     // Se não foi informado valor_total, usar o do pedido
                     if (empty($input['valor_total'])) {
                         $input['valor_total'] = $valorTotalPedido;
                     }
                     
-                    // Calcular lucro e margem
+                    // Calcular lucro e margem (lucro = valor_total - custo_total - frete + desconto)
+                    // Frete é um custo adicional, desconto é um abatimento do valor recebido
                     if ($valorTotalPedido > 0) {
-                        $lucro = $valorTotalPedido - $valorCustoTotal;
+                        $lucro = $valorTotalPedido - $valorCustoTotal - $fretePedido;
                         $margemLucro = ($lucro / $valorTotalPedido) * 100;
                     }
                 }

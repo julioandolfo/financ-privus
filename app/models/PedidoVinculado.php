@@ -144,9 +144,9 @@ class PedidoVinculado extends Model
     public function create($data)
     {
         $sql = "INSERT INTO {$this->table} 
-                (empresa_id, origem, origem_id, numero_pedido, cliente_id, data_pedido, data_atualizacao, status, valor_total, valor_custo_total, dados_origem) 
+                (empresa_id, origem, origem_id, numero_pedido, cliente_id, data_pedido, data_atualizacao, status, valor_total, valor_custo_total, frete, desconto, observacoes, dados_origem) 
                 VALUES 
-                (:empresa_id, :origem, :origem_id, :numero_pedido, :cliente_id, :data_pedido, :data_atualizacao, :status, :valor_total, :valor_custo_total, :dados_origem)";
+                (:empresa_id, :origem, :origem_id, :numero_pedido, :cliente_id, :data_pedido, :data_atualizacao, :status, :valor_total, :valor_custo_total, :frete, :desconto, :observacoes, :dados_origem)";
         
         $stmt = $this->db->prepare($sql);
         
@@ -161,6 +161,9 @@ class PedidoVinculado extends Model
             'status' => $data['status'] ?? self::STATUS_PENDENTE,
             'valor_total' => $data['valor_total'],
             'valor_custo_total' => $data['valor_custo_total'] ?? 0,
+            'frete' => $data['frete'] ?? 0,
+            'desconto' => $data['desconto'] ?? 0,
+            'observacoes' => $data['observacoes'] ?? null,
             'dados_origem' => isset($data['dados_origem']) ? json_encode($data['dados_origem']) : null
         ]);
         
@@ -221,18 +224,22 @@ class PedidoVinculado extends Model
     /**
      * Atualizar apenas os totais do pedido
      */
-    public function updateTotais($id, $valorTotal, $valorCustoTotal)
+    public function updateTotais($id, $valorTotal, $valorCustoTotal, $frete = 0, $desconto = 0)
     {
         $sql = "UPDATE {$this->table} SET 
                 valor_total = :valor_total, 
-                valor_custo_total = :valor_custo_total, 
+                valor_custo_total = :valor_custo_total,
+                frete = :frete,
+                desconto = :desconto,
                 data_atualizacao = NOW() 
                 WHERE id = :id";
         $stmt = $this->db->prepare($sql);
         return $stmt->execute([
             'id' => $id,
             'valor_total' => $valorTotal,
-            'valor_custo_total' => $valorCustoTotal
+            'valor_custo_total' => $valorCustoTotal,
+            'frete' => $frete,
+            'desconto' => $desconto
         ]);
     }
     

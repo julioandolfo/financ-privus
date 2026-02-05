@@ -364,10 +364,14 @@ class ContaReceberController extends Controller
                     $pedidoItemModel = new PedidoItem();
                     $itensPedido = $pedidoItemModel->findByPedido($contaReceber['pedido_id']);
                     
-                    // Calcular lucro e margem do pedido
+                    // Calcular lucro e margem do pedido (frete é custo adicional)
                     $valorTotalPedido = floatval($pedidoVinculado['valor_total'] ?? 0);
                     $custoTotalPedido = floatval($pedidoVinculado['valor_custo_total'] ?? 0);
-                    $pedidoVinculado['lucro'] = $valorTotalPedido - $custoTotalPedido;
+                    $fretePedido = floatval($pedidoVinculado['frete'] ?? 0);
+                    $descontoPedido = floatval($pedidoVinculado['desconto'] ?? 0);
+                    
+                    // Lucro = Valor Total - Custo Total - Frete (frete é custo)
+                    $pedidoVinculado['lucro'] = $valorTotalPedido - $custoTotalPedido - $fretePedido;
                     $pedidoVinculado['margem_lucro'] = $valorTotalPedido > 0 
                         ? round(($pedidoVinculado['lucro'] / $valorTotalPedido) * 100, 2) 
                         : 0;
