@@ -4,20 +4,6 @@
  */
 
 /**
- * Verifica se uma data está vencida
- * 
- * @param string $data Data no formato Y-m-d ou d/m/Y
- * @return bool
- */
-function estaVencido($data) {
-    if (empty($data) || $data == '0000-00-00') {
-        return false;
-    }
-    $timestamp = strtotime($data);
-    return $timestamp < strtotime('today');
-}
-
-/**
  * Formata valor monetário para exibição (R$ 1.234,56)
  * 
  * @param float $valor Valor a formatar
