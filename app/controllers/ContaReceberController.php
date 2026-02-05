@@ -430,6 +430,11 @@ class ContaReceberController extends Controller
                 $rateios = $this->rateioModel->findByContaReceber($id);
             }
             
+            // Busca parcelas se houver
+            $parcelas = [];
+            $parcelaModel = new ParcelaReceber();
+            $parcelas = $parcelaModel->findByContaReceber($id);
+            
             return $this->render('contas_receber/edit', [
                 'title' => 'Editar Conta a Receber',
                 'conta' => $contaReceber,
@@ -439,7 +444,8 @@ class ContaReceberController extends Controller
                 'centrosCusto' => $centrosCusto,
                 'formasRecebimento' => $formasRecebimento,
                 'contasBancarias' => $contasBancarias,
-                'rateios' => $rateios
+                'rateios' => $rateios,
+                'parcelas' => $parcelas
             ]);
             
         } catch (\Exception $e) {

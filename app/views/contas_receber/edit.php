@@ -156,6 +156,94 @@ $old = $this->session->get('old') ?? [];
                 </div>
             </div>
 
+            <!-- Rateio entre Empresas -->
+            <?php if (!empty($rateios)): ?>
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Rateio entre Empresas</h2>
+                <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-6">
+                    <div class="space-y-4">
+                        <?php foreach ($rateios as $index => $rateio): ?>
+                        <div class="flex items-center space-x-4 bg-white dark:bg-gray-800 p-4 rounded-lg">
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Empresa</label>
+                                <p class="font-semibold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($rateio['empresa_nome'] ?? 'N/A') ?></p>
+                            </div>
+                            <div class="w-32">
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">Valor</label>
+                                <p class="font-semibold text-gray-900 dark:text-gray-100">R$ <?= number_format($rateio['valor_rateio'] ?? 0, 2, ',', '.') ?></p>
+                            </div>
+                            <div class="w-24">
+                                <label class="block text-sm font-medium text-gray-500 dark:text-gray-400">%</label>
+                                <p class="font-semibold text-gray-900 dark:text-gray-100"><?= number_format($rateio['percentual'] ?? 0, 2, ',', '.') ?>%</p>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                        <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Para alterar o rateio, exclua a conta e crie uma nova.
+                    </p>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Parcelas Existentes -->
+            <?php if (!empty($parcelas)): ?>
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Parcelas da Conta</h2>
+                <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-6 border border-indigo-200 dark:border-indigo-700">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-indigo-200 dark:border-indigo-700">
+                                    <th class="text-left py-2 px-3 font-semibold text-gray-700 dark:text-gray-300">Parcela</th>
+                                    <th class="text-left py-2 px-3 font-semibold text-gray-700 dark:text-gray-300">Vencimento</th>
+                                    <th class="text-right py-2 px-3 font-semibold text-gray-700 dark:text-gray-300">Valor</th>
+                                    <th class="text-center py-2 px-3 font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($parcelas as $parcela): ?>
+                                <tr class="border-b border-indigo-100 dark:border-indigo-800">
+                                    <td class="py-2 px-3"><?= $parcela['numero_parcela'] ?>/<?= count($parcelas) ?></td>
+                                    <td class="py-2 px-3"><?= date('d/m/Y', strtotime($parcela['data_vencimento'])) ?></td>
+                                    <td class="py-2 px-3 text-right font-semibold">R$ <?= number_format($parcela['valor_parcela'], 2, ',', '.') ?></td>
+                                    <td class="py-2 px-3 text-center">
+                                        <?php
+                                        $statusClass = match($parcela['status'] ?? 'pendente') {
+                                            'recebido' => 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+                                            'parcial' => 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+                                            'vencido' => 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+                                            default => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                        };
+                                        $statusLabel = match($parcela['status'] ?? 'pendente') {
+                                            'recebido' => 'Recebido',
+                                            'parcial' => 'Parcial',
+                                            'vencido' => 'Vencido',
+                                            default => 'Pendente'
+                                        };
+                                        ?>
+                                        <span class="px-2 py-1 rounded-full text-xs font-medium <?= $statusClass ?>">
+                                            <?= $statusLabel ?>
+                                        </span>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="mt-4 text-sm text-indigo-600 dark:text-indigo-400">
+                        <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        As parcelas podem ser gerenciadas individualmente na visualização da conta.
+                    </p>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Observações -->
             <div class="mb-8">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Observações</label>
