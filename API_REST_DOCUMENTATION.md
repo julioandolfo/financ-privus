@@ -373,13 +373,22 @@ POST /api/v1/contas-receber
 Content-Type: application/json
 
 {
-    "cliente_id": 3,
     "categoria_id": 10,
     "descricao": "Venda de produtos externos",
     "data_vencimento": "2025-01-20",
     "data_emissao": "2025-01-01",
+    "data_competencia": "2025-01-01",
+    "cliente": {
+        "cpf_cnpj": "12345678901",
+        "codigo_cliente": "CLI-001",
+        "nome_razao_social": "Cliente Exemplo",
+        "tipo": "fisica",
+        "email": "cliente@exemplo.com",
+        "telefone": "11999999999"
+    },
     "criar_pedido": true,
     "pedido": {
+        "numero_pedido": "PED-2025-001",
         "produtos": [
             {
                 "sku": "PROD-EXTERNO-001",
@@ -400,6 +409,8 @@ Content-Type: application/json
     }
 }
 ```
+
+> **Auto-cadastro de Cliente:** O sistema buscará o cliente por `cpf_cnpj` ou `codigo_cliente`. Se encontrar, vincula à conta. Se não encontrar, cria automaticamente com os dados fornecidos.
 
 **Como funciona:**
 - Se o produto com `sku = "PROD-EXTERNO-001"` **já existe**: usa o produto cadastrado (ignora nome/valores enviados)
@@ -438,6 +449,25 @@ Content-Type: application/json
     "message": "Conta a receber criada com sucesso. 2 produtos foram criados automaticamente."
 }
 ```
+
+### Estrutura do Cliente (Auto-cadastro)
+
+**Campos do objeto `cliente`:**
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `cpf_cnpj` | string | Condicional* | CPF ou CNPJ do cliente |
+| `codigo_cliente` | string | Condicional* | Código interno do cliente (ex: código do ERP) |
+| `nome_razao_social` | string | Sim** | Nome ou Razão Social |
+| `tipo` | string | Não | `fisica` ou `juridica` (detectado automaticamente) |
+| `email` | string | Não | E-mail do cliente |
+| `telefone` | string | Não | Telefone do cliente |
+| `endereco` | object | Não | Objeto com logradouro, numero, bairro, cidade, estado, cep |
+
+*Use `cpf_cnpj` OU `codigo_cliente` (pelo menos um é necessário para identificar/criar o cliente)  
+**Obrigatório apenas quando o cliente não existir e será criado automaticamente
+
+> **Importante:** Se o cliente já existir (identificado por `cpf_cnpj` ou `codigo_cliente`), ele será **vinculado** à conta. Se não existir, será **criado automaticamente** com os dados fornecidos.
 
 ### Estrutura Completa do Pedido
 
@@ -980,6 +1010,7 @@ GET /api/v1/clientes
     "data": [
         {
             "id": 1,
+            "codigo_cliente": "CLI-001",
             "nome_razao_social": "Cliente Exemplo Ltda",
             "tipo": "juridica",
             "cpf_cnpj": "12.345.678/0001-90",
@@ -997,6 +1028,31 @@ GET /api/v1/clientes
 GET /api/v1/clientes/{id}
 ```
 
+**Resposta:**
+```json
+{
+    "success": true,
+    "data": {
+        "id": 1,
+        "codigo_cliente": "CLI-001",
+        "nome_razao_social": "Cliente Exemplo Ltda",
+        "tipo": "juridica",
+        "cpf_cnpj": "12.345.678/0001-90",
+        "email": "contato@cliente.com",
+        "telefone": "(11) 98765-4321",
+        "ativo": true,
+        "endereco": {
+            "logradouro": "Rua Exemplo",
+            "numero": "123",
+            "bairro": "Centro",
+            "cidade": "São Paulo",
+            "estado": "SP",
+            "cep": "01234-567"
+        }
+    }
+}
+```
+
 ### Criar Cliente
 
 ```http
@@ -1004,6 +1060,7 @@ POST /api/v1/clientes
 Content-Type: application/json
 
 {
+    "codigo_cliente": "CLI-002",
     "nome_razao_social": "Novo Cliente Ltda",
     "tipo": "juridica",
     "cpf_cnpj": "98.765.432/0001-10",
@@ -1019,6 +1076,8 @@ Content-Type: application/json
     }
 }
 ```
+
+> **Nota:** O campo `codigo_cliente` é opcional e serve como código interno do cliente no seu sistema (ex: código do ERP).
 
 **Resposta:**
 ```json
@@ -1498,6 +1557,7 @@ headers = {
     'Content-Type': 'application/json'
 }
 data = {
+    'codigo_cliente': 'CLI-PY-001',  # Opcional: código interno do cliente
     'nome_razao_social': 'Cliente Python Ltda',
     'tipo': 'juridica',
     'cpf_cnpj': '12.345.678/0001-90',

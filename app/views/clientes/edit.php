@@ -78,22 +78,41 @@
                 <?php endif; ?>
             </div>
 
-            <!-- Nome/Razão Social -->
-            <div>
-                <label for="nome_razao_social" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Nome / Razão Social *
-                </label>
-                <input type="text" 
-                       id="nome_razao_social" 
-                       name="nome_razao_social" 
-                       value="<?= htmlspecialchars($old['nome_razao_social'] ?? $cliente['nome_razao_social']) ?>"
-                       minlength="3"
-                       maxlength="255"
-                       class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['nome_razao_social']) ? 'border-red-500' : '' ?>" 
-                       required>
-                <?php if (isset($this->session->get('errors')['nome_razao_social'])): ?>
-                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['nome_razao_social'] ?></p>
-                <?php endif; ?>
+            <!-- Código do Cliente e Nome/Razão Social -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div>
+                    <label for="codigo_cliente" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Código do Cliente
+                    </label>
+                    <input type="text" 
+                           id="codigo_cliente" 
+                           name="codigo_cliente" 
+                           value="<?= htmlspecialchars($old['codigo_cliente'] ?? $cliente['codigo_cliente'] ?? '') ?>"
+                           maxlength="50"
+                           placeholder="Ex: CLI-001"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['codigo_cliente']) ? 'border-red-500' : '' ?>">
+                    <?php if (isset($this->session->get('errors')['codigo_cliente'])): ?>
+                        <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['codigo_cliente'] ?></p>
+                    <?php else: ?>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Código interno (opcional)</p>
+                    <?php endif; ?>
+                </div>
+                <div class="md:col-span-3">
+                    <label for="nome_razao_social" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Nome / Razão Social *
+                    </label>
+                    <input type="text" 
+                           id="nome_razao_social" 
+                           name="nome_razao_social" 
+                           value="<?= htmlspecialchars($old['nome_razao_social'] ?? $cliente['nome_razao_social']) ?>"
+                           minlength="3"
+                           maxlength="255"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($this->session->get('errors')['nome_razao_social']) ? 'border-red-500' : '' ?>" 
+                           required>
+                    <?php if (isset($this->session->get('errors')['nome_razao_social'])): ?>
+                        <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['nome_razao_social'] ?></p>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <!-- CPF/CNPJ -->

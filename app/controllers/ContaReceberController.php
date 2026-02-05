@@ -12,6 +12,9 @@ use App\Models\CategoriaFinanceira;
 use App\Models\CentroCusto;
 use App\Models\FormaPagamento;
 use App\Models\ContaBancaria;
+use App\Models\ParcelaReceber;
+use App\Models\PedidoVinculado;
+use App\Models\PedidoItem;
 use includes\services\RateioService;
 use includes\services\MovimentacaoService;
 
@@ -345,6 +348,32 @@ class ContaReceberController extends Controller
                 $resumoParcelas = $this->contaReceberModel->getResumoParcelas($contaReceber['grupo_parcela_id']);
             }
             
+            // Busca parcelas da conta (via tabela parcelas_receber)
+            $parcelaModel = new ParcelaReceber();
+            $parcelas = $parcelaModel->findByContaReceber($id);
+            $resumoParcelasTabela = $parcelaModel->getResumoByContaReceber($id);
+            
+            // Busca pedido vinculado se houver
+            $pedidoVinculado = null;
+            $itensPedido = [];
+            if (!empty($contaReceber['pedido_id'])) {
+                $pedidoModel = new PedidoVinculado();
+                $pedidoVinculado = $pedidoModel->findById($contaReceber['pedido_id']);
+                
+                if ($pedidoVinculado) {
+                    $pedidoItemModel = new PedidoItem();
+                    $itensPedido = $pedidoItemModel->findByPedido($contaReceber['pedido_id']);
+                    
+                    // Calcular lucro e margem do pedido
+                    $valorTotalPedido = floatval($pedidoVinculado['valor_total'] ?? 0);
+                    $custoTotalPedido = floatval($pedidoVinculado['valor_custo_total'] ?? 0);
+                    $pedidoVinculado['lucro'] = $valorTotalPedido - $custoTotalPedido;
+                    $pedidoVinculado['margem_lucro'] = $valorTotalPedido > 0 
+                        ? round(($pedidoVinculado['lucro'] / $valorTotalPedido) * 100, 2) 
+                        : 0;
+                }
+            }
+            
             // Busca movimentações (histórico de recebimentos)
             $this->movimentacaoService = new MovimentacaoService();
             $movimentacoes = $this->movimentacaoService->buscarPorContaReceber($id);
@@ -354,6 +383,10 @@ class ContaReceberController extends Controller
                 'conta' => $contaReceber,
                 'rateios' => $rateios,
                 'resumoParcelas' => $resumoParcelas,
+                'parcelas' => $parcelas,
+                'resumoParcelasTabela' => $resumoParcelasTabela,
+                'pedidoVinculado' => $pedidoVinculado,
+                'itensPedido' => $itensPedido,
                 'movimentacoes' => $movimentacoes
             ]);
             

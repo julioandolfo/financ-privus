@@ -287,16 +287,27 @@ class ApiRestController extends Controller
             if (isset($input['cliente']) && !empty($input['cliente'])) {
                 $clienteData = $input['cliente'];
                 
-                if (!empty($clienteData['cpf_cnpj'])) {
+                // Permite buscar/criar cliente por CPF/CNPJ ou código do cliente
+                if (!empty($clienteData['cpf_cnpj']) || !empty($clienteData['codigo_cliente'])) {
                     $clienteModel = new Cliente();
+                    
+                    // Verifica se o cliente já existe ANTES de criar
+                    $clienteExistente = null;
+                    if (!empty($clienteData['cpf_cnpj'])) {
+                        $clienteExistente = $clienteModel->findByCpfCnpj($clienteData['cpf_cnpj'], $input['empresa_id']);
+                    }
+                    if (!$clienteExistente && !empty($clienteData['codigo_cliente'])) {
+                        $clienteExistente = $clienteModel->findByCodigoCliente($clienteData['codigo_cliente'], $input['empresa_id']);
+                    }
+                    
+                    // Busca ou cria o cliente
                     $cliente = $clienteModel->findOrCreateByCpfCnpj($clienteData, $input['empresa_id']);
                     
                     if ($cliente) {
                         $clienteId = $cliente['id'];
                         $input['cliente_id'] = $clienteId;
                         
-                        // Verifica se foi criado agora ou já existia
-                        $clienteExistente = $clienteModel->findByCpfCnpj($clienteData['cpf_cnpj'], $input['empresa_id']);
+                        // Cliente foi criado se não existia antes
                         $clienteCriado = empty($clienteExistente);
                     }
                 }
@@ -952,6 +963,8 @@ class ApiRestController extends Controller
         if (empty($data['data_vencimento'])) {
             $errors['data_vencimento'] = 'Data de vencimento é obrigatória';
         }
+        
+        // Nota: centro_custo_id é opcional para contas a receber
         
         return $errors;
     }

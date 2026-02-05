@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../../includes/helpers/formata_dados.php';
 require_once __DIR__ . '/../../../includes/helpers/functions.php';
 ?>
 
-<div class="max-w-6xl mx-auto animate-fade-in" x-data="{ showCancelModal: false }" @keydown.escape.window="showCancelModal = false">
+<div class="max-w-6xl mx-auto animate-fade-in" x-data="{ showCancelModal: false, showPedidoModal: false }" @keydown.escape.window="showCancelModal = false; showPedidoModal = false">
     <!-- Header -->
     <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl shadow-xl p-8 mb-8">
         <div class="flex justify-between items-center">
@@ -12,6 +12,14 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                 <p class="text-green-100">Visualize todas as informações da receita</p>
             </div>
             <div class="flex items-center space-x-3">
+                <?php if (!empty($pedidoVinculado)): ?>
+                    <button @click="showPedidoModal = true" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg flex items-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                        </svg>
+                        <span>Ver Pedido #<?= htmlspecialchars($pedidoVinculado['numero_pedido'] ?? $pedidoVinculado['id']) ?></span>
+                    </button>
+                <?php endif; ?>
                 <?php if ($conta['status'] != 'recebido' && $conta['status'] != 'cancelado'): ?>
                     <a href="/contas-receber/<?= $conta['id'] ?>/baixar" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg flex items-center space-x-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -209,6 +217,153 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
             </div>
             <?php endif; ?>
 
+            <!-- Parcelas da Conta (tabela parcelas_receber) -->
+            <?php if (!empty($parcelas) && count($parcelas) > 0): ?>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
+                    <span class="inline-flex items-center">
+                        <svg class="w-6 h-6 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        Parcelas
+                        <span class="ml-2 text-sm font-normal text-gray-500">
+                            (<?= count($parcelas) ?> parcela<?= count($parcelas) > 1 ? 's' : '' ?>)
+                        </span>
+                    </span>
+                </h2>
+                
+                <!-- Resumo das Parcelas -->
+                <?php if (!empty($resumoParcelasTabela)): ?>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Total Parcelas</p>
+                        <p class="text-xl font-bold text-gray-900 dark:text-gray-100"><?= formatarMoeda($resumoParcelasTabela['valor_total'] ?? 0) ?></p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Total Recebido</p>
+                        <p class="text-xl font-bold text-green-600"><?= formatarMoeda($resumoParcelasTabela['total_recebido'] ?? 0) ?></p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Pendentes</p>
+                        <p class="text-xl font-bold text-amber-600"><?= $resumoParcelasTabela['parcelas_pendentes'] ?? 0 ?></p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Recebidas</p>
+                        <p class="text-xl font-bold text-blue-600"><?= $resumoParcelasTabela['parcelas_recebidas'] ?? 0 ?>/<?= $resumoParcelasTabela['total_parcelas'] ?? 0 ?></p>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
+                <!-- Lista de Parcelas -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                <th class="text-left pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Parcela</th>
+                                <th class="text-left pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Vencimento</th>
+                                <th class="text-right pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Valor</th>
+                                <th class="text-right pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Recebido</th>
+                                <th class="text-center pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Status</th>
+                                <th class="text-left pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Forma Receb.</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                            <?php foreach ($parcelas as $parcela): ?>
+                            <tr>
+                                <td class="py-3 text-gray-900 dark:text-gray-100">
+                                    <span class="font-semibold"><?= $parcela['numero_parcela'] ?></span>
+                                </td>
+                                <td class="py-3 text-gray-600 dark:text-gray-400">
+                                    <?= formatarData($parcela['data_vencimento']) ?>
+                                    <?php if (strtotime($parcela['data_vencimento']) < time() && $parcela['status'] == 'pendente'): ?>
+                                        <span class="ml-1 text-red-600 text-xs font-bold">VENCIDA</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="py-3 text-right font-semibold text-gray-900 dark:text-gray-100"><?= formatarMoeda($parcela['valor_parcela']) ?></td>
+                                <td class="py-3 text-right text-green-600 font-semibold"><?= formatarMoeda($parcela['valor_recebido'] ?? 0) ?></td>
+                                <td class="py-3 text-center"><?= formatarStatusBadge($parcela['status']) ?></td>
+                                <td class="py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars($parcela['forma_recebimento_nome'] ?? '-') ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Pedido Vinculado (Resumo) -->
+            <?php if (!empty($pedidoVinculado)): ?>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                        <span class="inline-flex items-center">
+                            <svg class="w-6 h-6 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                            </svg>
+                            Pedido Vinculado
+                        </span>
+                    </h2>
+                    <button @click="showPedidoModal = true" class="text-purple-600 hover:text-purple-800 text-sm font-semibold flex items-center space-x-1">
+                        <span>Ver detalhes completos</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Info do Pedido -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Número</p>
+                        <p class="text-lg font-bold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($pedidoVinculado['numero_pedido'] ?? $pedidoVinculado['id']) ?></p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Valor Total</p>
+                        <p class="text-lg font-bold text-gray-900 dark:text-gray-100"><?= formatarMoeda($pedidoVinculado['valor_total'] ?? 0) ?></p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Lucro</p>
+                        <p class="text-lg font-bold text-green-600"><?= formatarMoeda($pedidoVinculado['lucro'] ?? 0) ?></p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Margem</p>
+                        <p class="text-lg font-bold text-blue-600"><?= number_format($pedidoVinculado['margem_lucro'] ?? 0, 2, ',', '.') ?>%</p>
+                    </div>
+                </div>
+                
+                <!-- Lista de Itens do Pedido -->
+                <?php if (!empty($itensPedido)): ?>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                <th class="text-left pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Produto</th>
+                                <th class="text-center pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Qtd</th>
+                                <th class="text-right pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Valor Unit.</th>
+                                <th class="text-right pb-3 text-sm font-medium text-gray-500 dark:text-gray-400">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                            <?php foreach ($itensPedido as $item): ?>
+                            <tr>
+                                <td class="py-3 text-gray-900 dark:text-gray-100">
+                                    <span class="font-semibold"><?= htmlspecialchars($item['nome_produto']) ?></span>
+                                    <?php if (!empty($item['produto_codigo'])): ?>
+                                        <span class="text-xs text-gray-500 ml-1">(<?= htmlspecialchars($item['produto_codigo']) ?>)</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="py-3 text-center text-gray-600 dark:text-gray-400"><?= number_format($item['quantidade'], 2, ',', '.') ?></td>
+                                <td class="py-3 text-right text-gray-600 dark:text-gray-400"><?= formatarMoeda($item['valor_unitario']) ?></td>
+                                <td class="py-3 text-right font-semibold text-gray-900 dark:text-gray-100"><?= formatarMoeda($item['valor_total']) ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+
             <!-- Rateios -->
             <?php if (!empty($rateios)): ?>
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
@@ -370,4 +525,142 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
             </div>
         </div>
     </div>
+
+    <!-- Modal de Pedido Vinculado -->
+    <?php if (!empty($pedidoVinculado)): ?>
+    <div x-show="showPedidoModal" 
+         x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto"
+         @click.self="showPedidoModal = false">
+        <div class="flex items-center justify-center min-h-screen px-4 py-8">
+            <div class="fixed inset-0 bg-gray-900/50 transition-opacity"></div>
+            <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full overflow-hidden max-h-[90vh] flex flex-col">
+                <div class="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 flex justify-between items-center">
+                    <h3 class="text-xl font-bold text-white">
+                        <span class="inline-flex items-center">
+                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                            </svg>
+                            Pedido #<?= htmlspecialchars($pedidoVinculado['numero_pedido'] ?? $pedidoVinculado['id']) ?>
+                        </span>
+                    </h3>
+                    <button @click="showPedidoModal = false" class="text-white hover:text-gray-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="p-6 overflow-y-auto flex-1">
+                    <!-- Informações do Pedido -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Data do Pedido</p>
+                            <p class="text-lg font-bold text-gray-900 dark:text-gray-100"><?= formatarData($pedidoVinculado['data_pedido'] ?? '') ?></p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Origem</p>
+                            <p class="text-lg font-bold text-gray-900 dark:text-gray-100"><?= ucfirst(htmlspecialchars($pedidoVinculado['origem'] ?? 'manual')) ?></p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Status</p>
+                            <p class="text-lg font-bold text-gray-900 dark:text-gray-100"><?= ucfirst(htmlspecialchars($pedidoVinculado['status'] ?? 'pendente')) ?></p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Cliente</p>
+                            <p class="text-lg font-bold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($pedidoVinculado['cliente_nome'] ?? $conta['cliente_nome'] ?? 'N/A') ?></p>
+                        </div>
+                    </div>
+
+                    <!-- Resumo Financeiro -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                        <div class="text-center">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Valor Total</p>
+                            <p class="text-xl font-bold text-gray-900 dark:text-gray-100"><?= formatarMoeda($pedidoVinculado['valor_total'] ?? 0) ?></p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Custo Total</p>
+                            <p class="text-xl font-bold text-red-600"><?= formatarMoeda($pedidoVinculado['valor_custo_total'] ?? 0) ?></p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Lucro</p>
+                            <p class="text-xl font-bold text-green-600"><?= formatarMoeda($pedidoVinculado['lucro'] ?? 0) ?></p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Margem de Lucro</p>
+                            <p class="text-xl font-bold text-blue-600"><?= number_format($pedidoVinculado['margem_lucro'] ?? 0, 2, ',', '.') ?>%</p>
+                        </div>
+                    </div>
+
+                    <!-- Itens do Pedido -->
+                    <?php if (!empty($itensPedido)): ?>
+                    <h4 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Itens do Pedido (<?= count($itensPedido) ?> item<?= count($itensPedido) > 1 ? 's' : '' ?>)</h4>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Produto</th>
+                                    <th class="text-center py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Qtd</th>
+                                    <th class="text-right py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Valor Unit.</th>
+                                    <th class="text-right py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Custo Unit.</th>
+                                    <th class="text-right py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Total</th>
+                                    <th class="text-right py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Lucro</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                <?php foreach ($itensPedido as $item): 
+                                    $lucroItem = ($item['valor_total'] ?? 0) - ($item['custo_total'] ?? 0);
+                                    $margemItem = ($item['valor_total'] ?? 0) > 0 ? ($lucroItem / $item['valor_total']) * 100 : 0;
+                                ?>
+                                <tr>
+                                    <td class="py-3 px-4 text-gray-900 dark:text-gray-100">
+                                        <span class="font-semibold"><?= htmlspecialchars($item['nome_produto']) ?></span>
+                                        <?php if (!empty($item['produto_codigo'])): ?>
+                                            <span class="block text-xs text-gray-500"><?= htmlspecialchars($item['produto_codigo']) ?></span>
+                                        <?php endif; ?>
+                                        <?php if (!empty($item['codigo_produto_origem'])): ?>
+                                            <span class="block text-xs text-gray-400">SKU: <?= htmlspecialchars($item['codigo_produto_origem']) ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="py-3 px-4 text-center text-gray-600 dark:text-gray-400"><?= number_format($item['quantidade'], 2, ',', '.') ?></td>
+                                    <td class="py-3 px-4 text-right text-gray-600 dark:text-gray-400"><?= formatarMoeda($item['valor_unitario']) ?></td>
+                                    <td class="py-3 px-4 text-right text-red-500"><?= formatarMoeda($item['custo_unitario'] ?? 0) ?></td>
+                                    <td class="py-3 px-4 text-right font-semibold text-gray-900 dark:text-gray-100"><?= formatarMoeda($item['valor_total']) ?></td>
+                                    <td class="py-3 px-4 text-right">
+                                        <span class="font-semibold text-green-600"><?= formatarMoeda($lucroItem) ?></span>
+                                        <span class="block text-xs text-gray-500">(<?= number_format($margemItem, 1, ',', '.') ?>%)</span>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                            <tfoot class="bg-gray-50 dark:bg-gray-700/50">
+                                <tr class="font-bold">
+                                    <td class="py-3 px-4 text-gray-900 dark:text-gray-100" colspan="2">TOTAL</td>
+                                    <td class="py-3 px-4 text-right text-gray-600 dark:text-gray-400">-</td>
+                                    <td class="py-3 px-4 text-right text-red-600"><?= formatarMoeda($pedidoVinculado['valor_custo_total'] ?? 0) ?></td>
+                                    <td class="py-3 px-4 text-right text-gray-900 dark:text-gray-100"><?= formatarMoeda($pedidoVinculado['valor_total'] ?? 0) ?></td>
+                                    <td class="py-3 px-4 text-right text-green-600"><?= formatarMoeda($pedidoVinculado['lucro'] ?? 0) ?></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <?php else: ?>
+                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <svg class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                        </svg>
+                        <p>Nenhum item encontrado neste pedido.</p>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                
+                <div class="bg-gray-50 dark:bg-gray-700/50 px-6 py-4 flex justify-end">
+                    <button @click="showPedidoModal = false" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 </div>

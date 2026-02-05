@@ -63,6 +63,20 @@
                     </div>
                 </div>
 
+                <!-- Código do Cliente -->
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        Código do Cliente
+                    </label>
+                    <div class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        <?php if (!empty($cliente['codigo_cliente'])): ?>
+                            <?= htmlspecialchars($cliente['codigo_cliente']) ?>
+                        <?php else: ?>
+                            <span class="text-gray-500 dark:text-gray-400">Não informado</span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <!-- Status -->
                 <div class="space-y-2">
                     <label class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">

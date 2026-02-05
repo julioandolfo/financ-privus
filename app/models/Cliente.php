@@ -94,6 +94,14 @@ class Cliente extends Model
             }
         }
         
+        // Se tem codigo_cliente, tenta buscar por ele
+        if (!empty($data['codigo_cliente'])) {
+            $cliente = $this->findByCodigoCliente($data['codigo_cliente'], $empresaId);
+            if ($cliente) {
+                return $cliente;
+            }
+        }
+        
         // Se não encontrou, cria novo cliente
         $data['empresa_id'] = $empresaId;
         
@@ -112,6 +120,27 @@ class Cliente extends Model
     }
     
     /**
+     * Busca cliente por Código do Cliente
+     */
+    public function findByCodigoCliente($codigoCliente, $empresaId = null)
+    {
+        $sql = "SELECT * FROM {$this->table} WHERE codigo_cliente = :codigo_cliente";
+        
+        $params = ['codigo_cliente' => $codigoCliente];
+        
+        if ($empresaId) {
+            $sql .= " AND empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
+        }
+        
+        $sql .= " LIMIT 1";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    /**
      * Detecta tipo de pessoa por CPF/CNPJ
      */
     private function detectarTipo($cpfCnpj)
@@ -126,9 +155,9 @@ class Cliente extends Model
     public function create($data)
     {
         $sql = "INSERT INTO {$this->table} 
-                (empresa_id, tipo, nome_razao_social, cpf_cnpj, email, telefone, endereco, ativo) 
+                (empresa_id, codigo_cliente, tipo, nome_razao_social, cpf_cnpj, email, telefone, endereco, ativo) 
                 VALUES 
-                (:empresa_id, :tipo, :nome_razao_social, :cpf_cnpj, :email, :telefone, :endereco, :ativo)";
+                (:empresa_id, :codigo_cliente, :tipo, :nome_razao_social, :cpf_cnpj, :email, :telefone, :endereco, :ativo)";
         
         $stmt = $this->db->prepare($sql);
         
@@ -138,6 +167,7 @@ class Cliente extends Model
         
         $stmt->execute([
             'empresa_id' => $data['empresa_id'],
+            'codigo_cliente' => $data['codigo_cliente'] ?? null,
             'tipo' => $data['tipo'],
             'nome_razao_social' => $data['nome_razao_social'],
             'cpf_cnpj' => $data['cpf_cnpj'] ?? null,
@@ -157,6 +187,7 @@ class Cliente extends Model
     {
         $sql = "UPDATE {$this->table} SET 
                 empresa_id = :empresa_id,
+                codigo_cliente = :codigo_cliente,
                 tipo = :tipo,
                 nome_razao_social = :nome_razao_social,
                 cpf_cnpj = :cpf_cnpj,
@@ -175,6 +206,7 @@ class Cliente extends Model
         return $stmt->execute([
             'id' => $id,
             'empresa_id' => $data['empresa_id'],
+            'codigo_cliente' => $data['codigo_cliente'] ?? null,
             'tipo' => $data['tipo'],
             'nome_razao_social' => $data['nome_razao_social'],
             'cpf_cnpj' => $data['cpf_cnpj'] ?? null,
