@@ -313,20 +313,32 @@ class ApiRestController extends Controller
                 }
             }
             
+            // Se já temos um cliente_id no input, usar ele
+            if (empty($clienteId) && !empty($input['cliente_id'])) {
+                $clienteId = $input['cliente_id'];
+            }
+            
             // 2. Auto-cadastro de PEDIDO com PRODUTOS (se enviado)
             if (isset($input['criar_pedido']) && $input['criar_pedido'] === true && isset($input['pedido'])) {
                 $pedidoData = $input['pedido'];
                 
                 // Criar pedido
                 $pedidoModel = new PedidoVinculado();
-                $numeroPedido = $pedidoData['numero_pedido'] ?? 'API-' . date('YmdHis');
+                // Usar numero_documento da conta como numero_pedido se não informado
+                $numeroPedido = $pedidoData['numero_pedido'] ?? $input['numero_documento'] ?? 'API-' . date('YmdHis');
+                
+                // Tratar data do pedido (converter datetime para date se necessário)
+                $dataPedido = $pedidoData['data_pedido'] ?? $input['data_emissao'] ?? date('Y-m-d');
+                if (strlen($dataPedido) > 10) {
+                    $dataPedido = substr($dataPedido, 0, 10); // Extrai apenas YYYY-MM-DD
+                }
                 
                 $pedidoId = $pedidoModel->create([
                     'empresa_id' => $input['empresa_id'],
                     'cliente_id' => $clienteId ?? $input['cliente_id'] ?? null,
                     'numero_pedido' => $numeroPedido,
                     'origem_id' => $numeroPedido,
-                    'data_pedido' => $input['data_emissao'],
+                    'data_pedido' => $dataPedido,
                     'status' => 'concluido',
                     'origem' => 'api',
                     'valor_total' => 0 // Será calculado
@@ -365,6 +377,7 @@ class ApiRestController extends Controller
                             $valorUnitario = $produtoData['valor_unitario'] ?? $produto['preco_venda'];
                             $custoUnitario = $produtoData['custo_unitario'] ?? $produto['custo_unitario'] ?? 0;
                             $valorTotal = $quantidade * $valorUnitario;
+                            $custoTotal = $quantidade * $custoUnitario;
                             $nomeProduto = $produtoData['nome'] ?? $produto['nome'] ?? 'Produto';
                             
                             // Criar item do pedido
@@ -376,17 +389,18 @@ class ApiRestController extends Controller
                                 'quantidade' => $quantidade,
                                 'valor_unitario' => $valorUnitario,
                                 'custo_unitario' => $custoUnitario,
+                                'custo_total' => $custoTotal,
                                 'valor_total' => $valorTotal
                             ]);
                             
                             $valorTotalPedido += $valorTotal;
-                            $valorCustoTotal += ($quantidade * $custoUnitario);
+                            $valorCustoTotal += $custoTotal;
                             $produtosVinculados++;
                         }
                     }
                     
-                    // Atualizar valor_total do pedido
-                    $pedidoModel->update($pedidoId, ['valor_total' => $valorTotalPedido]);
+                    // Atualizar valor_total e valor_custo_total do pedido
+                    $pedidoModel->updateTotais($pedidoId, $valorTotalPedido, $valorCustoTotal);
                     
                     // Se não foi informado valor_total, usar o do pedido
                     if (empty($input['valor_total'])) {

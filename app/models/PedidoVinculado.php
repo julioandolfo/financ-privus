@@ -219,6 +219,24 @@ class PedidoVinculado extends Model
     }
     
     /**
+     * Atualizar apenas os totais do pedido
+     */
+    public function updateTotais($id, $valorTotal, $valorCustoTotal)
+    {
+        $sql = "UPDATE {$this->table} SET 
+                valor_total = :valor_total, 
+                valor_custo_total = :valor_custo_total, 
+                data_atualizacao = NOW() 
+                WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            'id' => $id,
+            'valor_total' => $valorTotal,
+            'valor_custo_total' => $valorCustoTotal
+        ]);
+    }
+    
+    /**
      * Calcular totais do pedido baseado nos itens
      */
     public function recalcularTotais($id)
