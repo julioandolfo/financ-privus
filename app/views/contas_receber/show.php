@@ -5,66 +5,73 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
 
 <div class="max-w-6xl mx-auto animate-fade-in" x-data="{ showCancelModal: false, showPedidoModal: false }" @keydown.escape.window="showCancelModal = false; showPedidoModal = false">
     <!-- Header -->
-    <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl shadow-xl p-8 mb-8">
-        <div class="flex justify-between items-center">
-            <div>
-                <h1 class="text-3xl font-bold text-white mb-2">Detalhes da Conta a Receber</h1>
-                <p class="text-green-100">Visualize todas as informações da receita</p>
+    <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl shadow-xl p-6 mb-8">
+        <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+            <div class="flex-shrink-0">
+                <h1 class="text-2xl lg:text-3xl font-bold text-white mb-1">Detalhes da Conta a Receber</h1>
+                <p class="text-green-100 text-sm">Doc: <?= htmlspecialchars($conta['numero_documento']) ?></p>
             </div>
-            <div class="flex items-center space-x-3">
-                <?php if (!empty($pedidoVinculado)): ?>
-                    <button @click="showPedidoModal = true" class="<?= !empty($pedidoVinculado['bonificado']) ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600' : 'bg-purple-500 hover:bg-purple-600' ?> text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg flex items-center space-x-2">
-                        <?php if (!empty($pedidoVinculado['bonificado'])): ?>
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
-                            </svg>
-                        <?php else: ?>
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            
+            <!-- Botões organizados em grupos -->
+            <div class="flex flex-col gap-3">
+                <!-- Linha 1: Ações principais -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <?php if (!empty($pedidoVinculado)): ?>
+                        <button @click="showPedidoModal = true" class="<?= !empty($pedidoVinculado['bonificado']) ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600' : 'bg-purple-500 hover:bg-purple-600' ?> text-white px-4 py-2 rounded-lg font-medium transition-all shadow-lg flex items-center space-x-2 text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                             </svg>
-                        <?php endif; ?>
-                        <span>Ver Pedido #<?= htmlspecialchars($pedidoVinculado['numero_pedido'] ?? $pedidoVinculado['id']) ?></span>
-                        <?php if (!empty($pedidoVinculado['bonificado'])): ?>
-                            <span class="bg-white/20 px-2 py-0.5 rounded text-xs">BONIFICADO</span>
-                        <?php endif; ?>
-                    </button>
-                <?php endif; ?>
-                <?php if ($conta['status'] != 'recebido' && $conta['status'] != 'cancelado'): ?>
-                    <a href="/contas-receber/<?= $conta['id'] ?>/baixar" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg flex items-center space-x-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            <span>Pedido #<?= htmlspecialchars($pedidoVinculado['numero_pedido'] ?? $pedidoVinculado['id']) ?></span>
+                            <?php if (!empty($pedidoVinculado['bonificado'])): ?>
+                                <span class="bg-white/20 px-1.5 py-0.5 rounded text-xs">BONIF</span>
+                            <?php endif; ?>
+                        </button>
+                    <?php endif; ?>
+                    
+                    <?php if ($conta['status'] != 'recebido' && $conta['status'] != 'cancelado'): ?>
+                        <a href="/contas-receber/<?= $conta['id'] ?>/baixar" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-lg flex items-center space-x-2 text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                            <span>Baixar/Receber</span>
+                        </a>
+                    <?php endif; ?>
+                    
+                    <?php if ($conta['status'] != 'cancelado'): ?>
+                        <a href="/contas-receber/<?= $conta['id'] ?>/edit" class="bg-white text-green-600 px-4 py-2 rounded-lg font-medium hover:bg-green-50 transition-all shadow-lg flex items-center space-x-2 text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            <span>Editar</span>
+                        </a>
+                    <?php endif; ?>
+                </div>
+                
+                <!-- Linha 2: Ações secundárias -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <?php if ($conta['status'] == 'recebido' || $conta['status'] == 'parcial'): ?>
+                        <button @click="showCancelModal = true" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-medium transition-all shadow flex items-center space-x-2 text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                            </svg>
+                            <span>Cancelar Recebimento</span>
+                        </button>
+                    <?php endif; ?>
+                    
+                    <a href="/contas-receber/<?= $conta['id'] ?>/historico" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg font-medium transition-all flex items-center space-x-2 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
-                        <span>Baixar/Receber</span>
+                        <span>Histórico</span>
                     </a>
-                <?php endif; ?>
-                <?php if ($conta['status'] == 'recebido' || $conta['status'] == 'parcial'): ?>
-                    <button @click="showCancelModal = true" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg flex items-center space-x-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                    
+                    <a href="/contas-receber" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg font-medium transition-all flex items-center space-x-2 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                         </svg>
-                        <span>Cancelar Recebimento</span>
-                    </button>
-                <?php endif; ?>
-                <?php if ($conta['status'] != 'cancelado'): ?>
-                    <a href="/contas-receber/<?= $conta['id'] ?>/edit" class="bg-white text-green-600 px-6 py-3 rounded-xl font-semibold hover:bg-green-50 transition-all shadow-lg flex items-center space-x-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                        </svg>
-                        <span>Editar</span>
+                        <span>Voltar</span>
                     </a>
-                <?php endif; ?>
-                <a href="/contas-receber/<?= $conta['id'] ?>/historico" class="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-semibold transition-all flex items-center space-x-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    <span>Histórico</span>
-                </a>
-                <a href="/contas-receber" class="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-semibold transition-all flex items-center space-x-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                    </svg>
-                    <span>Voltar</span>
-                </a>
+                </div>
             </div>
         </div>
     </div>
@@ -359,7 +366,17 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                 </div>
                 
                 <!-- Info do Cliente -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-cyan-50 dark:bg-cyan-900/20 rounded-xl">
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-cyan-50 dark:bg-cyan-900/20 rounded-xl">
+                    <div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Código</p>
+                        <p class="text-lg font-bold text-cyan-600 dark:text-cyan-400">
+                            <?php if (!empty($clienteVinculado['codigo_cliente'])): ?>
+                                <?= htmlspecialchars($clienteVinculado['codigo_cliente']) ?>
+                            <?php else: ?>
+                                <span class="text-gray-400">-</span>
+                            <?php endif; ?>
+                        </p>
+                    </div>
                     <div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Nome / Razão Social</p>
                         <p class="text-lg font-bold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($clienteVinculado['nome_razao_social']) ?></p>
@@ -398,14 +415,6 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                     </div>
                 </div>
                 
-                <?php if (!empty($clienteVinculado['codigo_cliente'])): ?>
-                <div class="mt-4 flex items-center text-sm text-gray-600 dark:text-gray-400">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
-                    </svg>
-                    Código do Cliente: <span class="font-semibold ml-1"><?= htmlspecialchars($clienteVinculado['codigo_cliente']) ?></span>
-                </div>
-                <?php endif; ?>
             </div>
             <?php endif; ?>
 
