@@ -98,11 +98,9 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                                 </svg>
                             </a>
-                            <?php if (!empty($conta['cliente_codigo'])): ?>
-                                <span class="inline-flex items-center px-2 py-0.5 mt-1 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                                    Cód: <?= htmlspecialchars($conta['cliente_codigo']) ?>
-                                </span>
-                            <?php endif; ?>
+                            <span class="inline-flex items-center px-2 py-0.5 mt-1 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                                Cód: <?= !empty($conta['cliente_codigo']) ? htmlspecialchars($conta['cliente_codigo']) : 'Não informado' ?>
+                            </span>
                         <?php else: ?>
                             <p class="text-lg font-semibold text-gray-500 dark:text-gray-400">Não informado</p>
                         <?php endif; ?>
