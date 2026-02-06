@@ -276,6 +276,9 @@ curl -X GET "https://seu-dominio.com/api/v1/pedidos/1" \
   "total": 450.00,
   "status": "pendente",
   "origem": "externo",
+  "frete": 25.00,
+  "desconto": 10.00,
+  "bonificado": 0,
   "observacoes": "Cliente preferencial",
   "itens": [
     {
@@ -302,6 +305,9 @@ curl -X GET "https://seu-dominio.com/api/v1/pedidos/1" \
 - ✅ `total` (decimal, obrigatório): Valor total do pedido
 - ⚪ `status` (string, opcional): Status (padrão: pendente)
 - ⚪ `origem` (string, opcional): Origem (padrão: externo)
+- ⚪ `frete` (decimal, opcional): Valor do frete - deduzido do lucro
+- ⚪ `desconto` (decimal, opcional): Valor do desconto concedido
+- ⚪ `bonificado` (integer, opcional): 1 = pedido bonificado, 0 = não bonificado (padrão: 0)
 - ⚪ `observacoes` (text, opcional): Observações
 - ⚪ `itens` (array, opcional): Array de itens do pedido
 

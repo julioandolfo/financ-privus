@@ -1731,21 +1731,94 @@ class ApiRestController extends Controller
         
         $input = json_decode(file_get_contents('php://input'), true);
         
-        $valorRecebido = $input['valor_recebido'] ?? $parcela['valor_parcela'];
+        $saldoRestante = $parcela['valor_parcela'] - ($parcela['valor_recebido'] ?? 0);
+        $valorRecebido = $input['valor_recebido'] ?? $saldoRestante;
         $dataRecebimento = $input['data_recebimento'] ?? date('Y-m-d');
         $formaRecebimentoId = $input['forma_recebimento_id'] ?? null;
         $contaBancariaId = $input['conta_bancaria_id'] ?? null;
+        $observacoes = $input['observacoes'] ?? null;
+        
+        // Validar valor
+        if ($valorRecebido <= 0) {
+            $data = ['success' => false, 'error' => 'Valor do recebimento deve ser maior que zero'];
+            $this->logSuccess($request, 400, $data);
+            return $response->json($data, 400);
+        }
+        
+        if ($valorRecebido > $saldoRestante) {
+            $data = ['success' => false, 'error' => 'Valor do recebimento não pode ser maior que o saldo restante (R$ ' . number_format($saldoRestante, 2, ',', '.') . ')'];
+            $this->logSuccess($request, 400, $data);
+            return $response->json($data, 400);
+        }
         
         $result = $parcelaModel->registrarRecebimento($id, $valorRecebido, $dataRecebimento, $formaRecebimentoId, $contaBancariaId);
         
         if ($result) {
-            $data = ['success' => true, 'message' => 'Recebimento registrado com sucesso'];
+            // Atualizar status da conta principal
+            $contaId = $parcela['conta_receber_id'];
+            $this->atualizarStatusContaPorParcelas($contaId);
+            
+            // Buscar dados atualizados
+            $parcelaAtualizada = $parcelaModel->findById($id);
+            $resumo = $parcelaModel->getResumoByContaReceber($contaId);
+            
+            $data = [
+                'success' => true, 
+                'message' => 'Recebimento registrado com sucesso',
+                'parcela' => [
+                    'id' => $parcelaAtualizada['id'],
+                    'numero_parcela' => $parcelaAtualizada['numero_parcela'],
+                    'valor_parcela' => floatval($parcelaAtualizada['valor_parcela']),
+                    'valor_recebido' => floatval($parcelaAtualizada['valor_recebido']),
+                    'saldo_restante' => floatval($parcelaAtualizada['valor_parcela'] - $parcelaAtualizada['valor_recebido']),
+                    'status' => $parcelaAtualizada['status'],
+                    'data_recebimento' => $parcelaAtualizada['data_recebimento']
+                ],
+                'conta' => [
+                    'id' => $contaId,
+                    'total_parcelas' => intval($resumo['total_parcelas']),
+                    'parcelas_recebidas' => intval($resumo['parcelas_recebidas']),
+                    'total_recebido' => floatval($resumo['total_recebido']),
+                    'total_pendente' => floatval($resumo['total_valor'] - $resumo['total_recebido'])
+                ]
+            ];
             $this->logSuccess($request, 200, $data);
             $response->json($data);
         } else {
             $data = ['success' => false, 'error' => 'Erro ao registrar recebimento'];
             $this->logSuccess($request, 500, $data);
             $response->json($data, 500);
+        }
+    }
+    
+    /**
+     * Atualiza o status da conta a receber baseado nas parcelas
+     */
+    private function atualizarStatusContaPorParcelas($contaId)
+    {
+        $parcelaModel = new ParcelaReceber();
+        $resumo = $parcelaModel->getResumoByContaReceber($contaId);
+        
+        if (!$resumo || $resumo['total_parcelas'] == 0) {
+            return;
+        }
+        
+        $contaReceberModel = new ContaReceber();
+        
+        // Se todas as parcelas foram recebidas
+        if ($resumo['parcelas_recebidas'] == $resumo['total_parcelas']) {
+            $contaReceberModel->update($contaId, [
+                'status' => 'recebido',
+                'valor_recebido' => $resumo['total_recebido'],
+                'data_recebimento' => date('Y-m-d')
+            ]);
+        } 
+        // Se pelo menos uma parcela foi recebida (parcial ou total)
+        elseif ($resumo['total_recebido'] > 0) {
+            $contaReceberModel->update($contaId, [
+                'status' => 'parcial',
+                'valor_recebido' => $resumo['total_recebido']
+            ]);
         }
     }
 }

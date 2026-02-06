@@ -248,8 +248,11 @@ GET /api/v1/contas-receber/{id}
             "numero_pedido": "PED-001",
             "valor_total": 2500.00,
             "valor_custo_total": 1500.00,
-            "lucro": 1000.00,
-            "margem_lucro": 66.67,
+            "frete": 50.00,
+            "desconto": 25.00,
+            "bonificado": 0,
+            "lucro": 925.00,
+            "margem_lucro": 61.67,
             "itens": [
                 {
                     "id": 10,
@@ -397,6 +400,9 @@ Content-Type: application/json
     "criar_pedido": true,
     "pedido": {
         "numero_pedido": "PED-2025-001",
+        "frete": 25.00,
+        "desconto": 10.00,
+        "bonificado": 0,
         "produtos": [
             {
                 "sku": "PROD-EXTERNO-001",
@@ -417,6 +423,11 @@ Content-Type: application/json
     }
 }
 ```
+
+**Campos do Pedido:**
+- ⚪ `frete` (decimal, opcional): Valor do frete - será deduzido do lucro
+- ⚪ `desconto` (decimal, opcional): Valor do desconto concedido
+- ⚪ `bonificado` (integer, opcional): 1 = pedido bonificado, 0 = não (padrão: 0)
 
 > **Auto-cadastro de Cliente:** O sistema buscará o cliente por `cpf_cnpj` ou `codigo_cliente`. Se encontrar, vincula à conta. Se não encontrar, cria automaticamente com os dados fornecidos.
 
@@ -486,6 +497,9 @@ Content-Type: application/json
 | `numero_pedido` | string | Não | Número do pedido (se não informado, gera automático) |
 | `data_pedido` | date | Sim | Data do pedido (YYYY-MM-DD) |
 | `status` | string | Não | Status do pedido (pendente, processando, concluido, cancelado) |
+| `frete` | decimal | Não | Valor do frete - será deduzido do lucro |
+| `desconto` | decimal | Não | Valor do desconto concedido |
+| `bonificado` | integer | Não | 1 = pedido bonificado (grátis), 0 = normal (padrão: 0) |
 | `produtos` | array | Sim | Lista de produtos do pedido |
 
 **Campos do objeto `produtos[]`:**
@@ -565,6 +579,127 @@ DELETE /api/v1/contas-receber/{id}
 ```
 
 **Nota:** Excluir uma conta a receber também exclui o pedido e itens vinculados (CASCADE).
+
+---
+
+## 📋 Parcelas de Contas a Receber
+
+### Listar Parcelas de uma Conta
+
+```http
+GET /api/v1/contas-receber/{id}/parcelas
+```
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "data": {
+        "parcelas": [
+            {
+                "id": 1,
+                "numero_parcela": 1,
+                "valor_parcela": 500.00,
+                "valor_recebido": 0.00,
+                "data_vencimento": "2025-02-15",
+                "data_recebimento": null,
+                "status": "pendente"
+            },
+            {
+                "id": 2,
+                "numero_parcela": 2,
+                "valor_parcela": 500.00,
+                "valor_recebido": 0.00,
+                "data_vencimento": "2025-03-15",
+                "data_recebimento": null,
+                "status": "pendente"
+            }
+        ],
+        "resumo": {
+            "total_parcelas": 2,
+            "parcelas_recebidas": 0,
+            "total_valor": 1000.00,
+            "total_recebido": 0.00
+        }
+    }
+}
+```
+
+### Visualizar Parcela Específica
+
+```http
+GET /api/v1/parcelas-receber/{id}
+```
+
+**Resposta:**
+```json
+{
+    "success": true,
+    "data": {
+        "id": 1,
+        "conta_receber_id": 10,
+        "numero_parcela": 1,
+        "valor_parcela": 500.00,
+        "valor_recebido": 0.00,
+        "data_vencimento": "2025-02-15",
+        "data_recebimento": null,
+        "status": "pendente",
+        "forma_recebimento_id": null,
+        "conta_bancaria_id": null
+    }
+}
+```
+
+### Dar Baixa/Receber Parcela
+
+```http
+POST /api/v1/parcelas-receber/{id}/baixar
+Content-Type: application/json
+
+{
+    "valor_recebido": 500.00,
+    "data_recebimento": "2025-02-15",
+    "forma_recebimento_id": 1,
+    "conta_bancaria_id": 2,
+    "observacoes": "Recebido via PIX"
+}
+```
+
+**Campos:**
+- ⚪ `valor_recebido` (decimal, opcional): Valor recebido. Se não informado, usa o saldo restante da parcela
+- ⚪ `data_recebimento` (date, opcional): Data do recebimento (padrão: data atual)
+- ⚪ `forma_recebimento_id` (integer, opcional): ID da forma de recebimento
+- ⚪ `conta_bancaria_id` (integer, opcional): ID da conta bancária
+- ⚪ `observacoes` (string, opcional): Observações do recebimento
+
+**Resposta de Sucesso:**
+```json
+{
+    "success": true,
+    "message": "Recebimento registrado com sucesso",
+    "parcela": {
+        "id": 1,
+        "numero_parcela": 1,
+        "valor_parcela": 500.00,
+        "valor_recebido": 500.00,
+        "saldo_restante": 0.00,
+        "status": "recebido",
+        "data_recebimento": "2025-02-15"
+    },
+    "conta": {
+        "id": 10,
+        "total_parcelas": 2,
+        "parcelas_recebidas": 1,
+        "total_recebido": 500.00,
+        "total_pendente": 500.00
+    }
+}
+```
+
+**Notas:**
+- O valor recebido não pode ser maior que o saldo restante da parcela
+- Quando todas as parcelas são pagas, a conta principal é automaticamente marcada como "recebido"
+- Se houver recebimento parcial, a conta principal é marcada como "parcial"
 
 ---
 
@@ -783,8 +918,11 @@ GET /api/v1/pedidos
             "data_pedido": "2025-01-20",
             "valor_total": 250.00,
             "valor_custo_total": 150.00,
-            "lucro": 100.00,
-            "margem_lucro": 66.67,
+            "frete": 10.00,
+            "desconto": 5.00,
+            "bonificado": 0,
+            "lucro": 90.00,
+            "margem_lucro": 60.00,
             "total_itens": 2
         }
     ]
@@ -813,8 +951,11 @@ GET /api/v1/pedidos/{id}
         "data_pedido": "2025-01-20 10:30:00",
         "valor_total": 250.00,
         "valor_custo_total": 150.00,
-        "lucro": 100.00,
-        "margem_lucro": 66.67,
+        "frete": 10.00,
+        "desconto": 5.00,
+        "bonificado": 0,
+        "lucro": 90.00,
+        "margem_lucro": 60.00,
         "itens": [
             {
                 "id": 10,
@@ -866,6 +1007,9 @@ Content-Type: application/json
     "data_pedido": "2025-01-20",
     "status": "pendente",
     "origem": "manual",
+    "frete": 20.00,
+    "desconto": 5.00,
+    "bonificado": 0,
     "produtos": [
         {
             "produto_id": 1,
@@ -877,6 +1021,11 @@ Content-Type: application/json
 }
 ```
 
+**Campos do Pedido:**
+- ⚪ `frete` (decimal, opcional): Valor do frete - será deduzido do lucro
+- ⚪ `desconto` (decimal, opcional): Valor do desconto concedido
+- ⚪ `bonificado` (integer, opcional): 1 = pedido bonificado (grátis), 0 = normal (padrão: 0)
+
 **Resposta:**
 ```json
 {
@@ -884,8 +1033,11 @@ Content-Type: application/json
     "id": 25,
     "valor_total": 450.00,
     "valor_custo_total": 270.00,
-    "lucro": 180.00,
-    "margem_lucro": 66.67,
+    "frete": 20.00,
+    "desconto": 5.00,
+    "bonificado": 0,
+    "lucro": 160.00,
+    "margem_lucro": 35.56,
     "message": "Pedido criado com sucesso"
 }
 ```
@@ -974,8 +1126,11 @@ GET /api/v1/pedidos/{id}/analise
         "numero_pedido": "PED-001",
         "valor_total": 250.00,
         "valor_custo_total": 150.00,
-        "lucro_bruto": 100.00,
-        "margem_lucro_percentual": 66.67,
+        "frete": 10.00,
+        "desconto": 5.00,
+        "bonificado": 0,
+        "lucro_bruto": 90.00,
+        "margem_lucro_percentual": 60.00,
         "ticket_medio_item": 125.00,
         "itens": [
             {
@@ -1504,16 +1659,21 @@ curl -X POST https://seudominio.com/api/v1/contas-receber \
       "numero_pedido": "PED-123",
       "data_pedido": "2025-01-20",
       "status": "concluido",
+      "frete": 30.00,
+      "desconto": 15.00,
+      "bonificado": 0,
       "produtos": [
         {
           "produto_id": 1,
           "quantidade": 5,
-          "valor_unitario": 100.00
+          "valor_unitario": 100.00,
+          "custo_unitario": 60.00
         },
         {
           "produto_id": 2,
           "quantidade": 2,
-          "valor_unitario": 250.00
+          "valor_unitario": 250.00,
+          "custo_unitario": 150.00
         }
       ]
     }

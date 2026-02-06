@@ -61,9 +61,18 @@ class ApiDocController extends Controller
         return [
             'info' => [
                 'title' => 'API Financeiro Empresarial',
-                'version' => '1.2.0',
-                'description' => 'API RESTful para integração com o Sistema Financeiro Empresarial. Gerencie contas a pagar/receber, produtos, clientes, fornecedores e movimentações financeiras. ⭐ NOVO: Suporte a pedidos com produtos, auto-cadastro via SKU e cálculo automático de lucro/margem.',
+                'version' => '1.3.0',
+                'description' => 'API RESTful para integração com o Sistema Financeiro Empresarial. Gerencie contas a pagar/receber, produtos, clientes, fornecedores e movimentações financeiras. ⭐ NOVO: Suporte a frete, desconto e bonificado em pedidos. Baixa de parcelas com atualização automática da conta.',
                 'changelog' => [
+                    'v1.3.0 (Fevereiro 2026)' => [
+                        '🚀 Suporte a BONIFICADO em Pedidos',
+                        '✅ Campo bonificado em pedidos (1 = grátis, 0 = normal)',
+                        '✅ Campo frete em pedidos (deduzido do lucro)',
+                        '✅ Campo desconto em pedidos',
+                        '✅ PATCH /api/v1/pedidos/{id}/frete - Atualizar frete/desconto/bonificado',
+                        '✅ Baixa de parcelas atualiza status da conta principal automaticamente',
+                        '✅ Resposta completa na baixa de parcelas (parcela + resumo da conta)',
+                    ],
                     'v1.2.0 (Janeiro 2026)' => [
                         '🚀 Suporte a PARCELAS em Contas a Receber',
                         '✅ Gerar parcelas automaticamente (número + intervalo)',
@@ -331,19 +340,42 @@ class ApiDocController extends Controller
                         [
                             'method' => 'POST',
                             'endpoint' => '/api/v1/parcelas-receber/{id}/baixar',
-                            'description' => '🆕 Registra recebimento de uma parcela específica',
+                            'description' => '🆕 Registra recebimento de uma parcela específica. Atualiza automaticamente o status da conta principal.',
                             'params' => [
                                 ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID da parcela'],
                             ],
                             'body' => [
-                                'valor_recebido' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor recebido (padrão: valor da parcela)'],
+                                'valor_recebido' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor recebido (padrão: saldo restante da parcela)'],
                                 'data_recebimento' => ['type' => 'date', 'required' => false, 'description' => 'Data do recebimento (padrão: hoje)'],
                                 'forma_recebimento_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da forma de pagamento'],
                                 'conta_bancaria_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da conta bancária'],
+                                'observacoes' => ['type' => 'string', 'required' => false, 'description' => 'Observações do recebimento'],
                             ],
                             'response' => [
                                 'success' => true,
-                                'message' => 'Recebimento registrado com sucesso'
+                                'message' => 'Recebimento registrado com sucesso',
+                                'parcela' => [
+                                    'id' => 1,
+                                    'numero_parcela' => 1,
+                                    'valor_parcela' => 500.00,
+                                    'valor_recebido' => 500.00,
+                                    'saldo_restante' => 0.00,
+                                    'status' => 'recebido',
+                                    'data_recebimento' => '2026-02-05'
+                                ],
+                                'conta' => [
+                                    'id' => 10,
+                                    'total_parcelas' => 3,
+                                    'parcelas_recebidas' => 1,
+                                    'total_recebido' => 500.00,
+                                    'total_pendente' => 1000.00
+                                ]
+                            ],
+                            'example' => [
+                                'valor_recebido' => 500.00,
+                                'data_recebimento' => '2026-02-05',
+                                'forma_recebimento_id' => 2,
+                                'conta_bancaria_id' => 1
                             ]
                         ],
                         [
@@ -825,7 +857,7 @@ class ApiDocController extends Controller
                 
                 'pedidos' => [
                     'name' => 'Pedidos',
-                    'description' => 'Gerenciamento de pedidos vinculados',
+                    'description' => 'Gerenciamento de pedidos vinculados. Suporta frete, desconto e bonificado.',
                     'base_url' => '/api/v1/pedidos',
                     'methods' => [
                         [
@@ -836,6 +868,7 @@ class ApiDocController extends Controller
                                 ['name' => 'status', 'type' => 'string', 'required' => false, 'description' => 'Filtrar por status (pendente, processando, concluido, cancelado)'],
                                 ['name' => 'origem', 'type' => 'string', 'required' => false, 'description' => 'Filtrar por origem (woocommerce, manual, externo)'],
                                 ['name' => 'cliente_id', 'type' => 'integer', 'required' => false, 'description' => 'Filtrar por cliente'],
+                                ['name' => 'bonificado', 'type' => 'integer', 'required' => false, 'description' => '🆕 Filtrar por bonificado (1 = sim, 0 = não)'],
                                 ['name' => 'data_inicio', 'type' => 'date', 'required' => false, 'description' => 'Data inicial (YYYY-MM-DD)'],
                                 ['name' => 'data_fim', 'type' => 'date', 'required' => false, 'description' => 'Data final (YYYY-MM-DD)'],
                             ],
@@ -849,7 +882,13 @@ class ApiDocController extends Controller
                                         'cliente_nome' => 'Cliente Exemplo',
                                         'numero_pedido' => 'PED-2026-001',
                                         'data_pedido' => '2026-01-06',
-                                        'total' => 299.90,
+                                        'valor_total' => 299.90,
+                                        'valor_custo_total' => 180.00,
+                                        'frete' => 15.00,
+                                        'desconto' => 10.00,
+                                        'bonificado' => 0,
+                                        'lucro' => 94.90,
+                                        'margem_lucro' => 31.66,
                                         'status' => 'pendente',
                                         'origem' => 'manual',
                                         'total_itens' => 3,
@@ -870,7 +909,13 @@ class ApiDocController extends Controller
                                 'data' => [
                                     'id' => 1,
                                     'numero_pedido' => 'PED-2026-001',
-                                    'total' => 299.90,
+                                    'valor_total' => 299.90,
+                                    'valor_custo_total' => 180.00,
+                                    'frete' => 15.00,
+                                    'desconto' => 10.00,
+                                    'bonificado' => 0,
+                                    'lucro' => 94.90,
+                                    'margem_lucro' => 31.66,
                                     'status' => 'pendente',
                                     'itens' => [
                                         [
@@ -878,7 +923,10 @@ class ApiDocController extends Controller
                                             'produto_nome' => 'Produto A',
                                             'quantidade' => 2,
                                             'preco_unitario' => 99.90,
+                                            'custo_unitario' => 60.00,
                                             'subtotal' => 199.80,
+                                            'custo_total' => 120.00,
+                                            'lucro_item' => 79.80
                                         ]
                                     ]
                                 ]
@@ -894,6 +942,9 @@ class ApiDocController extends Controller
                                 'numero_pedido' => ['type' => 'string', 'required' => false, 'description' => 'Número do pedido (gerado automaticamente se não fornecido)'],
                                 'data_pedido' => ['type' => 'date', 'required' => true, 'description' => 'Data do pedido (YYYY-MM-DD)'],
                                 'total' => ['type' => 'decimal', 'required' => true, 'description' => 'Valor total do pedido'],
+                                'frete' => ['type' => 'decimal', 'required' => false, 'description' => '🆕 Valor do frete (deduzido do lucro)'],
+                                'desconto' => ['type' => 'decimal', 'required' => false, 'description' => '🆕 Valor do desconto'],
+                                'bonificado' => ['type' => 'integer', 'required' => false, 'description' => '🆕 1 = pedido bonificado (grátis), 0 = normal (padrão: 0)'],
                                 'status' => ['type' => 'string', 'required' => false, 'description' => 'Status (padrão: pendente)'],
                                 'origem' => ['type' => 'string', 'required' => false, 'description' => 'Origem (padrão: externo)'],
                                 'observacoes' => ['type' => 'text', 'required' => false, 'description' => 'Observações do pedido'],
@@ -902,7 +953,61 @@ class ApiDocController extends Controller
                             'response' => [
                                 'success' => true,
                                 'id' => 1,
+                                'valor_total' => 299.90,
+                                'valor_custo_total' => 180.00,
+                                'frete' => 15.00,
+                                'desconto' => 10.00,
+                                'bonificado' => 0,
+                                'lucro' => 94.90,
+                                'margem_lucro' => 31.66,
                                 'message' => 'Pedido criado com sucesso'
+                            ],
+                            'example' => [
+                                'empresa_id' => 1,
+                                'cliente_id' => 10,
+                                'numero_pedido' => 'PED-2026-001',
+                                'data_pedido' => '2026-02-05',
+                                'total' => 299.90,
+                                'frete' => 15.00,
+                                'desconto' => 10.00,
+                                'bonificado' => 0,
+                                'status' => 'pendente',
+                                'itens' => [
+                                    ['produto_id' => 5, 'quantidade' => 2, 'valor_unitario' => 99.90, 'custo_unitario' => 60.00]
+                                ]
+                            ]
+                        ],
+                        [
+                            'method' => 'PATCH',
+                            'endpoint' => '/api/v1/pedidos/{id}/frete',
+                            'description' => '🆕 Atualiza frete, desconto e/ou bonificado de um pedido (rota simplificada)',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID do pedido'],
+                            ],
+                            'body' => [
+                                'frete' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor do frete'],
+                                'desconto' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor do desconto'],
+                                'bonificado' => ['type' => 'integer', 'required' => false, 'description' => '1 = bonificado, 0 = normal'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'message' => 'Pedido atualizado com sucesso',
+                                'pedido' => [
+                                    'id' => 1,
+                                    'numero_pedido' => 'PED-001',
+                                    'valor_total' => 150.00,
+                                    'valor_custo_total' => 80.00,
+                                    'frete' => 25.50,
+                                    'desconto' => 10.00,
+                                    'bonificado' => 1,
+                                    'lucro' => 34.50,
+                                    'margem_lucro' => 23.00
+                                ]
+                            ],
+                            'example' => [
+                                'frete' => 25.50,
+                                'desconto' => 10.00,
+                                'bonificado' => 1
                             ]
                         ],
                         [
@@ -915,6 +1020,9 @@ class ApiDocController extends Controller
                             'body' => [
                                 'status' => ['type' => 'string', 'required' => false, 'description' => 'Novo status do pedido'],
                                 'total' => ['type' => 'decimal', 'required' => false, 'description' => 'Novo total'],
+                                'frete' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor do frete'],
+                                'desconto' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor do desconto'],
+                                'bonificado' => ['type' => 'integer', 'required' => false, 'description' => '1 = bonificado, 0 = normal'],
                                 'observacoes' => ['type' => 'text', 'required' => false, 'description' => 'Observações'],
                             ],
                         ],
