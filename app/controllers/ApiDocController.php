@@ -225,7 +225,7 @@ class ApiDocController extends Controller
                         [
                             'method' => 'POST',
                             'endpoint' => '/api/v1/contas-pagar',
-                            'description' => 'Cria uma nova conta a pagar',
+                            'description' => 'Cria uma nova conta a pagar. Suporta vinculação com pedido e cliente.',
                             'body' => [
                                 'empresa_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da empresa'],
                                 'fornecedor_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID do fornecedor'],
@@ -244,6 +244,8 @@ class ApiDocController extends Controller
                                 'forma_pagamento_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da forma de pagamento'],
                                 'tem_rateio' => ['type' => 'boolean', 'required' => false, 'description' => 'Indica se a conta tem rateio entre empresas. Padrão: false'],
                                 'observacoes' => ['type' => 'text', 'required' => false, 'description' => 'Observações adicionais'],
+                                'pedido_id' => ['type' => 'integer', 'required' => false, 'description' => '🆕 ID do pedido vinculado (requer coluna na tabela)'],
+                                'cliente_id' => ['type' => 'integer', 'required' => false, 'description' => '🆕 ID do cliente vinculado (requer coluna na tabela)'],
                             ],
                             'response' => [
                                 'success' => true,
@@ -259,6 +261,8 @@ class ApiDocController extends Controller
                                 'numero_documento' => 'NF-12345',
                                 'data_competencia' => '2026-01-26',
                                 'data_vencimento' => '2026-02-15',
+                                'pedido_id' => 123,
+                                'cliente_id' => 45,
                                 'observacoes' => 'Pagamento via boleto'
                             ]
                         ],
@@ -478,6 +482,8 @@ class ApiDocController extends Controller
                             'body' => [
                                 'empresa_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da empresa (use GET /api/v1/empresas)'],
                                 'categoria_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da categoria financeira (use GET /api/v1/categorias)'],
+                                'cliente_id' => ['type' => 'integer', 'required' => false, 'description' => '🆕 ID do cliente já existente (alternativa ao objeto cliente)'],
+                                'pedido_id' => ['type' => 'integer', 'required' => false, 'description' => '🆕 ID do pedido já existente para vincular'],
                                 'descricao' => ['type' => 'string', 'required' => true, 'description' => 'Descrição da venda'],
                                 'data_vencimento' => ['type' => 'date', 'required' => true, 'description' => 'Data de vencimento geral (YYYY-MM-DD)'],
                                 'data_emissao' => ['type' => 'date', 'required' => false, 'description' => 'Data de emissão (padrão: hoje)'],
@@ -495,8 +501,9 @@ class ApiDocController extends Controller
                                     'observacoes' => ['type' => 'string', 'required' => false, 'description' => 'Observações da parcela'],
                                 ]],
                                 'criar_pedido' => ['type' => 'boolean', 'required' => false, 'description' => 'true para criar pedido com produtos'],
-                                'cliente' => ['type' => 'object', 'required' => false, 'description' => '🚀 Dados do cliente (busca/cria por CPF/CNPJ)', 'fields' => [
-                                    'cpf_cnpj' => ['type' => 'string', 'required' => true, 'description' => 'CPF ou CNPJ (busca existente ou cria novo)'],
+                                'cliente' => ['type' => 'object', 'required' => false, 'description' => '🚀 Dados do cliente (busca/cria por CPF/CNPJ ou código)', 'fields' => [
+                                    'cpf_cnpj' => ['type' => 'string', 'required' => false, 'description' => 'CPF ou CNPJ (busca existente ou cria novo)'],
+                                    'codigo_cliente' => ['type' => 'string', 'required' => false, 'description' => '🆕 Código do cliente no sistema de origem (ex: "CLI-001")'],
                                     'nome' => ['type' => 'string', 'required' => true, 'description' => 'Nome ou Razão Social'],
                                     'email' => ['type' => 'string', 'required' => false, 'description' => 'E-mail do cliente'],
                                     'telefone' => ['type' => 'string', 'required' => false, 'description' => 'Telefone do cliente'],
@@ -556,6 +563,7 @@ class ApiDocController extends Controller
                                 'criar_pedido' => true,
                                 'cliente' => [
                                     'cpf_cnpj' => '123.456.789-00',
+                                    'codigo_cliente' => 'CLI-001',
                                     'nome' => 'João da Silva',
                                     'email' => 'joao@email.com',
                                     'telefone' => '(11) 98765-4321'
@@ -1064,7 +1072,7 @@ class ApiDocController extends Controller
                 
                 'clientes' => [
                     'name' => 'Clientes',
-                    'description' => 'Gerenciamento de clientes',
+                    'description' => 'Gerenciamento de clientes. Suporta código do cliente para integração.',
                     'base_url' => '/api/v1/clientes',
                     'methods' => [
                         [
@@ -1078,10 +1086,12 @@ class ApiDocController extends Controller
                             'description' => 'Cria um novo cliente',
                             'body' => [
                                 'empresa_id' => ['type' => 'integer', 'required' => true],
-                                'nome' => ['type' => 'string', 'required' => true],
+                                'nome' => ['type' => 'string', 'required' => true, 'description' => 'Nome ou Razão Social'],
+                                'codigo_cliente' => ['type' => 'string', 'required' => false, 'description' => '🆕 Código do cliente no sistema de origem (ex: "CLI-001")'],
                                 'email' => ['type' => 'email', 'required' => false],
                                 'telefone' => ['type' => 'string', 'required' => false],
                                 'cpf_cnpj' => ['type' => 'string', 'required' => false],
+                                'tipo' => ['type' => 'string', 'required' => false, 'description' => 'fisica ou juridica (auto-detecta pelo CPF/CNPJ)'],
                             ],
                         ],
                     ]

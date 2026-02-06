@@ -165,17 +165,18 @@ class ContaPagar extends Model
      */
     public function create($data)
     {
-        $sql = "INSERT INTO {$this->table} 
-                (empresa_id, fornecedor_id, categoria_id, centro_custo_id, numero_documento,
-                 descricao, valor_total, valor_pago, data_emissao, data_competencia,
-                 data_vencimento, data_pagamento, status, forma_pagamento_id,
-                 conta_bancaria_id, tem_rateio, observacoes, tipo_custo,
-                 eh_parcelado, total_parcelas, parcela_numero, grupo_parcela_id,
-                 usuario_cadastro_id) 
-                VALUES 
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // Verifica quais colunas extras existem na tabela
+        $extraColumns = $this->getExtraColumns();
         
-        $stmt = $this->db->prepare($sql);
+        // Colunas base que sempre existem
+        $columns = [
+            'empresa_id', 'fornecedor_id', 'categoria_id', 'centro_custo_id', 'numero_documento',
+            'descricao', 'valor_total', 'valor_pago', 'data_emissao', 'data_competencia',
+            'data_vencimento', 'data_pagamento', 'status', 'forma_pagamento_id',
+            'conta_bancaria_id', 'tem_rateio', 'observacoes', 'tipo_custo',
+            'eh_parcelado', 'total_parcelas', 'parcela_numero', 'grupo_parcela_id',
+            'usuario_cadastro_id'
+        ];
         
         // Converte strings vazias para null em campos opcionais de FK
         $fornecedorId = !empty($data['fornecedor_id']) ? $data['fornecedor_id'] : null;
@@ -183,12 +184,13 @@ class ContaPagar extends Model
         $formaPagamentoId = !empty($data['forma_pagamento_id']) ? $data['forma_pagamento_id'] : null;
         $contaBancariaId = !empty($data['conta_bancaria_id']) ? $data['conta_bancaria_id'] : null;
         
-        $success = $stmt->execute([
+        // Valores base
+        $values = [
             $data['empresa_id'],
             $fornecedorId,
             $data['categoria_id'],
             $centroCustoId,
-            $data['numero_documento'],
+            $data['numero_documento'] ?? '',
             $data['descricao'],
             $data['valor_total'],
             $data['valor_pago'] ?? 0,
@@ -207,9 +209,47 @@ class ContaPagar extends Model
             $data['parcela_numero'] ?? null,
             $data['grupo_parcela_id'] ?? null,
             $data['usuario_cadastro_id']
-        ]);
+        ];
+        
+        // Adiciona colunas extras se existirem na tabela
+        if (in_array('pedido_id', $extraColumns)) {
+            $columns[] = 'pedido_id';
+            $values[] = $data['pedido_id'] ?? null;
+        }
+        if (in_array('cliente_id', $extraColumns)) {
+            $columns[] = 'cliente_id';
+            $values[] = !empty($data['cliente_id']) ? $data['cliente_id'] : null;
+        }
+        
+        $placeholders = implode(', ', array_fill(0, count($columns), '?'));
+        $columnsList = implode(', ', $columns);
+        
+        $sql = "INSERT INTO {$this->table} ({$columnsList}) VALUES ({$placeholders})";
+        
+        $stmt = $this->db->prepare($sql);
+        $success = $stmt->execute($values);
         
         return $success ? $this->db->lastInsertId() : false;
+    }
+    
+    /**
+     * Verifica quais colunas extras existem na tabela
+     */
+    private function getExtraColumns()
+    {
+        static $columns = null;
+        
+        if ($columns === null) {
+            try {
+                $stmt = $this->db->query("DESCRIBE {$this->table}");
+                $result = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+                $columns = $result;
+            } catch (\Exception $e) {
+                $columns = [];
+            }
+        }
+        
+        return $columns;
     }
     
     /**
