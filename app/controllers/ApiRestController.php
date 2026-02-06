@@ -190,7 +190,7 @@ class ApiRestController extends Controller
             return $response->json($data, 404);
         }
         
-        $model->delete($id);
+        $model->softDelete($id, 'Excluído via API');
         
         $data = ['success' => true, 'message' => 'Conta excluída com sucesso'];
         $this->logSuccess($request, 200, $data);
@@ -594,7 +594,7 @@ class ApiRestController extends Controller
             return $response->json($data, 404);
         }
         
-        $model->delete($id);
+        $model->softDelete($id, 'Excluído via API');
         
         $data = ['success' => true, 'message' => 'Conta excluída com sucesso'];
         $this->logSuccess($request, 200, $data);
