@@ -27,6 +27,7 @@ class ContaReceber extends Model
         $sql = "SELECT cr.*, 
                        e.nome_fantasia as empresa_nome,
                        c.nome_razao_social as cliente_nome,
+                       c.codigo_cliente as cliente_codigo,
                        cat.nome as categoria_nome,
                        cc.nome as centro_custo_nome,
                        cb.banco_nome,

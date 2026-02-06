@@ -39,7 +39,17 @@
                         ];
                         $statusColor = $statusColors[$pedido['status']] ?? 'bg-gray-100 text-gray-800';
                         ?>
-                        <p><span class="inline-block px-3 py-1 text-sm font-semibold rounded-full <?= $statusColor ?>"><?= ucfirst($pedido['status']) ?></span></p>
+                        <p>
+                            <span class="inline-block px-3 py-1 text-sm font-semibold rounded-full <?= $statusColor ?>"><?= ucfirst($pedido['status']) ?></span>
+                            <?php if (!empty($pedido['bonificado'])): ?>
+                                <span class="inline-block ml-2 px-3 py-1 text-sm font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+                                    <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+                                    </svg>
+                                    BONIFICADO
+                                </span>
+                            <?php endif; ?>
+                        </p>
                     </div>
                     
                     <div>
@@ -87,28 +97,47 @@
             <!-- Totais -->
             <div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-6 shadow-xl text-white">
                 <h3 class="text-lg font-semibold mb-4">Valores do Pedido</h3>
+                <?php 
+                $frete = $pedido['frete'] ?? 0;
+                $desconto = $pedido['desconto'] ?? 0;
+                $lucro = ($pedido['valor_total'] ?? 0) - ($pedido['valor_custo_total'] ?? 0) - $frete;
+                $margem = ($pedido['valor_total'] ?? 0) > 0 ? ($lucro / $pedido['valor_total']) * 100 : 0;
+                ?>
                 <div class="space-y-3">
                     <div class="flex justify-between items-center pb-3 border-b border-white/20">
                         <span class="text-white/80">Valor Total:</span>
                         <span class="text-2xl font-bold">R$ <?= number_format($pedido['valor_total'], 2, ',', '.') ?></span>
                     </div>
-                    <?php if ($pedido['valor_custo_total'] > 0): ?>
-                        <div class="flex justify-between items-center">
-                            <span class="text-white/80">Custo Total:</span>
-                            <span class="text-lg font-semibold">R$ <?= number_format($pedido['valor_custo_total'], 2, ',', '.') ?></span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-white/80">Lucro:</span>
-                            <span class="text-lg font-semibold">R$ <?= number_format($pedido['valor_total'] - $pedido['valor_custo_total'], 2, ',', '.') ?></span>
-                        </div>
-                        <?php 
-                        $margem = $pedido['valor_custo_total'] > 0 ? (($pedido['valor_total'] - $pedido['valor_custo_total']) / $pedido['valor_custo_total']) * 100 : 0;
-                        ?>
-                        <div class="flex justify-between items-center">
-                            <span class="text-white/80">Margem:</span>
-                            <span class="text-lg font-semibold"><?= number_format($margem, 1, ',', '.') ?>%</span>
-                        </div>
-                    <?php endif; ?>
+                    <div class="flex justify-between items-center">
+                        <span class="text-white/80">Custo Total:</span>
+                        <span class="text-lg font-semibold">R$ <?= number_format($pedido['valor_custo_total'] ?? 0, 2, ',', '.') ?></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-white/80">
+                            <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                            </svg>
+                            Frete:
+                        </span>
+                        <span class="text-lg font-semibold">R$ <?= number_format($frete, 2, ',', '.') ?></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-white/80">
+                            <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"></path>
+                            </svg>
+                            Desconto:
+                        </span>
+                        <span class="text-lg font-semibold">R$ <?= number_format($desconto, 2, ',', '.') ?></span>
+                    </div>
+                    <div class="flex justify-between items-center pt-3 border-t border-white/20">
+                        <span class="text-white/80">Lucro:</span>
+                        <span class="text-lg font-semibold">R$ <?= number_format($lucro, 2, ',', '.') ?></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-white/80">Margem:</span>
+                        <span class="text-lg font-semibold"><?= number_format($margem, 1, ',', '.') ?>%</span>
+                    </div>
                 </div>
             </div>
 

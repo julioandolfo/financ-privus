@@ -319,6 +319,9 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                                 <?= htmlspecialchars($conta['cliente_nome'] ?? 'Sem cliente') ?>
+                                <?php if (!empty($conta['cliente_codigo'])): ?>
+                                    <span class="block text-xs text-gray-500 dark:text-gray-400">Cód: <?= htmlspecialchars($conta['cliente_codigo']) ?></span>
+                                <?php endif; ?>
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                                 <div><?= htmlspecialchars(truncarTexto($conta['descricao'], 50)) ?></div>

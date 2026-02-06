@@ -450,26 +450,20 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                 </div>
                 
                 <!-- Frete e Desconto (Resumo) -->
-                <?php if (($pedidoVinculado['frete'] ?? 0) > 0 || ($pedidoVinculado['desconto'] ?? 0) > 0): ?>
                 <div class="flex flex-wrap gap-4 mb-4">
-                    <?php if (($pedidoVinculado['frete'] ?? 0) > 0): ?>
                     <div class="inline-flex items-center px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full text-sm">
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
                         </svg>
-                        Frete: <strong class="ml-1"><?= formatarMoeda($pedidoVinculado['frete']) ?></strong>
+                        Frete: <strong class="ml-1"><?= formatarMoeda($pedidoVinculado['frete'] ?? 0) ?></strong>
                     </div>
-                    <?php endif; ?>
-                    <?php if (($pedidoVinculado['desconto'] ?? 0) > 0): ?>
                     <div class="inline-flex items-center px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full text-sm">
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"></path>
                         </svg>
-                        Desconto: <strong class="ml-1"><?= formatarMoeda($pedidoVinculado['desconto']) ?></strong>
+                        Desconto: <strong class="ml-1"><?= formatarMoeda($pedidoVinculado['desconto'] ?? 0) ?></strong>
                     </div>
-                    <?php endif; ?>
                 </div>
-                <?php endif; ?>
                 
                 <!-- Lista de Itens do Pedido -->
                 <?php if (!empty($itensPedido)): ?>
@@ -743,9 +737,7 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                     </div>
                     
                     <!-- Frete e Desconto -->
-                    <?php if (($pedidoVinculado['frete'] ?? 0) > 0 || ($pedidoVinculado['desconto'] ?? 0) > 0): ?>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-700">
-                        <?php if (($pedidoVinculado['frete'] ?? 0) > 0): ?>
                         <div class="text-center">
                             <p class="text-sm text-gray-500 dark:text-gray-400">
                                 <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -753,10 +745,9 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                                 </svg>
                                 Frete
                             </p>
-                            <p class="text-xl font-bold text-amber-600"><?= formatarMoeda($pedidoVinculado['frete']) ?></p>
+                            <p class="text-xl font-bold text-amber-600"><?= formatarMoeda($pedidoVinculado['frete'] ?? 0) ?></p>
                             <p class="text-xs text-gray-500">(Deduzido do lucro)</p>
                         </div>
-                        <?php endif; ?>
                         <?php if (($pedidoVinculado['desconto'] ?? 0) > 0): ?>
                         <div class="text-center">
                             <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -765,11 +756,9 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                                 </svg>
                                 Desconto
                             </p>
-                            <p class="text-xl font-bold text-orange-600"><?= formatarMoeda($pedidoVinculado['desconto']) ?></p>
+                            <p class="text-xl font-bold text-orange-600"><?= formatarMoeda($pedidoVinculado['desconto'] ?? 0) ?></p>
                         </div>
-                        <?php endif; ?>
                     </div>
-                    <?php endif; ?>
 
                     <!-- Itens do Pedido -->
                     <?php if (!empty($itensPedido)): ?>
