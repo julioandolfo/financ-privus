@@ -55,14 +55,16 @@ class Cliente extends Model
     }
     
     /**
-     * Busca cliente por CPF/CNPJ
+     * Busca cliente por CPF/CNPJ (ignora deletados)
      */
     public function findByCpfCnpj($cpfCnpj, $empresaId = null)
     {
         // Remove formatação do CPF/CNPJ
         $cpfCnpjLimpo = preg_replace('/[^0-9]/', '', $cpfCnpj);
         
-        $sql = "SELECT * FROM {$this->table} WHERE REPLACE(REPLACE(REPLACE(REPLACE(cpf_cnpj, '.', ''), '-', ''), '/', ''), ' ', '') = :cpf_cnpj";
+        $sql = "SELECT * FROM {$this->table} 
+                WHERE REPLACE(REPLACE(REPLACE(REPLACE(cpf_cnpj, '.', ''), '-', ''), '/', ''), ' ', '') = :cpf_cnpj
+                AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')";
         
         if ($empresaId) {
             $sql .= " AND empresa_id = :empresa_id";
@@ -120,11 +122,13 @@ class Cliente extends Model
     }
     
     /**
-     * Busca cliente por Código do Cliente
+     * Busca cliente por Código do Cliente (ignora deletados)
      */
     public function findByCodigoCliente($codigoCliente, $empresaId = null)
     {
-        $sql = "SELECT * FROM {$this->table} WHERE codigo_cliente = :codigo_cliente";
+        $sql = "SELECT * FROM {$this->table} 
+                WHERE codigo_cliente = :codigo_cliente
+                AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')";
         
         $params = ['codigo_cliente' => $codigoCliente];
         
