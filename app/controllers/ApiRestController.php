@@ -348,6 +348,7 @@ class ApiRestController extends Controller
                     'valor_total' => 0, // Será calculado
                     'frete' => $fretePedido,
                     'desconto' => $descontoPedido,
+                    'bonificado' => $pedidoData['bonificado'] ?? $input['bonificado'] ?? 0,
                     'observacoes' => $pedidoData['observacoes'] ?? null
                 ]);
                 
@@ -1423,6 +1424,67 @@ class ApiRestController extends Controller
         $model->delete($id);
         
         $data = ['success' => true, 'message' => 'Pedido excluído com sucesso'];
+        $this->logSuccess($request, 200, $data);
+        $response->json($data);
+    }
+    
+    /**
+     * Atualizar frete, desconto e/ou bonificado de um pedido (rota simplificada)
+     * PATCH /api/v1/pedidos/{id}/frete
+     * Body: { "frete": 15.00, "desconto": 5.00, "bonificado": 1 }
+     */
+    public function pedidosUpdateFrete(Request $request, Response $response, $id)
+    {
+        $token = $this->authenticate($request, $response);
+        
+        $model = new PedidoVinculado();
+        $pedido = $model->findById($id);
+        
+        if (!$pedido || ($token['empresa_id'] && $pedido['empresa_id'] != $token['empresa_id'])) {
+            $data = ['success' => false, 'error' => 'Pedido não encontrado'];
+            $this->logSuccess($request, 404, $data);
+            return $response->json($data, 404);
+        }
+        
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        $frete = isset($input['frete']) ? floatval($input['frete']) : null;
+        $desconto = isset($input['desconto']) ? floatval($input['desconto']) : null;
+        $bonificado = isset($input['bonificado']) ? intval($input['bonificado']) : null;
+        
+        if ($frete === null && $desconto === null && $bonificado === null) {
+            $data = ['success' => false, 'error' => 'Informe ao menos um dos campos: frete, desconto ou bonificado'];
+            $this->logSuccess($request, 400, $data);
+            return $response->json($data, 400);
+        }
+        
+        $model->updateFreteDesconto($id, $frete, $desconto, $bonificado);
+        
+        // Buscar pedido atualizado
+        $pedidoAtualizado = $model->findById($id);
+        
+        // Calcular lucro atualizado
+        $valorTotal = floatval($pedidoAtualizado['valor_total'] ?? 0);
+        $custoTotal = floatval($pedidoAtualizado['valor_custo_total'] ?? 0);
+        $freteAtual = floatval($pedidoAtualizado['frete'] ?? 0);
+        $lucro = $valorTotal - $custoTotal - $freteAtual;
+        $margem = $valorTotal > 0 ? round(($lucro / $valorTotal) * 100, 2) : 0;
+        
+        $data = [
+            'success' => true, 
+            'message' => 'Pedido atualizado com sucesso',
+            'pedido' => [
+                'id' => $pedidoAtualizado['id'],
+                'numero_pedido' => $pedidoAtualizado['numero_pedido'],
+                'valor_total' => $pedidoAtualizado['valor_total'],
+                'valor_custo_total' => $pedidoAtualizado['valor_custo_total'],
+                'frete' => $pedidoAtualizado['frete'],
+                'desconto' => $pedidoAtualizado['desconto'],
+                'bonificado' => $pedidoAtualizado['bonificado'],
+                'lucro' => $lucro,
+                'margem_lucro' => $margem
+            ]
+        ];
         $this->logSuccess($request, 200, $data);
         $response->json($data);
     }

@@ -68,6 +68,8 @@ class HomeController extends Controller
             $pedidoModel = new PedidoVinculado();
             $pedidosMetricas = $pedidoModel->getEstatisticas($empresasIds);
             $pedidosPorOrigem = $pedidoModel->getPorOrigem($empresasIds);
+            $bonificadosResumo = $pedidoModel->getResumoBonificados($empresasIds);
+            $bonificadosPorEmpresa = $pedidoModel->getBonificadosPorEmpresa($empresasIds);
             
             // Dados das empresas
             $empresasData = [];
@@ -401,6 +403,8 @@ class HomeController extends Controller
                 'produtos' => $produtosMetricas,
                 'pedidos' => $pedidosMetricas,
                 'pedidosPorOrigem' => $pedidosPorOrigem,
+                'bonificados' => $bonificadosResumo,
+                'bonificadosPorEmpresa' => $bonificadosPorEmpresa,
                 'empresasData' => $empresasData,
                 'usuarios' => [
                     'ativos' => $usuariosAtivos,

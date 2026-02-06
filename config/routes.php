@@ -302,6 +302,7 @@ return [
     'GET /api/v1/pedidos/{id}' => ['handler' => 'ApiRestController@pedidosShow', 'middleware' => ['ApiAuthMiddleware']],
     'POST /api/v1/pedidos' => ['handler' => 'ApiRestController@pedidosStore', 'middleware' => ['ApiAuthMiddleware']],
     'PUT /api/v1/pedidos/{id}' => ['handler' => 'ApiRestController@pedidosUpdate', 'middleware' => ['ApiAuthMiddleware']],
+    'PATCH /api/v1/pedidos/{id}/frete' => ['handler' => 'ApiRestController@pedidosUpdateFrete', 'middleware' => ['ApiAuthMiddleware']],
     'DELETE /api/v1/pedidos/{id}' => ['handler' => 'ApiRestController@pedidosDelete', 'middleware' => ['ApiAuthMiddleware']],
     
     // Clientes

@@ -144,9 +144,9 @@ class PedidoVinculado extends Model
     public function create($data)
     {
         $sql = "INSERT INTO {$this->table} 
-                (empresa_id, origem, origem_id, numero_pedido, cliente_id, data_pedido, data_atualizacao, status, valor_total, valor_custo_total, frete, desconto, observacoes, dados_origem) 
+                (empresa_id, origem, origem_id, numero_pedido, cliente_id, data_pedido, data_atualizacao, status, valor_total, valor_custo_total, frete, desconto, bonificado, observacoes, dados_origem) 
                 VALUES 
-                (:empresa_id, :origem, :origem_id, :numero_pedido, :cliente_id, :data_pedido, :data_atualizacao, :status, :valor_total, :valor_custo_total, :frete, :desconto, :observacoes, :dados_origem)";
+                (:empresa_id, :origem, :origem_id, :numero_pedido, :cliente_id, :data_pedido, :data_atualizacao, :status, :valor_total, :valor_custo_total, :frete, :desconto, :bonificado, :observacoes, :dados_origem)";
         
         $stmt = $this->db->prepare($sql);
         
@@ -163,6 +163,7 @@ class PedidoVinculado extends Model
             'valor_custo_total' => $data['valor_custo_total'] ?? 0,
             'frete' => $data['frete'] ?? 0,
             'desconto' => $data['desconto'] ?? 0,
+            'bonificado' => $data['bonificado'] ?? 0,
             'observacoes' => $data['observacoes'] ?? null,
             'dados_origem' => isset($data['dados_origem']) ? json_encode($data['dados_origem']) : null
         ]);
@@ -244,6 +245,40 @@ class PedidoVinculado extends Model
     }
     
     /**
+     * Atualizar frete, desconto e bonificado do pedido
+     */
+    public function updateFreteDesconto($id, $frete = null, $desconto = null, $bonificado = null)
+    {
+        $updates = [];
+        $params = ['id' => $id];
+        
+        if ($frete !== null) {
+            $updates[] = "frete = :frete";
+            $params['frete'] = $frete;
+        }
+        
+        if ($desconto !== null) {
+            $updates[] = "desconto = :desconto";
+            $params['desconto'] = $desconto;
+        }
+        
+        if ($bonificado !== null) {
+            $updates[] = "bonificado = :bonificado";
+            $params['bonificado'] = $bonificado;
+        }
+        
+        if (empty($updates)) {
+            return false;
+        }
+        
+        $updates[] = "data_atualizacao = NOW()";
+        
+        $sql = "UPDATE {$this->table} SET " . implode(', ', $updates) . " WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute($params);
+    }
+    
+    /**
      * Calcular totais do pedido baseado nos itens
      */
     public function recalcularTotais($id)
@@ -319,5 +354,61 @@ class PedidoVinculado extends Model
         $stmt->execute($empresasIds);
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+    
+    /**
+     * Estatísticas de pedidos bonificados por empresa
+     */
+    public function getBonificadosPorEmpresa($empresasIds)
+    {
+        if (empty($empresasIds)) {
+            return [];
+        }
+        
+        $placeholders = implode(',', array_fill(0, count($empresasIds), '?'));
+        
+        $sql = "SELECT 
+                    p.empresa_id,
+                    e.nome_fantasia as empresa_nome,
+                    COUNT(*) as total_bonificados,
+                    SUM(p.valor_total) as valor_total_bonificado
+                FROM {$this->table} p
+                INNER JOIN empresas e ON p.empresa_id = e.id
+                WHERE p.empresa_id IN ($placeholders)
+                  AND p.bonificado = 1
+                GROUP BY p.empresa_id, e.nome_fantasia
+                ORDER BY valor_total_bonificado DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($empresasIds);
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+    
+    /**
+     * Resumo geral de bonificados
+     */
+    public function getResumoBonificados($empresasIds)
+    {
+        if (empty($empresasIds)) {
+            return [
+                'total_pedidos' => 0,
+                'valor_total' => 0
+            ];
+        }
+        
+        $placeholders = implode(',', array_fill(0, count($empresasIds), '?'));
+        
+        $sql = "SELECT 
+                    COUNT(*) as total_pedidos,
+                    COALESCE(SUM(valor_total), 0) as valor_total
+                FROM {$this->table}
+                WHERE empresa_id IN ($placeholders)
+                  AND bonificado = 1";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($empresasIds);
+        
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: ['total_pedidos' => 0, 'valor_total' => 0];
     }
 }

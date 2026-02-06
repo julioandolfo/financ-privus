@@ -13,11 +13,20 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
             </div>
             <div class="flex items-center space-x-3">
                 <?php if (!empty($pedidoVinculado)): ?>
-                    <button @click="showPedidoModal = true" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg flex items-center space-x-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-                        </svg>
+                    <button @click="showPedidoModal = true" class="<?= !empty($pedidoVinculado['bonificado']) ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600' : 'bg-purple-500 hover:bg-purple-600' ?> text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg flex items-center space-x-2">
+                        <?php if (!empty($pedidoVinculado['bonificado'])): ?>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+                            </svg>
+                        <?php else: ?>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                            </svg>
+                        <?php endif; ?>
                         <span>Ver Pedido #<?= htmlspecialchars($pedidoVinculado['numero_pedido'] ?? $pedidoVinculado['id']) ?></span>
+                        <?php if (!empty($pedidoVinculado['bonificado'])): ?>
+                            <span class="bg-white/20 px-2 py-0.5 rounded text-xs">BONIFICADO</span>
+                        <?php endif; ?>
                     </button>
                 <?php endif; ?>
                 <?php if ($conta['status'] != 'recebido' && $conta['status'] != 'cancelado'): ?>
@@ -82,6 +91,11 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                                 </svg>
                             </a>
+                            <?php if (!empty($conta['cliente_codigo'])): ?>
+                                <span class="inline-flex items-center px-2 py-0.5 mt-1 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                                    Cód: <?= htmlspecialchars($conta['cliente_codigo']) ?>
+                                </span>
+                            <?php endif; ?>
                         <?php else: ?>
                             <p class="text-lg font-semibold text-gray-500 dark:text-gray-400">Não informado</p>
                         <?php endif; ?>
@@ -690,7 +704,17 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                         </div>
                         <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
                             <p class="text-sm text-gray-500 dark:text-gray-400">Status</p>
-                            <p class="text-lg font-bold text-gray-900 dark:text-gray-100"><?= ucfirst(htmlspecialchars($pedidoVinculado['status'] ?? 'pendente')) ?></p>
+                            <p class="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                <?= ucfirst(htmlspecialchars($pedidoVinculado['status'] ?? 'pendente')) ?>
+                                <?php if (!empty($pedidoVinculado['bonificado'])): ?>
+                                    <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
+                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+                                        </svg>
+                                        BONIFICADO
+                                    </span>
+                                <?php endif; ?>
+                            </p>
                         </div>
                         <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
                             <p class="text-sm text-gray-500 dark:text-gray-400">Cliente</p>

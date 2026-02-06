@@ -694,6 +694,66 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             <?php endif; ?>
         </div>
     <?php endif; ?>
+    
+    <!-- Pedidos Bonificados -->
+    <?php if (isset($bonificados) && ($bonificados['total_pedidos'] ?? 0) > 0): ?>
+        <div class="bg-gradient-to-r from-amber-500 to-orange-600 dark:from-amber-700 dark:to-orange-800 rounded-2xl p-8 shadow-xl mb-8">
+            <div class="mb-6">
+                <h3 class="text-white text-2xl font-bold mb-2 flex items-center">
+                    <svg class="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+                    </svg>
+                    Pedidos Bonificados
+                </h3>
+                <p class="text-white/80 text-sm">Acompanhamento de bonificações por empresa</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- Total de Pedidos Bonificados -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+                    <p class="text-white/70 text-sm mb-1">Total de Pedidos Bonificados</p>
+                    <p class="text-4xl font-bold text-white"><?= $bonificados['total_pedidos'] ?></p>
+                </div>
+
+                <!-- Valor Total Bonificado -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+                    <p class="text-white/70 text-sm mb-1">Valor Total Bonificado</p>
+                    <p class="text-3xl font-bold text-white">R$ <?= number_format($bonificados['valor_total'], 2, ',', '.') ?></p>
+                </div>
+            </div>
+            
+            <!-- Bonificados por Empresa -->
+            <?php if (!empty($bonificadosPorEmpresa)): ?>
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <p class="text-white/70 text-sm mb-3">Bonificados por Empresa</p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="text-white/70 text-sm">
+                                    <th class="text-left py-2 px-3">Empresa</th>
+                                    <th class="text-center py-2 px-3">Quantidade</th>
+                                    <th class="text-right py-2 px-3">Valor Total</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-white/10">
+                                <?php foreach ($bonificadosPorEmpresa as $empresa): ?>
+                                    <tr class="text-white">
+                                        <td class="py-2 px-3 font-semibold"><?= htmlspecialchars($empresa['empresa_nome']) ?></td>
+                                        <td class="py-2 px-3 text-center">
+                                            <span class="bg-white/20 px-3 py-1 rounded-full text-sm font-bold">
+                                                <?= $empresa['total_bonificados'] ?>
+                                            </span>
+                                        </td>
+                                        <td class="py-2 px-3 text-right font-bold">R$ <?= number_format($empresa['valor_total_bonificado'], 2, ',', '.') ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 
     <!-- Gráficos e Detalhes -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">

@@ -323,6 +323,9 @@ Content-Type: application/json
         "numero_pedido": "PED-001",
         "data_pedido": "2025-01-01",
         "status": "pendente",
+        "frete": 15.00,
+        "desconto": 5.00,
+        "bonificado": 0,
         "produtos": [
             {
                 "produto_id": 1,
@@ -340,6 +343,11 @@ Content-Type: application/json
     }
 }
 ```
+
+**Campos do Pedido:**
+- ⚪ `frete` (decimal, opcional): Valor do frete - será deduzido do lucro
+- ⚪ `desconto` (decimal, opcional): Valor do desconto concedido
+- ⚪ `bonificado` (integer, opcional): 1 = pedido bonificado, 0 = não bonificado
 
 **Nota:** O campo `valor_total` é calculado automaticamente pela soma dos produtos. Os campos `custo_unitario` são opcionais - se não informados, o sistema busca do cadastro do produto.
 

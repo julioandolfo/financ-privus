@@ -379,6 +379,55 @@ curl -X DELETE "https://seu-dominio.com/api/v1/pedidos/1" \
 
 ---
 
+#### 6. **PATCH** `/api/v1/pedidos/{id}/frete`
+**Descrição**: Atualiza frete, desconto e/ou bonificado de um pedido (rota simplificada)
+
+**Body (JSON)** - Pelo menos um campo é obrigatório:
+```json
+{
+  "frete": 15.00,
+  "desconto": 5.00,
+  "bonificado": 1
+}
+```
+
+**Campos disponíveis**:
+- ⚪ `frete` (decimal, opcional): Valor do frete
+- ⚪ `desconto` (decimal, opcional): Valor do desconto
+- ⚪ `bonificado` (integer, opcional): 1 = bonificado, 0 = não bonificado
+
+**Exemplo de Requisição**:
+```bash
+curl -X PATCH "https://seu-dominio.com/api/v1/pedidos/1/frete" \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "frete": 25.50,
+    "bonificado": 1
+  }'
+```
+
+**Resposta de Sucesso**:
+```json
+{
+  "success": true,
+  "message": "Pedido atualizado com sucesso",
+  "pedido": {
+    "id": 1,
+    "numero_pedido": "PED-001",
+    "valor_total": 150.00,
+    "valor_custo_total": 80.00,
+    "frete": 25.50,
+    "desconto": 0.00,
+    "bonificado": 1,
+    "lucro": 44.50,
+    "margem_lucro": 29.67
+  }
+}
+```
+
+---
+
 ## 🔐 Autenticação
 
 Todos os endpoints requerem autenticação via **Bearer Token**.
