@@ -696,7 +696,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
     <?php endif; ?>
     
     <!-- Pedidos Bonificados -->
-    <?php if (isset($bonificados) && ($bonificados['total_pedidos'] ?? 0) > 0): ?>
+    <?php if (isset($bonificados)): ?>
         <div class="bg-gradient-to-r from-amber-500 to-orange-600 dark:from-amber-700 dark:to-orange-800 rounded-2xl p-8 shadow-xl mb-8">
             <div class="mb-6">
                 <h3 class="text-white text-2xl font-bold mb-2 flex items-center">
@@ -712,13 +712,13 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                 <!-- Total de Pedidos Bonificados -->
                 <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6">
                     <p class="text-white/70 text-sm mb-1">Total de Pedidos Bonificados</p>
-                    <p class="text-4xl font-bold text-white"><?= $bonificados['total_pedidos'] ?></p>
+                    <p class="text-4xl font-bold text-white"><?= $bonificados['total_pedidos'] ?? 0 ?></p>
                 </div>
 
                 <!-- Valor Total Bonificado -->
                 <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6">
                     <p class="text-white/70 text-sm mb-1">Valor Total Bonificado</p>
-                    <p class="text-3xl font-bold text-white">R$ <?= number_format($bonificados['valor_total'], 2, ',', '.') ?></p>
+                    <p class="text-3xl font-bold text-white">R$ <?= number_format($bonificados['valor_total'] ?? 0, 2, ',', '.') ?></p>
                 </div>
             </div>
             
@@ -750,6 +750,10 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                             </tbody>
                         </table>
                     </div>
+                </div>
+            <?php else: ?>
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <p class="text-white/70 text-sm text-center py-4">Nenhum pedido bonificado registrado ainda.</p>
                 </div>
             <?php endif; ?>
         </div>

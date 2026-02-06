@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
+use App\Core\Database;
 use App\Models\ContaPagar;
 use App\Models\ContaReceber;
 use App\Models\ParcelaReceber;
@@ -1421,11 +1422,113 @@ class ApiRestController extends Controller
             return $response->json($data, 404);
         }
         
-        $model->delete($id);
+        // Contadores para resposta
+        $contasReceberExcluidas = 0;
+        $contasPagarExcluidas = 0;
+        $itensExcluidos = 0;
+        $parcelasExcluidas = 0;
         
-        $data = ['success' => true, 'message' => 'Pedido excluído com sucesso'];
-        $this->logSuccess($request, 200, $data);
-        $response->json($data);
+        try {
+            $db = Database::getInstance()->getConnection();
+            $db->beginTransaction();
+            
+            // 1. Excluir contas a receber vinculadas ao pedido
+            $sqlContasReceber = "SELECT id FROM contas_receber WHERE pedido_id = :pedido_id AND deleted_at IS NULL";
+            $stmtCr = $db->prepare($sqlContasReceber);
+            $stmtCr->execute(['pedido_id' => $id]);
+            $contasReceberIds = $stmtCr->fetchAll(\PDO::FETCH_COLUMN);
+            
+            if (!empty($contasReceberIds)) {
+                // Excluir parcelas das contas a receber
+                $placeholdersCr = implode(',', array_fill(0, count($contasReceberIds), '?'));
+                $sqlParcelasCr = "DELETE FROM parcelas_receber WHERE conta_receber_id IN ({$placeholdersCr})";
+                $stmtParcelasCr = $db->prepare($sqlParcelasCr);
+                $stmtParcelasCr->execute($contasReceberIds);
+                $parcelasExcluidas += $stmtParcelasCr->rowCount();
+                
+                // Soft delete das contas a receber
+                $sqlDeleteCr = "UPDATE contas_receber SET deleted_at = NOW(), deleted_reason = 'Pedido excluído via API' WHERE pedido_id = :pedido_id";
+                $stmtDeleteCr = $db->prepare($sqlDeleteCr);
+                $stmtDeleteCr->execute(['pedido_id' => $id]);
+                $contasReceberExcluidas = $stmtDeleteCr->rowCount();
+            }
+            
+            // 2. Excluir contas a pagar vinculadas ao pedido (se existir campo pedido_id)
+            try {
+                $sqlContasPagar = "SELECT id FROM contas_pagar WHERE pedido_id = :pedido_id AND deleted_at IS NULL";
+                $stmtCp = $db->prepare($sqlContasPagar);
+                $stmtCp->execute(['pedido_id' => $id]);
+                $contasPagarIds = $stmtCp->fetchAll(\PDO::FETCH_COLUMN);
+                
+                if (!empty($contasPagarIds)) {
+                    // Excluir parcelas das contas a pagar
+                    $placeholdersCp = implode(',', array_fill(0, count($contasPagarIds), '?'));
+                    $sqlParcelasCp = "DELETE FROM parcelas_pagar WHERE conta_pagar_id IN ({$placeholdersCp})";
+                    $stmtParcelasCp = $db->prepare($sqlParcelasCp);
+                    $stmtParcelasCp->execute($contasPagarIds);
+                    $parcelasExcluidas += $stmtParcelasCp->rowCount();
+                    
+                    // Soft delete das contas a pagar
+                    $sqlDeleteCp = "UPDATE contas_pagar SET deleted_at = NOW(), deleted_reason = 'Pedido excluído via API' WHERE pedido_id = :pedido_id";
+                    $stmtDeleteCp = $db->prepare($sqlDeleteCp);
+                    $stmtDeleteCp->execute(['pedido_id' => $id]);
+                    $contasPagarExcluidas = $stmtDeleteCp->rowCount();
+                }
+            } catch (\Exception $e) {
+                // Campo pedido_id pode não existir em contas_pagar, ignorar
+            }
+            
+            // 3. Excluir itens do pedido
+            $pedidoItemModel = new PedidoItem();
+            $itensExcluidos = $pedidoItemModel->countByPedido($id);
+            $pedidoItemModel->deleteByPedido($id);
+            
+            // 4. Excluir o pedido
+            $model->delete($id);
+            
+            $db->commit();
+            
+            // Montar mensagem de resposta
+            $detalhes = [];
+            if ($contasReceberExcluidas > 0) {
+                $detalhes[] = "{$contasReceberExcluidas} conta(s) a receber";
+            }
+            if ($contasPagarExcluidas > 0) {
+                $detalhes[] = "{$contasPagarExcluidas} conta(s) a pagar";
+            }
+            if ($itensExcluidos > 0) {
+                $detalhes[] = "{$itensExcluidos} item(ns)";
+            }
+            if ($parcelasExcluidas > 0) {
+                $detalhes[] = "{$parcelasExcluidas} parcela(s)";
+            }
+            
+            $mensagem = 'Pedido excluído com sucesso';
+            if (!empty($detalhes)) {
+                $mensagem .= '. Também excluídos: ' . implode(', ', $detalhes);
+            }
+            
+            $data = [
+                'success' => true, 
+                'message' => $mensagem,
+                'detalhes' => [
+                    'contas_receber_excluidas' => $contasReceberExcluidas,
+                    'contas_pagar_excluidas' => $contasPagarExcluidas,
+                    'itens_excluidos' => $itensExcluidos,
+                    'parcelas_excluidas' => $parcelasExcluidas
+                ]
+            ];
+            $this->logSuccess($request, 200, $data);
+            $response->json($data);
+            
+        } catch (\Exception $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            $data = ['success' => false, 'error' => 'Erro ao excluir pedido: ' . $e->getMessage()];
+            $this->logSuccess($request, 500, $data);
+            return $response->json($data, 500);
+        }
     }
     
     /**

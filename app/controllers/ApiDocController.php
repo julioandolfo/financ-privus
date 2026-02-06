@@ -61,9 +61,18 @@ class ApiDocController extends Controller
         return [
             'info' => [
                 'title' => 'API Financeiro Empresarial',
-                'version' => '1.3.0',
-                'description' => 'API RESTful para integração com o Sistema Financeiro Empresarial. Gerencie contas a pagar/receber, produtos, clientes, fornecedores e movimentações financeiras. ⭐ NOVO: Suporte a frete, desconto e bonificado em pedidos. Baixa de parcelas com atualização automática da conta.',
+                'version' => '1.4.0',
+                'description' => 'API RESTful para integração com o Sistema Financeiro Empresarial. Gerencie contas a pagar/receber, produtos, clientes, fornecedores e movimentações financeiras. ⭐ NOVO: Exclusão de pedido em cascata (remove contas vinculadas automaticamente).',
                 'changelog' => [
+                    'v1.4.0 (Fevereiro 2026)' => [
+                        '🚀 Exclusão em CASCATA de Pedidos',
+                        '✅ DELETE /api/v1/pedidos/{id} agora exclui automaticamente:',
+                        '   - Contas a Receber vinculadas (soft delete)',
+                        '   - Contas a Pagar vinculadas (soft delete)',
+                        '   - Itens do pedido',
+                        '   - Parcelas das contas',
+                        '✅ Resposta detalhada com contagem de registros excluídos',
+                    ],
                     'v1.3.0 (Fevereiro 2026)' => [
                         '🚀 Suporte a BONIFICADO em Pedidos',
                         '✅ Campo bonificado em pedidos (1 = grátis, 0 = normal)',
@@ -1029,10 +1038,26 @@ class ApiDocController extends Controller
                         [
                             'method' => 'DELETE',
                             'endpoint' => '/api/v1/pedidos/{id}',
-                            'description' => 'Exclui um pedido',
+                            'description' => '🆕 Exclui um pedido e TODOS os registros relacionados (contas a receber, contas a pagar, itens e parcelas)',
                             'params' => [
                                 ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID do pedido'],
                             ],
+                            'response' => [
+                                'success' => true,
+                                'message' => 'Pedido excluído com sucesso. Também excluídos: 1 conta(s) a receber, 3 item(ns), 2 parcela(s)',
+                                'detalhes' => [
+                                    'contas_receber_excluidas' => 1,
+                                    'contas_pagar_excluidas' => 0,
+                                    'itens_excluidos' => 3,
+                                    'parcelas_excluidas' => 2
+                                ]
+                            ],
+                            'notes' => [
+                                'A exclusão é em cascata - todos os registros vinculados ao pedido são excluídos automaticamente',
+                                'Contas a receber e a pagar são marcadas como deletadas (soft delete)',
+                                'Itens do pedido e parcelas são removidos permanentemente',
+                                'O campo detalhes mostra quantos registros de cada tipo foram excluídos'
+                            ]
                         ],
                     ]
                 ],
