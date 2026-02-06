@@ -55,7 +55,7 @@ class Cliente extends Model
     }
     
     /**
-     * Busca cliente por CPF/CNPJ (ignora deletados)
+     * Busca cliente por CPF/CNPJ (ignora deletados e inativos)
      */
     public function findByCpfCnpj($cpfCnpj, $empresaId = null)
     {
@@ -64,7 +64,7 @@ class Cliente extends Model
         
         $sql = "SELECT * FROM {$this->table} 
                 WHERE REPLACE(REPLACE(REPLACE(REPLACE(cpf_cnpj, '.', ''), '-', ''), '/', ''), ' ', '') = :cpf_cnpj
-                AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')";
+                AND ativo = 1";
         
         if ($empresaId) {
             $sql .= " AND empresa_id = :empresa_id";
@@ -122,13 +122,13 @@ class Cliente extends Model
     }
     
     /**
-     * Busca cliente por Código do Cliente (ignora deletados)
+     * Busca cliente por Código do Cliente (ignora inativos)
      */
     public function findByCodigoCliente($codigoCliente, $empresaId = null)
     {
         $sql = "SELECT * FROM {$this->table} 
                 WHERE codigo_cliente = :codigo_cliente
-                AND (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')";
+                AND ativo = 1";
         
         $params = ['codigo_cliente' => $codigoCliente];
         
