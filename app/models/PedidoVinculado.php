@@ -102,6 +102,7 @@ class PedidoVinculado extends Model
     {
         $sql = "SELECT p.*, 
                        c.nome_razao_social as cliente_nome, c.email as cliente_email, c.telefone as cliente_telefone,
+                       c.codigo_cliente as cliente_codigo,
                        e.razao_social as empresa_nome
                 FROM {$this->table} p
                 LEFT JOIN clientes c ON p.cliente_id = c.id

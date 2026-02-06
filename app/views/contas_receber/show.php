@@ -748,7 +748,6 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                             <p class="text-xl font-bold text-amber-600"><?= formatarMoeda($pedidoVinculado['frete'] ?? 0) ?></p>
                             <p class="text-xs text-gray-500">(Deduzido do lucro)</p>
                         </div>
-                        <?php if (($pedidoVinculado['desconto'] ?? 0) > 0): ?>
                         <div class="text-center">
                             <p class="text-sm text-gray-500 dark:text-gray-400">
                                 <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

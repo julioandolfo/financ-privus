@@ -147,6 +147,13 @@
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Cliente</h3>
                     <div class="space-y-2">
                         <p class="font-semibold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($pedido['cliente_nome']) ?></p>
+                        <?php if (!empty($pedido['cliente_codigo'])): ?>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                                    Cód: <?= htmlspecialchars($pedido['cliente_codigo']) ?>
+                                </span>
+                            </p>
+                        <?php endif; ?>
                         <?php if ($pedido['cliente_email']): ?>
                             <p class="text-sm text-gray-600 dark:text-gray-400"><?= htmlspecialchars($pedido['cliente_email']) ?></p>
                         <?php endif; ?>
