@@ -36,9 +36,9 @@ class ProdutoController extends Controller
         $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         
         $filters = [
-            'busca' => $request->get('busca'),
-            'categoria_id' => $request->get('categoria_id'),
-            'estoque_status' => $request->get('estoque_status')
+            'busca' => $request->get('busca') ?: null,
+            'categoria_id' => $request->get('categoria_id') ?: null,
+            'estoque_status' => $request->get('estoque_status') ?: null
         ];
         
         // Paginação

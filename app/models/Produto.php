@@ -37,19 +37,19 @@ class Produto extends Model
         }
         
         // Filtro por código ou nome
-        if (!empty($filters['busca'])) {
+        if (isset($filters['busca']) && $filters['busca'] !== '' && $filters['busca'] !== null) {
             $sql .= " AND (p.codigo LIKE :busca OR p.nome LIKE :busca)";
             $params['busca'] = '%' . $filters['busca'] . '%';
         }
         
         // Filtro por categoria
-        if (!empty($filters['categoria_id'])) {
+        if (isset($filters['categoria_id']) && $filters['categoria_id'] !== '' && $filters['categoria_id'] !== null) {
             $sql .= " AND p.categoria_id = :categoria_id";
             $params['categoria_id'] = $filters['categoria_id'];
         }
         
         // Filtro por status de estoque
-        if (!empty($filters['estoque_status'])) {
+        if (isset($filters['estoque_status']) && $filters['estoque_status'] !== '' && $filters['estoque_status'] !== null) {
             switch ($filters['estoque_status']) {
                 case 'baixo':
                     $sql .= " AND p.estoque <= p.estoque_minimo";
@@ -320,17 +320,17 @@ class Produto extends Model
         }
         
         // Aplicar os mesmos filtros do findAll
-        if (!empty($filters['busca'])) {
+        if (isset($filters['busca']) && $filters['busca'] !== '' && $filters['busca'] !== null) {
             $sql .= " AND (p.codigo LIKE :busca OR p.nome LIKE :busca)";
             $params['busca'] = '%' . $filters['busca'] . '%';
         }
         
-        if (!empty($filters['categoria_id'])) {
+        if (isset($filters['categoria_id']) && $filters['categoria_id'] !== '' && $filters['categoria_id'] !== null) {
             $sql .= " AND p.categoria_id = :categoria_id";
             $params['categoria_id'] = $filters['categoria_id'];
         }
         
-        if (!empty($filters['estoque_status'])) {
+        if (isset($filters['estoque_status']) && $filters['estoque_status'] !== '' && $filters['estoque_status'] !== null) {
             switch ($filters['estoque_status']) {
                 case 'baixo':
                     $sql .= " AND p.estoque <= p.estoque_minimo";

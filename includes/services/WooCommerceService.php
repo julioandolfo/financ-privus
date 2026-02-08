@@ -292,8 +292,22 @@ class WooCommerceService
                     // PASSO 5: PROCESSAR PRODUTOS/ITENS DO PEDIDO
                     // =============================================
                     $lineItems = $pedWoo['line_items'] ?? [];
+                    \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                        "Pedido #{$numeroPedido}: line_items encontrados: " . count($lineItems));
+                    
                     if (!empty($lineItems)) {
-                        $this->processarItensDoPedido($pedidoId, $lineItems, $empresaId, $numeroPedido);
+                        try {
+                            $qtdProcessados = $this->processarItensDoPedido($pedidoId, $lineItems, $empresaId, $numeroPedido);
+                            \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                                "Pedido #{$numeroPedido}: {$qtdProcessados} itens processados com sucesso");
+                        } catch (\Throwable $eItens) {
+                            \App\Models\LogSistema::error('WooCommerce', 'sincronizarPedidos', 
+                                "Pedido #{$numeroPedido}: ERRO ao processar itens: " . $eItens->getMessage(),
+                                ['trace' => $eItens->getTraceAsString()]);
+                        }
+                    } else {
+                        \App\Models\LogSistema::warning('WooCommerce', 'sincronizarPedidos', 
+                            "Pedido #{$numeroPedido}: NENHUM line_item no pedido WooCommerce!");
                     }
                     
                     // =============================================
@@ -350,6 +364,22 @@ class WooCommerceService
      */
     private function processarItensDoPedido($pedidoId, $lineItems, $empresaId, $numeroPedido)
     {
+        \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
+            "=== INICIO processarItensDoPedido #{$numeroPedido} === pedido_id={$pedidoId}, itens=" . count($lineItems));
+        
+        // Verifica se o model de itens está disponível
+        if (!$this->pedidoItemModel) {
+            \App\Models\LogSistema::error('WooCommerce', 'processarItens', 
+                "pedidoItemModel é NULL! Tentando instanciar...");
+            try {
+                $this->pedidoItemModel = new \App\Models\PedidoItem();
+            } catch (\Throwable $e) {
+                \App\Models\LogSistema::error('WooCommerce', 'processarItens', 
+                    "Falha ao instanciar PedidoItem: " . $e->getMessage());
+                return 0;
+            }
+        }
+        
         // Primeiro, remove itens antigos deste pedido (para atualização)
         try {
             $itensExistentes = $this->pedidoItemModel->findByPedido($pedidoId);
@@ -358,7 +388,7 @@ class WooCommerceService
                 \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
                     "Pedido #{$numeroPedido}: removidos " . count($itensExistentes) . " itens antigos para recriar");
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             \App\Models\LogSistema::warning('WooCommerce', 'processarItens', 
                 "Pedido #{$numeroPedido}: erro ao limpar itens antigos: " . $e->getMessage());
         }
@@ -463,10 +493,10 @@ class WooCommerceService
                         "Pedido #{$numeroPedido}: item criado '{$nomeProduto}' x{$quantidade} = R\${$precoTotal} (Item ID: #{$itemId}, Produto ID: #{$produtoId})");
                 }
                 
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 \App\Models\LogSistema::error('WooCommerce', 'processarItens', 
                     "Pedido #{$numeroPedido}: erro ao processar item '{$nomeProduto}': " . $e->getMessage(),
-                    ['item' => $item]);
+                    ['trace' => $e->getTraceAsString(), 'item_data' => json_encode($item)]);
             }
         }
         

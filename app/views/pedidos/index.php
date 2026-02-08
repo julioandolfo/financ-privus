@@ -151,7 +151,13 @@
                         // Construir URL base com todos os filtros exceto 'pagina'
                         $urlParams = $filters;
                         unset($urlParams['pagina']);
-                        $urlBase = '/pedidos?' . http_build_query($urlParams);
+                        
+                        // Remover parâmetros vazios
+                        $urlParams = array_filter($urlParams, function($value) {
+                            return $value !== '' && $value !== null;
+                        });
+                        
+                        $urlBase = '/pedidos' . (!empty($urlParams) ? '?' . http_build_query($urlParams) : '');
                         $separador = empty($urlParams) ? '?' : '&';
                         
                         // Calcular range de páginas para exibir

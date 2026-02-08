@@ -425,7 +425,13 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                             <?php
                             $urlParams = $filters;
                             unset($urlParams['pagina']);
-                            $urlBase = '/contas-pagar?' . http_build_query($urlParams);
+                            
+                            // Remover parâmetros vazios
+                            $urlParams = array_filter($urlParams, function($value) {
+                                return $value !== '' && $value !== null;
+                            });
+                            
+                            $urlBase = '/contas-pagar' . (!empty($urlParams) ? '?' . http_build_query($urlParams) : '');
                             $separador = empty($urlParams) ? '?' : '&';
                             $range = 2;
                             $inicio = max(1, $paginacao['pagina_atual'] - $range);

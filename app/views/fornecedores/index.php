@@ -183,15 +183,21 @@
                             </div>
                             
                             <div class="flex items-center space-x-2">
-                                <?php
-                                $urlParams = $filters ?? [];
-                                unset($urlParams['pagina']);
-                                $urlBase = '/fornecedores?' . http_build_query($urlParams);
-                                $separador = empty($urlParams) ? '?' : '&';
-                                $range = 2;
-                                $inicio = max(1, $paginacao['pagina_atual'] - $range);
-                                $fim = min($paginacao['total_paginas'], $paginacao['pagina_atual'] + $range);
-                                ?>
+                            <?php
+                            $urlParams = $filters ?? [];
+                            unset($urlParams['pagina']);
+                            
+                            // Remover parâmetros vazios
+                            $urlParams = array_filter($urlParams, function($value) {
+                                return $value !== '' && $value !== null;
+                            });
+                            
+                            $urlBase = '/fornecedores' . (!empty($urlParams) ? '?' . http_build_query($urlParams) : '');
+                            $separador = empty($urlParams) ? '?' : '&';
+                            $range = 2;
+                            $inicio = max(1, $paginacao['pagina_atual'] - $range);
+                            $fim = min($paginacao['total_paginas'], $paginacao['pagina_atual'] + $range);
+                            ?>
                                 
                                 <?php if ($paginacao['pagina_atual'] > 1): ?>
                                     <a href="<?= $urlBase . $separador ?>pagina=1" class="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Primeira</a>
