@@ -56,7 +56,7 @@ $categorias = $categoriaModel->getFlatList($empresaId);
 
     <!-- Tab: Dados Básicos -->
     <div x-show="currentTab === 'dados'" x-transition>
-        <form method="POST" action="<?= $this->baseUrl('/produtos/' . $produto['id']) ?>">
+        <form method="POST" action="<?= $this->baseUrl('/produtos/' . $produto['id']) ?>" @submit="prepararSubmit($event)">
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8 space-y-6">
                 
                 <!-- Código, SKU e Nome -->
@@ -144,11 +144,10 @@ $categorias = $categoriaModel->getFlatList($empresaId);
                         <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                             Custo Unitário *
                         </label>
-                        <input type="text" name="custo_unitario" required
+                        <input type="text" id="custo_unitario" name="custo_unitario" required
                                x-model="custoUnitario"
                                @input="calcularMargem()"
-                               data-mask="currency"
-                               value="<?= htmlspecialchars($produto['custo_unitario']) ?>"
+                               value="<?= number_format($produto['custo_unitario'], 2, ',', '.') ?>"
                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     </div>
 
@@ -156,11 +155,10 @@ $categorias = $categoriaModel->getFlatList($empresaId);
                         <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                             Preço de Venda *
                         </label>
-                        <input type="text" name="preco_venda" required
+                        <input type="text" id="preco_venda" name="preco_venda" required
                                x-model="precoVenda"
                                @input="calcularMargem()"
-                               data-mask="currency"
-                               value="<?= htmlspecialchars($produto['preco_venda']) ?>"
+                               value="<?= number_format($produto['preco_venda'], 2, ',', '.') ?>"
                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     </div>
 
@@ -369,33 +367,6 @@ $categorias = $categoriaModel->getFlatList($empresaId);
             </div>
         </div>
     </div>
-
-    <!-- Modal Scanner -->
-    <div x-show="showScanner" 
-         x-transition
-         class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
-         @click.self="fecharScanner()">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-2xl w-full">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Scanner de Código de Barras</h3>
-                <button @click="fecharScanner()" class="text-gray-500 hover:text-gray-700">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            <div id="scanner-container" class="relative w-full h-96 bg-black rounded-lg overflow-hidden">
-                <video x-ref="scannerVideo" class="w-full h-full object-cover"></video>
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <div class="w-64 h-32 border-2 border-red-500"></div>
-                </div>
-            </div>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mt-4 text-center">
-                Posicione o código de barras dentro do quadrado
-            </p>
-        </div>
-    </div>
-</div>
 
     <!-- Tab: Tributos -->
     <div x-show="currentTab === 'tributos'" x-transition>
@@ -629,23 +600,93 @@ $categorias = $categoriaModel->getFlatList($empresaId);
             </div>
         </form>
     </div>
+
+    <!-- Modal Scanner -->
+    <div x-show="showScanner" 
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+         @click.self="fecharScanner()">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-2xl w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">Scanner de Código de Barras</h3>
+                <button @click="fecharScanner()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="scanner-container" class="relative w-full h-96 bg-black rounded-lg overflow-hidden">
+                <video x-ref="scannerVideo" class="w-full h-full object-cover"></video>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="w-64 h-32 border-2 border-red-500"></div>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-4 text-center">
+                Posicione o código de barras dentro do quadrado
+            </p>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/imask@6.4.3/dist/imask.min.js"></script>
 <script>
 function produtoEditForm() {
     return {
         currentTab: 'dados',
-        custoUnitario: <?= $produto['custo_unitario'] ?>,
-        precoVenda: <?= $produto['preco_venda'] ?>,
+        custoUnitario: '<?= number_format($produto['custo_unitario'], 2, ',', '.') ?>',
+        precoVenda: '<?= number_format($produto['preco_venda'], 2, ',', '.') ?>',
         margem: 0,
         dragover: false,
         showScanner: false,
         modalVariacao: false,
         variacaoEditando: null,
+        custoMask: null,
+        precoMask: null,
         
         init() {
             this.calcularMargem();
+            this.initMasks();
+        },
+        
+        initMasks() {
+            // Máscara para custo unitário
+            const custoElement = document.getElementById('custo_unitario');
+            if (custoElement) {
+                this.custoMask = IMask(custoElement, {
+                    mask: 'R$ num',
+                    blocks: {
+                        num: {
+                            mask: Number,
+                            scale: 2,
+                            thousandsSeparator: '.',
+                            radix: ',',
+                            mapToRadix: ['.'],
+                            min: 0,
+                            max: 999999999.99
+                        }
+                    }
+                });
+            }
+            
+            // Máscara para preço de venda
+            const precoElement = document.getElementById('preco_venda');
+            if (precoElement) {
+                this.precoMask = IMask(precoElement, {
+                    mask: 'R$ num',
+                    blocks: {
+                        num: {
+                            mask: Number,
+                            scale: 2,
+                            thousandsSeparator: '.',
+                            radix: ',',
+                            mapToRadix: ['.'],
+                            min: 0,
+                            max: 999999999.99
+                        }
+                    }
+                });
+            }
         },
         
         calcularMargem() {
@@ -666,6 +707,22 @@ function produtoEditForm() {
             valor = valor.toString().replace(/[^\d,]/g, '');
             valor = valor.replace(',', '.');
             return parseFloat(valor) || 0;
+        },
+        
+        prepararSubmit(event) {
+            // Converte os valores de moeda para o formato correto antes de enviar
+            const custoInput = document.getElementById('custo_unitario');
+            const precoInput = document.getElementById('preco_venda');
+            
+            if (custoInput && this.custoMask) {
+                const valorLimpo = this.custoMask.unmaskedValue;
+                custoInput.value = valorLimpo;
+            }
+            
+            if (precoInput && this.precoMask) {
+                const valorLimpo = this.precoMask.unmaskedValue;
+                precoInput.value = valorLimpo;
+            }
         },
         
         async gerarCodigoBarras() {

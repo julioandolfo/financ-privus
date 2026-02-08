@@ -106,6 +106,15 @@ class ProdutoController extends Controller
     {
         $data = $request->all();
         $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
+        $usuarioId = $_SESSION['usuario_id'] ?? null;
+        
+        // Converter valores de moeda (formato brasileiro para float)
+        if (isset($data['custo_unitario'])) {
+            $data['custo_unitario'] = $this->converterMoeda($data['custo_unitario']);
+        }
+        if (isset($data['preco_venda'])) {
+            $data['preco_venda'] = $this->converterMoeda($data['preco_venda']);
+        }
         
         // Validar
         $errors = $this->validate($data, null, $empresaId);
@@ -122,6 +131,14 @@ class ProdutoController extends Controller
         $produtoId = $this->produtoModel->create($data);
         
         if ($produtoId) {
+            // Registrar log
+            $this->registrarLog($usuarioId, 'create', 'produtos', $produtoId, [
+                'codigo' => $data['codigo'],
+                'nome' => $data['nome'],
+                'custo_unitario' => $data['custo_unitario'],
+                'preco_venda' => $data['preco_venda']
+            ]);
+            
             $this->session->set('success', 'Produto cadastrado com sucesso!');
             return $response->redirect('/produtos/' . $produtoId);
         }
@@ -180,6 +197,7 @@ class ProdutoController extends Controller
     {
         $data = $request->all();
         $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
+        $usuarioId = $_SESSION['usuario_id'] ?? null;
         
         // Buscar produto
         $produto = $this->produtoModel->findById($id);
@@ -187,6 +205,14 @@ class ProdutoController extends Controller
         if (!$produto) {
             $this->session->set('error', 'Produto não encontrado.');
             return $response->redirect('/produtos');
+        }
+        
+        // Converter valores de moeda (formato brasileiro para float)
+        if (isset($data['custo_unitario'])) {
+            $data['custo_unitario'] = $this->converterMoeda($data['custo_unitario']);
+        }
+        if (isset($data['preco_venda'])) {
+            $data['preco_venda'] = $this->converterMoeda($data['preco_venda']);
         }
         
         // Validar
@@ -201,6 +227,22 @@ class ProdutoController extends Controller
         $success = $this->produtoModel->update($id, $data);
         
         if ($success) {
+            // Registrar log
+            $this->registrarLog($usuarioId, 'update', 'produtos', $id, [
+                'antes' => [
+                    'codigo' => $produto['codigo'],
+                    'nome' => $produto['nome'],
+                    'custo_unitario' => $produto['custo_unitario'],
+                    'preco_venda' => $produto['preco_venda']
+                ],
+                'depois' => [
+                    'codigo' => $data['codigo'],
+                    'nome' => $data['nome'],
+                    'custo_unitario' => $data['custo_unitario'],
+                    'preco_venda' => $data['preco_venda']
+                ]
+            ]);
+            
             $this->session->set('success', 'Produto atualizado com sucesso!');
             return $response->redirect('/produtos/' . $id);
         }
@@ -210,13 +252,82 @@ class ProdutoController extends Controller
     }
     
     /**
+     * Converter valor de moeda brasileira para float
+     */
+    private function converterMoeda($valor)
+    {
+        if (is_numeric($valor)) {
+            return (float) $valor;
+        }
+        
+        // Remove "R$" e espaços
+        $valor = str_replace(['R$', ' '], '', $valor);
+        
+        // Remove os pontos de milhar
+        $valor = str_replace('.', '', $valor);
+        
+        // Substitui vírgula por ponto decimal
+        $valor = str_replace(',', '.', $valor);
+        
+        return (float) $valor;
+    }
+    
+    /**
+     * Registrar log de alteração
+     */
+    private function registrarLog($usuarioId, $acao, $tabela, $registroId, $dados = [])
+    {
+        try {
+            $logDir = __DIR__ . '/../../logs';
+            if (!is_dir($logDir)) {
+                mkdir($logDir, 0755, true);
+            }
+            
+            $logFile = $logDir . '/produtos_' . date('Y-m-d') . '.log';
+            
+            $logEntry = [
+                'data_hora' => date('Y-m-d H:i:s'),
+                'usuario_id' => $usuarioId,
+                'acao' => $acao,
+                'tabela' => $tabela,
+                'registro_id' => $registroId,
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? 'N/A',
+                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'N/A',
+                'dados' => $dados
+            ];
+            
+            $logLine = json_encode($logEntry, JSON_UNESCAPED_UNICODE) . PHP_EOL;
+            file_put_contents($logFile, $logLine, FILE_APPEND);
+            
+        } catch (\Exception $e) {
+            // Silenciosamente ignora erros de log para não afetar a operação principal
+            error_log('Erro ao registrar log: ' . $e->getMessage());
+        }
+    }
+    
+    /**
      * Deleta produto
      */
     public function destroy(Request $request, Response $response, $id)
     {
+        $usuarioId = $_SESSION['usuario_id'] ?? null;
+        
+        // Buscar produto antes de deletar para log
+        $produto = $this->produtoModel->findById($id);
+        
         $success = $this->produtoModel->delete($id);
         
         if ($success) {
+            // Registrar log
+            if ($produto) {
+                $this->registrarLog($usuarioId, 'delete', 'produtos', $id, [
+                    'codigo' => $produto['codigo'],
+                    'nome' => $produto['nome'],
+                    'custo_unitario' => $produto['custo_unitario'],
+                    'preco_venda' => $produto['preco_venda']
+                ]);
+            }
+            
             $this->session->set('success', 'Produto excluído com sucesso!');
         } else {
             $this->session->set('error', 'Erro ao excluir produto.');
@@ -509,6 +620,10 @@ class ProdutoController extends Controller
     public function updateTributos(Request $request, Response $response, $id)
     {
         $data = $request->all();
+        $usuarioId = $_SESSION['usuario_id'] ?? null;
+        
+        // Buscar produto atual para log
+        $produto = $this->produtoModel->findById($id);
         
         // Dados tributários
         $dadosTributarios = [
@@ -559,6 +674,26 @@ class ProdutoController extends Controller
         $updated = $this->produtoModel->updateTributos($id, $dadosTributarios);
         
         if ($updated) {
+            // Registrar log
+            $this->registrarLog($usuarioId, 'update_tributos', 'produtos', $id, [
+                'produto' => [
+                    'codigo' => $produto['codigo'],
+                    'nome' => $produto['nome']
+                ],
+                'antes' => [
+                    'ncm' => $produto['ncm'],
+                    'cest' => $produto['cest'],
+                    'origem' => $produto['origem'],
+                    'cfop_venda' => $produto['cfop_venda']
+                ],
+                'depois' => [
+                    'ncm' => $dadosTributarios['ncm'],
+                    'cest' => $dadosTributarios['cest'],
+                    'origem' => $dadosTributarios['origem'],
+                    'cfop_venda' => $dadosTributarios['cfop_venda']
+                ]
+            ]);
+            
             $_SESSION['success'] = 'Informações tributárias atualizadas com sucesso!';
         } else {
             $_SESSION['error'] = 'Erro ao atualizar informações tributárias.';
