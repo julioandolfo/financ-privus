@@ -152,7 +152,10 @@
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Limite de Registros</label>
                     <select name="limite" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                        <option value="50">50 registros</option>
+                        <option value="1">1 registro (teste)</option>
+                        <option value="5">5 registros</option>
+                        <option value="10">10 registros</option>
+                        <option value="50" selected>50 registros</option>
                         <option value="100">100 registros</option>
                         <option value="250">250 registros</option>
                         <option value="500">500 registros</option>
