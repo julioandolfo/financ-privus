@@ -44,6 +44,76 @@ class Cliente extends Model
     }
     
     /**
+     * Retorna clientes com filtros e paginação
+     */
+    public function findAllWithFilters($filters = [])
+    {
+        $sql = "SELECT * FROM {$this->table} WHERE ativo = 1";
+        $params = [];
+        
+        if (!empty($filters['empresa_id'])) {
+            $sql .= " AND empresa_id = :empresa_id";
+            $params['empresa_id'] = $filters['empresa_id'];
+        }
+        
+        if (!empty($filters['busca'])) {
+            $sql .= " AND (nome_razao_social LIKE :busca OR cpf_cnpj LIKE :busca OR email LIKE :busca OR codigo_cliente LIKE :busca)";
+            $params['busca'] = '%' . $filters['busca'] . '%';
+        }
+        
+        if (!empty($filters['tipo_pessoa'])) {
+            $sql .= " AND tipo = :tipo_pessoa";
+            $params['tipo_pessoa'] = $filters['tipo_pessoa'];
+        }
+        
+        $sql .= " ORDER BY nome_razao_social ASC";
+        
+        // Paginação
+        if (isset($filters['limite'])) {
+            if (isset($filters['offset'])) {
+                $sql .= " LIMIT " . (int)$filters['limite'] . " OFFSET " . (int)$filters['offset'];
+            } else {
+                $sql .= " LIMIT " . (int)$filters['limite'];
+            }
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+    
+    /**
+     * Conta clientes com filtros aplicados
+     */
+    public function countWithFilters($filters = [])
+    {
+        $sql = "SELECT COUNT(*) as total FROM {$this->table} WHERE ativo = 1";
+        $params = [];
+        
+        if (!empty($filters['empresa_id'])) {
+            $sql .= " AND empresa_id = :empresa_id";
+            $params['empresa_id'] = $filters['empresa_id'];
+        }
+        
+        if (!empty($filters['busca'])) {
+            $sql .= " AND (nome_razao_social LIKE :busca OR cpf_cnpj LIKE :busca OR email LIKE :busca OR codigo_cliente LIKE :busca)";
+            $params['busca'] = '%' . $filters['busca'] . '%';
+        }
+        
+        if (!empty($filters['tipo_pessoa'])) {
+            $sql .= " AND tipo = :tipo_pessoa";
+            $params['tipo_pessoa'] = $filters['tipo_pessoa'];
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['total'] ?? 0;
+    }
+    
+    /**
      * Retorna um cliente por ID
      */
     public function findById($id)

@@ -113,8 +113,28 @@ class ContaPagarController extends Controller
             
             // Paginação
             $porPagina = $request->get('por_pagina') ?? 25;
+            $paginaAtual = $request->get('pagina') ?? 1;
+            $paginaAtual = max(1, (int)$paginaAtual);
+            
+            // Busca total de registros para calcular paginação
+            $totalRegistros = $this->contaPagarModel->countWithFilters($filters);
+            
+            // Calcula paginação
+            $totalPaginas = 1;
+            $offset = 0;
+            
             if ($porPagina !== 'todos') {
-                $filters['limite'] = (int) $porPagina;
+                $porPagina = (int) $porPagina;
+                $totalPaginas = ceil($totalRegistros / $porPagina);
+                
+                // Ajusta página atual se estiver fora do range
+                if ($paginaAtual > $totalPaginas && $totalPaginas > 0) {
+                    $paginaAtual = $totalPaginas;
+                }
+                
+                $offset = ($paginaAtual - 1) * $porPagina;
+                $filters['limite'] = $porPagina;
+                $filters['offset'] = $offset;
             }
             
             $contasPagar = $this->contaPagarModel->findAll($filters);
@@ -135,7 +155,14 @@ class ContaPagarController extends Controller
                 'categorias' => $categorias,
                 'centrosCusto' => $centrosCusto,
                 'formasPagamento' => $formasPagamento,
-                'filters' => $filtersApplied
+                'filters' => $filtersApplied,
+                'paginacao' => [
+                    'total_registros' => $totalRegistros,
+                    'por_pagina' => $porPagina,
+                    'pagina_atual' => $paginaAtual,
+                    'total_paginas' => $totalPaginas,
+                    'offset' => $offset
+                ]
             ]);
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Erro ao carregar contas a pagar: ' . $e->getMessage();

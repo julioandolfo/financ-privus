@@ -137,6 +137,19 @@
                     <option value="0" <?= $filters['conciliado'] === '0' ? 'selected' : '' ?>>Não Conciliadas</option>
                 </select>
             </div>
+            
+            <!-- Itens por Página -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Itens por Página
+                </label>
+                <select name="por_pagina" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="25" <?= ($filters['por_pagina'] ?? '25') == '25' ? 'selected' : '' ?>>25</option>
+                    <option value="50" <?= ($filters['por_pagina'] ?? '') == '50' ? 'selected' : '' ?>>50</option>
+                    <option value="100" <?= ($filters['por_pagina'] ?? '') == '100' ? 'selected' : '' ?>>100</option>
+                    <option value="todos" <?= ($filters['por_pagina'] ?? '') == 'todos' ? 'selected' : '' ?>>Todos</option>
+                </select>
+            </div>
 
             <!-- Botão Filtrar -->
             <div class="flex items-end">
@@ -275,11 +288,58 @@
                 </table>
             </div>
             
+            <!-- Paginação -->
+            <?php if (isset($paginacao) && $paginacao['total_paginas'] > 1): ?>
+                <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm text-gray-700 dark:text-gray-300">
+                            Mostrando <span class="font-medium"><?= min($paginacao['offset'] + 1, $paginacao['total_registros']) ?></span>
+                            até <span class="font-medium"><?= min($paginacao['offset'] + $paginacao['por_pagina'], $paginacao['total_registros']) ?></span>
+                            de <span class="font-medium"><?= $paginacao['total_registros'] ?></span> registros
+                        </div>
+                        
+                        <div class="flex items-center space-x-2">
+                            <?php
+                            $urlParams = $filters ?? [];
+                            unset($urlParams['pagina']);
+                            $urlBase = '/movimentacoes-caixa?' . http_build_query($urlParams);
+                            $separador = empty($urlParams) ? '?' : '&';
+                            $range = 2;
+                            $inicio = max(1, $paginacao['pagina_atual'] - $range);
+                            $fim = min($paginacao['total_paginas'], $paginacao['pagina_atual'] + $range);
+                            ?>
+                            
+                            <?php if ($paginacao['pagina_atual'] > 1): ?>
+                                <a href="<?= $urlBase . $separador ?>pagina=1" class="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Primeira</a>
+                                <a href="<?= $urlBase . $separador ?>pagina=<?= $paginacao['pagina_atual'] - 1 ?>" class="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Anterior</a>
+                            <?php endif; ?>
+                            
+                            <?php if ($inicio > 1): ?><span class="px-2 text-gray-500">...</span><?php endif; ?>
+                            
+                            <?php for ($i = $inicio; $i <= $fim; $i++): ?>
+                                <?php if ($i == $paginacao['pagina_atual']): ?>
+                                    <span class="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-medium"><?= $i ?></span>
+                                <?php else: ?>
+                                    <a href="<?= $urlBase . $separador ?>pagina=<?= $i ?>" class="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"><?= $i ?></a>
+                                <?php endif; ?>
+                            <?php endfor; ?>
+                            
+                            <?php if ($fim < $paginacao['total_paginas']): ?><span class="px-2 text-gray-500">...</span><?php endif; ?>
+                            
+                            <?php if ($paginacao['pagina_atual'] < $paginacao['total_paginas']): ?>
+                                <a href="<?= $urlBase . $separador ?>pagina=<?= $paginacao['pagina_atual'] + 1 ?>" class="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Próxima</a>
+                                <a href="<?= $urlBase . $separador ?>pagina=<?= $paginacao['total_paginas'] ?>" class="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Última</a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+            
             <!-- Resumo -->
             <div class="bg-gray-50 dark:bg-gray-700/50 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
                 <div class="flex justify-between items-center text-sm">
                     <span class="text-gray-600 dark:text-gray-400">
-                        Total de <?= count($movimentacoes) ?> movimentação(ões)
+                        Total de <?= isset($paginacao) ? $paginacao['total_registros'] : count($movimentacoes) ?> movimentação(ões)
                     </span>
                 </div>
             </div>

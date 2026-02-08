@@ -54,6 +54,27 @@ class MovimentacaoCaixaController extends Controller
         if ($dataFim) $filters['data_fim'] = $dataFim;
         if ($conciliado !== '') $filters['conciliado'] = $conciliado;
         
+        // Paginação
+        $porPagina = $request->get('por_pagina') ?? 25;
+        $paginaAtual = $request->get('pagina') ?? 1;
+        $paginaAtual = max(1, (int)$paginaAtual);
+        
+        $totalRegistros = $this->movimentacaoModel->countWithFilters($filters);
+        
+        $totalPaginas = 1;
+        $offset = 0;
+        
+        if ($porPagina !== 'todos') {
+            $porPagina = (int) $porPagina;
+            $totalPaginas = ceil($totalRegistros / $porPagina);
+            if ($paginaAtual > $totalPaginas && $totalPaginas > 0) {
+                $paginaAtual = $totalPaginas;
+            }
+            $offset = ($paginaAtual - 1) * $porPagina;
+            $filters['limite'] = $porPagina;
+            $filters['offset'] = $offset;
+        }
+        
         $movimentacoes = $this->movimentacaoModel->findAll($filters);
         
         // Calcular totais
@@ -71,24 +92,25 @@ class MovimentacaoCaixaController extends Controller
         // Dados para filtros
         $empresas = $this->empresaModel->findAll(['ativo' => 1]);
         $contasBancarias = $this->contaBancariaModel->findAll();
+        $filtersApplied = $request->all();
         
         return $this->render('movimentacoes_caixa/index', [
             'title' => 'Movimentações de Caixa',
             'movimentacoes' => $movimentacoes,
             'empresas' => $empresas,
             'contasBancarias' => $contasBancarias,
-            'filters' => [
-                'empresa_id' => $empresaId,
-                'tipo' => $tipo,
-                'conta_bancaria_id' => $contaBancariaId,
-                'data_inicio' => $dataInicio,
-                'data_fim' => $dataFim,
-                'conciliado' => $conciliado
-            ],
+            'filters' => $filtersApplied,
             'totais' => [
                 'entradas' => $totalEntradas,
                 'saidas' => $totalSaidas,
                 'saldo' => $saldoPeriodo
+            ],
+            'paginacao' => [
+                'total_registros' => $totalRegistros,
+                'por_pagina' => $porPagina,
+                'pagina_atual' => $paginaAtual,
+                'total_paginas' => $totalPaginas,
+                'offset' => $offset
             ]
         ]);
     }

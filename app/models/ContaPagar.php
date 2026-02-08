@@ -128,6 +128,15 @@ class ContaPagar extends Model
         
         $sql .= " ORDER BY cp.data_vencimento DESC, cp.id DESC";
         
+        // Paginação
+        if (isset($filters['limite'])) {
+            if (isset($filters['offset'])) {
+                $sql .= " LIMIT " . (int)$filters['limite'] . " OFFSET " . (int)$filters['offset'];
+            } else {
+                $sql .= " LIMIT " . (int)$filters['limite'];
+            }
+        }
+        
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -706,6 +715,101 @@ class ContaPagar extends Model
         
         $stmt = $this->db->query($sql);
         return $stmt->fetchColumn();
+    }
+    
+    /**
+     * Retorna total de registros com filtros aplicados
+     */
+    public function countWithFilters($filters = [])
+    {
+        $sql = "SELECT COUNT(*) as total
+                FROM {$this->table} cp
+                JOIN empresas e ON cp.empresa_id = e.id
+                LEFT JOIN fornecedores f ON cp.fornecedor_id = f.id
+                JOIN categorias_financeiras c ON cp.categoria_id = c.id
+                LEFT JOIN centros_custo cc ON cp.centro_custo_id = cc.id
+                WHERE cp.deleted_at IS NULL";
+        $params = [];
+        
+        // Aplicar os mesmos filtros do findAll
+        if (isset($filters['empresas_ids']) && is_array($filters['empresas_ids'])) {
+            $placeholders = implode(',', array_fill(0, count($filters['empresas_ids']), '?'));
+            $sql .= " AND cp.empresa_id IN ({$placeholders})";
+            $params = array_merge($params, $filters['empresas_ids']);
+        } elseif (isset($filters['empresa_id']) && $filters['empresa_id'] !== '') {
+            $sql .= " AND cp.empresa_id = ?";
+            $params[] = $filters['empresa_id'];
+        }
+        
+        if (isset($filters['status']) && $filters['status'] !== '') {
+            $sql .= " AND cp.status = ?";
+            $params[] = $filters['status'];
+        }
+        
+        if (isset($filters['fornecedor_id']) && $filters['fornecedor_id'] !== '') {
+            $sql .= " AND cp.fornecedor_id = ?";
+            $params[] = $filters['fornecedor_id'];
+        } elseif (isset($filters['fornecedor_nome']) && $filters['fornecedor_nome'] !== '') {
+            $sql .= " AND f.nome_razao_social = ?";
+            $params[] = $filters['fornecedor_nome'];
+        }
+        
+        if (isset($filters['categoria_id']) && $filters['categoria_id'] !== '') {
+            $sql .= " AND cp.categoria_id = ?";
+            $params[] = $filters['categoria_id'];
+        } elseif (isset($filters['categoria_nome']) && $filters['categoria_nome'] !== '') {
+            $sql .= " AND c.nome = ?";
+            $params[] = $filters['categoria_nome'];
+        }
+        
+        if (isset($filters['centro_custo_id']) && $filters['centro_custo_id'] !== '') {
+            $sql .= " AND cp.centro_custo_id = ?";
+            $params[] = $filters['centro_custo_id'];
+        } elseif (isset($filters['centro_custo_nome']) && $filters['centro_custo_nome'] !== '') {
+            $sql .= " AND cc.nome = ?";
+            $params[] = $filters['centro_custo_nome'];
+        }
+        
+        if (isset($filters['data_competencia_inicio']) && $filters['data_competencia_inicio'] !== '') {
+            $sql .= " AND cp.data_competencia >= ?";
+            $params[] = $filters['data_competencia_inicio'];
+        }
+        if (isset($filters['data_competencia_fim']) && $filters['data_competencia_fim'] !== '') {
+            $sql .= " AND cp.data_competencia <= ?";
+            $params[] = $filters['data_competencia_fim'];
+        }
+        
+        if (isset($filters['data_vencimento_inicio']) && $filters['data_vencimento_inicio'] !== '') {
+            $sql .= " AND cp.data_vencimento >= ?";
+            $params[] = $filters['data_vencimento_inicio'];
+        }
+        if (isset($filters['data_vencimento_fim']) && $filters['data_vencimento_fim'] !== '') {
+            $sql .= " AND cp.data_vencimento <= ?";
+            $params[] = $filters['data_vencimento_fim'];
+        }
+        
+        if (isset($filters['tem_rateio']) && $filters['tem_rateio'] !== '') {
+            $sql .= " AND cp.tem_rateio = ?";
+            $params[] = $filters['tem_rateio'];
+        }
+        
+        if (isset($filters['search']) && $filters['search'] !== '') {
+            $sql .= " AND (cp.descricao LIKE ? OR cp.numero_documento LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+        
+        if (isset($filters['tipo_custo']) && $filters['tipo_custo'] !== '') {
+            $sql .= " AND cp.tipo_custo = ?";
+            $params[] = $filters['tipo_custo'];
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['total'] ?? 0;
     }
 
     /**

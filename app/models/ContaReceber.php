@@ -232,6 +232,14 @@ class ContaReceber extends Model
             $columns[] = 'pedido_id';
             $values[] = $data['pedido_id'] ?? null;
         }
+        if (in_array('forma_recebimento_id', $extraColumns)) {
+            $columns[] = 'forma_recebimento_id';
+            $values[] = !empty($data['forma_recebimento_id']) ? $data['forma_recebimento_id'] : null;
+        }
+        if (in_array('data_recebimento', $extraColumns) && !empty($data['data_recebimento'])) {
+            $columns[] = 'data_recebimento';
+            $values[] = $data['data_recebimento'];
+        }
         
         $placeholders = implode(', ', array_fill(0, count($columns), '?'));
         $columnsList = implode(', ', $columns);

@@ -287,9 +287,48 @@ class Usuario extends Model
         
         $sql .= " ORDER BY u.nome ASC";
         
+        // Paginação
+        if (isset($filters['limite'])) {
+            if (isset($filters['offset'])) {
+                $sql .= " LIMIT " . (int)$filters['limite'] . " OFFSET " . (int)$filters['offset'];
+            } else {
+                $sql .= " LIMIT " . (int)$filters['limite'];
+            }
+        }
+        
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    /**
+     * Conta usuários com filtros aplicados
+     */
+    public function countWithFilters($filters = [])
+    {
+        $sql = "SELECT COUNT(*) as total FROM {$this->table} u WHERE 1=1";
+        $params = [];
+        
+        if (isset($filters['ativo']) && $filters['ativo'] !== '') {
+            $sql .= " AND u.ativo = :ativo";
+            $params['ativo'] = $filters['ativo'];
+        }
+        
+        if (isset($filters['empresa_id']) && $filters['empresa_id'] !== '') {
+            $sql .= " AND u.empresa_id = :empresa_id";
+            $params['empresa_id'] = $filters['empresa_id'];
+        }
+        
+        if (isset($filters['search']) && !empty($filters['search'])) {
+            $sql .= " AND (u.nome LIKE :search OR u.email LIKE :search)";
+            $params['search'] = '%' . $filters['search'] . '%';
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['total'] ?? 0;
     }
     
     /**

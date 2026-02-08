@@ -30,12 +30,41 @@ class UsuarioController extends Controller
                 'search' => $request->get('search', '')
             ];
             
+            // Paginação
+            $porPagina = $request->get('por_pagina') ?? 25;
+            $paginaAtual = $request->get('pagina') ?? 1;
+            $paginaAtual = max(1, (int)$paginaAtual);
+            
+            $totalRegistros = $this->usuarioModel->countWithFilters($filters);
+            
+            $totalPaginas = 1;
+            $offset = 0;
+            
+            if ($porPagina !== 'todos') {
+                $porPagina = (int) $porPagina;
+                $totalPaginas = ceil($totalRegistros / $porPagina);
+                if ($paginaAtual > $totalPaginas && $totalPaginas > 0) {
+                    $paginaAtual = $totalPaginas;
+                }
+                $offset = ($paginaAtual - 1) * $porPagina;
+                $filters['limite'] = $porPagina;
+                $filters['offset'] = $offset;
+            }
+            
             $usuarios = $this->usuarioModel->findAll($filters);
+            $filtersApplied = $request->all();
             
             return $this->render('usuarios/index', [
                 'title' => 'Gerenciar Usuários',
                 'usuarios' => $usuarios,
-                'filters' => $filters
+                'filters' => $filtersApplied,
+                'paginacao' => [
+                    'total_registros' => $totalRegistros,
+                    'por_pagina' => $porPagina,
+                    'pagina_atual' => $paginaAtual,
+                    'total_paginas' => $totalPaginas,
+                    'offset' => $offset
+                ]
             ]);
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Erro ao carregar usuários: ' . $e->getMessage();

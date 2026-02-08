@@ -379,8 +379,8 @@ class IntegracaoController extends Controller
         }
         
         try {
-            // Captura opções de sincronização
-            $opcoes = $request->all();
+            // Captura opções de sincronização (suporta JSON e form-data)
+            $opcoes = $request->isJson() ? ($request->json() ?: []) : $request->all();
             
             $resultado = null;
             

@@ -44,14 +44,50 @@ class PedidoVinculadoController extends Controller
             'numero_pedido' => $request->get('numero_pedido')
         ];
         
+        // Paginação
+        $porPagina = $request->get('por_pagina') ?? 25;
+        $paginaAtual = $request->get('pagina') ?? 1;
+        $paginaAtual = max(1, (int)$paginaAtual);
+        
+        // Busca total de registros para calcular paginação
+        $totalRegistros = $this->pedidoModel->countWithFilters($empresaId, $filters);
+        
+        // Calcula paginação
+        $totalPaginas = 1;
+        $offset = 0;
+        
+        if ($porPagina !== 'todos') {
+            $porPagina = (int) $porPagina;
+            $totalPaginas = ceil($totalRegistros / $porPagina);
+            
+            // Ajusta página atual se estiver fora do range
+            if ($paginaAtual > $totalPaginas && $totalPaginas > 0) {
+                $paginaAtual = $totalPaginas;
+            }
+            
+            $offset = ($paginaAtual - 1) * $porPagina;
+            $filters['limite'] = $porPagina;
+            $filters['offset'] = $offset;
+        }
+        
         $pedidos = $this->pedidoModel->findAll($empresaId, $filters);
         $clientes = $this->clienteModel->findAll($empresaId);
+        
+        // Filtros aplicados para a view
+        $filtersApplied = $request->all();
         
         return $this->render('pedidos/index', [
             'title' => 'Pedidos Vinculados',
             'pedidos' => $pedidos,
             'clientes' => $clientes,
-            'filters' => $filters
+            'filters' => $filtersApplied,
+            'paginacao' => [
+                'total_registros' => $totalRegistros,
+                'por_pagina' => $porPagina,
+                'pagina_atual' => $paginaAtual,
+                'total_paginas' => $totalPaginas,
+                'offset' => $offset
+            ]
         ]);
     }
     

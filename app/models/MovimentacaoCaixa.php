@@ -77,6 +77,15 @@ class MovimentacaoCaixa extends Model
         
         $sql .= " ORDER BY m.data_movimentacao DESC, m.id DESC";
         
+        // Paginação
+        if (isset($filters['limite'])) {
+            if (isset($filters['offset'])) {
+                $sql .= " LIMIT " . (int)$filters['limite'] . " OFFSET " . (int)$filters['offset'];
+            } else {
+                $sql .= " LIMIT " . (int)$filters['limite'];
+            }
+        }
+        
         $stmt = $this->db->prepare($sql);
         
         // Bind dos parâmetros nomeados e posicionais
@@ -91,6 +100,70 @@ class MovimentacaoCaixa extends Model
         
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+    
+    /**
+     * Retorna total de movimentações com filtros aplicados
+     */
+    public function countWithFilters($filters = [])
+    {
+        $sql = "SELECT COUNT(*) as total
+                FROM {$this->table} m
+                WHERE 1=1";
+        $params = [];
+        
+        if (isset($filters['empresa_id']) && $filters['empresa_id'] !== '') {
+            $sql .= " AND m.empresa_id = :empresa_id";
+            $params['empresa_id'] = $filters['empresa_id'];
+        }
+        
+        if (isset($filters['empresas_ids']) && is_array($filters['empresas_ids'])) {
+            $placeholders = implode(',', array_fill(0, count($filters['empresas_ids']), '?'));
+            $sql .= " AND m.empresa_id IN ({$placeholders})";
+            $params = array_merge($params, $filters['empresas_ids']);
+        }
+        
+        if (isset($filters['tipo']) && $filters['tipo'] !== '') {
+            $sql .= " AND m.tipo = :tipo";
+            $params['tipo'] = $filters['tipo'];
+        }
+        
+        if (isset($filters['conta_bancaria_id']) && $filters['conta_bancaria_id'] !== '') {
+            $sql .= " AND m.conta_bancaria_id = :conta_bancaria_id";
+            $params['conta_bancaria_id'] = $filters['conta_bancaria_id'];
+        }
+        
+        if (isset($filters['data_inicio']) && $filters['data_inicio'] !== '') {
+            $sql .= " AND m.data_movimentacao >= :data_inicio";
+            $params['data_inicio'] = $filters['data_inicio'];
+        }
+        
+        if (isset($filters['data_fim']) && $filters['data_fim'] !== '') {
+            $sql .= " AND m.data_movimentacao <= :data_fim";
+            $params['data_fim'] = $filters['data_fim'];
+        }
+        
+        if (isset($filters['conciliado']) && $filters['conciliado'] !== '') {
+            $sql .= " AND m.conciliado = :conciliado";
+            $params['conciliado'] = $filters['conciliado'];
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        
+        // Bind dos parâmetros nomeados e posicionais
+        $posicao = 1;
+        foreach ($params as $key => $value) {
+            if (is_int($key)) {
+                $stmt->bindValue($posicao++, $value);
+            } else {
+                $stmt->bindValue(":{$key}", $value);
+            }
+        }
+        
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['total'] ?? 0;
     }
     
     /**

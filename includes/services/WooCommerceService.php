@@ -6,6 +6,7 @@ use App\Models\IntegracaoWooCommerce;
 use App\Models\IntegracaoLog;
 use App\Models\Produto;
 use App\Models\PedidoVinculado;
+use App\Models\PedidoItem;
 use App\Models\Cliente;
 use App\Models\IntegracaoJob;
 use App\Models\ProdutoImagem;
@@ -19,6 +20,7 @@ class WooCommerceService
     private $logModel;
     private $produtoModel;
     private $pedidoModel;
+    private $pedidoItemModel;
     private $clienteModel;
     private $jobModel;
     private $imagemModel;
@@ -32,6 +34,7 @@ class WooCommerceService
         $this->logModel = new IntegracaoLog();
         $this->produtoModel = new Produto();
         $this->pedidoModel = new PedidoVinculado();
+        $this->pedidoItemModel = new PedidoItem();
         $this->clienteModel = new Cliente();
         $this->jobModel = new IntegracaoJob();
         $this->imagemModel = new ProdutoImagem();
@@ -63,11 +66,20 @@ class WooCommerceService
         ];
         
         try {
+            $isPedidoUnico = !empty($opcoes['pedido_unico_id']);
+            
             // Define o que sincronizar
             $sincProdutos = isset($opcoes['sincronizar_produtos']) ? $opcoes['sincronizar_produtos'] : $config['sincronizar_produtos'];
             $sincPedidos = isset($opcoes['sincronizar_pedidos']) ? $opcoes['sincronizar_pedidos'] : $config['sincronizar_pedidos'];
             
-            // Sincroniza produtos
+            // Se é pedido único, pula sincronização de produtos em lote 
+            // (os produtos do pedido serão criados automaticamente)
+            if ($isPedidoUnico) {
+                $sincProdutos = false;
+                $sincPedidos = true;
+            }
+            
+            // Sincroniza produtos (em lote)
             if ($sincProdutos) {
                 $resultProdutos = $this->sincronizarProdutos($config, $integracao['empresa_id'], $opcoes);
                 $resultados['produtos'] = $resultProdutos['total'];
@@ -76,7 +88,7 @@ class WooCommerceService
                 }
             }
             
-            // Sincroniza pedidos
+            // Sincroniza pedidos (com produtos vinculados)
             if ($sincPedidos) {
                 $resultPedidos = $this->sincronizarPedidos($config, $integracao['empresa_id'], $opcoes);
                 $resultados['pedidos'] = $resultPedidos['total'];
@@ -90,7 +102,11 @@ class WooCommerceService
             $this->integracaoModel->updateUltimaSincronizacao($integracaoId, $proximaSinc);
             
             // Log
-            $mensagem = "Sincronização concluída: {$resultados['produtos']} produtos, {$resultados['pedidos']} pedidos";
+            if ($isPedidoUnico) {
+                $mensagem = "Sincronização de pedido único #{$opcoes['pedido_unico_id']} concluída: {$resultados['pedidos']} pedido(s) processado(s)";
+            } else {
+                $mensagem = "Sincronização concluída: {$resultados['produtos']} produtos, {$resultados['pedidos']} pedidos";
+            }
             $tipoLog = empty($resultados['erros']) ? IntegracaoLog::TIPO_SUCESSO : IntegracaoLog::TIPO_AVISO;
             $this->logModel->create($integracaoId, $tipoLog, $mensagem, $resultados);
             
@@ -171,34 +187,61 @@ class WooCommerceService
         try {
             $pedidos = $this->buscarPedidosWooCommerce($config, $opcoes);
             
+            $isPedidoUnico = !empty($opcoes['pedido_unico_id']);
+            
             \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
-                'Pedidos encontrados: ' . count($pedidos), ['empresa_id' => $empresaId]);
+                ($isPedidoUnico ? 'Sincronização de pedido único' : 'Sincronização em lote') . 
+                ' - Pedidos encontrados: ' . count($pedidos), 
+                ['empresa_id' => $empresaId]);
             
             foreach ($pedidos as $pedWoo) {
                 try {
-                    // Busca ou cria cliente
-                    $clienteId = $this->buscarOuCriarCliente($pedWoo['billing'], $empresaId);
+                    $numeroPedido = $pedWoo['number'] ?? $pedWoo['id'];
                     
-                    // Mapeia o status do WooCommerce para o sistema
+                    \App\Models\LogSistema::debug('WooCommerce', 'sincronizarPedidos', 
+                        "=== Processando pedido #{$numeroPedido} ===",
+                        [
+                            'woo_id' => $pedWoo['id'],
+                            'status' => $pedWoo['status'],
+                            'total' => $pedWoo['total'],
+                            'payment_method' => $pedWoo['payment_method'] ?? 'N/A',
+                            'cliente' => ($pedWoo['billing']['first_name'] ?? '') . ' ' . ($pedWoo['billing']['last_name'] ?? ''),
+                            'itens' => count($pedWoo['line_items'] ?? [])
+                        ]);
+                    
+                    // =============================================
+                    // PASSO 1: BUSCAR OU CRIAR CLIENTE
+                    // =============================================
+                    $metaData = $pedWoo['meta_data'] ?? [];
+                    $clienteId = $this->buscarOuCriarCliente($pedWoo['billing'], $empresaId, $metaData);
+                    
+                    \App\Models\LogSistema::debug('WooCommerce', 'sincronizarPedidos', 
+                        "Pedido #{$numeroPedido}: cliente_id = {$clienteId}");
+                    
+                    // =============================================
+                    // PASSO 2: MAPEAR STATUS
+                    // =============================================
                     $statusWoo = $pedWoo['status'];
                     $statusSistema = $mapeamentoStatus['wc-' . $statusWoo] 
                         ?? $mapeamentoStatus[$statusWoo] 
                         ?? $this->mapearStatus($statusWoo);
                     
-                    // Identifica forma de pagamento do WooCommerce
+                    // =============================================
+                    // PASSO 3: IDENTIFICAR FORMA DE PAGAMENTO
+                    // =============================================
                     $formaPagamentoWoo = $pedWoo['payment_method'] ?? '';
                     $formaPagamentoTitulo = $pedWoo['payment_method_title'] ?? $formaPagamentoWoo;
-                    
-                    // Busca configuração de ação para esta forma de pagamento
                     $acaoFormaPgto = $acoesFormasPagamento[$formaPagamentoWoo] ?? [];
                     
-                    // Dados do pedido
+                    // =============================================
+                    // PASSO 4: CRIAR OU ATUALIZAR PEDIDO
+                    // =============================================
                     $dados = [
                         'empresa_id' => $empresaId,
                         'cliente_id' => $clienteId,
                         'origem' => 'woocommerce',
                         'origem_id' => $pedWoo['id'],
-                        'numero_pedido' => $pedWoo['number'],
+                        'numero_pedido' => $numeroPedido,
                         'data_pedido' => date('Y-m-d H:i:s', strtotime($pedWoo['date_created'])),
                         'status' => $statusSistema,
                         'valor_total' => $pedWoo['total'],
@@ -209,34 +252,57 @@ class WooCommerceService
                     ];
                     
                     // Verifica se pedido já existe
-                    $pedidoExistente = $this->buscarPedidoExistente($pedWoo['number'], $empresaId);
+                    $pedidoExistente = $this->buscarPedidoExistente($numeroPedido, $empresaId, $pedWoo['id']);
                     
                     if ($pedidoExistente) {
-                        // Atualiza status se mudou
-                        if ($pedidoExistente['status'] !== $statusSistema) {
-                            $this->pedidoModel->update($pedidoExistente['id'], $dados);
-                            
-                            // Só verifica baixa se NÃO é "não criar receita"
-                            if (empty($acaoFormaPgto['nao_criar_receita'])) {
-                                $this->verificarBaixaAutomatica(
-                                    $pedidoExistente['id'],
-                                    $statusSistema,
-                                    $acaoFormaPgto,
-                                    $statusPagamentoConfirmado,
-                                    $pedWoo,
-                                    $empresaId,
-                                    $contaReceberModel
-                                );
-                            }
+                        // Atualiza pedido existente (inclusive cliente_id se mudou)
+                        $this->pedidoModel->update($pedidoExistente['id'], $dados);
+                        $pedidoId = $pedidoExistente['id'];
+                        
+                        \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                            "Pedido #{$numeroPedido}: atualizado (ID: {$pedidoId})",
+                            ['status_anterior' => $pedidoExistente['status'], 'status_novo' => $statusSistema]);
+                        
+                        // Se status mudou, verifica baixa automática
+                        if ($pedidoExistente['status'] !== $statusSistema && empty($acaoFormaPgto['nao_criar_receita'])) {
+                            $this->verificarBaixaAutomatica(
+                                $pedidoId,
+                                $statusSistema,
+                                $acaoFormaPgto,
+                                $statusPagamentoConfirmado,
+                                $pedWoo,
+                                $empresaId,
+                                $contaReceberModel
+                            );
                         }
                     } else {
                         // Cria pedido novo
                         $pedidoId = $this->pedidoModel->create($dados);
                         
-                        // Cria conta a receber SOMENTE se não é "não criar receita"
+                        if (!$pedidoId) {
+                            throw new \Exception("Falha ao criar pedido no banco de dados");
+                        }
+                        
+                        \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                            "Pedido #{$numeroPedido}: criado (ID: {$pedidoId})",
+                            ['cliente_id' => $clienteId, 'status' => $statusSistema, 'valor' => $pedWoo['total']]);
+                    }
+                    
+                    // =============================================
+                    // PASSO 5: PROCESSAR PRODUTOS/ITENS DO PEDIDO
+                    // =============================================
+                    $lineItems = $pedWoo['line_items'] ?? [];
+                    if (!empty($lineItems)) {
+                        $this->processarItensDoPedido($pedidoId, $lineItems, $empresaId, $numeroPedido);
+                    }
+                    
+                    // =============================================
+                    // PASSO 6: CONTA A RECEBER (apenas para pedidos novos)
+                    // =============================================
+                    if (!$pedidoExistente) {
                         if (!empty($acaoFormaPgto['nao_criar_receita'])) {
                             \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
-                                "Pedido #{$pedWoo['number']}: conta a receber NÃO criada (forma pgto '{$formaPagamentoTitulo}' configurada como 'não criar receita')"
+                                "Pedido #{$numeroPedido}: conta a receber NÃO criada (forma pgto '{$formaPagamentoTitulo}' configurada como 'não criar receita')"
                             );
                         } else {
                             $this->criarContaReceberDoPedido(
@@ -253,17 +319,161 @@ class WooCommerceService
                     }
                     
                     $total++;
+                    
+                    \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                        "Pedido #{$numeroPedido}: sincronizado com sucesso! " .
+                        "(Cliente: #{$clienteId}, Itens: " . count($lineItems) . ", Status: {$statusSistema})");
+                    
                 } catch (\Exception $e) {
-                    $erros[] = "Pedido {$pedWoo['number']}: " . $e->getMessage();
+                    $numPed = $pedWoo['number'] ?? $pedWoo['id'] ?? '?';
+                    $erros[] = "Pedido {$numPed}: " . $e->getMessage();
                     \App\Models\LogSistema::error('WooCommerce', 'sincronizarPedidos', 
-                        "Erro pedido #{$pedWoo['number']}: " . $e->getMessage());
+                        "Erro pedido #{$numPed}: " . $e->getMessage(),
+                        ['trace' => $e->getTraceAsString()]);
                 }
             }
         } catch (\Exception $e) {
             $erros[] = "Erro ao buscar pedidos: " . $e->getMessage();
+            \App\Models\LogSistema::error('WooCommerce', 'sincronizarPedidos', 
+                "Erro geral ao buscar pedidos: " . $e->getMessage());
         }
         
         return ['total' => $total, 'erros' => $erros];
+    }
+    
+    /**
+     * Processa os itens (line_items) de um pedido WooCommerce
+     * 
+     * Para cada item:
+     * 1. Busca produto no sistema por SKU ou cria novo
+     * 2. Cria o item do pedido vinculado ao produto
+     */
+    private function processarItensDoPedido($pedidoId, $lineItems, $empresaId, $numeroPedido)
+    {
+        // Primeiro, remove itens antigos deste pedido (para atualização)
+        try {
+            $itensExistentes = $this->pedidoItemModel->findByPedido($pedidoId);
+            if (!empty($itensExistentes)) {
+                $this->pedidoItemModel->deleteByPedido($pedidoId);
+                \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                    "Pedido #{$numeroPedido}: removidos " . count($itensExistentes) . " itens antigos para recriar");
+            }
+        } catch (\Exception $e) {
+            \App\Models\LogSistema::warning('WooCommerce', 'processarItens', 
+                "Pedido #{$numeroPedido}: erro ao limpar itens antigos: " . $e->getMessage());
+        }
+        
+        $totalItens = 0;
+        
+        foreach ($lineItems as $item) {
+            try {
+                $sku = $item['sku'] ?? '';
+                $nomeProduto = $item['name'] ?? 'Produto WooCommerce';
+                $quantidade = floatval($item['quantity'] ?? 1);
+                $precoUnitario = floatval($item['price'] ?? 0);
+                $precoTotal = floatval($item['total'] ?? ($precoUnitario * $quantidade));
+                $produtoWooId = $item['product_id'] ?? null;
+                $variacaoId = $item['variation_id'] ?? null;
+                
+                // =============================================
+                // BUSCA OU CRIA O PRODUTO NO SISTEMA
+                // =============================================
+                $produtoId = null;
+                
+                // 1. Busca por SKU
+                if (!empty($sku)) {
+                    $produtoExistente = $this->produtoModel->findBySku($sku, $empresaId);
+                    if ($produtoExistente) {
+                        $produtoId = $produtoExistente['id'];
+                        \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                            "Pedido #{$numeroPedido}: produto encontrado por SKU '{$sku}' -> ID #{$produtoId}");
+                    }
+                }
+                
+                // 2. Busca por nome se não encontrou por SKU
+                if (!$produtoId && !empty($nomeProduto)) {
+                    $db = \App\Core\Database::getInstance()->getConnection();
+                    $sql = "SELECT id FROM produtos WHERE nome = :nome AND empresa_id = :empresa_id AND ativo = 1 LIMIT 1";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute(['nome' => $nomeProduto, 'empresa_id' => $empresaId]);
+                    $produtoEncontrado = $stmt->fetchColumn();
+                    if ($produtoEncontrado) {
+                        $produtoId = $produtoEncontrado;
+                        \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                            "Pedido #{$numeroPedido}: produto encontrado por nome '{$nomeProduto}' -> ID #{$produtoId}");
+                    }
+                }
+                
+                // 3. Cria produto se não existe
+                if (!$produtoId) {
+                    $codigoProduto = $sku ?: 'WOO-' . ($produtoWooId ?: uniqid());
+                    
+                    $dadosProduto = [
+                        'empresa_id' => $empresaId,
+                        'categoria_id' => $this->getCategoriaVendaId($empresaId),
+                        'codigo' => $codigoProduto,
+                        'sku' => $sku ?: null,
+                        'codigo_barras' => null,
+                        'nome' => $nomeProduto,
+                        'descricao' => null,
+                        'custo_unitario' => 0,
+                        'preco_venda' => $precoUnitario,
+                        'unidade_medida' => 'UN',
+                        'estoque' => 0,
+                        'estoque_minimo' => 0,
+                    ];
+                    
+                    $produtoId = $this->produtoModel->create($dadosProduto);
+                    
+                    if ($produtoId) {
+                        \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
+                            "Pedido #{$numeroPedido}: produto criado '{$nomeProduto}' (SKU: {$sku}) -> ID #{$produtoId}",
+                            ['preco' => $precoUnitario, 'woo_product_id' => $produtoWooId]);
+                    } else {
+                        \App\Models\LogSistema::warning('WooCommerce', 'processarItens', 
+                            "Pedido #{$numeroPedido}: falha ao criar produto '{$nomeProduto}'");
+                    }
+                }
+                
+                // =============================================
+                // CRIA O ITEM DO PEDIDO
+                // =============================================
+                $codigoOrigem = $produtoWooId ? "WOO-{$produtoWooId}" : ($sku ?: null);
+                if ($variacaoId) {
+                    $codigoOrigem .= "/V{$variacaoId}";
+                }
+                
+                $dadosItem = [
+                    'pedido_id' => $pedidoId,
+                    'produto_id' => $produtoId,
+                    'codigo_produto_origem' => $codigoOrigem,
+                    'nome_produto' => $nomeProduto,
+                    'quantidade' => $quantidade,
+                    'valor_unitario' => $precoUnitario,
+                    'valor_total' => $precoTotal,
+                    'custo_unitario' => 0,
+                    'custo_total' => 0,
+                ];
+                
+                $itemId = $this->pedidoItemModel->create($dadosItem);
+                
+                if ($itemId) {
+                    $totalItens++;
+                    \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                        "Pedido #{$numeroPedido}: item criado '{$nomeProduto}' x{$quantidade} = R\${$precoTotal} (Item ID: #{$itemId}, Produto ID: #{$produtoId})");
+                }
+                
+            } catch (\Exception $e) {
+                \App\Models\LogSistema::error('WooCommerce', 'processarItens', 
+                    "Pedido #{$numeroPedido}: erro ao processar item '{$nomeProduto}': " . $e->getMessage(),
+                    ['item' => $item]);
+            }
+        }
+        
+        \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
+            "Pedido #{$numeroPedido}: {$totalItens}/" . count($lineItems) . " itens processados com sucesso");
+        
+        return $totalItens;
     }
     
     /**
@@ -614,7 +824,51 @@ class WooCommerceService
      */
     private function buscarPedidosWooCommerce($config, $opcoes = [])
     {
-        $url = rtrim($config['url_site'], '/') . '/wp-json/wc/v3/orders';
+        $baseUrl = rtrim($config['url_site'], '/') . '/wp-json/wc/v3/orders';
+        
+        // Se é pedido único, busca direto pelo ID
+        if (!empty($opcoes['pedido_unico_id'])) {
+            $pedidoId = trim($opcoes['pedido_unico_id']);
+            $url = $baseUrl . '/' . $pedidoId;
+            
+            \App\Models\LogSistema::info('WooCommerce', 'buscarPedidos', 
+                "Buscando pedido único: #{$pedidoId}");
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_USERPWD, $config['consumer_key'] . ':' . $config['consumer_secret']);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+            
+            if ($curlError) {
+                throw new \Exception("Erro de conexão: {$curlError}");
+            }
+            
+            if ($httpCode === 404) {
+                throw new \Exception("Pedido #{$pedidoId} não encontrado no WooCommerce");
+            }
+            
+            if ($httpCode !== 200) {
+                throw new \Exception("Erro na API WooCommerce. Código: {$httpCode}. Resposta: " . substr($response, 0, 200));
+            }
+            
+            $data = json_decode($response, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new \Exception("Resposta inválida da API: " . json_last_error_msg());
+            }
+            
+            // Retorna como array de pedidos (1 único)
+            return is_array($data) ? [$data] : [];
+        }
+        
+        // Busca múltiplos pedidos
+        $url = $baseUrl;
         $params = [];
         
         // Limite de registros
@@ -687,17 +941,39 @@ class WooCommerceService
     /**
      * Busca ou cria cliente
      */
-    private function buscarOuCriarCliente($billing, $empresaId)
+    /**
+     * Busca ou cria cliente a partir dos dados do pedido WooCommerce
+     * 
+     * Fluxo:
+     * 1. Extrai CPF/CNPJ do billing e meta_data
+     * 2. Busca por CPF/CNPJ
+     * 3. Busca por email
+     * 4. Se não encontrou, cria novo cliente
+     * 
+     * @param array $billing Dados de cobrança do WooCommerce
+     * @param int $empresaId ID da empresa
+     * @param array $metaData Meta dados do pedido (contém CPF/CNPJ em plugins BR)
+     * @return int ID do cliente
+     */
+    private function buscarOuCriarCliente($billing, $empresaId, $metaData = [])
     {
         $email = $billing['email'] ?? '';
         $nome = trim(($billing['first_name'] ?? '') . ' ' . ($billing['last_name'] ?? ''));
-        $cpfCnpj = $billing['cpf'] ?? $billing['cnpj'] ?? $billing['persontype_cpf'] ?? '';
         $telefone = $billing['phone'] ?? '';
+        
+        // Extrai CPF/CNPJ de múltiplas fontes possíveis
+        $cpfCnpj = $this->extrairCpfCnpj($billing, $metaData);
+        
+        \App\Models\LogSistema::debug('WooCommerce', 'buscarOuCriarCliente', 
+            "Processando cliente: nome={$nome}, email={$email}, cpf_cnpj={$cpfCnpj}, telefone={$telefone}",
+            ['empresa_id' => $empresaId]);
         
         // 1. Busca por CPF/CNPJ se disponível
         if (!empty($cpfCnpj)) {
             $cliente = $this->clienteModel->findByCpfCnpj($cpfCnpj, $empresaId);
             if ($cliente) {
+                \App\Models\LogSistema::info('WooCommerce', 'buscarOuCriarCliente', 
+                    "Cliente encontrado por CPF/CNPJ: #{$cliente['id']} - {$cliente['nome_razao_social']}");
                 return $cliente['id'];
             }
         }
@@ -705,23 +981,49 @@ class WooCommerceService
         // 2. Busca por email
         if (!empty($email)) {
             $db = \App\Core\Database::getInstance()->getConnection();
-            $sql = "SELECT id FROM clientes WHERE email = :email AND empresa_id = :empresa_id AND ativo = 1 LIMIT 1";
+            $sql = "SELECT id, nome_razao_social FROM clientes WHERE email = :email AND empresa_id = :empresa_id AND ativo = 1 LIMIT 1";
             $stmt = $db->prepare($sql);
             $stmt->execute(['email' => $email, 'empresa_id' => $empresaId]);
-            $clienteId = $stmt->fetchColumn();
-            if ($clienteId) {
-                return $clienteId;
+            $clienteExistente = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if ($clienteExistente) {
+                \App\Models\LogSistema::info('WooCommerce', 'buscarOuCriarCliente', 
+                    "Cliente encontrado por email: #{$clienteExistente['id']} - {$clienteExistente['nome_razao_social']}");
+                
+                // Atualiza CPF/CNPJ se estava vazio e agora temos
+                if (!empty($cpfCnpj)) {
+                    $db2 = \App\Core\Database::getInstance()->getConnection();
+                    $sqlUpdate = "UPDATE clientes SET cpf_cnpj = :cpf_cnpj WHERE id = :id AND (cpf_cnpj IS NULL OR cpf_cnpj = '')";
+                    $stmtUpdate = $db2->prepare($sqlUpdate);
+                    $stmtUpdate->execute(['cpf_cnpj' => $cpfCnpj, 'id' => $clienteExistente['id']]);
+                }
+                
+                return $clienteExistente['id'];
             }
         }
         
-        // 3. Cria cliente novo
+        // 3. Busca por nome exato (último recurso antes de criar)
+        if (!empty($nome)) {
+            $db = \App\Core\Database::getInstance()->getConnection();
+            $sql = "SELECT id, nome_razao_social FROM clientes WHERE nome_razao_social = :nome AND empresa_id = :empresa_id AND ativo = 1 LIMIT 1";
+            $stmt = $db->prepare($sql);
+            $stmt->execute(['nome' => $nome, 'empresa_id' => $empresaId]);
+            $clienteExistente = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if ($clienteExistente) {
+                \App\Models\LogSistema::info('WooCommerce', 'buscarOuCriarCliente', 
+                    "Cliente encontrado por nome: #{$clienteExistente['id']} - {$clienteExistente['nome_razao_social']}");
+                return $clienteExistente['id'];
+            }
+        }
+        
+        // 4. Cria cliente novo
         if (empty($nome)) {
             $nome = $email ?: 'Cliente WooCommerce';
         }
         
         $endereco = [
-            'logradouro' => $billing['address_1'] ?? '',
+            'logradouro' => ($billing['address_1'] ?? '') . (!empty($billing['number']) ? ', ' . $billing['number'] : ''),
             'complemento' => $billing['address_2'] ?? '',
+            'bairro' => $billing['neighborhood'] ?? '',
             'cidade' => $billing['city'] ?? '',
             'estado' => $billing['state'] ?? '',
             'cep' => $billing['postcode'] ?? '',
@@ -740,38 +1042,91 @@ class WooCommerceService
                 'ativo' => 1
             ]);
             
-            \App\Models\LogSistema::info('WooCommerce', 'criarCliente', 
-                "Cliente criado: {$nome}", ['email' => $email, 'id' => $clienteId]);
+            \App\Models\LogSistema::info('WooCommerce', 'buscarOuCriarCliente', 
+                "Novo cliente criado: #{$clienteId} - {$nome}", 
+                ['email' => $email, 'cpf_cnpj' => $cpfCnpj, 'telefone' => $telefone]);
             
             return $clienteId;
         } catch (\Exception $e) {
-            \App\Models\LogSistema::error('WooCommerce', 'criarCliente', 
-                "Erro ao criar cliente: " . $e->getMessage(), ['nome' => $nome, 'email' => $email]);
-            return 1; // Fallback
+            \App\Models\LogSistema::error('WooCommerce', 'buscarOuCriarCliente', 
+                "Erro ao criar cliente: " . $e->getMessage(), 
+                ['nome' => $nome, 'email' => $email, 'trace' => $e->getTraceAsString()]);
+            
+            // NÃO retorna fallback 1. Lança exceção para parar e avisar
+            throw new \Exception("Falha ao criar cliente '{$nome}': " . $e->getMessage());
         }
+    }
+    
+    /**
+     * Extrai CPF/CNPJ dos dados de billing e meta_data do WooCommerce
+     * 
+     * Plugins BR (Brazilian Market, Extra Checkout Fields, etc) colocam
+     * CPF/CNPJ em diferentes campos e meta_data.
+     */
+    private function extrairCpfCnpj($billing, $metaData = [])
+    {
+        // 1. Campos diretos do billing (plugins populares)
+        $campos = ['cpf', 'cnpj', 'persontype_cpf', 'persontype_cnpj', 
+                    'billing_cpf', 'billing_cnpj', 'cpf_cnpj',
+                    'billing_cpf_cnpj', 'document', 'billing_document'];
+        
+        foreach ($campos as $campo) {
+            if (!empty($billing[$campo])) {
+                $valor = preg_replace('/\D/', '', $billing[$campo]);
+                if (strlen($valor) >= 11) {
+                    return $billing[$campo];
+                }
+            }
+        }
+        
+        // 2. Meta data do pedido (WooCommerce BR plugins)
+        if (!empty($metaData) && is_array($metaData)) {
+            $metaCampos = ['_billing_cpf', '_billing_cnpj', '_billing_cpf_cnpj',
+                           'billing_cpf', 'billing_cnpj', '_cpf', '_cnpj',
+                           '_billing_persontype', '_billing_number'];
+            
+            foreach ($metaData as $meta) {
+                $key = $meta['key'] ?? '';
+                $value = $meta['value'] ?? '';
+                
+                if (in_array($key, $metaCampos) && !empty($value)) {
+                    $valor = preg_replace('/\D/', '', $value);
+                    if (strlen($valor) >= 11) {
+                        return $value;
+                    }
+                }
+            }
+        }
+        
+        return '';
     }
     
     /**
      * Busca pedido existente pelo número
      */
-    private function buscarPedidoExistente($numeroPedido, $empresaId)
+    private function buscarPedidoExistente($numeroPedido, $empresaId, $origemId = null)
     {
         try {
-            $pedido = $this->pedidoModel->findByOrigem('woocommerce', $numeroPedido, $empresaId);
-            return $pedido ?: null;
+            $db = \App\Core\Database::getInstance()->getConnection();
+            
+            // Busca por numero_pedido OU origem_id
+            $sql = "SELECT * FROM pedidos_vinculados 
+                    WHERE empresa_id = :empresa_id 
+                    AND origem = 'woocommerce'
+                    AND (numero_pedido = :numero OR origem_id = :origem_id)
+                    LIMIT 1";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([
+                'empresa_id' => $empresaId,
+                'numero' => $numeroPedido,
+                'origem_id' => $origemId ?? $numeroPedido,
+            ]);
+            
+            return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
         } catch (\Exception $e) {
-            // Tenta busca alternativa
-            try {
-                $db = \App\Core\Database::getInstance()->getConnection();
-                $sql = "SELECT * FROM pedidos_vinculados 
-                        WHERE numero_pedido = :numero AND empresa_id = :empresa_id 
-                        AND origem = 'woocommerce' LIMIT 1";
-                $stmt = $db->prepare($sql);
-                $stmt->execute(['numero' => $numeroPedido, 'empresa_id' => $empresaId]);
-                return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
-            } catch (\Exception $e2) {
-                return null;
-            }
+            \App\Models\LogSistema::warning('WooCommerce', 'buscarPedidoExistente', 
+                "Erro ao buscar pedido #{$numeroPedido}: " . $e->getMessage());
+            return null;
         }
     }
     

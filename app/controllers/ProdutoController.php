@@ -41,14 +41,50 @@ class ProdutoController extends Controller
             'estoque_status' => $request->get('estoque_status')
         ];
         
+        // Paginação
+        $porPagina = $request->get('por_pagina') ?? 25;
+        $paginaAtual = $request->get('pagina') ?? 1;
+        $paginaAtual = max(1, (int)$paginaAtual);
+        
+        // Busca total de registros para calcular paginação
+        $totalRegistros = $this->produtoModel->countWithFilters($empresaId, $filters);
+        
+        // Calcula paginação
+        $totalPaginas = 1;
+        $offset = 0;
+        
+        if ($porPagina !== 'todos') {
+            $porPagina = (int) $porPagina;
+            $totalPaginas = ceil($totalRegistros / $porPagina);
+            
+            // Ajusta página atual se estiver fora do range
+            if ($paginaAtual > $totalPaginas && $totalPaginas > 0) {
+                $paginaAtual = $totalPaginas;
+            }
+            
+            $offset = ($paginaAtual - 1) * $porPagina;
+            $filters['limite'] = $porPagina;
+            $filters['offset'] = $offset;
+        }
+        
         $produtos = $this->produtoModel->findAll($empresaId, $filters);
         $estatisticas = $this->produtoModel->getEstatisticas($empresaId);
+        
+        // Filtros aplicados para a view
+        $filtersApplied = $request->all();
         
         return $this->render('produtos/index', [
             'title' => 'Produtos',
             'produtos' => $produtos,
             'estatisticas' => $estatisticas,
-            'filters' => $filters
+            'filters' => $filtersApplied,
+            'paginacao' => [
+                'total_registros' => $totalRegistros,
+                'por_pagina' => $porPagina,
+                'pagina_atual' => $paginaAtual,
+                'total_paginas' => $totalPaginas,
+                'offset' => $offset
+            ]
         ]);
     }
     

@@ -19,19 +19,57 @@ class ClienteController extends Controller
             $empresaId = $request->get('empresa_id');
             $ajax = $request->get('ajax');
             
-            $clientes = $this->clienteModel->findAll($empresaId);
+            // Filtros
+            $filters = [
+                'empresa_id' => $empresaId,
+                'busca' => $request->get('busca'),
+                'tipo_pessoa' => $request->get('tipo_pessoa')
+            ];
             
-            // Se for requisição AJAX, retorna JSON
+            // Se for AJAX, retorna todos sem paginação
             if ($ajax) {
+                $clientes = $this->clienteModel->findAll($empresaId);
                 return $response->json([
                     'success' => true,
                     'clientes' => $clientes
                 ]);
             }
             
+            // Paginação
+            $porPagina = $request->get('por_pagina') ?? 25;
+            $paginaAtual = $request->get('pagina') ?? 1;
+            $paginaAtual = max(1, (int)$paginaAtual);
+            
+            $totalRegistros = $this->clienteModel->countWithFilters($filters);
+            
+            $totalPaginas = 1;
+            $offset = 0;
+            
+            if ($porPagina !== 'todos') {
+                $porPagina = (int) $porPagina;
+                $totalPaginas = ceil($totalRegistros / $porPagina);
+                if ($paginaAtual > $totalPaginas && $totalPaginas > 0) {
+                    $paginaAtual = $totalPaginas;
+                }
+                $offset = ($paginaAtual - 1) * $porPagina;
+                $filters['limite'] = $porPagina;
+                $filters['offset'] = $offset;
+            }
+            
+            $clientes = $this->clienteModel->findAllWithFilters($filters);
+            $filtersApplied = $request->all();
+            
             return $this->render('clientes/index', [
                 'title' => 'Gerenciar Clientes',
-                'clientes' => $clientes
+                'clientes' => $clientes,
+                'filters' => $filtersApplied,
+                'paginacao' => [
+                    'total_registros' => $totalRegistros,
+                    'por_pagina' => $porPagina,
+                    'pagina_atual' => $paginaAtual,
+                    'total_paginas' => $totalPaginas,
+                    'offset' => $offset
+                ]
             ]);
         } catch (\Exception $e) {
             if ($request->get('ajax')) {

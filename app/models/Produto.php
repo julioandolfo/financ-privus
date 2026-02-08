@@ -65,6 +65,15 @@ class Produto extends Model
         
         $sql .= " ORDER BY p.nome ASC";
         
+        // Paginação
+        if (isset($filters['limite'])) {
+            if (isset($filters['offset'])) {
+                $sql .= " LIMIT " . (int)$filters['limite'] . " OFFSET " . (int)$filters['offset'];
+            } else {
+                $sql .= " LIMIT " . (int)$filters['limite'];
+            }
+        }
+        
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         
@@ -288,6 +297,55 @@ class Produto extends Model
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['empresa_id' => $empresaId]);
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['total'] ?? 0;
+    }
+    
+    /**
+     * Contar produtos com filtros aplicados
+     */
+    public function countWithFilters($empresaId = null, $filters = [])
+    {
+        $sql = "SELECT COUNT(*) as total
+                FROM {$this->table} p
+                INNER JOIN empresas e ON p.empresa_id = e.id
+                WHERE p.ativo = 1";
+        
+        $params = [];
+        
+        if ($empresaId) {
+            $sql .= " AND p.empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
+        }
+        
+        // Aplicar os mesmos filtros do findAll
+        if (!empty($filters['busca'])) {
+            $sql .= " AND (p.codigo LIKE :busca OR p.nome LIKE :busca)";
+            $params['busca'] = '%' . $filters['busca'] . '%';
+        }
+        
+        if (!empty($filters['categoria_id'])) {
+            $sql .= " AND p.categoria_id = :categoria_id";
+            $params['categoria_id'] = $filters['categoria_id'];
+        }
+        
+        if (!empty($filters['estoque_status'])) {
+            switch ($filters['estoque_status']) {
+                case 'baixo':
+                    $sql .= " AND p.estoque <= p.estoque_minimo";
+                    break;
+                case 'ok':
+                    $sql .= " AND p.estoque > p.estoque_minimo";
+                    break;
+                case 'zero':
+                    $sql .= " AND p.estoque = 0";
+                    break;
+            }
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         return $result['total'] ?? 0;

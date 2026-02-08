@@ -95,6 +95,20 @@
                         </label>
                     </div>
                 </div>
+                <!-- Pedido Específico -->
+                <div>
+                    <label class="flex items-center gap-2 mb-3">
+                        <input type="checkbox" id="checkPedidoUnico" onchange="togglePedidoUnico()" class="w-4 h-4 text-orange-600 rounded">
+                        <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">🔍 Sincronizar pedido específico (teste)</span>
+                    </label>
+                    <div id="pedidoUnicoContainer" class="hidden">
+                        <div class="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
+                            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Número do pedido no WooCommerce</label>
+                            <input type="text" name="pedido_unico_id" id="pedido_unico_id" placeholder="Ex: 12345" class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500">
+                            <p class="text-xs text-orange-600 dark:text-orange-400 mt-2">Informe o ID do pedido no WooCommerce para sincronizar apenas ele. Ideal para testar antes de sincronizar tudo.</p>
+                        </div>
+                    </div>
+                </div>
                 <?php endif; ?>
 
                 <!-- Filtro por Período -->
@@ -170,6 +184,12 @@
         }
     }
 
+    function togglePedidoUnico() {
+        const check = document.getElementById('checkPedidoUnico');
+        const div = document.getElementById('pedidoUnicoContainer');
+        div.classList.toggle('hidden', !check.checked);
+    }
+
     function togglePeriodoCustom() {
         const check = document.getElementById('checkPeriodoCustom');
         const div = document.getElementById('periodoCustom');
@@ -198,6 +218,17 @@
         // Verifica período customizado
         if (document.getElementById('checkPeriodoCustom').checked) {
             opcoes.periodo = 'custom';
+        }
+
+        // Verifica pedido único
+        const checkPedidoUnico = document.getElementById('checkPedidoUnico');
+        if (checkPedidoUnico && checkPedidoUnico.checked) {
+            const pedidoId = document.getElementById('pedido_unico_id').value.trim();
+            if (!pedidoId) {
+                alert('Informe o número do pedido para sincronizar');
+                return;
+            }
+            opcoes.pedido_unico_id = pedidoId;
         }
 
         // Fecha modal e inicia sincronização

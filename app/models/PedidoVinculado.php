@@ -89,6 +89,15 @@ class PedidoVinculado extends Model
         
         $sql .= " ORDER BY p.data_pedido DESC";
         
+        // Paginação
+        if (isset($filters['limite'])) {
+            if (isset($filters['offset'])) {
+                $sql .= " LIMIT " . (int)$filters['limite'] . " OFFSET " . (int)$filters['offset'];
+            } else {
+                $sql .= " LIMIT " . (int)$filters['limite'];
+            }
+        }
+        
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         
@@ -137,6 +146,62 @@ class PedidoVinculado extends Model
         $stmt->execute($params);
         
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    /**
+     * Contar pedidos com filtros aplicados
+     */
+    public function countWithFilters($empresaId = null, $filters = [])
+    {
+        $sql = "SELECT COUNT(*) as total
+                FROM {$this->table} p
+                LEFT JOIN clientes c ON p.cliente_id = c.id
+                INNER JOIN empresas e ON p.empresa_id = e.id
+                WHERE 1=1";
+        
+        $params = [];
+        
+        if ($empresaId) {
+            $sql .= " AND p.empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
+        }
+        
+        // Aplicar os mesmos filtros do findAll
+        if (!empty($filters['origem'])) {
+            $sql .= " AND p.origem = :origem";
+            $params['origem'] = $filters['origem'];
+        }
+        
+        if (!empty($filters['status'])) {
+            $sql .= " AND p.status = :status";
+            $params['status'] = $filters['status'];
+        }
+        
+        if (!empty($filters['cliente_id'])) {
+            $sql .= " AND p.cliente_id = :cliente_id";
+            $params['cliente_id'] = $filters['cliente_id'];
+        }
+        
+        if (!empty($filters['data_inicio'])) {
+            $sql .= " AND DATE(p.data_pedido) >= :data_inicio";
+            $params['data_inicio'] = $filters['data_inicio'];
+        }
+        
+        if (!empty($filters['data_fim'])) {
+            $sql .= " AND DATE(p.data_pedido) <= :data_fim";
+            $params['data_fim'] = $filters['data_fim'];
+        }
+        
+        if (!empty($filters['numero_pedido'])) {
+            $sql .= " AND p.numero_pedido LIKE :numero_pedido";
+            $params['numero_pedido'] = '%' . $filters['numero_pedido'] . '%';
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['total'] ?? 0;
     }
     
     /**
