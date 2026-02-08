@@ -743,34 +743,69 @@ class WooCommerceService
     {
         $db = \App\Core\Database::getInstance()->getConnection();
         
-        // Tenta buscar categoria "Vendas" ou "Receitas"
-        $sql = "SELECT id FROM categorias_financeiras 
-                WHERE empresa_id = :empresa_id 
-                AND tipo = 'receita'
-                AND ativo = 1
-                ORDER BY id ASC LIMIT 1";
+        // Busca categoria de PRODUTOS (tabela categorias_produtos, NÃO categorias_financeiras)
+        // Tenta buscar categoria "WooCommerce" ou "Geral" ou qualquer uma
+        $nomesBusca = ['WooCommerce', 'Woocommerce', 'Geral', 'Produtos', 'Vendas'];
         
+        foreach ($nomesBusca as $nome) {
+            try {
+                $sql = "SELECT id FROM categorias_produtos 
+                        WHERE empresa_id = :empresa_id 
+                        AND nome LIKE :nome
+                        LIMIT 1";
+                $stmt = $db->prepare($sql);
+                $stmt->execute(['empresa_id' => $empresaId, 'nome' => '%' . $nome . '%']);
+                $result = $stmt->fetchColumn();
+                if ($result) {
+                    return $result;
+                }
+            } catch (\Throwable $e) {
+                // continua tentando
+            }
+        }
+        
+        // Fallback: busca qualquer categoria de produtos da empresa
         try {
+            $sql = "SELECT id FROM categorias_produtos 
+                    WHERE empresa_id = :empresa_id 
+                    ORDER BY id ASC LIMIT 1";
             $stmt = $db->prepare($sql);
             $stmt->execute(['empresa_id' => $empresaId]);
             $result = $stmt->fetchColumn();
-            
             if ($result) {
                 return $result;
             }
-        } catch (\Exception $e) {
-            // Ignora
+        } catch (\Throwable $e) {
+            // continua
         }
         
-        // Fallback: busca qualquer categoria ativa
-        $sql = "SELECT id FROM categorias_financeiras 
-                WHERE ativo = 1 ORDER BY id ASC LIMIT 1";
+        // Último fallback: busca qualquer categoria de produtos
         try {
+            $sql = "SELECT id FROM categorias_produtos ORDER BY id ASC LIMIT 1";
             $stmt = $db->prepare($sql);
             $stmt->execute();
-            return $stmt->fetchColumn() ?: 1;
-        } catch (\Exception $e) {
-            return 1;
+            $result = $stmt->fetchColumn();
+            if ($result) {
+                return $result;
+            }
+        } catch (\Throwable $e) {
+            // continua
+        }
+        
+        // Se não existe nenhuma categoria, cria uma
+        try {
+            $sql = "INSERT INTO categorias_produtos (empresa_id, nome) VALUES (:empresa_id, 'WooCommerce')";
+            $stmt = $db->prepare($sql);
+            $stmt->execute(['empresa_id' => $empresaId]);
+            $novoId = $db->lastInsertId();
+            \App\Models\LogSistema::info('WooCommerce', 'getCategoriaVendaId', 
+                "Categoria de produtos 'WooCommerce' criada automaticamente: ID #{$novoId}");
+            return $novoId;
+        } catch (\Throwable $e) {
+            \App\Models\LogSistema::error('WooCommerce', 'getCategoriaVendaId', 
+                "Não foi possível encontrar/criar categoria de produtos: " . $e->getMessage());
+            // Retorna NULL para que o produto seja criado sem categoria
+            return null;
         }
     }
     
