@@ -75,7 +75,7 @@ class MovimentacaoCaixa extends Model
             $params['conciliado'] = $filters['conciliado'];
         }
         
-        $sql .= " ORDER BY m.data_movimentacao DESC, m.id DESC";
+        $sql .= " ORDER BY m.id DESC";
         
         // Paginação
         if (isset($filters['limite'])) {

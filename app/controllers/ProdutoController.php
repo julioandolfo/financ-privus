@@ -38,7 +38,8 @@ class ProdutoController extends Controller
         $filters = [
             'busca' => $request->get('busca') ?: null,
             'categoria_id' => $request->get('categoria_id') ?: null,
-            'estoque_status' => $request->get('estoque_status') ?: null
+            'estoque_status' => $request->get('estoque_status') ?: null,
+            'custo_status' => $request->get('custo_status') ?: null
         ];
         
         // Paginação

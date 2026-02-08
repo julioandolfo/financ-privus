@@ -63,7 +63,19 @@ class Produto extends Model
             }
         }
         
-        $sql .= " ORDER BY p.nome ASC";
+        // Filtro por status de custo
+        if (isset($filters['custo_status']) && $filters['custo_status'] !== '' && $filters['custo_status'] !== null) {
+            switch ($filters['custo_status']) {
+                case 'sem_custo':
+                    $sql .= " AND (p.custo_unitario IS NULL OR p.custo_unitario = 0)";
+                    break;
+                case 'com_custo':
+                    $sql .= " AND p.custo_unitario > 0";
+                    break;
+            }
+        }
+        
+        $sql .= " ORDER BY p.id DESC";
         
         // Paginação
         if (isset($filters['limite'])) {
@@ -340,6 +352,18 @@ class Produto extends Model
                     break;
                 case 'zero':
                     $sql .= " AND p.estoque = 0";
+                    break;
+            }
+        }
+        
+        // Filtro por status de custo (para contagem)
+        if (isset($filters['custo_status']) && $filters['custo_status'] !== '' && $filters['custo_status'] !== null) {
+            switch ($filters['custo_status']) {
+                case 'sem_custo':
+                    $sql .= " AND (p.custo_unitario IS NULL OR p.custo_unitario = 0)";
+                    break;
+                case 'com_custo':
+                    $sql .= " AND p.custo_unitario > 0";
                     break;
             }
         }

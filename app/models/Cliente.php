@@ -30,7 +30,7 @@ class Cliente extends Model
             $sql .= " AND empresa_id = :empresa_id";
         }
         
-        $sql .= " ORDER BY nome_razao_social ASC";
+        $sql .= " ORDER BY id DESC";
         
         $stmt = $this->db->prepare($sql);
         
@@ -66,7 +66,7 @@ class Cliente extends Model
             $params['tipo_pessoa'] = $filters['tipo_pessoa'];
         }
         
-        $sql .= " ORDER BY nome_razao_social ASC";
+        $sql .= " ORDER BY id DESC";
         
         // Paginação
         if (isset($filters['limite'])) {

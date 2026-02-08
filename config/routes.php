@@ -117,6 +117,7 @@ return [
     'GET /pedidos' => ['handler' => 'PedidoVinculadoController@index', 'middleware' => ['AuthMiddleware']],
     'GET /pedidos/create' => ['handler' => 'PedidoVinculadoController@create', 'middleware' => ['AuthMiddleware']],
     'POST /pedidos' => ['handler' => 'PedidoVinculadoController@store', 'middleware' => ['AuthMiddleware']],
+    'POST /pedidos/recalcular' => ['handler' => 'PedidoVinculadoController@recalcular', 'middleware' => ['AuthMiddleware']],
     'GET /pedidos/{id}' => ['handler' => 'PedidoVinculadoController@show', 'middleware' => ['AuthMiddleware']],
     'POST /pedidos/{id}/status' => ['handler' => 'PedidoVinculadoController@updateStatus', 'middleware' => ['AuthMiddleware']],
     'POST /pedidos/{id}/delete' => ['handler' => 'PedidoVinculadoController@destroy', 'middleware' => ['AuthMiddleware']],

@@ -116,7 +116,7 @@ class ContaReceber extends Model
             $params[] = $searchTerm;
         }
         
-        $sql .= " ORDER BY cr.data_vencimento DESC, cr.id DESC";
+        $sql .= " ORDER BY cr.id DESC";
         
         // Paginação
         if (isset($filters['limite'])) {

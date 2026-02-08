@@ -87,7 +87,7 @@ class PedidoVinculado extends Model
             $params['numero_pedido'] = '%' . $filters['numero_pedido'] . '%';
         }
         
-        $sql .= " ORDER BY p.data_pedido DESC";
+        $sql .= " ORDER BY p.id DESC";
         
         // Paginação
         if (isset($filters['limite'])) {

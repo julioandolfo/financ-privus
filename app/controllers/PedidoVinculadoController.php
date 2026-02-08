@@ -270,4 +270,92 @@ class PedidoVinculadoController extends Controller
         
         return $errors;
     }
+    
+    /**
+     * Recalcular custos e totais de pedidos
+     */
+    public function recalcular(Request $request, Response $response)
+    {
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
+        
+        // Filtros para selecionar quais pedidos recalcular
+        $filtros = [
+            'origem' => $request->post('origem_filtro'),
+            'status' => $request->post('status_filtro'),
+            'data_inicio' => $request->post('data_inicio_filtro'),
+            'data_fim' => $request->post('data_fim_filtro')
+        ];
+        
+        try {
+            $this->db->beginTransaction();
+            
+            // Buscar pedidos que atendem aos filtros
+            $pedidos = $this->pedidoModel->findAll($empresaId, $filtros);
+            
+            $totalRecalculados = 0;
+            $erros = [];
+            
+            foreach ($pedidos as $pedido) {
+                try {
+                    // Buscar itens do pedido
+                    $itens = $this->itemModel->findByPedido($pedido['id']);
+                    
+                    // Recalcular cada item com base no custo atual do produto
+                    foreach ($itens as $item) {
+                        if ($item['produto_id']) {
+                            // Buscar produto para pegar o custo atualizado
+                            $produto = $this->produtoModel->findById($item['produto_id']);
+                            
+                            if ($produto) {
+                                $novoCustoUnitario = $produto['custo_unitario'] ?? 0;
+                                $novoCustoTotal = $item['quantidade'] * $novoCustoUnitario;
+                                
+                                // Atualizar item com novo custo
+                                $sqlUpdateItem = "UPDATE pedidos_itens SET 
+                                                 custo_unitario = :custo_unitario,
+                                                 custo_total = :custo_total
+                                                 WHERE id = :id";
+                                $stmtItem = $this->db->prepare($sqlUpdateItem);
+                                $stmtItem->execute([
+                                    'custo_unitario' => $novoCustoUnitario,
+                                    'custo_total' => $novoCustoTotal,
+                                    'id' => $item['id']
+                                ]);
+                            }
+                        }
+                    }
+                    
+                    // Recalcular totais do pedido
+                    $this->pedidoModel->recalcularTotais($pedido['id']);
+                    
+                    $totalRecalculados++;
+                    
+                } catch (\Exception $e) {
+                    $erros[] = "Erro ao recalcular pedido #{$pedido['numero_pedido']}: " . $e->getMessage();
+                }
+            }
+            
+            $this->db->commit();
+            
+            if ($totalRecalculados > 0) {
+                $mensagem = "✅ {$totalRecalculados} pedido(s) recalculado(s) com sucesso!";
+                if (!empty($erros)) {
+                    $mensagem .= " Alguns pedidos apresentaram erros.";
+                }
+                $this->session->set('success', $mensagem);
+            } else {
+                $this->session->set('info', 'Nenhum pedido encontrado com os filtros selecionados.');
+            }
+            
+            if (!empty($erros)) {
+                $this->session->set('warning', implode('<br>', $erros));
+            }
+            
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->session->set('error', 'Erro ao recalcular pedidos: ' . $e->getMessage());
+        }
+        
+        return $response->redirect('/pedidos');
+    }
 }

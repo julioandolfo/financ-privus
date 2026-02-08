@@ -126,7 +126,7 @@ class ContaPagar extends Model
             $params[] = $filters['tipo_custo'];
         }
         
-        $sql .= " ORDER BY cp.data_vencimento DESC, cp.id DESC";
+        $sql .= " ORDER BY cp.id DESC";
         
         // Paginação
         if (isset($filters['limite'])) {

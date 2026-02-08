@@ -285,7 +285,7 @@ class Usuario extends Model
             $params['search'] = '%' . $filters['search'] . '%';
         }
         
-        $sql .= " ORDER BY u.nome ASC";
+        $sql .= " ORDER BY u.id DESC";
         
         // Paginação
         if (isset($filters['limite'])) {
