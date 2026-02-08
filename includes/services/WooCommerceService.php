@@ -605,7 +605,7 @@ class WooCommerceService
                 $dadosConta = [
                     'empresa_id' => $empresaId,
                     'cliente_id' => $clienteId,
-                    'categoria_id' => $this->getCategoriaVendaId($empresaId),
+                    'categoria_id' => $this->getCategoriaFinanceiraVendaId($empresaId),
                     'centro_custo_id' => null,
                     'numero_documento' => "WOO-{$pedWoo['number']}/{$i}",
                     'descricao' => "Pedido #{$pedWoo['number']} - Parcela {$i}/{$numeroParcelas}",
@@ -650,7 +650,7 @@ class WooCommerceService
             $dadosConta = [
                 'empresa_id' => $empresaId,
                 'cliente_id' => $clienteId,
-                'categoria_id' => $this->getCategoriaVendaId($empresaId),
+                'categoria_id' => $this->getCategoriaFinanceiraVendaId($empresaId),
                 'centro_custo_id' => null,
                 'numero_documento' => "WOO-{$pedWoo['number']}",
                 'descricao' => "Pedido WooCommerce #{$pedWoo['number']}",
@@ -807,6 +807,86 @@ class WooCommerceService
             // Retorna NULL para que o produto seja criado sem categoria
             return null;
         }
+    }
+    
+    /**
+     * Busca categoria financeira padrão para contas a receber
+     * (tabela categorias_financeiras, tipo 'receita')
+     */
+    private function getCategoriaFinanceiraVendaId($empresaId)
+    {
+        $db = \App\Core\Database::getInstance()->getConnection();
+        
+        // Tenta buscar categoria financeira de receita
+        $nomesBusca = ['Vendas', 'Venda', 'WooCommerce', 'Receita', 'Receitas'];
+        
+        foreach ($nomesBusca as $nome) {
+            try {
+                $sql = "SELECT id FROM categorias_financeiras 
+                        WHERE empresa_id = :empresa_id 
+                        AND nome LIKE :nome
+                        AND tipo = 'receita'
+                        AND ativo = 1
+                        LIMIT 1";
+                $stmt = $db->prepare($sql);
+                $stmt->execute(['empresa_id' => $empresaId, 'nome' => '%' . $nome . '%']);
+                $result = $stmt->fetchColumn();
+                if ($result) {
+                    return $result;
+                }
+            } catch (\Throwable $e) {
+                // continua tentando
+            }
+        }
+        
+        // Fallback: qualquer categoria financeira de receita da empresa
+        try {
+            $sql = "SELECT id FROM categorias_financeiras 
+                    WHERE empresa_id = :empresa_id 
+                    AND tipo = 'receita'
+                    AND ativo = 1
+                    ORDER BY id ASC LIMIT 1";
+            $stmt = $db->prepare($sql);
+            $stmt->execute(['empresa_id' => $empresaId]);
+            $result = $stmt->fetchColumn();
+            if ($result) {
+                return $result;
+            }
+        } catch (\Throwable $e) {
+            // continua
+        }
+        
+        // Fallback: qualquer categoria financeira da empresa
+        try {
+            $sql = "SELECT id FROM categorias_financeiras 
+                    WHERE empresa_id = :empresa_id 
+                    AND ativo = 1
+                    ORDER BY id ASC LIMIT 1";
+            $stmt = $db->prepare($sql);
+            $stmt->execute(['empresa_id' => $empresaId]);
+            $result = $stmt->fetchColumn();
+            if ($result) {
+                return $result;
+            }
+        } catch (\Throwable $e) {
+            // continua
+        }
+        
+        // Último fallback: qualquer categoria financeira
+        try {
+            $sql = "SELECT id FROM categorias_financeiras WHERE ativo = 1 ORDER BY id ASC LIMIT 1";
+            $stmt = $db->prepare($sql);
+            $stmt->execute();
+            $result = $stmt->fetchColumn();
+            if ($result) {
+                return $result;
+            }
+        } catch (\Throwable $e) {
+            \App\Models\LogSistema::error('WooCommerce', 'getCategoriaFinanceiraVendaId', 
+                "Nenhuma categoria financeira encontrada: " . $e->getMessage());
+        }
+        
+        return null;
     }
     
     /**
