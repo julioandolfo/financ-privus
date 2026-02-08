@@ -185,11 +185,11 @@
                     ?>
                     <div class="border-l-4 <?= $logBorder[$log['tipo']] ?? 'border-l-gray-300' ?> pl-4 py-2">
                         <div class="flex justify-between">
-                            <span class="font-medium text-sm text-gray-900 dark:text-gray-100"><?= htmlspecialchars($log['mensagem']) ?></span>
-                            <span class="text-xs text-gray-500"><?= date('d/m/Y H:i', strtotime($log['data'])) ?></span>
+                            <span class="font-medium text-sm text-gray-900 dark:text-gray-100"><?= htmlspecialchars($log['mensagem'] ?? '') ?></span>
+                            <span class="text-xs text-gray-500"><?= date('d/m/Y H:i', strtotime($log['data_execucao'] ?? 'now')) ?></span>
                         </div>
-                        <?php if (!empty($log['detalhes'])): ?>
-                            <p class="text-xs text-gray-500 mt-1"><?= htmlspecialchars(substr($log['detalhes'], 0, 150)) ?></p>
+                        <?php if (!empty($log['dados'])): ?>
+                            <p class="text-xs text-gray-500 mt-1"><?= htmlspecialchars(substr($log['dados'], 0, 150)) ?></p>
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>

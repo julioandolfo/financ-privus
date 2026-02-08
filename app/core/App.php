@@ -214,6 +214,20 @@ class App
             'file' => $e->getFile(),
             'line' => $e->getLine()
         ]);
+        
+        // Grava no sistema de logs (visível via /logs)
+        try {
+            \App\Models\LogSistema::error('App', 'handleException', $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'uri' => $_SERVER['REQUEST_URI'] ?? 'N/A',
+                'method' => $_SERVER['REQUEST_METHOD'] ?? 'N/A',
+                'trace' => $e->getTraceAsString()
+            ]);
+        } catch (\Throwable $logError) {
+            // Se não conseguir gravar no LogSistema, ignora (evita loop)
+        }
+        
         // Garante que o diretório de logs existe
         $logDir = dirname(__DIR__) . '/../storage/logs';
         if (!is_dir($logDir)) {

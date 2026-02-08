@@ -1108,9 +1108,9 @@ class WooCommerceService
         
         // Logs recentes
         $sql = "SELECT tipo, COUNT(*) as total 
-                FROM integracao_logs 
+                FROM integracoes_logs 
                 WHERE integracao_id = :integracao_id 
-                AND data >= DATE_SUB(CURDATE(), INTERVAL :dias DAY)
+                AND data_execucao >= DATE_SUB(CURDATE(), INTERVAL :dias DAY)
                 GROUP BY tipo";
         
         $stmt = $db->prepare($sql);

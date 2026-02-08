@@ -8,6 +8,7 @@ use App\Models\IntegracaoWooCommerce;
 use App\Models\WooCommerceMetadata;
 use App\Models\CategoriaFinanceira;
 use App\Models\FormaPagamento;
+use App\Models\LogSistema;
 use Includes\Services\WooCommerceService;
 
 /**
@@ -24,11 +25,44 @@ class IntegracaoWooConfigController extends Controller
     public function __construct()
     {
         parent::__construct();
-        $this->wooModel = new IntegracaoWooCommerce();
-        $this->metadataModel = new WooCommerceMetadata();
-        $this->categoriaModel = new CategoriaFinanceira();
-        $this->formaPgtoModel = new FormaPagamento();
-        $this->wooService = new WooCommerceService();
+        
+        try {
+            LogSistema::debug('WooConfig', '__construct', 'Iniciando construtor IntegracaoWooConfigController');
+            
+            $this->wooModel = new IntegracaoWooCommerce();
+            LogSistema::debug('WooConfig', '__construct', 'IntegracaoWooCommerce instanciado');
+            
+            $this->metadataModel = new WooCommerceMetadata();
+            LogSistema::debug('WooConfig', '__construct', 'WooCommerceMetadata instanciado');
+            
+            $this->formaPgtoModel = new FormaPagamento();
+            LogSistema::debug('WooConfig', '__construct', 'FormaPagamento instanciado');
+            
+            try {
+                $this->categoriaModel = new CategoriaFinanceira();
+                LogSistema::debug('WooConfig', '__construct', 'CategoriaFinanceira instanciado');
+            } catch (\Throwable $e) {
+                $this->categoriaModel = null;
+                LogSistema::warning('WooConfig', '__construct', 'Erro CategoriaFinanceira: ' . $e->getMessage());
+            }
+            
+            try {
+                $this->wooService = new WooCommerceService();
+                LogSistema::debug('WooConfig', '__construct', 'WooCommerceService instanciado');
+            } catch (\Throwable $e) {
+                $this->wooService = null;
+                LogSistema::warning('WooConfig', '__construct', 'Erro WooCommerceService: ' . $e->getMessage());
+            }
+            
+            LogSistema::debug('WooConfig', '__construct', 'Construtor finalizado com sucesso');
+        } catch (\Throwable $e) {
+            LogSistema::error('WooConfig', '__construct', 'ERRO FATAL no construtor: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
     }
     
     /**
@@ -37,17 +71,28 @@ class IntegracaoWooConfigController extends Controller
     public function configurarStatus(Request $request, Response $response, $integracaoId)
     {
         try {
+            LogSistema::info('WooConfig', 'configurarStatus', "Acessando config status, integracaoId: {$integracaoId}");
+            
             $config = $this->wooModel->findByIntegracaoId($integracaoId);
             
             if (!$config) {
+                LogSistema::warning('WooConfig', 'configurarStatus', "Integração {$integracaoId} não encontrada");
                 return $response->json(['success' => false, 'error' => 'Integração não encontrada'], 404);
             }
             
+            LogSistema::debug('WooConfig', 'configurarStatus', 'Config encontrada, buscando metadata...');
+            
             // Busca status do WooCommerce (armazenados no metadata)
-            $statusWoo = $this->metadataModel->findByTipo($integracaoId, WooCommerceMetadata::TIPO_STATUS);
+            $statusWoo = [];
+            try {
+                $statusWoo = $this->metadataModel->findByTipo($integracaoId, WooCommerceMetadata::TIPO_STATUS);
+                LogSistema::debug('WooConfig', 'configurarStatus', 'Status WooCommerce: ' . count($statusWoo) . ' encontrados');
+            } catch (\Throwable $e) {
+                LogSistema::warning('WooConfig', 'configurarStatus', 'Erro ao buscar metadata status: ' . $e->getMessage());
+            }
             
             // Busca mapeamento atual
-            $mapeamento = $config['mapeamento_status'] 
+            $mapeamento = !empty($config['mapeamento_status']) 
                 ? json_decode($config['mapeamento_status'], true) 
                 : [];
             
@@ -60,6 +105,8 @@ class IntegracaoWooConfigController extends Controller
                 'parcial' => 'Parcial'
             ];
             
+            LogSistema::debug('WooConfig', 'configurarStatus', 'Renderizando view...');
+            
             $this->render('integracoes/woocommerce_config_status', [
                 'integracaoId' => $integracaoId,
                 'config' => $config,
@@ -68,7 +115,12 @@ class IntegracaoWooConfigController extends Controller
                 'mapeamento' => $mapeamento
             ]);
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            LogSistema::error('WooConfig', 'configurarStatus', 'ERRO: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -79,21 +131,29 @@ class IntegracaoWooConfigController extends Controller
     public function atualizarStatus(Request $request, Response $response, $integracaoId)
     {
         try {
+            LogSistema::info('WooConfig', 'atualizarStatus', "Atualizando status WooCommerce, integracaoId: {$integracaoId}");
+            
             $config = $this->wooModel->findByIntegracaoId($integracaoId);
             
             if (!$config) {
                 return $response->json(['success' => false, 'error' => 'Integração não encontrada'], 404);
             }
             
-            // Busca status do WooCommerce
+            if (!$this->wooService) {
+                return $response->json(['success' => false, 'error' => 'WooCommerceService não disponível'], 500);
+            }
+            
             $resultado = $this->wooService->buscarStatusWooCommerce($config);
             
             if (!$resultado['sucesso']) {
+                LogSistema::warning('WooConfig', 'atualizarStatus', 'Falha: ' . ($resultado['erro'] ?? 'Erro desconhecido'));
                 return $response->json([
                     'success' => false, 
                     'error' => $resultado['erro']
                 ], 400);
             }
+            
+            LogSistema::info('WooConfig', 'atualizarStatus', 'Status atualizados: ' . count($resultado['status']));
             
             return $response->json([
                 'success' => true,
@@ -101,7 +161,12 @@ class IntegracaoWooConfigController extends Controller
                 'total' => count($resultado['status'])
             ]);
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            LogSistema::error('WooConfig', 'atualizarStatus', 'ERRO: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -112,7 +177,8 @@ class IntegracaoWooConfigController extends Controller
     public function salvarMapeamentoStatus(Request $request, Response $response, $integracaoId)
     {
         try {
-            $mapeamento = $request->post('mapeamento', []);
+            $data = $request->isJson() ? $request->json() : $request->post();
+            $mapeamento = $data['mapeamento'] ?? [];
             
             $config = $this->wooModel->findByIntegracaoId($integracaoId);
             
@@ -155,6 +221,8 @@ class IntegracaoWooConfigController extends Controller
     public function configurarFormasPagamento(Request $request, Response $response, $integracaoId)
     {
         try {
+            LogSistema::info('WooConfig', 'configurarFormasPagamento', "Acessando config pagamentos, integracaoId: {$integracaoId}");
+            
             $config = $this->wooModel->findByIntegracaoId($integracaoId);
             
             if (!$config) {
@@ -162,15 +230,25 @@ class IntegracaoWooConfigController extends Controller
             }
             
             // Busca formas de pagamento do WooCommerce
-            $formasPgtoWoo = $this->metadataModel->findByTipo($integracaoId, WooCommerceMetadata::TIPO_PAYMENT_GATEWAY);
+            $formasPgtoWoo = [];
+            try {
+                $formasPgtoWoo = $this->metadataModel->findByTipo($integracaoId, WooCommerceMetadata::TIPO_PAYMENT_GATEWAY);
+            } catch (\Throwable $e) {
+                LogSistema::warning('WooConfig', 'configurarFormasPagamento', 'Erro ao buscar metadata pagamentos: ' . $e->getMessage());
+            }
             
             // Busca acoes configuradas
-            $acoesConfig = $config['acoes_formas_pagamento'] 
+            $acoesConfig = !empty($config['acoes_formas_pagamento']) 
                 ? json_decode($config['acoes_formas_pagamento'], true) 
                 : [];
             
             // Formas de pagamento do sistema
-            $formasPgtoSistema = $this->formaPgtoModel->findAll();
+            $formasPgtoSistema = [];
+            try {
+                $formasPgtoSistema = $this->formaPgtoModel->findAll();
+            } catch (\Throwable $e) {
+                LogSistema::warning('WooConfig', 'configurarFormasPagamento', 'Erro ao buscar formas pgto sistema: ' . $e->getMessage());
+            }
             
             $this->render('integracoes/woocommerce_config_pagamento', [
                 'integracaoId' => $integracaoId,
@@ -180,7 +258,12 @@ class IntegracaoWooConfigController extends Controller
                 'acoesConfig' => $acoesConfig
             ]);
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            LogSistema::error('WooConfig', 'configurarFormasPagamento', 'ERRO: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -191,21 +274,29 @@ class IntegracaoWooConfigController extends Controller
     public function atualizarFormasPagamento(Request $request, Response $response, $integracaoId)
     {
         try {
+            LogSistema::info('WooConfig', 'atualizarFormasPagamento', "Atualizando formas pagamento, integracaoId: {$integracaoId}");
+            
             $config = $this->wooModel->findByIntegracaoId($integracaoId);
             
             if (!$config) {
                 return $response->json(['success' => false, 'error' => 'Integração não encontrada'], 404);
             }
             
-            // Busca formas de pagamento do WooCommerce
+            if (!$this->wooService) {
+                return $response->json(['success' => false, 'error' => 'WooCommerceService não disponível'], 500);
+            }
+            
             $resultado = $this->wooService->buscarFormasPagamentoWooCommerce($config);
             
             if (!$resultado['sucesso']) {
+                LogSistema::warning('WooConfig', 'atualizarFormasPagamento', 'Falha: ' . ($resultado['erro'] ?? 'Erro desconhecido'));
                 return $response->json([
                     'success' => false,
                     'error' => $resultado['erro']
                 ], 400);
             }
+            
+            LogSistema::info('WooConfig', 'atualizarFormasPagamento', 'Formas pagamento atualizadas: ' . count($resultado['formas_pagamento']));
             
             return $response->json([
                 'success' => true,
@@ -213,7 +304,12 @@ class IntegracaoWooConfigController extends Controller
                 'total' => count($resultado['formas_pagamento'])
             ]);
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            LogSistema::error('WooConfig', 'atualizarFormasPagamento', 'ERRO: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -224,7 +320,8 @@ class IntegracaoWooConfigController extends Controller
     public function salvarAcoesFormasPagamento(Request $request, Response $response, $integracaoId)
     {
         try {
-            $acoes = $request->post('acoes', []);
+            $data = $request->isJson() ? $request->json() : $request->post();
+            $acoes = $data['acoes'] ?? [];
             
             $config = $this->wooModel->findByIntegracaoId($integracaoId);
             
@@ -267,6 +364,8 @@ class IntegracaoWooConfigController extends Controller
     public function configurarCategorias(Request $request, Response $response, $integracaoId)
     {
         try {
+            LogSistema::info('WooConfig', 'configurarCategorias', "Acessando config categorias, integracaoId: {$integracaoId}");
+            
             $config = $this->wooModel->findByIntegracaoId($integracaoId);
             
             if (!$config) {
@@ -274,16 +373,27 @@ class IntegracaoWooConfigController extends Controller
             }
             
             // Busca categorias do WooCommerce
-            $categoriasWoo = $this->metadataModel->findByTipo($integracaoId, WooCommerceMetadata::TIPO_CATEGORIA);
+            $categoriasWoo = [];
+            try {
+                $categoriasWoo = $this->metadataModel->findByTipo($integracaoId, WooCommerceMetadata::TIPO_CATEGORIA);
+            } catch (\Throwable $e) {
+                LogSistema::warning('WooConfig', 'configurarCategorias', 'Erro ao buscar metadata categorias: ' . $e->getMessage());
+            }
             
             // Busca mapeamento atual
-            $mapeamento = $config['mapeamento_categorias'] 
+            $mapeamento = !empty($config['mapeamento_categorias']) 
                 ? json_decode($config['mapeamento_categorias'], true) 
                 : [];
             
-            // Categorias do sistema (produtos)
-            // Assumindo que existe uma tabela de categorias de produtos
-            $categoriasSistema = []; // Implementar busca de categorias
+            // Categorias do sistema
+            $categoriasSistema = [];
+            try {
+                if ($this->categoriaModel) {
+                    $categoriasSistema = $this->categoriaModel->findAll();
+                }
+            } catch (\Throwable $e) {
+                LogSistema::warning('WooConfig', 'configurarCategorias', 'Erro ao buscar categorias sistema: ' . $e->getMessage());
+            }
             
             $this->render('integracoes/woocommerce_config_categorias', [
                 'integracaoId' => $integracaoId,
@@ -293,7 +403,12 @@ class IntegracaoWooConfigController extends Controller
                 'mapeamento' => $mapeamento
             ]);
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            LogSistema::error('WooConfig', 'configurarCategorias', 'ERRO: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -304,21 +419,29 @@ class IntegracaoWooConfigController extends Controller
     public function atualizarCategorias(Request $request, Response $response, $integracaoId)
     {
         try {
+            LogSistema::info('WooConfig', 'atualizarCategorias', "Atualizando categorias, integracaoId: {$integracaoId}");
+            
             $config = $this->wooModel->findByIntegracaoId($integracaoId);
             
             if (!$config) {
                 return $response->json(['success' => false, 'error' => 'Integração não encontrada'], 404);
             }
             
-            // Busca categorias do WooCommerce
+            if (!$this->wooService) {
+                return $response->json(['success' => false, 'error' => 'WooCommerceService não disponível'], 500);
+            }
+            
             $resultado = $this->wooService->buscarCategoriasWooCommerce($config);
             
             if (!$resultado['sucesso']) {
+                LogSistema::warning('WooConfig', 'atualizarCategorias', 'Falha: ' . ($resultado['erro'] ?? 'Erro desconhecido'));
                 return $response->json([
                     'success' => false,
                     'error' => $resultado['erro']
                 ], 400);
             }
+            
+            LogSistema::info('WooConfig', 'atualizarCategorias', 'Categorias atualizadas: ' . count($resultado['categorias']));
             
             return $response->json([
                 'success' => true,
@@ -326,7 +449,12 @@ class IntegracaoWooConfigController extends Controller
                 'total' => count($resultado['categorias'])
             ]);
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            LogSistema::error('WooConfig', 'atualizarCategorias', 'ERRO: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -337,7 +465,8 @@ class IntegracaoWooConfigController extends Controller
     public function salvarMapeamentoCategorias(Request $request, Response $response, $integracaoId)
     {
         try {
-            $mapeamento = $request->post('mapeamento', []);
+            $data = $request->isJson() ? $request->json() : $request->post();
+            $mapeamento = $data['mapeamento'] ?? [];
             
             $config = $this->wooModel->findByIntegracaoId($integracaoId);
             

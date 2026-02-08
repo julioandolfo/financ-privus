@@ -189,6 +189,19 @@ try {
         'line' => $e->getLine(),
         'trace' => $e->getTraceAsString()
     ]);
+    
+    // Grava no sistema de logs (visível via /logs)
+    try {
+        \App\Models\LogSistema::error('Sistema', 'index', $e->getMessage(), [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'uri' => $_SERVER['REQUEST_URI'] ?? 'N/A',
+            'method' => $_SERVER['REQUEST_METHOD'] ?? 'N/A',
+            'trace' => $e->getTraceAsString()
+        ]);
+    } catch (Throwable $logError) {
+        // Se não conseguir gravar, ignora
+    }
     // Log do erro
     $errorLog = APP_ROOT . '/storage/logs/error.log';
     $logDir = dirname($errorLog);
