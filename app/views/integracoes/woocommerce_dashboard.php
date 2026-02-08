@@ -1,474 +1,243 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard WooCommerce - Integração #<?= $integracaoId ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        .metric-card {
-            border-left: 4px solid #0d6efd;
-            transition: transform 0.2s;
-        }
-        .metric-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        .metric-value {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #0d6efd;
-        }
-        .metric-label {
-            color: #6c757d;
-            font-size: 0.9rem;
-        }
-        .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.875rem;
-        }
-        .status-pendente { background-color: #ffc107; color: #000; }
-        .status-processando { background-color: #0dcaf0; color: #000; }
-        .status-concluido { background-color: #198754; color: #fff; }
-        .status-erro { background-color: #dc3545; color: #fff; }
-        .status-cancelado { background-color: #6c757d; color: #fff; }
-        
-        .log-item {
-            border-left: 3px solid;
-            padding-left: 12px;
-            margin-bottom: 10px;
-        }
-        .log-sucesso { border-color: #198754; }
-        .log-erro { border-color: #dc3545; }
-        .log-aviso { border-color: #ffc107; }
-        .log-info { border-color: #0dcaf0; }
-        
-        .refresh-animation {
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
-</head>
-<body class="bg-light">
-    <div class="container-fluid py-4">
-        <!-- Header -->
-        <div class="row mb-4">
-            <div class="col-md-8">
-                <h1 class="h3 mb-2">
-                    <i class="bi bi-speedometer2"></i> Dashboard WooCommerce
-                </h1>
-                <p class="text-muted">
-                    <i class="bi bi-shop"></i> <?= htmlspecialchars($config['url_site'] ?? '') ?>
-                </p>
+<?php $title = 'Dashboard WooCommerce'; ?>
+<div class="max-w-7xl mx-auto">
+    <div class="mb-8 flex justify-between items-start">
+        <div>
+            <a href="<?= $this->baseUrl('/integracoes/' . $integracaoId) ?>" class="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 mb-4">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                Voltar
+            </a>
+            <h1 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                📊 Dashboard WooCommerce
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1"><?= htmlspecialchars($config['url_site'] ?? '') ?></p>
+        </div>
+        <button onclick="atualizarDashboard(this)" class="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow transition-all">
+            🔄 Atualizar
+        </button>
+    </div>
+
+    <!-- Cards de Métricas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 border-l-4 border-l-yellow-500 border border-gray-200 dark:border-gray-700">
+            <div class="flex justify-between items-start">
+                <div>
+                    <div class="text-3xl font-bold text-yellow-600" id="metricPendentes"><?= $metricas['jobs']['pendente'] ?? 0 ?></div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Jobs Pendentes</div>
+                </div>
+                <span class="text-3xl">⏳</span>
             </div>
-            <div class="col-md-4 text-end">
-                <button class="btn btn-outline-primary btn-sm" onclick="atualizarDashboard()">
-                    <i class="bi bi-arrow-clockwise" id="iconRefresh"></i> Atualizar
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 border-l-4 border-l-green-500 border border-gray-200 dark:border-gray-700">
+            <div class="flex justify-between items-start">
+                <div>
+                    <div class="text-3xl font-bold text-green-600" id="metricConcluidos"><?= $metricas['jobs']['concluido'] ?? 0 ?></div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Concluídos</div>
+                </div>
+                <span class="text-3xl">✅</span>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 border-l-4 border-l-blue-500 border border-gray-200 dark:border-gray-700">
+            <div class="flex justify-between items-start">
+                <div>
+                    <div class="text-3xl font-bold text-blue-600" id="metricProdutos"><?= $metricas['produtos_hoje'] ?? 0 ?></div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Produtos Hoje</div>
+                </div>
+                <span class="text-3xl">📦</span>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 border-l-4 border-l-red-500 border border-gray-200 dark:border-gray-700">
+            <div class="flex justify-between items-start">
+                <div>
+                    <div class="text-3xl font-bold text-red-600" id="metricErros"><?= $metricas['jobs']['erro'] ?? 0 ?></div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Erros (7 dias)</div>
+                </div>
+                <span class="text-3xl">⚠️</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sincronização e Cache -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">🕐 Última Sincronização</h3>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <div class="text-sm font-semibold text-gray-700 dark:text-gray-300">Produtos</div>
+                    <div class="text-sm text-gray-500">
+                        <?php if ($metricas['ultima_sync_produtos']): ?>
+                            <?= date('d/m/Y H:i', strtotime($metricas['ultima_sync_produtos'])) ?>
+                        <?php else: ?>
+                            Nunca sincronizado
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-sm font-semibold text-gray-700 dark:text-gray-300">Pedidos</div>
+                    <div class="text-sm text-gray-500">
+                        <?php if ($metricas['ultima_sync_pedidos']): ?>
+                            <?= date('d/m/Y H:i', strtotime($metricas['ultima_sync_pedidos'])) ?>
+                        <?php else: ?>
+                            Nunca sincronizado
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="criarJobSync('sync_produtos')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all">
+                    📦 Sync Produtos
                 </button>
-                <a href="/integracoes/<?= $integracaoId ?>" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-left"></i> Voltar
-                </a>
+                <button onclick="criarJobSync('sync_pedidos')" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-all">
+                    🛒 Sync Pedidos
+                </button>
             </div>
         </div>
 
-        <!-- Cards de Métricas -->
-        <div class="row g-3 mb-4">
-            <!-- Jobs Pendentes -->
-            <div class="col-md-3">
-                <div class="card metric-card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="metric-value" id="metricJobsPendentes">
-                                    <?= $metricas['jobs'][App\Models\IntegracaoJob::STATUS_PENDENTE] ?? 0 ?>
-                                </div>
-                                <div class="metric-label">Jobs Pendentes</div>
-                            </div>
-                            <i class="bi bi-hourglass-split fs-1 text-warning"></i>
-                        </div>
-                    </div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">💾 Cache de Sincronização</h3>
+            <div class="grid grid-cols-2 gap-4 text-center mb-4">
+                <div>
+                    <div class="text-3xl font-bold text-blue-600"><?= $estatisticasCache['produto'] ?? 0 ?></div>
+                    <div class="text-sm text-gray-500">Produtos no Cache</div>
+                </div>
+                <div>
+                    <div class="text-3xl font-bold text-green-600"><?= $estatisticasCache['pedido'] ?? 0 ?></div>
+                    <div class="text-sm text-gray-500">Pedidos no Cache</div>
                 </div>
             </div>
-
-            <!-- Jobs Concluídos Hoje -->
-            <div class="col-md-3">
-                <div class="card metric-card h-100" style="border-left-color: #198754;">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="metric-value text-success" id="metricJobsConcluidos">
-                                    <?= $metricas['jobs'][App\Models\IntegracaoJob::STATUS_CONCLUIDO] ?? 0 ?>
-                                </div>
-                                <div class="metric-label">Jobs Concluídos</div>
-                            </div>
-                            <i class="bi bi-check-circle fs-1 text-success"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Produtos Sincronizados Hoje -->
-            <div class="col-md-3">
-                <div class="card metric-card h-100" style="border-left-color: #0dcaf0;">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="metric-value text-info" id="metricProdutosHoje">
-                                    <?= $metricas['produtos_hoje'] ?? 0 ?>
-                                </div>
-                                <div class="metric-label">Produtos Hoje</div>
-                            </div>
-                            <i class="bi bi-box-seam fs-1 text-info"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Erros (últimos 7 dias) -->
-            <div class="col-md-3">
-                <div class="card metric-card h-100" style="border-left-color: #dc3545;">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <div class="metric-value text-danger" id="metricErros">
-                                    <?= ($metricas['jobs'][App\Models\IntegracaoJob::STATUS_ERRO] ?? 0) ?>
-                                </div>
-                                <div class="metric-label">Erros (7 dias)</div>
-                            </div>
-                            <i class="bi bi-exclamation-triangle fs-1 text-danger"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Informações de Sincronização -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header bg-white">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-clock-history"></i> Última Sincronização
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-6">
-                                <strong>Produtos:</strong><br>
-                                <span class="text-muted">
-                                    <?php if ($metricas['ultima_sync_produtos']): ?>
-                                        <?= date('d/m/Y H:i', strtotime($metricas['ultima_sync_produtos'])) ?>
-                                        <br>
-                                        <small>(<?= $this->tempoDecorrido($metricas['ultima_sync_produtos']) ?>)</small>
-                                    <?php else: ?>
-                                        Nunca sincronizado
-                                    <?php endif; ?>
-                                </span>
-                            </div>
-                            <div class="col-6">
-                                <strong>Pedidos:</strong><br>
-                                <span class="text-muted">
-                                    <?php if ($metricas['ultima_sync_pedidos']): ?>
-                                        <?= date('d/m/Y H:i', strtotime($metricas['ultima_sync_pedidos'])) ?>
-                                        <br>
-                                        <small>(<?= $this->tempoDecorrido($metricas['ultima_sync_pedidos']) ?>)</small>
-                                    <?php else: ?>
-                                        Nunca sincronizado
-                                    <?php endif; ?>
-                                </span>
-                            </div>
-                        </div>
-                        <hr>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-primary" onclick="criarJobSync('produtos')">
-                                <i class="bi bi-arrow-repeat"></i> Sincronizar Produtos
-                            </button>
-                            <button class="btn btn-sm btn-primary" onclick="criarJobSync('pedidos')">
-                                <i class="bi bi-arrow-repeat"></i> Sincronizar Pedidos
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header bg-white">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-database"></i> Cache de Sincronização
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row text-center">
-                            <div class="col-6">
-                                <div class="h3 text-primary">
-                                    <?= $estatisticasCache['produto'] ?? 0 ?>
-                                </div>
-                                <div class="text-muted small">Produtos no Cache</div>
-                            </div>
-                            <div class="col-6">
-                                <div class="h3 text-success">
-                                    <?= $estatisticasCache['pedido'] ?? 0 ?>
-                                </div>
-                                <div class="text-muted small">Pedidos no Cache</div>
-                            </div>
-                        </div>
-                        <hr>
-                        <p class="text-muted small mb-0">
-                            <i class="bi bi-info-circle"></i> 
-                            O cache permite sincronização incremental, importando apenas itens modificados.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tabs -->
-        <div class="card">
-            <div class="card-header bg-white">
-                <ul class="nav nav-tabs card-header-tabs" role="tablist">
-                    <li class="nav-item">
-                        <a class="nav-link active" data-bs-toggle="tab" href="#tabJobs">
-                            <i class="bi bi-list-task"></i> Jobs Recentes
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#tabLogs">
-                            <i class="bi bi-file-earmark-text"></i> Logs
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="tab" href="#tabGraficos">
-                            <i class="bi bi-graph-up"></i> Gráficos
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            <div class="card-body">
-                <div class="tab-content">
-                    <!-- Tab Jobs -->
-                    <div class="tab-pane fade show active" id="tabJobs">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Tipo</th>
-                                        <th>Status</th>
-                                        <th>Tentativas</th>
-                                        <th>Criado em</th>
-                                        <th>Tempo Execução</th>
-                                        <th>Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tabelaJobs">
-                                    <?php foreach ($jobsRecentes as $job): ?>
-                                        <tr>
-                                            <td><?= $job['id'] ?></td>
-                                            <td>
-                                                <i class="bi bi-<?= $this->iconeTipoJob($job['tipo']) ?>"></i>
-                                                <?= ucwords(str_replace('_', ' ', $job['tipo'])) ?>
-                                            </td>
-                                            <td>
-                                                <span class="status-badge status-<?= $job['status'] ?>">
-                                                    <?= ucfirst($job['status']) ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <?= $job['tentativas'] ?> / <?= $job['max_tentativas'] ?>
-                                            </td>
-                                            <td>
-                                                <?= date('d/m/Y H:i:s', strtotime($job['criado_em'])) ?>
-                                            </td>
-                                            <td>
-                                                <?= $job['tempo_execucao'] ? number_format($job['tempo_execucao'], 2) . 's' : '-' ?>
-                                            </td>
-                                            <td>
-                                                <?php if ($job['erro']): ?>
-                                                    <button class="btn btn-sm btn-outline-danger" 
-                                                            onclick="mostrarErroJob(<?= $job['id'] ?>, '<?= addslashes($job['erro']) ?>')">
-                                                        <i class="bi bi-exclamation-circle"></i>
-                                                    </button>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Tab Logs -->
-                    <div class="tab-pane fade" id="tabLogs">
-                        <div id="containerLogs">
-                            <?php foreach ($logsRecentes as $log): ?>
-                                <div class="log-item log-<?= strtolower($log['tipo']) ?>">
-                                    <div class="d-flex justify-content-between">
-                                        <strong><?= htmlspecialchars($log['mensagem']) ?></strong>
-                                        <span class="text-muted small">
-                                            <?= date('d/m/Y H:i:s', strtotime($log['data'])) ?>
-                                        </span>
-                                    </div>
-                                    <?php if ($log['detalhes']): ?>
-                                        <small class="text-muted">
-                                            <?= htmlspecialchars(substr($log['detalhes'], 0, 200)) ?>
-                                            <?= strlen($log['detalhes']) > 200 ? '...' : '' ?>
-                                        </small>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-
-                    <!-- Tab Gráficos -->
-                    <div class="tab-pane fade" id="tabGraficos">
-                        <div class="row">
-                            <div class="col-md-6 mb-4">
-                                <canvas id="graficoTaxaSucesso"></canvas>
-                            </div>
-                            <div class="col-md-6 mb-4">
-                                <canvas id="graficoSincronizacoes"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <p class="text-xs text-gray-500">
+                💡 O cache permite sincronização incremental, importando apenas itens modificados.
+            </p>
         </div>
     </div>
 
-    <!-- Modal Erro Job -->
-    <div class="modal fade" id="modalErroJob" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">
-                        <i class="bi bi-exclamation-triangle"></i> Erro no Job
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p id="textoErroJob"></p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                </div>
-            </div>
+    <!-- Jobs Recentes -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 mb-8">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">📋 Jobs Recentes</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left border-b border-gray-200 dark:border-gray-700">
+                        <th class="px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">ID</th>
+                        <th class="px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
+                        <th class="px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                        <th class="px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Tentativas</th>
+                        <th class="px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Criado em</th>
+                        <th class="px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Tempo</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    <?php if (empty($jobsRecentes)): ?>
+                        <tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">Nenhum job encontrado</td></tr>
+                    <?php else: ?>
+                        <?php foreach ($jobsRecentes as $job): ?>
+                            <?php
+                                $statusClasses = [
+                                    'pendente' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+                                    'processando' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                                    'concluido' => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                                    'erro' => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+                                    'cancelado' => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400',
+                                ];
+                            ?>
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                <td class="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">#<?= $job['id'] ?></td>
+                                <td class="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">
+                                    <?= ucwords(str_replace('_', ' ', $job['tipo'])) ?>
+                                </td>
+                                <td class="px-6 py-3">
+                                    <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full <?= $statusClasses[$job['status']] ?? '' ?>">
+                                        <?= ucfirst($job['status']) ?>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-3 text-sm text-gray-600"><?= $job['tentativas'] ?>/<?= $job['max_tentativas'] ?></td>
+                                <td class="px-6 py-3 text-sm text-gray-600"><?= date('d/m/Y H:i', strtotime($job['criado_em'])) ?></td>
+                                <td class="px-6 py-3 text-sm text-gray-600"><?= $job['tempo_execucao'] ? number_format($job['tempo_execucao'], 2) . 's' : '-' ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        const integracaoId = <?= $integracaoId ?>;
+    <!-- Logs Recentes -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">📝 Logs Recentes</h3>
+        </div>
+        <div class="p-6 space-y-3">
+            <?php if (empty($logsRecentes)): ?>
+                <p class="text-center text-gray-500 py-8">Nenhum log encontrado</p>
+            <?php else: ?>
+                <?php foreach ($logsRecentes as $log): ?>
+                    <?php
+                        $logBorder = [
+                            'sucesso' => 'border-l-green-500',
+                            'erro' => 'border-l-red-500',
+                            'aviso' => 'border-l-yellow-500',
+                            'info' => 'border-l-blue-500',
+                        ];
+                    ?>
+                    <div class="border-l-4 <?= $logBorder[$log['tipo']] ?? 'border-l-gray-300' ?> pl-4 py-2">
+                        <div class="flex justify-between">
+                            <span class="font-medium text-sm text-gray-900 dark:text-gray-100"><?= htmlspecialchars($log['mensagem']) ?></span>
+                            <span class="text-xs text-gray-500"><?= date('d/m/Y H:i', strtotime($log['data'])) ?></span>
+                        </div>
+                        <?php if (!empty($log['detalhes'])): ?>
+                            <p class="text-xs text-gray-500 mt-1"><?= htmlspecialchars(substr($log['detalhes'], 0, 150)) ?></p>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
 
-        // Atualizar dashboard
-        function atualizarDashboard() {
-            const icon = document.getElementById('iconRefresh');
-            icon.classList.add('refresh-animation');
-            
-            fetch(`/api/integracoes/${integracaoId}/dashboard/metricas`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        // Atualizar métricas
-                        const metricas = data.data;
-                        document.getElementById('metricJobsPendentes').textContent = metricas.jobs.pendente || 0;
-                        document.getElementById('metricJobsConcluidos').textContent = metricas.jobs.concluido || 0;
-                        document.getElementById('metricProdutosHoje').textContent = metricas.produtos_hoje || 0;
-                        document.getElementById('metricErros').textContent = metricas.jobs.erro || 0;
-                    }
-                })
-                .finally(() => {
-                    icon.classList.remove('refresh-animation');
-                });
-        }
+<script>
+    const integracaoId = <?= $integracaoId ?>;
 
-        // Criar job de sincronização
-        function criarJobSync(tipo) {
-            const tipoJob = tipo === 'produtos' ? 'sync_produtos' : 'sync_pedidos';
-            
-            fetch(`/api/integracoes/${integracaoId}/dashboard/jobs/criar`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tipo: tipoJob })
-            })
+    function atualizarDashboard(btn) {
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Atualizando...'; }
+
+        fetch(`/integracoes/${integracaoId}/woocommerce/dashboard/metricas`)
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    alert(`Job de sincronização de ${tipo} criado com sucesso!`);
-                    location.reload();
-                } else {
-                    alert(`Erro: ${data.error}`);
+                    const m = data.data;
+                    document.getElementById('metricPendentes').textContent = m.jobs?.pendente || 0;
+                    document.getElementById('metricConcluidos').textContent = m.jobs?.concluido || 0;
+                    document.getElementById('metricProdutos').textContent = m.produtos_hoje || 0;
+                    document.getElementById('metricErros').textContent = m.jobs?.erro || 0;
                 }
+            })
+            .finally(() => {
+                if (btn) { btn.disabled = false; btn.textContent = '🔄 Atualizar'; }
             });
-        }
+    }
 
-        // Mostrar erro do job
-        function mostrarErroJob(jobId, erro) {
-            document.getElementById('textoErroJob').textContent = erro;
-            new bootstrap.Modal(document.getElementById('modalErroJob')).show();
-        }
-
-        // Inicializar gráficos
-        document.addEventListener('DOMContentLoaded', function() {
-            // Gráfico Taxa de Sucesso
-            const ctxTaxa = document.getElementById('graficoTaxaSucesso');
-            if (ctxTaxa) {
-                new Chart(ctxTaxa, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Concluído', 'Erro', 'Pendente', 'Processando'],
-                        datasets: [{
-                            data: [
-                                <?= $metricas['jobs'][App\Models\IntegracaoJob::STATUS_CONCLUIDO] ?? 0 ?>,
-                                <?= $metricas['jobs'][App\Models\IntegracaoJob::STATUS_ERRO] ?? 0 ?>,
-                                <?= $metricas['jobs'][App\Models\IntegracaoJob::STATUS_PENDENTE] ?? 0 ?>,
-                                <?= $metricas['jobs'][App\Models\IntegracaoJob::STATUS_PROCESSANDO] ?? 0 ?>
-                            ],
-                            backgroundColor: ['#198754', '#dc3545', '#ffc107', '#0dcaf0']
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Taxa de Sucesso (Últimos 7 dias)'
-                            }
-                        }
-                    }
-                });
+    function criarJobSync(tipo) {
+        fetch(`/integracoes/${integracaoId}/woocommerce/dashboard/jobs/criar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ tipo })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ ' + data.message);
+                location.reload();
+            } else {
+                alert('❌ ' + data.error);
             }
+        })
+        .catch(err => alert('❌ Erro: ' + err.message));
+    }
 
-            // Auto-refresh a cada 30 segundos
-            setInterval(atualizarDashboard, 30000);
-        });
-    </script>
-</body>
-</html>
-
-<?php
-// Helper functions
-function tempoDecorrido($dataHora) {
-    $tempo = time() - strtotime($dataHora);
-    if ($tempo < 60) return "há " . $tempo . " segundos";
-    if ($tempo < 3600) return "há " . floor($tempo / 60) . " minutos";
-    if ($tempo < 86400) return "há " . floor($tempo / 3600) . " horas";
-    return "há " . floor($tempo / 86400) . " dias";
-}
-
-function iconeTipoJob($tipo) {
-    $icones = [
-        'sync_produtos' => 'box-seam',
-        'sync_pedidos' => 'cart',
-        'webhook' => 'arrow-down-circle',
-        'importar_imagens' => 'image'
-    ];
-    return $icones[$tipo] ?? 'gear';
-}
-?>
+    // Auto-refresh a cada 30s
+    setInterval(() => atualizarDashboard(null), 30000);
+</script>

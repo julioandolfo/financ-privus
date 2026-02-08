@@ -237,6 +237,32 @@ return [
     'POST /integracoes/webhook' => ['handler' => 'IntegracaoController@storeWebhook', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/api' => ['handler' => 'IntegracaoController@storeApi', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/webmanibr' => ['handler' => 'IntegracaoController@storeWebmaniBR', 'middleware' => ['AuthMiddleware']],
+    
+    // WooCommerce - Configuração de Status
+    'GET /integracoes/{id}/woocommerce/config/status' => ['handler' => 'IntegracaoWooConfigController@configurarStatus', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/woocommerce/config/status/atualizar' => ['handler' => 'IntegracaoWooConfigController@atualizarStatus', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/woocommerce/config/status/salvar' => ['handler' => 'IntegracaoWooConfigController@salvarMapeamentoStatus', 'middleware' => ['AuthMiddleware']],
+    
+    // WooCommerce - Configuração de Formas de Pagamento
+    'GET /integracoes/{id}/woocommerce/config/pagamentos' => ['handler' => 'IntegracaoWooConfigController@configurarFormasPagamento', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/woocommerce/config/pagamentos/atualizar' => ['handler' => 'IntegracaoWooConfigController@atualizarFormasPagamento', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/woocommerce/config/pagamentos/salvar' => ['handler' => 'IntegracaoWooConfigController@salvarAcoesFormasPagamento', 'middleware' => ['AuthMiddleware']],
+    
+    // WooCommerce - Configuração de Categorias
+    'GET /integracoes/{id}/woocommerce/config/categorias' => ['handler' => 'IntegracaoWooConfigController@configurarCategorias', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/woocommerce/config/categorias/atualizar' => ['handler' => 'IntegracaoWooConfigController@atualizarCategorias', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/woocommerce/config/categorias/salvar' => ['handler' => 'IntegracaoWooConfigController@salvarMapeamentoCategorias', 'middleware' => ['AuthMiddleware']],
+    
+    // WooCommerce - Dashboard
+    'GET /integracoes/{id}/woocommerce/dashboard' => ['handler' => 'IntegracaoWooDashboardController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /integracoes/{id}/woocommerce/dashboard/metricas' => ['handler' => 'IntegracaoWooDashboardController@metricas', 'middleware' => ['AuthMiddleware']],
+    'GET /integracoes/{id}/woocommerce/dashboard/jobs' => ['handler' => 'IntegracaoWooDashboardController@jobs', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/woocommerce/dashboard/jobs/criar' => ['handler' => 'IntegracaoWooDashboardController@criarJob', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/woocommerce/dashboard/jobs/processar' => ['handler' => 'IntegracaoWooDashboardController@processarJob', 'middleware' => ['AuthMiddleware']],
+    'GET /integracoes/{id}/woocommerce/dashboard/estatisticas-produtos' => ['handler' => 'IntegracaoWooDashboardController@estatisticasProdutos', 'middleware' => ['AuthMiddleware']],
+    'GET /integracoes/{id}/woocommerce/dashboard/grafico-sincronizacoes' => ['handler' => 'IntegracaoWooDashboardController@graficoSincronizacoes', 'middleware' => ['AuthMiddleware']],
+    'GET /integracoes/{id}/woocommerce/dashboard/grafico-taxa-sucesso' => ['handler' => 'IntegracaoWooDashboardController@graficoTaxaSucesso', 'middleware' => ['AuthMiddleware']],
+    
     'GET /integracoes/{id}' => ['handler' => 'IntegracaoController@show', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/{id}/sincronizar' => ['handler' => 'IntegracaoController@sincronizar', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/{id}/delete' => ['handler' => 'IntegracaoController@destroy', 'middleware' => ['AuthMiddleware']],
