@@ -14,6 +14,59 @@
         </button>
     </div>
 
+    <?php if ($integracao['tipo'] === 'woocommerce'): ?>
+    <!-- Card de Configuração WooCommerce -->
+    <div class="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl shadow-lg p-6 border border-blue-200 dark:border-blue-900">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white text-2xl">
+                ⚙️
+            </div>
+            <div>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100">Configuração da Integração</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Configure mapeamentos antes de sincronizar</p>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <a href="/integracoes/<?= $integracao['id'] ?>/woocommerce/config/status" class="block p-4 bg-white dark:bg-gray-800 rounded-xl border-2 border-transparent hover:border-blue-500 transition-all group">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                        🔄
+                    </div>
+                    <div>
+                        <div class="font-semibold text-gray-900 dark:text-gray-100">Status</div>
+                        <div class="text-xs text-gray-600 dark:text-gray-400">Mapear status do Woo</div>
+                    </div>
+                </div>
+            </a>
+
+            <a href="/integracoes/<?= $integracao['id'] ?>/woocommerce/config/pagamentos" class="block p-4 bg-white dark:bg-gray-800 rounded-xl border-2 border-transparent hover:border-green-500 transition-all group">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                        💳
+                    </div>
+                    <div>
+                        <div class="font-semibold text-gray-900 dark:text-gray-100">Pagamentos</div>
+                        <div class="text-xs text-gray-600 dark:text-gray-400">Ações por gateway</div>
+                    </div>
+                </div>
+            </a>
+
+            <a href="/integracoes/<?= $integracao['id'] ?>/woocommerce/dashboard" class="block p-4 bg-white dark:bg-gray-800 rounded-xl border-2 border-transparent hover:border-purple-500 transition-all group">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                        📊
+                    </div>
+                    <div>
+                        <div class="font-semibold text-gray-900 dark:text-gray-100">Dashboard</div>
+                        <div class="text-xs text-gray-600 dark:text-gray-400">Monitor em tempo real</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Modal de Opções de Sincronização -->
     <div id="modalSincronizacao" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onclick="fecharModal(event)">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full mx-4 p-8" onclick="event.stopPropagation()">

@@ -119,12 +119,30 @@ class IntegracaoWooCommerce extends Model
     public function testarConexao($urlSite, $consumerKey, $consumerSecret)
     {
         try {
+            // Se receber array ao invés de parâmetros separados
+            if (is_array($urlSite)) {
+                $config = $urlSite;
+                $urlSite = $config['url_site'] ?? '';
+                $consumerKey = $config['consumer_key'] ?? '';
+                $consumerSecret = $config['consumer_secret'] ?? '';
+            }
+            
             // Valida URL
+            $urlSite = trim($urlSite);
             if (empty($urlSite)) {
                 return [
                     'sucesso' => false,
                     'codigo' => 0,
                     'mensagem' => '❌ URL do site não informada'
+                ];
+            }
+            
+            // Valida credenciais
+            if (empty($consumerKey) || empty($consumerSecret)) {
+                return [
+                    'sucesso' => false,
+                    'codigo' => 0,
+                    'mensagem' => '❌ Consumer Key ou Consumer Secret não informados'
                 ];
             }
             

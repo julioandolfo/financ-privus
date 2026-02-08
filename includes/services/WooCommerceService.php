@@ -241,13 +241,23 @@ class WooCommerceService
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
+        
+        if ($curlError) {
+            throw new \Exception("Erro de conexão: {$curlError}");
+        }
         
         if ($httpCode !== 200) {
             throw new \Exception("Erro na API WooCommerce. Código: {$httpCode}");
         }
         
-        return json_decode($response, true) ?: [];
+        $data = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception("Resposta inválida da API: " . json_last_error_msg());
+        }
+        
+        return is_array($data) ? $data : [];
     }
     
     /**
@@ -306,13 +316,23 @@ class WooCommerceService
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
+        
+        if ($curlError) {
+            throw new \Exception("Erro de conexão: {$curlError}");
+        }
         
         if ($httpCode !== 200) {
             throw new \Exception("Erro na API WooCommerce. Código: {$httpCode}");
         }
         
-        return json_decode($response, true) ?: [];
+        $data = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception("Resposta inválida da API: " . json_last_error_msg());
+        }
+        
+        return is_array($data) ? $data : [];
     }
     
     /**
@@ -467,7 +487,12 @@ class WooCommerceService
             $url = rtrim($config['url_site'], '/') . '/wp-json/wc/v3/reports/orders/totals';
             
             $response = $this->requestWooCommerce('GET', $url, [], $config);
+            
+            // Valida se é JSON válido
             $data = json_decode($response, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new \Exception("Resposta inválida da API (não é JSON válido): " . substr($response, 0, 100));
+            }
             
             $status = [];
             
@@ -509,7 +534,12 @@ class WooCommerceService
             $url = rtrim($config['url_site'], '/') . '/wp-json/wc/v3/payment_gateways';
             
             $response = $this->requestWooCommerce('GET', $url, [], $config);
+            
+            // Valida se é JSON válido
             $data = json_decode($response, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new \Exception("Resposta inválida da API (não é JSON válido): " . substr($response, 0, 100));
+            }
             
             $formasPagamento = [];
             
@@ -559,7 +589,12 @@ class WooCommerceService
             $url .= '?per_page=100';
             
             $response = $this->requestWooCommerce('GET', $url, [], $config);
+            
+            // Valida se é JSON válido
             $data = json_decode($response, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new \Exception("Resposta inválida da API (não é JSON válido): " . substr($response, 0, 100));
+            }
             
             $categorias = [];
             
@@ -606,7 +641,10 @@ class WooCommerceService
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_USERPWD, $config['consumer_key'] . ':' . $config['consumer_secret']);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         
         if ($method === 'POST') {
             curl_setopt($ch, CURLOPT_POST, true);
@@ -620,10 +658,39 @@ class WooCommerceService
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        $curlErrno = curl_errno($ch);
         curl_close($ch);
         
+        // Verifica erro de cURL
+        if ($curlErrno !== 0) {
+            throw new \Exception("Erro de conexão com WooCommerce: {$curlError} (código: {$curlErrno})");
+        }
+        
+        // Verifica código HTTP
         if ($httpCode !== 200 && $httpCode !== 201) {
-            throw new \Exception("Erro na API WooCommerce. Código: {$httpCode}");
+            // Tenta extrair mensagem de erro da resposta
+            $errorMessage = $response;
+            
+            // Se for JSON, tenta pegar mensagem de erro
+            $jsonData = @json_decode($response, true);
+            if ($jsonData && isset($jsonData['message'])) {
+                $errorMessage = $jsonData['message'];
+            } elseif ($jsonData && isset($jsonData['error'])) {
+                $errorMessage = $jsonData['error'];
+            }
+            
+            // Limita tamanho da mensagem
+            if (strlen($errorMessage) > 200) {
+                $errorMessage = substr($errorMessage, 0, 200) . '...';
+            }
+            
+            throw new \Exception("Erro na API WooCommerce (HTTP {$httpCode}): {$errorMessage}");
+        }
+        
+        // Verifica se a resposta é vazia
+        if (empty($response)) {
+            throw new \Exception("Resposta vazia da API WooCommerce");
         }
         
         return $response;
@@ -777,7 +844,14 @@ class WooCommerceService
         }
         
         $response = $this->requestWooCommerce('GET', $url, [], $config);
-        return json_decode($response, true) ?: [];
+        
+        // Valida JSON
+        $data = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception("Resposta inválida da API de produtos: " . json_last_error_msg());
+        }
+        
+        return is_array($data) ? $data : [];
     }
     
     /**
