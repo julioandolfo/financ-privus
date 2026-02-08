@@ -153,29 +153,103 @@ class WooCommerceService
     {
         $total = 0;
         $erros = [];
+        $contaReceberModel = new \App\Models\ContaReceber();
+        
+        // Carrega configurações de ações por forma de pagamento
+        $acoesFormasPagamento = !empty($config['acoes_formas_pagamento']) 
+            ? json_decode($config['acoes_formas_pagamento'], true) 
+            : [];
+        
+        // Carrega mapeamento de status
+        $mapeamentoStatus = !empty($config['mapeamento_status']) 
+            ? json_decode($config['mapeamento_status'], true) 
+            : [];
+        
+        // Status que indicam que o pagamento foi confirmado
+        $statusPagamentoConfirmado = ['em_processamento', 'concluido'];
         
         try {
             $pedidos = $this->buscarPedidosWooCommerce($config, $opcoes);
+            
+            \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                'Pedidos encontrados: ' . count($pedidos), ['empresa_id' => $empresaId]);
             
             foreach ($pedidos as $pedWoo) {
                 try {
                     // Busca ou cria cliente
                     $clienteId = $this->buscarOuCriarCliente($pedWoo['billing'], $empresaId);
                     
+                    // Mapeia o status do WooCommerce para o sistema
+                    $statusWoo = $pedWoo['status'];
+                    $statusSistema = $mapeamentoStatus['wc-' . $statusWoo] 
+                        ?? $mapeamentoStatus[$statusWoo] 
+                        ?? $this->mapearStatus($statusWoo);
+                    
+                    // Identifica forma de pagamento do WooCommerce
+                    $formaPagamentoWoo = $pedWoo['payment_method'] ?? '';
+                    $formaPagamentoTitulo = $pedWoo['payment_method_title'] ?? $formaPagamentoWoo;
+                    
+                    // Busca configuração de ação para esta forma de pagamento
+                    $acaoFormaPgto = $acoesFormasPagamento[$formaPagamentoWoo] ?? [];
+                    
+                    // Dados do pedido
                     $dados = [
                         'empresa_id' => $empresaId,
                         'cliente_id' => $clienteId,
+                        'origem' => 'woocommerce',
+                        'origem_id' => $pedWoo['id'],
                         'numero_pedido' => $pedWoo['number'],
-                        'data_pedido' => $pedWoo['date_created'],
-                        'status' => $this->mapearStatus($pedWoo['status']),
+                        'data_pedido' => date('Y-m-d H:i:s', strtotime($pedWoo['date_created'])),
+                        'status' => $statusSistema,
                         'valor_total' => $pedWoo['total'],
-                        'origem' => 'woocommerce'
+                        'frete' => $pedWoo['shipping_total'] ?? 0,
+                        'desconto' => $pedWoo['discount_total'] ?? 0,
+                        'observacoes' => "Pagamento: {$formaPagamentoTitulo}",
+                        'dados_origem' => $pedWoo
                     ];
                     
-                    $this->pedidoModel->create($dados);
+                    // Verifica se pedido já existe
+                    $pedidoExistente = $this->buscarPedidoExistente($pedWoo['number'], $empresaId);
+                    
+                    if ($pedidoExistente) {
+                        // Atualiza status se mudou
+                        if ($pedidoExistente['status'] !== $statusSistema) {
+                            $this->pedidoModel->update($pedidoExistente['id'], $dados);
+                            
+                            // Verifica se precisa dar baixa automática agora
+                            // (status mudou para confirmado E forma de pgto está marcada para baixa)
+                            $this->verificarBaixaAutomatica(
+                                $pedidoExistente['id'],
+                                $statusSistema,
+                                $acaoFormaPgto,
+                                $statusPagamentoConfirmado,
+                                $pedWoo,
+                                $empresaId,
+                                $contaReceberModel
+                            );
+                        }
+                    } else {
+                        // Cria pedido novo
+                        $pedidoId = $this->pedidoModel->create($dados);
+                        
+                        // Cria conta a receber
+                        $this->criarContaReceberDoPedido(
+                            $pedidoId,
+                            $pedWoo,
+                            $empresaId,
+                            $clienteId,
+                            $statusSistema,
+                            $acaoFormaPgto,
+                            $statusPagamentoConfirmado,
+                            $contaReceberModel
+                        );
+                    }
+                    
                     $total++;
                 } catch (\Exception $e) {
                     $erros[] = "Pedido {$pedWoo['number']}: " . $e->getMessage();
+                    \App\Models\LogSistema::error('WooCommerce', 'sincronizarPedidos', 
+                        "Erro pedido #{$pedWoo['number']}: " . $e->getMessage());
                 }
             }
         } catch (\Exception $e) {
@@ -183,6 +257,274 @@ class WooCommerceService
         }
         
         return ['total' => $total, 'erros' => $erros];
+    }
+    
+    /**
+     * Cria conta a receber a partir de um pedido WooCommerce
+     * 
+     * Lógica:
+     * - Sempre cria a conta a receber como PENDENTE
+     * - Só dá baixa automática se:
+     *   1. A forma de pagamento está marcada como "baixar_automaticamente"
+     *   2. E o status do pedido indica pagamento confirmado (processando/concluido)
+     * - Se "criar_parcelas" estiver ativo, divide em parcelas
+     */
+    private function criarContaReceberDoPedido(
+        $pedidoId, $pedWoo, $empresaId, $clienteId, 
+        $statusSistema, $acaoFormaPgto, $statusPagamentoConfirmado,
+        $contaReceberModel
+    ) {
+        $valorTotal = floatval($pedWoo['total']);
+        $formaPagamentoWoo = $pedWoo['payment_method'] ?? '';
+        $formaPagamentoTitulo = $pedWoo['payment_method_title'] ?? $formaPagamentoWoo;
+        $dataPedido = date('Y-m-d', strtotime($pedWoo['date_created']));
+        
+        // ID da forma de pagamento no sistema (se vinculada)
+        $formaPagamentoId = !empty($acaoFormaPgto['forma_pagamento_id']) 
+            ? $acaoFormaPgto['forma_pagamento_id'] 
+            : null;
+        
+        // Verifica se deve criar parcelas
+        $criarParcelas = !empty($acaoFormaPgto['criar_parcelas']);
+        $numeroParcelas = $acaoFormaPgto['numero_parcelas'] ?? 1;
+        
+        // Se "auto", usa 1 parcela (WooCommerce não informa parcelas)
+        if ($numeroParcelas === 'auto' || !is_numeric($numeroParcelas)) {
+            $numeroParcelas = 1;
+        }
+        $numeroParcelas = max(1, intval($numeroParcelas));
+        
+        // Verifica se deve dar baixa automática
+        $devedarBaixa = !empty($acaoFormaPgto['baixar_automaticamente']) 
+            && in_array($statusSistema, $statusPagamentoConfirmado);
+        
+        // Observações
+        $observacoes = "Pedido WooCommerce #{$pedWoo['number']}";
+        $observacoes .= " | Pagamento: {$formaPagamentoTitulo}";
+        if (!empty($acaoFormaPgto['observacoes'])) {
+            $observacoes .= " | " . $acaoFormaPgto['observacoes'];
+        }
+        
+        if ($criarParcelas && $numeroParcelas > 1) {
+            // === CRIAR MÚLTIPLAS PARCELAS ===
+            $valorPrimeiraParcela = null;
+            if (!empty($acaoFormaPgto['valor_primeira_parcela'])) {
+                $valorPrimeiraConfig = $acaoFormaPgto['valor_primeira_parcela'];
+                if (strpos($valorPrimeiraConfig, '%') !== false) {
+                    $percentual = floatval(str_replace('%', '', $valorPrimeiraConfig));
+                    $valorPrimeiraParcela = round($valorTotal * ($percentual / 100), 2);
+                } else {
+                    $valorPrimeiraParcela = floatval($valorPrimeiraConfig);
+                }
+            }
+            
+            $baixarPrimeiraParcela = !empty($acaoFormaPgto['baixar_primeira_parcela'])
+                && in_array($statusSistema, $statusPagamentoConfirmado);
+            
+            for ($i = 1; $i <= $numeroParcelas; $i++) {
+                // Calcula valor da parcela
+                if ($i === 1 && $valorPrimeiraParcela !== null) {
+                    $valorParcela = $valorPrimeiraParcela;
+                } elseif ($i === 1 && $valorPrimeiraParcela !== null) {
+                    $valorParcela = $valorPrimeiraParcela;
+                } else {
+                    $valorRestante = $valorPrimeiraParcela !== null 
+                        ? $valorTotal - $valorPrimeiraParcela 
+                        : $valorTotal;
+                    $parcelasRestantes = $valorPrimeiraParcela !== null 
+                        ? $numeroParcelas - 1 
+                        : $numeroParcelas;
+                    $valorParcela = round($valorRestante / max(1, $parcelasRestantes), 2);
+                }
+                
+                // Data de vencimento (parcela 1 = data do pedido, demais +30 dias cada)
+                $dataVencimento = date('Y-m-d', strtotime($dataPedido . ' + ' . (($i - 1) * 30) . ' days'));
+                
+                // Status e valor recebido da parcela
+                $statusParcela = 'pendente';
+                $valorRecebido = 0;
+                
+                // Primeira parcela: baixar se configurado
+                if ($i === 1 && $baixarPrimeiraParcela) {
+                    $statusParcela = 'recebido';
+                    $valorRecebido = $valorParcela;
+                }
+                // Se baixa automática total (não é parcela, é tudo)
+                if ($devedarBaixa && !$criarParcelas) {
+                    $statusParcela = 'recebido';
+                    $valorRecebido = $valorParcela;
+                }
+                
+                $dadosConta = [
+                    'empresa_id' => $empresaId,
+                    'cliente_id' => $clienteId,
+                    'categoria_id' => $this->getCategoriaVendaId($empresaId),
+                    'centro_custo_id' => null,
+                    'numero_documento' => "WOO-{$pedWoo['number']}/{$i}",
+                    'descricao' => "Pedido #{$pedWoo['number']} - Parcela {$i}/{$numeroParcelas}",
+                    'valor_total' => $valorParcela,
+                    'valor_recebido' => $valorRecebido,
+                    'data_emissao' => $dataPedido,
+                    'data_competencia' => $dataPedido,
+                    'data_vencimento' => $dataVencimento,
+                    'status' => $statusParcela,
+                    'observacoes' => $observacoes,
+                    'usuario_cadastro_id' => 1, // Sistema
+                    'forma_recebimento_id' => $formaPagamentoId,
+                    'pedido_id' => $pedidoId,
+                    'numero_parcelas' => $numeroParcelas,
+                    'parcela_atual' => $i,
+                ];
+                
+                if ($statusParcela === 'recebido') {
+                    $dadosConta['data_recebimento'] = $dataPedido;
+                }
+                
+                $contaReceberModel->create($dadosConta);
+            }
+            
+            \App\Models\LogSistema::info('WooCommerce', 'criarContaReceber', 
+                "Pedido #{$pedWoo['number']}: {$numeroParcelas} parcelas criadas" .
+                ($baixarPrimeiraParcela ? ' (1ª parcela baixada)' : ''),
+                ['forma_pgto' => $formaPagamentoTitulo, 'valor' => $valorTotal]
+            );
+            
+        } else {
+            // === PARCELA ÚNICA ===
+            $statusConta = 'pendente';
+            $valorRecebido = 0;
+            
+            // Só dá baixa se forma de pagamento marcada E status confirma pagamento
+            if ($devedarBaixa) {
+                $statusConta = 'recebido';
+                $valorRecebido = $valorTotal;
+            }
+            
+            $dadosConta = [
+                'empresa_id' => $empresaId,
+                'cliente_id' => $clienteId,
+                'categoria_id' => $this->getCategoriaVendaId($empresaId),
+                'centro_custo_id' => null,
+                'numero_documento' => "WOO-{$pedWoo['number']}",
+                'descricao' => "Pedido WooCommerce #{$pedWoo['number']}",
+                'valor_total' => $valorTotal,
+                'valor_recebido' => $valorRecebido,
+                'data_emissao' => $dataPedido,
+                'data_competencia' => $dataPedido,
+                'data_vencimento' => $dataPedido,
+                'status' => $statusConta,
+                'observacoes' => $observacoes,
+                'usuario_cadastro_id' => 1, // Sistema
+                'forma_recebimento_id' => $formaPagamentoId,
+                'pedido_id' => $pedidoId,
+            ];
+            
+            if ($statusConta === 'recebido') {
+                $dadosConta['data_recebimento'] = $dataPedido;
+            }
+            
+            $contaReceberModel->create($dadosConta);
+            
+            \App\Models\LogSistema::info('WooCommerce', 'criarContaReceber', 
+                "Pedido #{$pedWoo['number']}: conta a receber criada como '{$statusConta}'",
+                ['forma_pgto' => $formaPagamentoTitulo, 'valor' => $valorTotal, 'baixa_auto' => $devedarBaixa]
+            );
+        }
+    }
+    
+    /**
+     * Verifica e aplica baixa automática quando status de pedido muda
+     * 
+     * Cenário: pedido já existia como pendente, e agora o status mudou
+     * para "processando" ou "concluido". Se a forma de pagamento está
+     * configurada para baixa automática, dá a baixa agora.
+     */
+    private function verificarBaixaAutomatica(
+        $pedidoId, $statusSistema, $acaoFormaPgto, 
+        $statusPagamentoConfirmado, $pedWoo, $empresaId,
+        $contaReceberModel
+    ) {
+        // Só processa se forma de pagamento está marcada para baixa automática
+        if (empty($acaoFormaPgto['baixar_automaticamente'])) {
+            return;
+        }
+        
+        // Só processa se o status agora indica pagamento confirmado
+        if (!in_array($statusSistema, $statusPagamentoConfirmado)) {
+            return;
+        }
+        
+        // Busca contas a receber vinculadas a este pedido que ainda estão pendentes
+        $db = \App\Core\Database::getInstance()->getConnection();
+        $sql = "SELECT id, valor_total, status FROM contas_receber 
+                WHERE pedido_id = :pedido_id 
+                AND status = 'pendente'
+                AND deleted_at IS NULL";
+        
+        try {
+            $stmt = $db->prepare($sql);
+            $stmt->execute(['pedido_id' => $pedidoId]);
+            $contasPendentes = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            
+            $dataRecebimento = date('Y-m-d');
+            
+            foreach ($contasPendentes as $conta) {
+                $contaReceberModel->atualizarRecebimento(
+                    $conta['id'],
+                    $conta['valor_total'],
+                    $dataRecebimento,
+                    'recebido'
+                );
+            }
+            
+            if (count($contasPendentes) > 0) {
+                \App\Models\LogSistema::info('WooCommerce', 'baixaAutomatica', 
+                    "Pedido #{$pedWoo['number']}: baixa automática em " . count($contasPendentes) . " conta(s)",
+                    ['status_novo' => $statusSistema, 'forma_pgto' => $pedWoo['payment_method'] ?? '']
+                );
+            }
+        } catch (\Exception $e) {
+            \App\Models\LogSistema::error('WooCommerce', 'baixaAutomatica', 
+                "Erro ao dar baixa automática pedido #{$pedWoo['number']}: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Busca categoria padrão de venda da empresa
+     */
+    private function getCategoriaVendaId($empresaId)
+    {
+        $db = \App\Core\Database::getInstance()->getConnection();
+        
+        // Tenta buscar categoria "Vendas" ou "Receitas"
+        $sql = "SELECT id FROM categorias_financeiras 
+                WHERE empresa_id = :empresa_id 
+                AND tipo = 'receita'
+                AND ativo = 1
+                ORDER BY id ASC LIMIT 1";
+        
+        try {
+            $stmt = $db->prepare($sql);
+            $stmt->execute(['empresa_id' => $empresaId]);
+            $result = $stmt->fetchColumn();
+            
+            if ($result) {
+                return $result;
+            }
+        } catch (\Exception $e) {
+            // Ignora
+        }
+        
+        // Fallback: busca qualquer categoria ativa
+        $sql = "SELECT id FROM categorias_financeiras 
+                WHERE ativo = 1 ORDER BY id ASC LIMIT 1";
+        try {
+            $stmt = $db->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchColumn() ?: 1;
+        } catch (\Exception $e) {
+            return 1;
+        }
     }
     
     /**
@@ -340,9 +682,90 @@ class WooCommerceService
      */
     private function buscarOuCriarCliente($billing, $empresaId)
     {
-        // Implementar busca por email
-        // Por enquanto, retorna 1 (exemplo)
-        return 1;
+        $email = $billing['email'] ?? '';
+        $nome = trim(($billing['first_name'] ?? '') . ' ' . ($billing['last_name'] ?? ''));
+        $cpfCnpj = $billing['cpf'] ?? $billing['cnpj'] ?? $billing['persontype_cpf'] ?? '';
+        $telefone = $billing['phone'] ?? '';
+        
+        // 1. Busca por CPF/CNPJ se disponível
+        if (!empty($cpfCnpj)) {
+            $cliente = $this->clienteModel->findByCpfCnpj($cpfCnpj, $empresaId);
+            if ($cliente) {
+                return $cliente['id'];
+            }
+        }
+        
+        // 2. Busca por email
+        if (!empty($email)) {
+            $db = \App\Core\Database::getInstance()->getConnection();
+            $sql = "SELECT id FROM clientes WHERE email = :email AND empresa_id = :empresa_id AND ativo = 1 LIMIT 1";
+            $stmt = $db->prepare($sql);
+            $stmt->execute(['email' => $email, 'empresa_id' => $empresaId]);
+            $clienteId = $stmt->fetchColumn();
+            if ($clienteId) {
+                return $clienteId;
+            }
+        }
+        
+        // 3. Cria cliente novo
+        if (empty($nome)) {
+            $nome = $email ?: 'Cliente WooCommerce';
+        }
+        
+        $endereco = [
+            'logradouro' => $billing['address_1'] ?? '',
+            'complemento' => $billing['address_2'] ?? '',
+            'cidade' => $billing['city'] ?? '',
+            'estado' => $billing['state'] ?? '',
+            'cep' => $billing['postcode'] ?? '',
+            'pais' => $billing['country'] ?? 'BR',
+        ];
+        
+        try {
+            $clienteId = $this->clienteModel->create([
+                'empresa_id' => $empresaId,
+                'tipo' => strlen(preg_replace('/\D/', '', $cpfCnpj)) > 11 ? 'juridica' : 'fisica',
+                'nome_razao_social' => $nome,
+                'cpf_cnpj' => $cpfCnpj ?: null,
+                'email' => $email ?: null,
+                'telefone' => $telefone ?: null,
+                'endereco' => $endereco,
+                'ativo' => 1
+            ]);
+            
+            \App\Models\LogSistema::info('WooCommerce', 'criarCliente', 
+                "Cliente criado: {$nome}", ['email' => $email, 'id' => $clienteId]);
+            
+            return $clienteId;
+        } catch (\Exception $e) {
+            \App\Models\LogSistema::error('WooCommerce', 'criarCliente', 
+                "Erro ao criar cliente: " . $e->getMessage(), ['nome' => $nome, 'email' => $email]);
+            return 1; // Fallback
+        }
+    }
+    
+    /**
+     * Busca pedido existente pelo número
+     */
+    private function buscarPedidoExistente($numeroPedido, $empresaId)
+    {
+        try {
+            $pedido = $this->pedidoModel->findByOrigem('woocommerce', $numeroPedido, $empresaId);
+            return $pedido ?: null;
+        } catch (\Exception $e) {
+            // Tenta busca alternativa
+            try {
+                $db = \App\Core\Database::getInstance()->getConnection();
+                $sql = "SELECT * FROM pedidos_vinculados 
+                        WHERE numero_pedido = :numero AND empresa_id = :empresa_id 
+                        AND origem = 'woocommerce' LIMIT 1";
+                $stmt = $db->prepare($sql);
+                $stmt->execute(['numero' => $numeroPedido, 'empresa_id' => $empresaId]);
+                return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+            } catch (\Exception $e2) {
+                return null;
+            }
+        }
     }
     
     /**
