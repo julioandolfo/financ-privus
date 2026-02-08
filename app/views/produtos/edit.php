@@ -145,9 +145,8 @@ $categorias = $categoriaModel->getFlatList($empresaId);
                             Custo Unitário *
                         </label>
                         <input type="text" id="custo_unitario" name="custo_unitario" required
-                               x-model="custoUnitario"
                                @input="calcularMargem()"
-                               value="<?= number_format($produto['custo_unitario'], 2, ',', '.') ?>"
+                               value="<?= $produto['custo_unitario'] ?>"
                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     </div>
 
@@ -156,9 +155,8 @@ $categorias = $categoriaModel->getFlatList($empresaId);
                             Preço de Venda *
                         </label>
                         <input type="text" id="preco_venda" name="preco_venda" required
-                               x-model="precoVenda"
                                @input="calcularMargem()"
-                               value="<?= number_format($produto['preco_venda'], 2, ',', '.') ?>"
+                               value="<?= $produto['preco_venda'] ?>"
                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     </div>
 
@@ -634,8 +632,6 @@ $categorias = $categoriaModel->getFlatList($empresaId);
 function produtoEditForm() {
     return {
         currentTab: 'dados',
-        custoUnitario: '<?= number_format($produto['custo_unitario'], 2, ',', '.') ?>',
-        precoVenda: '<?= number_format($produto['preco_venda'], 2, ',', '.') ?>',
         margem: 0,
         dragover: false,
         showScanner: false,
@@ -645,53 +641,69 @@ function produtoEditForm() {
         precoMask: null,
         
         init() {
-            this.calcularMargem();
             this.initMasks();
+            this.calcularMargem();
         },
         
         initMasks() {
+            const self = this;
+            
+            // Configuração comum para ambas as máscaras
+            const maskOptions = {
+                mask: Number,
+                scale: 2,
+                signed: false,
+                thousandsSeparator: '.',
+                padFractionalZeros: true,
+                normalizeZeros: true,
+                radix: ',',
+                mapToRadix: ['.'],
+                min: 0,
+                max: 999999999.99
+            };
+            
             // Máscara para custo unitário
             const custoElement = document.getElementById('custo_unitario');
             if (custoElement) {
-                this.custoMask = IMask(custoElement, {
-                    mask: 'R$ num',
-                    blocks: {
-                        num: {
-                            mask: Number,
-                            scale: 2,
-                            thousandsSeparator: '.',
-                            radix: ',',
-                            mapToRadix: ['.'],
-                            min: 0,
-                            max: 999999999.99
-                        }
-                    }
+                this.custoMask = IMask(custoElement, maskOptions);
+                
+                // Formata valor inicial
+                const valorInicial = parseFloat(custoElement.value) || 0;
+                this.custoMask.value = valorInicial.toFixed(2);
+                
+                // Listener para recalcular margem
+                this.custoMask.on('accept', function() {
+                    self.calcularMargem();
                 });
             }
             
             // Máscara para preço de venda
             const precoElement = document.getElementById('preco_venda');
             if (precoElement) {
-                this.precoMask = IMask(precoElement, {
-                    mask: 'R$ num',
-                    blocks: {
-                        num: {
-                            mask: Number,
-                            scale: 2,
-                            thousandsSeparator: '.',
-                            radix: ',',
-                            mapToRadix: ['.'],
-                            min: 0,
-                            max: 999999999.99
-                        }
-                    }
+                this.precoMask = IMask(precoElement, maskOptions);
+                
+                // Formata valor inicial
+                const valorInicial = parseFloat(precoElement.value) || 0;
+                this.precoMask.value = valorInicial.toFixed(2);
+                
+                // Listener para recalcular margem
+                this.precoMask.on('accept', function() {
+                    self.calcularMargem();
                 });
             }
         },
         
         calcularMargem() {
-            const custo = this.parseValor(this.custoUnitario);
-            const preco = this.parseValor(this.precoVenda);
+            let custo = 0;
+            let preco = 0;
+            
+            if (this.custoMask) {
+                custo = parseFloat(this.custoMask.typedValue) || 0;
+            }
+            
+            if (this.precoMask) {
+                preco = parseFloat(this.precoMask.typedValue) || 0;
+            }
             
             if (custo > 0) {
                 const lucro = preco - custo;
@@ -701,27 +713,21 @@ function produtoEditForm() {
             }
         },
         
-        parseValor(valor) {
-            if (typeof valor === 'number') return valor;
-            if (!valor) return 0;
-            valor = valor.toString().replace(/[^\d,]/g, '');
-            valor = valor.replace(',', '.');
-            return parseFloat(valor) || 0;
-        },
-        
         prepararSubmit(event) {
             // Converte os valores de moeda para o formato correto antes de enviar
             const custoInput = document.getElementById('custo_unitario');
             const precoInput = document.getElementById('preco_venda');
             
             if (custoInput && this.custoMask) {
-                const valorLimpo = this.custoMask.unmaskedValue;
-                custoInput.value = valorLimpo;
+                // Pega o valor numérico e divide por 100 (centavos para reais)
+                const valorNumerico = this.custoMask.typedValue;
+                custoInput.value = valorNumerico;
             }
             
             if (precoInput && this.precoMask) {
-                const valorLimpo = this.precoMask.unmaskedValue;
-                precoInput.value = valorLimpo;
+                // Pega o valor numérico e divide por 100 (centavos para reais)
+                const valorNumerico = this.precoMask.typedValue;
+                precoInput.value = valorNumerico;
             }
         },
         

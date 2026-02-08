@@ -6,7 +6,7 @@
     </div>
 
     <!-- Formulário -->
-    <form method="POST" action="/produtos" x-data="produtoForm()">
+    <form method="POST" action="/produtos" x-data="produtoForm()" @submit="prepararSubmit($event)">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8 space-y-6">
             
             <!-- Código, SKU e Nome -->
@@ -120,13 +120,10 @@
                     <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                         Custo Unitário *
                     </label>
-                    <input type="text" name="custo_unitario" required
-                           x-model="custoUnitario"
-                           @input="calcularMargem()"
-                           data-mask="currency"
+                    <input type="text" id="custo_unitario" name="custo_unitario" required
                            value="<?= htmlspecialchars($this->session->get('old')['custo_unitario'] ?? '0') ?>"
                            class="w-full px-4 py-3 rounded-xl border <?= isset($this->session->get('errors')['custo_unitario']) ? 'border-red-500' : 'border-gray-300 dark:border-gray-600' ?> bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                           placeholder="R$ 0,00">
+                           placeholder="0,00">
                     <?php if (isset($this->session->get('errors')['custo_unitario'])): ?>
                         <p class="mt-1 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['custo_unitario'] ?></p>
                     <?php endif; ?>
@@ -137,13 +134,10 @@
                     <label class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                         Preço de Venda *
                     </label>
-                    <input type="text" name="preco_venda" required
-                           x-model="precoVenda"
-                           @input="calcularMargem()"
-                           data-mask="currency"
+                    <input type="text" id="preco_venda" name="preco_venda" required
                            value="<?= htmlspecialchars($this->session->get('old')['preco_venda'] ?? '0') ?>"
                            class="w-full px-4 py-3 rounded-xl border <?= isset($this->session->get('errors')['preco_venda']) ? 'border-red-500' : 'border-gray-300 dark:border-gray-600' ?> bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                           placeholder="R$ 0,00">
+                           placeholder="0,00">
                     <?php if (isset($this->session->get('errors')['preco_venda'])): ?>
                         <p class="mt-1 text-sm text-red-600 dark:text-red-400"><?= $this->session->get('errors')['preco_venda'] ?></p>
                     <?php endif; ?>
@@ -224,17 +218,77 @@
     </form>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/imask@6.4.3/dist/imask.min.js"></script>
 <script>
 function produtoForm() {
     return {
-        custoUnitario: 0,
-        precoVenda: 0,
         margem: 0,
+        custoMask: null,
+        precoMask: null,
+        
+        init() {
+            this.initMasks();
+        },
+        
+        initMasks() {
+            const self = this;
+            
+            // Configuração comum para ambas as máscaras
+            const maskOptions = {
+                mask: Number,
+                scale: 2,
+                signed: false,
+                thousandsSeparator: '.',
+                padFractionalZeros: true,
+                normalizeZeros: true,
+                radix: ',',
+                mapToRadix: ['.'],
+                min: 0,
+                max: 999999999.99
+            };
+            
+            // Máscara para custo unitário
+            const custoElement = document.getElementById('custo_unitario');
+            if (custoElement) {
+                this.custoMask = IMask(custoElement, maskOptions);
+                
+                // Formata valor inicial
+                const valorInicial = parseFloat(custoElement.value) || 0;
+                this.custoMask.value = valorInicial.toFixed(2);
+                
+                // Listener para recalcular margem
+                this.custoMask.on('accept', function() {
+                    self.calcularMargem();
+                });
+            }
+            
+            // Máscara para preço de venda
+            const precoElement = document.getElementById('preco_venda');
+            if (precoElement) {
+                this.precoMask = IMask(precoElement, maskOptions);
+                
+                // Formata valor inicial
+                const valorInicial = parseFloat(precoElement.value) || 0;
+                this.precoMask.value = valorInicial.toFixed(2);
+                
+                // Listener para recalcular margem
+                this.precoMask.on('accept', function() {
+                    self.calcularMargem();
+                });
+            }
+        },
         
         calcularMargem() {
-            // Converter strings com máscara para números
-            const custo = this.parseValor(this.custoUnitario);
-            const preco = this.parseValor(this.precoVenda);
+            let custo = 0;
+            let preco = 0;
+            
+            if (this.custoMask) {
+                custo = parseFloat(this.custoMask.typedValue) || 0;
+            }
+            
+            if (this.precoMask) {
+                preco = parseFloat(this.precoMask.typedValue) || 0;
+            }
             
             if (custo > 0) {
                 const lucro = preco - custo;
@@ -244,20 +298,23 @@ function produtoForm() {
             }
         },
         
-        parseValor(valor) {
-            if (typeof valor === 'number') return valor;
-            if (!valor) return 0;
+        prepararSubmit(event) {
+            // Converte os valores de moeda para o formato correto antes de enviar
+            const custoInput = document.getElementById('custo_unitario');
+            const precoInput = document.getElementById('preco_venda');
             
-            // Remove tudo exceto números e vírgula
-            valor = valor.toString().replace(/[^\d,]/g, '');
-            // Substitui vírgula por ponto
-            valor = valor.replace(',', '.');
+            if (custoInput && this.custoMask) {
+                const valorNumerico = this.custoMask.typedValue;
+                custoInput.value = valorNumerico;
+            }
             
-            return parseFloat(valor) || 0;
+            if (precoInput && this.precoMask) {
+                const valorNumerico = this.precoMask.typedValue;
+                precoInput.value = valorNumerico;
+            }
         },
         
         async gerarCodigoBarras() {
-            this.gerandoCodigo = true;
             try {
                 const response = await fetch('/produtos/gerar-codigo-barras');
                 const data = await response.json();
@@ -267,19 +324,10 @@ function produtoForm() {
             } catch (error) {
                 console.error('Erro ao gerar código de barras:', error);
                 alert('Erro ao gerar código de barras');
-            } finally {
-                this.gerandoCodigo = false;
             }
         }
     }
 }
-
-// Aplicar máscaras
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof applyMasks === 'function') {
-        applyMasks();
-    }
-});
 </script>
 
 <?php
