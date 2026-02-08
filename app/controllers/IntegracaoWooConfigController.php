@@ -5,6 +5,7 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
 use App\Models\IntegracaoWooCommerce;
+use App\Models\IntegracaoConfig;
 use App\Models\WooCommerceMetadata;
 use App\Models\CategoriaFinanceira;
 use App\Models\FormaPagamento;
@@ -17,6 +18,7 @@ use Includes\Services\WooCommerceService;
 class IntegracaoWooConfigController extends Controller
 {
     private $wooModel;
+    private $integracaoConfigModel;
     private $metadataModel;
     private $categoriaModel;
     private $formaPgtoModel;
@@ -30,6 +32,7 @@ class IntegracaoWooConfigController extends Controller
             LogSistema::debug('WooConfig', '__construct', 'Iniciando construtor IntegracaoWooConfigController');
             
             $this->wooModel = new IntegracaoWooCommerce();
+            $this->integracaoConfigModel = new IntegracaoConfig();
             LogSistema::debug('WooConfig', '__construct', 'IntegracaoWooCommerce instanciado');
             
             $this->metadataModel = new WooCommerceMetadata();
@@ -242,10 +245,14 @@ class IntegracaoWooConfigController extends Controller
                 ? json_decode($config['acoes_formas_pagamento'], true) 
                 : [];
             
-            // Formas de pagamento do sistema
+            // Busca empresa_id da integração
+            $integracao = $this->integracaoConfigModel->findById($integracaoId);
+            $empresaId = $integracao['empresa_id'] ?? null;
+            
+            // Formas de pagamento do sistema (filtradas pela empresa da integração)
             $formasPgtoSistema = [];
             try {
-                $formasPgtoSistema = $this->formaPgtoModel->findAll();
+                $formasPgtoSistema = $this->formaPgtoModel->findAll($empresaId);
             } catch (\Throwable $e) {
                 LogSistema::warning('WooConfig', 'configurarFormasPagamento', 'Erro ao buscar formas pgto sistema: ' . $e->getMessage());
             }
