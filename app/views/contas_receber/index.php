@@ -408,6 +408,84 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Paginação -->
+            <?php if ($paginacao['total_paginas'] > 1): ?>
+                <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm text-gray-700 dark:text-gray-300">
+                            Mostrando 
+                            <span class="font-medium"><?= min($paginacao['offset'] + 1, $paginacao['total_registros']) ?></span>
+                            até
+                            <span class="font-medium"><?= min($paginacao['offset'] + $paginacao['por_pagina'], $paginacao['total_registros']) ?></span>
+                            de
+                            <span class="font-medium"><?= $paginacao['total_registros'] ?></span>
+                            registros
+                        </div>
+                        
+                        <div class="flex items-center space-x-2">
+                            <?php
+                            // Construir URL base com todos os filtros exceto 'pagina'
+                            $urlParams = $filters;
+                            unset($urlParams['pagina']);
+                            $urlBase = '/contas-receber?' . http_build_query($urlParams);
+                            $separador = empty($urlParams) ? '?' : '&';
+                            
+                            // Calcular range de páginas para exibir
+                            $range = 2; // Quantas páginas mostrar antes e depois da atual
+                            $inicio = max(1, $paginacao['pagina_atual'] - $range);
+                            $fim = min($paginacao['total_paginas'], $paginacao['pagina_atual'] + $range);
+                            ?>
+                            
+                            <!-- Primeira página -->
+                            <?php if ($paginacao['pagina_atual'] > 1): ?>
+                                <a href="<?= $urlBase . $separador ?>pagina=1" 
+                                   class="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                    Primeira
+                                </a>
+                                <a href="<?= $urlBase . $separador ?>pagina=<?= $paginacao['pagina_atual'] - 1 ?>" 
+                                   class="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                    Anterior
+                                </a>
+                            <?php endif; ?>
+                            
+                            <!-- Páginas numeradas -->
+                            <?php if ($inicio > 1): ?>
+                                <span class="px-2 text-gray-500">...</span>
+                            <?php endif; ?>
+                            
+                            <?php for ($i = $inicio; $i <= $fim; $i++): ?>
+                                <?php if ($i == $paginacao['pagina_atual']): ?>
+                                    <span class="px-4 py-2 text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium">
+                                        <?= $i ?>
+                                    </span>
+                                <?php else: ?>
+                                    <a href="<?= $urlBase . $separador ?>pagina=<?= $i ?>" 
+                                       class="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                        <?= $i ?>
+                                    </a>
+                                <?php endif; ?>
+                            <?php endfor; ?>
+                            
+                            <?php if ($fim < $paginacao['total_paginas']): ?>
+                                <span class="px-2 text-gray-500">...</span>
+                            <?php endif; ?>
+                            
+                            <!-- Última página -->
+                            <?php if ($paginacao['pagina_atual'] < $paginacao['total_paginas']): ?>
+                                <a href="<?= $urlBase . $separador ?>pagina=<?= $paginacao['pagina_atual'] + 1 ?>" 
+                                   class="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                    Próxima
+                                </a>
+                                <a href="<?= $urlBase . $separador ?>pagina=<?= $paginacao['total_paginas'] ?>" 
+                                   class="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                    Última
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
         <?php else: ?>
             <div class="p-12 text-center">
                 <svg class="w-24 h-24 mx-auto text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

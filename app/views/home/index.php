@@ -332,7 +332,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                     </div>
                     <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
                         <span class="text-sm text-gray-600 dark:text-gray-400">Contas a Receber</span>
-                        <span class="font-bold text-green-600 dark:text-green-400">R$ <?= number_format($contas_receber['total'], 2, ',', '.') ?></span>
+                        <span class="font-bold text-green-600 dark:text-green-400">R$ <?= number_format($contas_receber['valor_a_receber'], 2, ',', '.') ?></span>
                     </div>
                     <div class="flex justify-between items-center">
                         <span class="text-sm text-gray-600 dark:text-gray-400">Contas a Pagar</span>

@@ -191,6 +191,8 @@ class HomeController extends Controller
             
             // Detalhe dos status das contas recebidas
             $statusContasReceber = [];
+            $contasRecibidasNoPeriodo = 0;
+            
             foreach ($contasRecebidas as $conta) {
                 $status = $conta['status'] ?? 'sem_status';
                 if (!isset($statusContasReceber[$status])) {
@@ -199,17 +201,28 @@ class HomeController extends Controller
                 $statusContasReceber[$status]['count']++;
                 $statusContasReceber[$status]['valor'] += $conta['valor_total'] ?? 0;
                 
-                if ($conta['status'] === 'recebido' && 
+                // Verifica se foi recebida no período
+                if (($conta['status'] === 'recebido' || $conta['status'] === 'parcial') && 
+                    !empty($conta['data_recebimento']) &&
                     $conta['data_recebimento'] >= $dataInicio && 
                     $conta['data_recebimento'] <= $dataFim) {
-                    $receitasUltimos30Dias += $conta['valor_total'] ?? 0;
+                    
+                    // Usa valor_recebido para contas parciais, valor_total para totalmente recebidas
+                    $valorRecebido = $conta['status'] === 'parcial' 
+                        ? floatval($conta['valor_recebido'] ?? 0) 
+                        : floatval($conta['valor_total'] ?? 0);
+                    
+                    $receitasUltimos30Dias += $valorRecebido;
+                    $contasRecibidasNoPeriodo++;
                 }
             }
             
             // LOG: Detalhamento por status - Contas a Receber
             LogSistema::debug('Dashboard', 'contas_receber_status', 'Distribuição de contas a receber por status', [
                 'status_distribuicao' => $statusContasReceber,
-                'receitas_30_dias' => $receitasUltimos30Dias
+                'receitas_30_dias' => $receitasUltimos30Dias,
+                'contas_recebidas_periodo' => $contasRecibidasNoPeriodo,
+                'periodo' => ['inicio' => $dataInicio, 'fim' => $dataFim]
             ]);
             
             // Despesas (contas pagas) - busca todas as empresas de uma vez

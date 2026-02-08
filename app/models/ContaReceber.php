@@ -118,6 +118,15 @@ class ContaReceber extends Model
         
         $sql .= " ORDER BY cr.data_vencimento DESC, cr.id DESC";
         
+        // Paginação
+        if (isset($filters['limite'])) {
+            if (isset($filters['offset'])) {
+                $sql .= " LIMIT " . (int)$filters['limite'] . " OFFSET " . (int)$filters['offset'];
+            } else {
+                $sql .= " LIMIT " . (int)$filters['limite'];
+            }
+        }
+        
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -569,9 +578,10 @@ class ContaReceber extends Model
      */
     public function getValorTotalRecebido($empresasIds = null)
     {
-        $sql = "SELECT SUM(valor_recebido) as total
+        $sql = "SELECT COALESCE(SUM(valor_recebido), 0) as total
                 FROM {$this->table}
                 WHERE status IN ('parcial', 'recebido')
+                  AND valor_recebido > 0
                   AND deleted_at IS NULL";
         
         if ($empresasIds) {
@@ -585,7 +595,7 @@ class ContaReceber extends Model
         
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        return $result['total'] ?? 0;
+        return floatval($result['total'] ?? 0);
     }
     
     /**
@@ -680,6 +690,86 @@ class ContaReceber extends Model
         
         $stmt = $this->db->query($sql);
         return $stmt->fetchColumn();
+    }
+    
+    /**
+     * Retorna total de registros com filtros aplicados
+     */
+    public function countWithFilters($filters = [])
+    {
+        $sql = "SELECT COUNT(*) as total
+                FROM {$this->table} cr
+                JOIN empresas e ON cr.empresa_id = e.id
+                LEFT JOIN clientes c ON cr.cliente_id = c.id
+                JOIN categorias_financeiras cat ON cr.categoria_id = cat.id
+                LEFT JOIN centros_custo cc ON cr.centro_custo_id = cc.id
+                WHERE cr.deleted_at IS NULL";
+        $params = [];
+        
+        // Aplicar os mesmos filtros do findAll
+        if (isset($filters['empresas_ids']) && is_array($filters['empresas_ids'])) {
+            $placeholders = implode(',', array_fill(0, count($filters['empresas_ids']), '?'));
+            $sql .= " AND cr.empresa_id IN ({$placeholders})";
+            $params = array_merge($params, $filters['empresas_ids']);
+        } elseif (isset($filters['empresa_id'])) {
+            $sql .= " AND cr.empresa_id = ?";
+            $params[] = $filters['empresa_id'];
+        }
+        
+        if (isset($filters['cliente_id']) && $filters['cliente_id'] !== '') {
+            $sql .= " AND cr.cliente_id = ?";
+            $params[] = $filters['cliente_id'];
+        } elseif (isset($filters['cliente_nome']) && $filters['cliente_nome'] !== '') {
+            $sql .= " AND c.nome_razao_social = ?";
+            $params[] = $filters['cliente_nome'];
+        }
+        
+        if (isset($filters['categoria_id']) && $filters['categoria_id'] !== '') {
+            $sql .= " AND cr.categoria_id = ?";
+            $params[] = $filters['categoria_id'];
+        } elseif (isset($filters['categoria_nome']) && $filters['categoria_nome'] !== '') {
+            $sql .= " AND cat.nome = ?";
+            $params[] = $filters['categoria_nome'];
+        }
+        
+        if (isset($filters['centro_custo_id']) && $filters['centro_custo_id'] !== '') {
+            $sql .= " AND cr.centro_custo_id = ?";
+            $params[] = $filters['centro_custo_id'];
+        } elseif (isset($filters['centro_custo_nome']) && $filters['centro_custo_nome'] !== '') {
+            $sql .= " AND cc.nome = ?";
+            $params[] = $filters['centro_custo_nome'];
+        }
+        
+        if (isset($filters['status'])) {
+            if ($filters['status'] == 'vencido') {
+                $sql .= " AND cr.status IN ('pendente', 'parcial') AND cr.data_vencimento < CURDATE()";
+            } else {
+                $sql .= " AND cr.status = ?";
+                $params[] = $filters['status'];
+            }
+        }
+        
+        if (isset($filters['data_vencimento_inicio'])) {
+            $sql .= " AND cr.data_vencimento >= ?";
+            $params[] = $filters['data_vencimento_inicio'];
+        }
+        if (isset($filters['data_vencimento_fim'])) {
+            $sql .= " AND cr.data_vencimento <= ?";
+            $params[] = $filters['data_vencimento_fim'];
+        }
+        
+        if (isset($filters['search'])) {
+            $sql .= " AND (cr.descricao LIKE ? OR cr.numero_documento LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['total'] ?? 0;
     }
 
     /**
