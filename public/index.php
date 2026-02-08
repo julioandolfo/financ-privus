@@ -80,7 +80,11 @@ spl_autoload_register(function ($class) {
     // Namespace includes
     if (strpos($class, 'includes\\') === 0 || strpos($class, 'Includes\\') === 0) {
         $relativeClass = str_replace(['includes\\', 'Includes\\'], '', $class);
-        $file = APP_ROOT . '/includes/' . str_replace('\\', '/', $relativeClass) . '.php';
+        // Converte diretórios para minúsculo (pasta "services" no servidor é minúscula)
+        $parts = explode('\\', $relativeClass);
+        $className = array_pop($parts); // Nome da classe mantém o case original
+        $dirPath = implode('/', array_map('strtolower', $parts)); // Diretórios em minúsculo
+        $file = APP_ROOT . '/includes/' . ($dirPath ? $dirPath . '/' : '') . $className . '.php';
         if (file_exists($file)) {
             require_once $file;
             return;
@@ -151,10 +155,13 @@ spl_autoload_register(function ($class) {
         }
     }
     
-    // Namespace includes
+    // Namespace includes (diretórios em minúsculo para compatibilidade Linux)
     if (strpos($class, 'includes\\') === 0 || strpos($class, 'Includes\\') === 0) {
         $relativeClass = str_replace(['includes\\', 'Includes\\'], '', $class);
-        $file = APP_ROOT . '/includes/' . str_replace('\\', '/', $relativeClass) . '.php';
+        $parts = explode('\\', $relativeClass);
+        $className = array_pop($parts);
+        $dirPath = implode('/', array_map('strtolower', $parts));
+        $file = APP_ROOT . '/includes/' . ($dirPath ? $dirPath . '/' : '') . $className . '.php';
         if (file_exists($file)) {
             require_once $file;
             return;
