@@ -119,29 +119,151 @@ class IntegracaoWooCommerce extends Model
     public function testarConexao($urlSite, $consumerKey, $consumerSecret)
     {
         try {
-            $url = rtrim($urlSite, '/') . '/wp-json/wc/v3/system_status';
+            // Valida URL
+            if (empty($urlSite)) {
+                return [
+                    'sucesso' => false,
+                    'codigo' => 0,
+                    'mensagem' => '❌ URL do site não informada'
+                ];
+            }
+            
+            // Tenta endpoint mais simples primeiro
+            $url = rtrim($urlSite, '/') . '/wp-json/wc/v3/products';
             
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_USERPWD, $consumerKey . ':' . $consumerSecret);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Sistema Financeiro/1.0');
             
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            $curlErrno = curl_errno($ch);
             curl_close($ch);
             
+            // Verifica erro de cURL
+            if ($curlErrno !== 0) {
+                $mensagensErro = [
+                    6 => 'Não foi possível resolver o host. Verifique a URL do site.',
+                    7 => 'Falha ao conectar. Servidor não responde ou URL incorreta.',
+                    28 => 'Timeout na conexão. Servidor demorou muito para responder.',
+                    35 => 'Erro SSL/TLS. Certificado pode estar inválido.',
+                    51 => 'Certificado SSL inválido ou não confiável.',
+                    52 => 'Servidor não retornou nada.',
+                    60 => 'Erro na verificação do certificado SSL.'
+                ];
+                
+                $mensagemDetalhada = $mensagensErro[$curlErrno] ?? $curlError;
+                
+                return [
+                    'sucesso' => false,
+                    'codigo' => $curlErrno,
+                    'mensagem' => "❌ Erro de conexão: {$mensagemDetalhada}",
+                    'detalhes' => [
+                        'curl_error' => $curlError,
+                        'curl_errno' => $curlErrno,
+                        'url_testada' => $url
+                    ]
+                ];
+            }
+            
+            // Verifica código HTTP
+            if ($httpCode === 0) {
+                return [
+                    'sucesso' => false,
+                    'codigo' => 0,
+                    'mensagem' => '❌ Não foi possível conectar ao servidor. Verifique se a URL está correta e se o site está online.',
+                    'detalhes' => [
+                        'url_testada' => $url,
+                        'sugestao' => 'Teste acessar a URL no navegador: ' . $url
+                    ]
+                ];
+            }
+            
+            if ($httpCode === 401) {
+                return [
+                    'sucesso' => false,
+                    'codigo' => 401,
+                    'mensagem' => '❌ Credenciais inválidas. Verifique Consumer Key e Consumer Secret.',
+                    'detalhes' => [
+                        'consumer_key_inicio' => substr($consumerKey, 0, 10) . '...',
+                        'sugestao' => 'Gere novas chaves em: WooCommerce > Configurações > Avançado > API REST'
+                    ]
+                ];
+            }
+            
+            if ($httpCode === 404) {
+                return [
+                    'sucesso' => false,
+                    'codigo' => 404,
+                    'mensagem' => '❌ Endpoint WooCommerce não encontrado. Verifique se o WooCommerce está instalado e ativo.',
+                    'detalhes' => [
+                        'url_testada' => $url,
+                        'sugestao' => 'Acesse: ' . rtrim($urlSite, '/') . '/wp-json/wc/v3'
+                    ]
+                ];
+            }
+            
+            if ($httpCode === 200) {
+                // Tenta decodificar resposta
+                $data = json_decode($response, true);
+                
+                return [
+                    'sucesso' => true,
+                    'codigo' => 200,
+                    'mensagem' => '✅ Conexão estabelecida com sucesso!',
+                    'detalhes' => [
+                        'woocommerce_versao' => $data['version'] ?? 'Detectado',
+                        'produtos_encontrados' => is_array($data) ? count($data) : 'API OK'
+                    ]
+                ];
+            }
+            
+            // Outros códigos HTTP
             return [
-                'sucesso' => $httpCode === 200,
+                'sucesso' => false,
                 'codigo' => $httpCode,
-                'mensagem' => $httpCode === 200 ? 'Conexão estabelecida com sucesso!' : 'Falha na conexão. Código: ' . $httpCode
+                'mensagem' => "❌ Erro HTTP {$httpCode}: " . $this->getHttpStatusMessage($httpCode),
+                'detalhes' => [
+                    'resposta' => substr($response, 0, 500)
+                ]
             ];
+            
         } catch (\Exception $e) {
             return [
                 'sucesso' => false,
-                'mensagem' => 'Erro: ' . $e->getMessage()
+                'codigo' => 0,
+                'mensagem' => '❌ Erro inesperado: ' . $e->getMessage(),
+                'detalhes' => [
+                    'exception' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
             ];
         }
+    }
+    
+    /**
+     * Retorna mensagem amigável para códigos HTTP
+     */
+    private function getHttpStatusMessage($code)
+    {
+        $messages = [
+            400 => 'Requisição inválida',
+            403 => 'Acesso negado',
+            500 => 'Erro interno do servidor',
+            502 => 'Bad Gateway - Servidor indisponível',
+            503 => 'Serviço temporariamente indisponível',
+            504 => 'Gateway Timeout - Servidor demorou muito'
+        ];
+        
+        return $messages[$code] ?? 'Erro desconhecido';
     }
 }
