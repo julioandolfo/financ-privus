@@ -216,33 +216,40 @@ class WooCommerceService
                         if ($pedidoExistente['status'] !== $statusSistema) {
                             $this->pedidoModel->update($pedidoExistente['id'], $dados);
                             
-                            // Verifica se precisa dar baixa automática agora
-                            // (status mudou para confirmado E forma de pgto está marcada para baixa)
-                            $this->verificarBaixaAutomatica(
-                                $pedidoExistente['id'],
-                                $statusSistema,
-                                $acaoFormaPgto,
-                                $statusPagamentoConfirmado,
-                                $pedWoo,
-                                $empresaId,
-                                $contaReceberModel
-                            );
+                            // Só verifica baixa se NÃO é "não criar receita"
+                            if (empty($acaoFormaPgto['nao_criar_receita'])) {
+                                $this->verificarBaixaAutomatica(
+                                    $pedidoExistente['id'],
+                                    $statusSistema,
+                                    $acaoFormaPgto,
+                                    $statusPagamentoConfirmado,
+                                    $pedWoo,
+                                    $empresaId,
+                                    $contaReceberModel
+                                );
+                            }
                         }
                     } else {
                         // Cria pedido novo
                         $pedidoId = $this->pedidoModel->create($dados);
                         
-                        // Cria conta a receber
-                        $this->criarContaReceberDoPedido(
-                            $pedidoId,
-                            $pedWoo,
-                            $empresaId,
-                            $clienteId,
-                            $statusSistema,
-                            $acaoFormaPgto,
-                            $statusPagamentoConfirmado,
-                            $contaReceberModel
-                        );
+                        // Cria conta a receber SOMENTE se não é "não criar receita"
+                        if (!empty($acaoFormaPgto['nao_criar_receita'])) {
+                            \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                                "Pedido #{$pedWoo['number']}: conta a receber NÃO criada (forma pgto '{$formaPagamentoTitulo}' configurada como 'não criar receita')"
+                            );
+                        } else {
+                            $this->criarContaReceberDoPedido(
+                                $pedidoId,
+                                $pedWoo,
+                                $empresaId,
+                                $clienteId,
+                                $statusSistema,
+                                $acaoFormaPgto,
+                                $statusPagamentoConfirmado,
+                                $contaReceberModel
+                            );
+                        }
                     }
                     
                     $total++;

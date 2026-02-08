@@ -88,6 +88,26 @@
                                     </select>
                                 </div>
 
+                                <!-- Ignorar / Não criar receita -->
+                                <div class="flex items-start gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
+                                    <input 
+                                        type="checkbox"
+                                        class="mt-1 w-5 h-5 rounded text-orange-600 focus:ring-orange-500"
+                                        id="ignorar_<?= $chave ?>"
+                                        name="acoes[<?= $chave ?>][nao_criar_receita]"
+                                        value="1"
+                                        <?= !empty($acao['nao_criar_receita']) ? 'checked' : '' ?>
+                                        onchange="toggleIgnorar('<?= $chave ?>')"
+                                    >
+                                    <div>
+                                        <label class="font-semibold text-gray-900 dark:text-gray-100">🚫 Não criar conta a receber</label>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Para carteira/wallet ou saldo na plataforma — o dinheiro já está com você, não gera receita</p>
+                                    </div>
+                                </div>
+
+                                <!-- Opções condicionais (escondidas se "não criar receita" estiver marcado) -->
+                                <div id="opcoes_receita_<?= $chave ?>" class="<?= !empty($acao['nao_criar_receita']) ? 'hidden' : '' ?> space-y-4">
+
                                 <!-- Baixar Automaticamente -->
                                 <div class="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
                                     <input 
@@ -159,6 +179,8 @@
                                     </div>
                                 </div>
 
+                                </div><!-- /opcoes_receita -->
+
                                 <!-- Observações -->
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">📝 Observações</label>
@@ -195,6 +217,10 @@
                         <span class="text-gray-600 mt-0.5">⏳</span>
                         <span class="text-gray-700 dark:text-gray-300"><strong>Boleto:</strong> Sem parcelas, sem baixar (manual)</span>
                     </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-orange-600 mt-0.5">🚫</span>
+                        <span class="text-gray-700 dark:text-gray-300"><strong>Carteira/Wallet:</strong> Não criar receita (saldo da plataforma)</span>
+                    </div>
                 </div>
             </div>
 
@@ -219,6 +245,12 @@
         const icon = document.getElementById('icon_' + id);
         el.classList.toggle('hidden');
         icon.style.transform = el.classList.contains('hidden') ? '' : 'rotate(180deg)';
+    }
+
+    function toggleIgnorar(chave) {
+        const checkbox = document.getElementById('ignorar_' + chave);
+        const opcoes = document.getElementById('opcoes_receita_' + chave);
+        opcoes.classList.toggle('hidden', checkbox.checked);
     }
 
     function toggleParcelas(chave) {
@@ -265,7 +297,7 @@
                 
                 if (!acoes[gateway]) acoes[gateway] = {};
                 
-                if (['criar_parcelas', 'baixar_primeira_parcela', 'baixar_automaticamente'].includes(campo)) {
+                if (['criar_parcelas', 'baixar_primeira_parcela', 'baixar_automaticamente', 'nao_criar_receita'].includes(campo)) {
                     acoes[gateway][campo] = value === '1';
                 } else {
                     acoes[gateway][campo] = value;
