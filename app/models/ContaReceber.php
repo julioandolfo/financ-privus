@@ -470,7 +470,7 @@ class ContaReceber extends Model
     public function atualizarRecebimento($id, $valorRecebido, $dataRecebimento, $status)
     {
         $sql = "UPDATE {$this->table} SET
-                valor_recebido = ?, data_recebimento = ?, status = ?, updated_at = NOW()
+                valor_recebido = ?, data_recebimento = ?, status = ?
                 WHERE id = ?";
         
         $stmt = $this->db->prepare($sql);
