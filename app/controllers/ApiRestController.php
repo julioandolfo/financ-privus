@@ -2030,18 +2030,30 @@ class ApiRestController extends Controller
         
         // Se todas as parcelas foram recebidas
         if ($resumo['parcelas_recebidas'] == $resumo['total_parcelas']) {
-            $contaReceberModel->update($contaId, [
-                'status' => 'recebido',
-                'valor_recebido' => $resumo['total_recebido'],
-                'data_recebimento' => date('Y-m-d')
-            ]);
+            $contaReceberModel->atualizarRecebimento(
+                $contaId, 
+                $resumo['total_recebido'], 
+                date('Y-m-d'), 
+                'recebido'
+            );
         } 
         // Se pelo menos uma parcela foi recebida (parcial ou total)
         elseif ($resumo['total_recebido'] > 0) {
-            $contaReceberModel->update($contaId, [
-                'status' => 'parcial',
-                'valor_recebido' => $resumo['total_recebido']
-            ]);
+            $contaReceberModel->atualizarRecebimento(
+                $contaId, 
+                $resumo['total_recebido'], 
+                date('Y-m-d'), 
+                'parcial'
+            );
+        }
+        // Se nenhuma parcela foi recebida, volta para pendente
+        else {
+            $contaReceberModel->atualizarRecebimento(
+                $contaId, 
+                0, 
+                null, 
+                'pendente'
+            );
         }
     }
 }
