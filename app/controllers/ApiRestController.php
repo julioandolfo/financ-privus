@@ -574,9 +574,100 @@ class ApiRestController extends Controller
             return $response->json($data, 400);
         }
         
-        $model->update($id, $input);
+        // Atualizar conta principal (excluindo parcelas do input)
+        $inputConta = $input;
+        unset($inputConta['parcelas']);
         
-        $data = ['success' => true, 'message' => 'Conta atualizada com sucesso'];
+        if (!empty($inputConta)) {
+            $model->update($id, $inputConta);
+        }
+        
+        // Atualizar parcelas se enviadas
+        $parcelasAtualizadas = 0;
+        $parcelasErros = [];
+        
+        if (isset($input['parcelas']) && is_array($input['parcelas'])) {
+            $parcelaModel = new ParcelaReceber();
+            
+            foreach ($input['parcelas'] as $parcelaInput) {
+                // Pode enviar parcela_id ou numero_parcela
+                $parcelaId = $parcelaInput['parcela_id'] ?? $parcelaInput['id'] ?? null;
+                $numeroParcela = $parcelaInput['numero_parcela'] ?? null;
+                
+                // Se não tem ID, busca pelo número da parcela
+                if (!$parcelaId && $numeroParcela) {
+                    $parcelasExistentes = $parcelaModel->findByContaReceber($id);
+                    foreach ($parcelasExistentes as $p) {
+                        if ($p['numero_parcela'] == $numeroParcela) {
+                            $parcelaId = $p['id'];
+                            break;
+                        }
+                    }
+                }
+                
+                if (!$parcelaId) {
+                    $parcelasErros[] = "Parcela não identificada: " . json_encode($parcelaInput);
+                    continue;
+                }
+                
+                // Verifica se a parcela pertence a esta conta
+                $parcela = $parcelaModel->findById($parcelaId);
+                if (!$parcela || $parcela['conta_receber_id'] != $id) {
+                    $parcelasErros[] = "Parcela #{$parcelaId} não pertence a esta conta";
+                    continue;
+                }
+                
+                // Prepara dados para atualização
+                $dadosParcelaUpdate = [];
+                
+                if (isset($parcelaInput['status'])) {
+                    $dadosParcelaUpdate['status'] = $parcelaInput['status'];
+                }
+                if (isset($parcelaInput['valor_recebido'])) {
+                    $dadosParcelaUpdate['valor_recebido'] = $parcelaInput['valor_recebido'];
+                }
+                if (isset($parcelaInput['data_recebimento'])) {
+                    $dadosParcelaUpdate['data_recebimento'] = $parcelaInput['data_recebimento'];
+                }
+                if (isset($parcelaInput['data_vencimento'])) {
+                    $dadosParcelaUpdate['data_vencimento'] = $parcelaInput['data_vencimento'];
+                }
+                if (isset($parcelaInput['valor_parcela'])) {
+                    $dadosParcelaUpdate['valor_parcela'] = $parcelaInput['valor_parcela'];
+                }
+                if (isset($parcelaInput['desconto'])) {
+                    $dadosParcelaUpdate['desconto'] = $parcelaInput['desconto'];
+                }
+                if (isset($parcelaInput['observacoes'])) {
+                    $dadosParcelaUpdate['observacoes'] = $parcelaInput['observacoes'];
+                }
+                
+                if (!empty($dadosParcelaUpdate)) {
+                    $parcelaModel->update($parcelaId, $dadosParcelaUpdate);
+                    $parcelasAtualizadas++;
+                }
+            }
+            
+            // Atualiza status da conta com base nas parcelas
+            $this->atualizarStatusContaPorParcelas($id);
+        }
+        
+        // Monta resposta
+        $mensagem = 'Conta atualizada com sucesso';
+        if ($parcelasAtualizadas > 0) {
+            $mensagem .= ". {$parcelasAtualizadas} parcela(s) atualizada(s)";
+        }
+        
+        $data = [
+            'success' => true, 
+            'message' => $mensagem,
+            'parcelas_atualizadas' => $parcelasAtualizadas
+        ];
+        
+        if (!empty($parcelasErros)) {
+            $data['parcelas_erros'] = $parcelasErros;
+        }
+        
         $this->logSuccess($request, 200, $data);
         $response->json($data);
     }

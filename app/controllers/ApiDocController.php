@@ -694,12 +694,13 @@ class ApiDocController extends Controller
                         [
                             'method' => 'PUT',
                             'endpoint' => '/api/v1/contas-receber/{id}',
-                            'description' => 'Atualiza uma conta a receber existente',
+                            'description' => '🆕 Atualiza uma conta a receber E suas parcelas em uma única requisição',
                             'params' => [
                                 ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID da conta a receber'],
                             ],
                             'body' => [
                                 'cliente_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID do cliente'],
+                                'pedido_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID do pedido vinculado'],
                                 'categoria_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da categoria financeira'],
                                 'descricao' => ['type' => 'string', 'required' => false, 'description' => 'Descrição da conta'],
                                 'valor_total' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor total da conta'],
@@ -711,16 +712,34 @@ class ApiDocController extends Controller
                                 'regiao' => ['type' => 'string', 'required' => false, 'description' => 'Região'],
                                 'segmento' => ['type' => 'string', 'required' => false, 'description' => 'Segmento'],
                                 'observacoes' => ['type' => 'text', 'required' => false, 'description' => 'Observações'],
+                                'parcelas' => ['type' => 'array', 'required' => false, 'description' => '🆕 Array de parcelas para atualizar', 'items' => [
+                                    'parcela_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da parcela (ou use numero_parcela)'],
+                                    'numero_parcela' => ['type' => 'integer', 'required' => false, 'description' => 'Número da parcela (1, 2, 3...)'],
+                                    'status' => ['type' => 'string', 'required' => false, 'description' => 'Novo status: pendente, recebido, parcial, cancelado'],
+                                    'valor_recebido' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor recebido'],
+                                    'data_recebimento' => ['type' => 'date', 'required' => false, 'description' => 'Data do recebimento'],
+                                    'data_vencimento' => ['type' => 'date', 'required' => false, 'description' => 'Nova data de vencimento'],
+                                    'desconto' => ['type' => 'decimal', 'required' => false, 'description' => 'Desconto da parcela'],
+                                    'observacoes' => ['type' => 'string', 'required' => false, 'description' => 'Observações'],
+                                ]],
                             ],
                             'response' => [
                                 'success' => true,
-                                'message' => 'Conta atualizada com sucesso'
+                                'message' => 'Conta atualizada com sucesso. 2 parcela(s) atualizada(s)',
+                                'parcelas_atualizadas' => 2
                             ],
                             'example' => [
                                 'descricao' => 'Venda atualizada',
                                 'valor_total' => 1800.00,
-                                'desconto' => 100.00,
-                                'data_vencimento' => '2026-03-15'
+                                'parcelas' => [
+                                    ['numero_parcela' => 1, 'status' => 'recebido', 'valor_recebido' => 600.00, 'data_recebimento' => '2026-02-05'],
+                                    ['numero_parcela' => 2, 'status' => 'recebido', 'valor_recebido' => 600.00, 'data_recebimento' => '2026-02-05']
+                                ]
+                            ],
+                            'notes' => [
+                                'Você pode atualizar a conta e suas parcelas em uma única requisição',
+                                'Para identificar a parcela, use parcela_id OU numero_parcela',
+                                'Ao atualizar status das parcelas, o status da conta é recalculado automaticamente'
                             ]
                         ],
                         [
