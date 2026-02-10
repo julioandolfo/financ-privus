@@ -353,16 +353,17 @@ class ApiDocController extends Controller
                         [
                             'method' => 'POST',
                             'endpoint' => '/api/v1/parcelas-receber/{id}/baixar',
-                            'description' => '🆕 Registra recebimento de uma parcela específica. Atualiza automaticamente o status da conta principal.',
+                            'description' => '🆕 Dar baixa em uma parcela. O {id} é o ID da PARCELA. Todos os campos do body são OPCIONAIS - se enviar vazio, usa valor total da parcela e data de hoje.',
                             'params' => [
-                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID da parcela'],
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID da PARCELA (não da conta)'],
                             ],
                             'body' => [
-                                'valor_recebido' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor recebido (padrão: saldo restante da parcela)'],
-                                'data_recebimento' => ['type' => 'date', 'required' => false, 'description' => 'Data do recebimento (padrão: hoje)'],
-                                'forma_recebimento_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da forma de pagamento'],
+                                'data_recebimento' => ['type' => 'date', 'required' => false, 'description' => 'Data do recebimento (padrão: data de hoje)'],
+                                'valor_recebido' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor recebido (padrão: valor total da parcela = baixa total)'],
+                                'forma_recebimento_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da forma de recebimento'],
                                 'conta_bancaria_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID da conta bancária'],
                                 'observacoes' => ['type' => 'string', 'required' => false, 'description' => 'Observações do recebimento'],
+                                'sobrescrever' => ['type' => 'boolean', 'required' => false, 'description' => 'true para refazer baixa em parcela já recebida'],
                             ],
                             'response' => [
                                 'success' => true,
@@ -370,25 +371,28 @@ class ApiDocController extends Controller
                                 'parcela' => [
                                     'id' => 1,
                                     'numero_parcela' => 1,
-                                    'valor_parcela' => 500.00,
-                                    'valor_recebido' => 500.00,
+                                    'valor_parcela' => 301.92,
+                                    'valor_recebido' => 301.92,
                                     'saldo_restante' => 0.00,
                                     'status' => 'recebido',
-                                    'data_recebimento' => '2026-02-05'
+                                    'data_recebimento' => '2026-02-12'
                                 ],
                                 'conta' => [
                                     'id' => 10,
-                                    'total_parcelas' => 3,
+                                    'total_parcelas' => 1,
                                     'parcelas_recebidas' => 1,
-                                    'total_recebido' => 500.00,
-                                    'total_pendente' => 1000.00
+                                    'total_recebido' => 301.92,
+                                    'total_pendente' => 0.00
                                 ]
                             ],
+                            'notes' => [
+                                '⚡ Forma mais simples: POST /api/v1/parcelas-receber/166/baixar com body { "data_recebimento": "2026-02-12" }',
+                                'Se não enviar valor_recebido, a parcela inteira é marcada como recebida',
+                                'Para baixa parcial, informe valor_recebido menor que o valor da parcela',
+                                'O status da conta principal é atualizado automaticamente',
+                            ],
                             'example' => [
-                                'valor_recebido' => 500.00,
-                                'data_recebimento' => '2026-02-05',
-                                'forma_recebimento_id' => 2,
-                                'conta_bancaria_id' => 1
+                                'data_recebimento' => '2026-02-12'
                             ]
                         ],
                         [

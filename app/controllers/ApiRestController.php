@@ -1910,6 +1910,15 @@ class ApiRestController extends Controller
         $response->json($data);
     }
 
+    /**
+     * Dar baixa em uma parcela de conta a receber
+     * POST /api/v1/parcelas-receber/{id}/baixar
+     * 
+     * O {id} é o ID da PARCELA (não da conta).
+     * O valor_recebido é OPCIONAL - se não informado, usa o valor total da parcela.
+     * 
+     * Body mínimo: {} (vazio) ou { "data_recebimento": "2026-02-12" }
+     */
     public function parcelasReceberBaixar(Request $request, Response $response, $id)
     {
         $token = $this->authenticate($request, $response);
@@ -1923,67 +1932,45 @@ class ApiRestController extends Controller
             return $response->json($data, 404);
         }
         
-        $input = json_decode(file_get_contents('php://input'), true);
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
         
-        // Detecta se a parcela está realmente recebida (status E valor)
-        $statusParcela = $parcela['status'] ?? 'pendente';
-        $valorJaRecebido = floatval($parcela['valor_recebido'] ?? 0);
         $valorParcela = floatval($parcela['valor_parcela']);
-        $parcelaRealmenteRecebida = ($statusParcela === 'recebido' && $valorJaRecebido >= $valorParcela);
+        $statusParcela = $parcela['status'] ?? 'pendente';
         
-        // Se o status é pendente, sempre permitir a baixa (sobrescreve automaticamente)
-        // Isso corrige inconsistências onde valor_recebido > 0 mas status = pendente
-        $sobrescrever = isset($input['sobrescrever']) && $input['sobrescrever'] === true;
-        if ($statusParcela === 'pendente') {
-            $sobrescrever = true;
-        }
-        
-        // Calcula saldo restante
-        if ($sobrescrever) {
-            $saldoRestante = $valorParcela;
-        } else {
-            $saldoRestante = $valorParcela - $valorJaRecebido;
-        }
-        
-        $valorRecebido = $input['valor_recebido'] ?? $saldoRestante;
-        $dataRecebimento = $input['data_recebimento'] ?? date('Y-m-d');
-        $formaRecebimentoId = $input['forma_recebimento_id'] ?? null;
-        $contaBancariaId = $input['conta_bancaria_id'] ?? null;
-        $observacoes = $input['observacoes'] ?? null;
-        
-        // Validar valor
-        if ($valorRecebido <= 0) {
-            $data = ['success' => false, 'error' => 'Valor do recebimento deve ser maior que zero'];
-            $this->logSuccess($request, 400, $data);
-            return $response->json($data, 400);
-        }
-        
-        // Se parcela realmente já recebida e não quer sobrescrever
-        if ($parcelaRealmenteRecebida && !$sobrescrever) {
+        // Se a parcela já está recebida e não quer sobrescrever
+        if ($statusParcela === 'recebido' && !(isset($input['sobrescrever']) && $input['sobrescrever'] === true)) {
             $data = [
                 'success' => false, 
-                'error' => 'Parcela já foi totalmente recebida. Use "sobrescrever": true para substituir o recebimento anterior.',
+                'error' => 'Parcela já foi recebida. Use "sobrescrever": true para substituir.',
                 'valor_parcela' => $valorParcela,
-                'valor_recebido' => $valorJaRecebido,
+                'valor_recebido' => floatval($parcela['valor_recebido'] ?? 0),
                 'status' => $statusParcela
             ];
             $this->logSuccess($request, 400, $data);
             return $response->json($data, 400);
         }
         
-        if ($valorRecebido > $saldoRestante && !$sobrescrever) {
-            $data = ['success' => false, 'error' => 'Valor do recebimento não pode ser maior que o saldo restante (R$ ' . number_format($saldoRestante, 2, ',', '.') . '). Use "sobrescrever": true para substituir.'];
+        // Valor recebido: se não informado, usa o valor total da parcela (baixa total)
+        $valorRecebido = isset($input['valor_recebido']) ? floatval($input['valor_recebido']) : $valorParcela;
+        $dataRecebimento = $input['data_recebimento'] ?? date('Y-m-d');
+        $formaRecebimentoId = $input['forma_recebimento_id'] ?? null;
+        $contaBancariaId = $input['conta_bancaria_id'] ?? null;
+        $observacoes = $input['observacoes'] ?? null;
+        
+        // Validações
+        if ($valorRecebido <= 0) {
+            $data = ['success' => false, 'error' => 'Valor do recebimento deve ser maior que zero'];
             $this->logSuccess($request, 400, $data);
             return $response->json($data, 400);
         }
         
-        // Valor não pode ser maior que valor da parcela
         if ($valorRecebido > $valorParcela) {
-            $data = ['success' => false, 'error' => 'Valor do recebimento não pode ser maior que o valor da parcela (R$ ' . number_format($valorParcela, 2, ',', '.') . ')'];
+            $data = ['success' => false, 'error' => 'Valor não pode ser maior que o valor da parcela (R$ ' . number_format($valorParcela, 2, ',', '.') . ')'];
             $this->logSuccess($request, 400, $data);
             return $response->json($data, 400);
         }
         
+        // Registra o recebimento (sempre sobrescreve para evitar inconsistências)
         $result = $parcelaModel->registrarRecebimento($id, $valorRecebido, $dataRecebimento, $formaRecebimentoId, $contaBancariaId, true);
         
         if ($result) {
@@ -1999,8 +1986,8 @@ class ApiRestController extends Controller
                 'success' => true, 
                 'message' => 'Recebimento registrado com sucesso',
                 'parcela' => [
-                    'id' => $parcelaAtualizada['id'],
-                    'numero_parcela' => $parcelaAtualizada['numero_parcela'],
+                    'id' => intval($parcelaAtualizada['id']),
+                    'numero_parcela' => intval($parcelaAtualizada['numero_parcela']),
                     'valor_parcela' => floatval($parcelaAtualizada['valor_parcela']),
                     'valor_recebido' => floatval($parcelaAtualizada['valor_recebido']),
                     'saldo_restante' => floatval($parcelaAtualizada['valor_parcela'] - $parcelaAtualizada['valor_recebido']),
@@ -2008,7 +1995,7 @@ class ApiRestController extends Controller
                     'data_recebimento' => $parcelaAtualizada['data_recebimento']
                 ],
                 'conta' => [
-                    'id' => $contaId,
+                    'id' => intval($contaId),
                     'total_parcelas' => intval($resumo['total_parcelas']),
                     'parcelas_recebidas' => intval($resumo['parcelas_recebidas']),
                     'total_recebido' => floatval($resumo['total_recebido']),
