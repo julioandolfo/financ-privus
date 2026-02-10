@@ -1937,8 +1937,26 @@ class ApiRestController extends Controller
         $valorParcela = floatval($parcela['valor_parcela']);
         $statusParcela = $parcela['status'] ?? 'pendente';
         
-        // Se a parcela já está recebida e não quer sobrescrever
+        // Se a parcela já está recebida
         if ($statusParcela === 'recebido' && !(isset($input['sobrescrever']) && $input['sobrescrever'] === true)) {
+            // Permite atualizar apenas observações sem sobrescrever
+            if (isset($input['observacoes']) && count($input) <= 2) {
+                $parcelaModel->update($id, ['observacoes' => $input['observacoes']]);
+                $parcelaAtualizada = $parcelaModel->findById($id);
+                $data = [
+                    'success' => true,
+                    'message' => 'Observações da parcela atualizadas com sucesso',
+                    'parcela' => [
+                        'id' => intval($parcelaAtualizada['id']),
+                        'numero_parcela' => intval($parcelaAtualizada['numero_parcela']),
+                        'status' => $parcelaAtualizada['status'],
+                        'observacoes' => $parcelaAtualizada['observacoes']
+                    ]
+                ];
+                $this->logSuccess($request, 200, $data);
+                return $response->json($data);
+            }
+            
             $data = [
                 'success' => false, 
                 'error' => 'Parcela já foi recebida. Use "sobrescrever": true para substituir.',
@@ -1972,6 +1990,11 @@ class ApiRestController extends Controller
         
         // Registra o recebimento (sempre sobrescreve para evitar inconsistências)
         $result = $parcelaModel->registrarRecebimento($id, $valorRecebido, $dataRecebimento, $formaRecebimentoId, $contaBancariaId, true);
+        
+        // Atualizar observações se informadas
+        if ($observacoes !== null) {
+            $parcelaModel->update($id, ['observacoes' => $observacoes]);
+        }
         
         if ($result) {
             // Atualizar status da conta principal
