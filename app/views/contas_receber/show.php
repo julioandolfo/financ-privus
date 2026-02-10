@@ -390,52 +390,55 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                 </div>
                 
                 <!-- Info do Cliente -->
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-cyan-50 dark:bg-cyan-900/20 rounded-xl">
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Código</p>
-                        <p class="text-lg font-bold text-cyan-600 dark:text-cyan-400">
-                            <?php if (!empty($clienteVinculado['codigo_cliente'])): ?>
-                                <?= htmlspecialchars($clienteVinculado['codigo_cliente']) ?>
-                            <?php else: ?>
-                                <span class="text-gray-400">-</span>
-                            <?php endif; ?>
-                        </p>
+                <div class="space-y-4">
+                    <!-- Linha 1: Código + Nome -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-cyan-50 dark:bg-cyan-900/20 rounded-xl">
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Código</p>
+                            <p class="text-lg font-bold text-cyan-600 dark:text-cyan-400">
+                                <?= !empty($clienteVinculado['codigo_cliente']) ? htmlspecialchars($clienteVinculado['codigo_cliente']) : '<span class="text-gray-400">-</span>' ?>
+                            </p>
+                        </div>
+                        <div class="md:col-span-2">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Nome / Razão Social</p>
+                            <p class="text-lg font-bold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($clienteVinculado['nome_razao_social']) ?></p>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Nome / Razão Social</p>
-                        <p class="text-lg font-bold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($clienteVinculado['nome_razao_social']) ?></p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">CPF / CNPJ</p>
-                        <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                            <?php if (!empty($clienteVinculado['cpf_cnpj'])): ?>
-                                <?= formatarCpfCnpj($clienteVinculado['cpf_cnpj']) ?>
-                            <?php else: ?>
-                                <span class="text-gray-400">Não informado</span>
-                            <?php endif; ?>
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Telefone</p>
-                        <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                            <?php if (!empty($clienteVinculado['telefone'])): ?>
-                                <?= formatarTelefone($clienteVinculado['telefone']) ?>
-                            <?php else: ?>
-                                <span class="text-gray-400">Não informado</span>
-                            <?php endif; ?>
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">E-mail</p>
-                        <p class="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
-                            <?php if (!empty($clienteVinculado['email'])): ?>
-                                <a href="mailto:<?= htmlspecialchars($clienteVinculado['email']) ?>" class="text-blue-600 hover:underline">
-                                    <?= htmlspecialchars($clienteVinculado['email']) ?>
-                                </a>
-                            <?php else: ?>
-                                <span class="text-gray-400">Não informado</span>
-                            <?php endif; ?>
-                        </p>
+                    
+                    <!-- Linha 2: CPF/CNPJ + Telefone + E-mail -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 px-4">
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">CPF / CNPJ</p>
+                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                <?php if (!empty($clienteVinculado['cpf_cnpj'])): ?>
+                                    <?= formatarCpfCnpj($clienteVinculado['cpf_cnpj']) ?>
+                                <?php else: ?>
+                                    <span class="text-gray-400">Não informado</span>
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Telefone</p>
+                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                <?php if (!empty($clienteVinculado['telefone'])): ?>
+                                    <?= formatarTelefone($clienteVinculado['telefone']) ?>
+                                <?php else: ?>
+                                    <span class="text-gray-400">Não informado</span>
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">E-mail</p>
+                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 break-all">
+                                <?php if (!empty($clienteVinculado['email'])): ?>
+                                    <a href="mailto:<?= htmlspecialchars($clienteVinculado['email']) ?>" class="text-blue-600 hover:underline">
+                                        <?= htmlspecialchars($clienteVinculado['email']) ?>
+                                    </a>
+                                <?php else: ?>
+                                    <span class="text-gray-400">Não informado</span>
+                                <?php endif; ?>
+                            </p>
+                        </div>
                     </div>
                 </div>
                 
