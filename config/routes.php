@@ -164,6 +164,7 @@ return [
     'POST /contas-receber/{id}/baixar' => ['handler' => 'ContaReceberController@efetuarBaixa', 'middleware' => ['AuthMiddleware']],
     'GET /contas-receber/{id}/parcela/{parcelaId}/baixar' => ['handler' => 'ContaReceberController@baixarParcela', 'middleware' => ['AuthMiddleware']],
     'POST /contas-receber/{id}/parcela/{parcelaId}/baixar' => ['handler' => 'ContaReceberController@efetuarBaixaParcela', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-receber/{id}/parcela/{parcelaId}/reverter' => ['handler' => 'ContaReceberController@reverterParcela', 'middleware' => ['AuthMiddleware']],
     'GET /contas-receber/{id}/historico' => ['handler' => 'ContaReceberController@historico', 'middleware' => ['AuthMiddleware']],
     'POST /contas-receber/{id}/cancelar-recebimento' => ['handler' => 'ContaReceberController@cancelarRecebimento', 'middleware' => ['AuthMiddleware']],
     'POST /contas-receber/{id}/restore' => ['handler' => 'ContaReceberController@restore', 'middleware' => ['AuthMiddleware']],

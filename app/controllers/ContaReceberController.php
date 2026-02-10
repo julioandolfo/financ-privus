@@ -863,18 +863,81 @@ class ContaReceberController extends Controller
         
         // Se todas as parcelas foram recebidas
         if ($resumo['parcelas_recebidas'] == $resumo['total_parcelas']) {
-            $this->contaReceberModel->update($contaId, [
-                'status' => 'recebido',
-                'valor_recebido' => $resumo['total_recebido'],
-                'data_recebimento' => date('Y-m-d')
-            ]);
+            $this->contaReceberModel->atualizarRecebimento(
+                $contaId, 
+                $resumo['total_recebido'], 
+                date('Y-m-d'), 
+                'recebido'
+            );
         } 
-        // Se pelo menos uma parcela foi recebida (parcial ou total)
+        // Se pelo menos uma parcela foi recebida
         elseif ($resumo['total_recebido'] > 0) {
-            $this->contaReceberModel->update($contaId, [
-                'status' => 'parcial',
-                'valor_recebido' => $resumo['total_recebido']
+            $this->contaReceberModel->atualizarRecebimento(
+                $contaId, 
+                $resumo['total_recebido'], 
+                date('Y-m-d'), 
+                'parcial'
+            );
+        }
+        // Nenhuma parcela recebida - volta para pendente
+        else {
+            $this->contaReceberModel->atualizarRecebimento(
+                $contaId, 
+                0, 
+                null, 
+                'pendente'
+            );
+        }
+    }
+    
+    /**
+     * Reverter pagamento de uma parcela (volta para pendente)
+     */
+    public function reverterParcela(Request $request, Response $response, $contaId, $parcelaId)
+    {
+        try {
+            $this->contaReceberModel = new ContaReceber();
+            $contaReceber = $this->contaReceberModel->findById($contaId);
+            
+            if (!$contaReceber) {
+                $_SESSION['error'] = 'Conta a receber não encontrada!';
+                $response->redirect('/contas-receber');
+                return;
+            }
+            
+            $parcelaModel = new ParcelaReceber();
+            $parcela = $parcelaModel->findById($parcelaId);
+            
+            if (!$parcela || $parcela['conta_receber_id'] != $contaId) {
+                $_SESSION['error'] = 'Parcela não encontrada!';
+                $response->redirect('/contas-receber/' . $contaId);
+                return;
+            }
+            
+            if ($parcela['status'] === 'pendente') {
+                $_SESSION['error'] = 'Esta parcela já está pendente!';
+                $response->redirect('/contas-receber/' . $contaId);
+                return;
+            }
+            
+            // Reverter parcela para pendente
+            $parcelaModel->update($parcelaId, [
+                'valor_recebido' => 0,
+                'data_recebimento' => null,
+                'status' => 'pendente',
+                'forma_recebimento_id' => null,
+                'conta_bancaria_id' => null
             ]);
+            
+            // Atualiza status da conta principal
+            $this->atualizarStatusContaPorParcelas($contaId);
+            
+            $_SESSION['success'] = 'Pagamento da parcela revertido com sucesso!';
+            $response->redirect('/contas-receber/' . $contaId);
+            
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Erro ao reverter parcela: ' . $e->getMessage();
+            $response->redirect('/contas-receber/' . $contaId);
         }
     }
     

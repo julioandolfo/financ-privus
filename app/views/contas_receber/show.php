@@ -313,20 +313,46 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                                 <td class="py-3 text-center"><?= formatarStatusBadge($parcela['status']) ?></td>
                                 <td class="py-3 text-gray-600 dark:text-gray-400"><?= htmlspecialchars($parcela['forma_recebimento_nome'] ?? '-') ?></td>
                                 <td class="py-3 text-center">
-                                    <?php if ($parcela['status'] != 'recebido' && $parcela['status'] != 'cancelado'): ?>
-                                        <a href="/contas-receber/<?= $conta['id'] ?>/parcela/<?= $parcela['id'] ?>/baixar" 
-                                           class="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors"
-                                           title="Baixar/Receber esta parcela">
-                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                                            </svg>
-                                            Baixar
-                                        </a>
-                                    <?php else: ?>
-                                        <span class="text-gray-400 text-xs">-</span>
-                                    <?php endif; ?>
+                                    <div class="flex items-center justify-center gap-1">
+                                        <?php if ($parcela['status'] != 'recebido' && $parcela['status'] != 'cancelado'): ?>
+                                            <a href="/contas-receber/<?= $conta['id'] ?>/parcela/<?= $parcela['id'] ?>/baixar" 
+                                               class="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors"
+                                               title="Baixar/Receber esta parcela">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                                </svg>
+                                                Baixar
+                                            </a>
+                                        <?php elseif ($parcela['status'] == 'recebido'): ?>
+                                            <form action="/contas-receber/<?= $conta['id'] ?>/parcela/<?= $parcela['id'] ?>/reverter" method="POST" 
+                                                  onsubmit="return confirm('Tem certeza que deseja reverter o pagamento desta parcela? Ela voltará para Pendente.')">
+                                                <button type="submit" 
+                                                        class="inline-flex items-center px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium rounded-lg transition-colors"
+                                                        title="Reverter pagamento desta parcela">
+                                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                                                    </svg>
+                                                    Reverter
+                                                </button>
+                                            </form>
+                                        <?php else: ?>
+                                            <span class="text-gray-400 text-xs">-</span>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
+                            <?php if (!empty($parcela['observacoes'])): ?>
+                            <tr class="bg-gray-50/50 dark:bg-gray-700/30">
+                                <td colspan="7" class="py-2 px-4">
+                                    <div class="flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                        <svg class="w-3.5 h-3.5 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+                                        </svg>
+                                        <span><strong class="text-gray-600 dark:text-gray-300">Obs:</strong> <?= htmlspecialchars($parcela['observacoes']) ?></span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endif; ?>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
