@@ -1925,14 +1925,24 @@ class ApiRestController extends Controller
         
         $input = json_decode(file_get_contents('php://input'), true);
         
-        // Opção para sobrescrever recebimento anterior
-        $sobrescrever = isset($input['sobrescrever']) && $input['sobrescrever'] === true;
+        // Detecta se a parcela está realmente recebida (status E valor)
+        $statusParcela = $parcela['status'] ?? 'pendente';
+        $valorJaRecebido = floatval($parcela['valor_recebido'] ?? 0);
+        $valorParcela = floatval($parcela['valor_parcela']);
+        $parcelaRealmenteRecebida = ($statusParcela === 'recebido' && $valorJaRecebido >= $valorParcela);
         
-        // Se sobrescrever, considera o valor da parcela como saldo; senão, calcula saldo restante
+        // Se o status é pendente, sempre permitir a baixa (sobrescreve automaticamente)
+        // Isso corrige inconsistências onde valor_recebido > 0 mas status = pendente
+        $sobrescrever = isset($input['sobrescrever']) && $input['sobrescrever'] === true;
+        if ($statusParcela === 'pendente') {
+            $sobrescrever = true;
+        }
+        
+        // Calcula saldo restante
         if ($sobrescrever) {
-            $saldoRestante = $parcela['valor_parcela'];
+            $saldoRestante = $valorParcela;
         } else {
-            $saldoRestante = $parcela['valor_parcela'] - ($parcela['valor_recebido'] ?? 0);
+            $saldoRestante = $valorParcela - $valorJaRecebido;
         }
         
         $valorRecebido = $input['valor_recebido'] ?? $saldoRestante;
@@ -1948,14 +1958,14 @@ class ApiRestController extends Controller
             return $response->json($data, 400);
         }
         
-        // Se saldo restante é 0 e não está sobrescrevendo, informar que já foi recebida
-        if ($saldoRestante <= 0 && !$sobrescrever) {
+        // Se parcela realmente já recebida e não quer sobrescrever
+        if ($parcelaRealmenteRecebida && !$sobrescrever) {
             $data = [
                 'success' => false, 
                 'error' => 'Parcela já foi totalmente recebida. Use "sobrescrever": true para substituir o recebimento anterior.',
-                'valor_parcela' => floatval($parcela['valor_parcela']),
-                'valor_recebido' => floatval($parcela['valor_recebido'] ?? 0),
-                'status' => $parcela['status']
+                'valor_parcela' => $valorParcela,
+                'valor_recebido' => $valorJaRecebido,
+                'status' => $statusParcela
             ];
             $this->logSuccess($request, 400, $data);
             return $response->json($data, 400);
@@ -1967,14 +1977,14 @@ class ApiRestController extends Controller
             return $response->json($data, 400);
         }
         
-        // Se sobrescrever, valor não pode ser maior que valor da parcela
-        if ($sobrescrever && $valorRecebido > $parcela['valor_parcela']) {
-            $data = ['success' => false, 'error' => 'Valor do recebimento não pode ser maior que o valor da parcela (R$ ' . number_format($parcela['valor_parcela'], 2, ',', '.') . ')'];
+        // Valor não pode ser maior que valor da parcela
+        if ($valorRecebido > $valorParcela) {
+            $data = ['success' => false, 'error' => 'Valor do recebimento não pode ser maior que o valor da parcela (R$ ' . number_format($valorParcela, 2, ',', '.') . ')'];
             $this->logSuccess($request, 400, $data);
             return $response->json($data, 400);
         }
         
-        $result = $parcelaModel->registrarRecebimento($id, $valorRecebido, $dataRecebimento, $formaRecebimentoId, $contaBancariaId, $sobrescrever);
+        $result = $parcelaModel->registrarRecebimento($id, $valorRecebido, $dataRecebimento, $formaRecebimentoId, $contaBancariaId, true);
         
         if ($result) {
             // Atualizar status da conta principal
