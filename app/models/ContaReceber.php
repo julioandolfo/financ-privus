@@ -108,10 +108,13 @@ class ContaReceber extends Model
             $params[] = $filters['data_vencimento_fim'];
         }
         
-        // Busca por descrição ou número de documento
-        if (isset($filters['search'])) {
-            $sql .= " AND (cr.descricao LIKE ? OR cr.numero_documento LIKE ?)";
+        // Busca por descrição, número de documento, cliente, código do cliente ou ID do pedido
+        if (isset($filters['search']) && $filters['search'] !== '') {
+            $sql .= " AND (cr.descricao LIKE ? OR cr.numero_documento LIKE ? OR c.nome_razao_social LIKE ? OR c.codigo_cliente LIKE ? OR cr.pedido_id LIKE ?)";
             $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
             $params[] = $searchTerm;
             $params[] = $searchTerm;
         }
@@ -766,9 +769,12 @@ class ContaReceber extends Model
             $params[] = $filters['data_vencimento_fim'];
         }
         
-        if (isset($filters['search'])) {
-            $sql .= " AND (cr.descricao LIKE ? OR cr.numero_documento LIKE ?)";
+        if (isset($filters['search']) && $filters['search'] !== '') {
+            $sql .= " AND (cr.descricao LIKE ? OR cr.numero_documento LIKE ? OR c.nome_razao_social LIKE ? OR c.codigo_cliente LIKE ? OR cr.pedido_id LIKE ?)";
             $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
             $params[] = $searchTerm;
             $params[] = $searchTerm;
         }
