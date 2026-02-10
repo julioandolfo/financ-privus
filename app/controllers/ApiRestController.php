@@ -1925,7 +1925,16 @@ class ApiRestController extends Controller
         
         $input = json_decode(file_get_contents('php://input'), true);
         
-        $saldoRestante = $parcela['valor_parcela'] - ($parcela['valor_recebido'] ?? 0);
+        // Opção para sobrescrever recebimento anterior
+        $sobrescrever = isset($input['sobrescrever']) && $input['sobrescrever'] === true;
+        
+        // Se sobrescrever, considera o valor da parcela como saldo; senão, calcula saldo restante
+        if ($sobrescrever) {
+            $saldoRestante = $parcela['valor_parcela'];
+        } else {
+            $saldoRestante = $parcela['valor_parcela'] - ($parcela['valor_recebido'] ?? 0);
+        }
+        
         $valorRecebido = $input['valor_recebido'] ?? $saldoRestante;
         $dataRecebimento = $input['data_recebimento'] ?? date('Y-m-d');
         $formaRecebimentoId = $input['forma_recebimento_id'] ?? null;
@@ -1939,13 +1948,33 @@ class ApiRestController extends Controller
             return $response->json($data, 400);
         }
         
-        if ($valorRecebido > $saldoRestante) {
-            $data = ['success' => false, 'error' => 'Valor do recebimento não pode ser maior que o saldo restante (R$ ' . number_format($saldoRestante, 2, ',', '.') . ')'];
+        // Se saldo restante é 0 e não está sobrescrevendo, informar que já foi recebida
+        if ($saldoRestante <= 0 && !$sobrescrever) {
+            $data = [
+                'success' => false, 
+                'error' => 'Parcela já foi totalmente recebida. Use "sobrescrever": true para substituir o recebimento anterior.',
+                'valor_parcela' => floatval($parcela['valor_parcela']),
+                'valor_recebido' => floatval($parcela['valor_recebido'] ?? 0),
+                'status' => $parcela['status']
+            ];
             $this->logSuccess($request, 400, $data);
             return $response->json($data, 400);
         }
         
-        $result = $parcelaModel->registrarRecebimento($id, $valorRecebido, $dataRecebimento, $formaRecebimentoId, $contaBancariaId);
+        if ($valorRecebido > $saldoRestante && !$sobrescrever) {
+            $data = ['success' => false, 'error' => 'Valor do recebimento não pode ser maior que o saldo restante (R$ ' . number_format($saldoRestante, 2, ',', '.') . '). Use "sobrescrever": true para substituir.'];
+            $this->logSuccess($request, 400, $data);
+            return $response->json($data, 400);
+        }
+        
+        // Se sobrescrever, valor não pode ser maior que valor da parcela
+        if ($sobrescrever && $valorRecebido > $parcela['valor_parcela']) {
+            $data = ['success' => false, 'error' => 'Valor do recebimento não pode ser maior que o valor da parcela (R$ ' . number_format($parcela['valor_parcela'], 2, ',', '.') . ')'];
+            $this->logSuccess($request, 400, $data);
+            return $response->json($data, 400);
+        }
+        
+        $result = $parcelaModel->registrarRecebimento($id, $valorRecebido, $dataRecebimento, $formaRecebimentoId, $contaBancariaId, $sobrescrever);
         
         if ($result) {
             // Atualizar status da conta principal

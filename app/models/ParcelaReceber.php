@@ -178,16 +178,23 @@ class ParcelaReceber extends Model
     
     /**
      * Registrar recebimento de parcela
+     * @param bool $sobrescrever Se true, substitui o valor_recebido; se false, soma ao existente
      */
-    public function registrarRecebimento($id, $valorRecebido, $dataRecebimento, $formaRecebimentoId = null, $contaBancariaId = null)
+    public function registrarRecebimento($id, $valorRecebido, $dataRecebimento, $formaRecebimentoId = null, $contaBancariaId = null, $sobrescrever = false)
     {
         $parcela = $this->findById($id);
         if (!$parcela) {
             return false;
         }
         
-        $novoValorRecebido = $parcela['valor_recebido'] + $valorRecebido;
-        $valorEsperado = $parcela['valor_parcela'] - $parcela['desconto'] + $parcela['juros'] + $parcela['multa'];
+        // Se sobrescrever, usa o valor diretamente; senão, soma ao existente
+        if ($sobrescrever) {
+            $novoValorRecebido = $valorRecebido;
+        } else {
+            $novoValorRecebido = ($parcela['valor_recebido'] ?? 0) + $valorRecebido;
+        }
+        
+        $valorEsperado = $parcela['valor_parcela'] - ($parcela['desconto'] ?? 0) + ($parcela['juros'] ?? 0) + ($parcela['multa'] ?? 0);
         
         $status = 'parcial';
         if ($novoValorRecebido >= $valorEsperado) {
