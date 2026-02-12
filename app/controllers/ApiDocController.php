@@ -61,9 +61,16 @@ class ApiDocController extends Controller
         return [
             'info' => [
                 'title' => 'API Financeiro Empresarial',
-                'version' => '1.4.0',
-                'description' => 'API RESTful para integração com o Sistema Financeiro Empresarial. Gerencie contas a pagar/receber, produtos, clientes, fornecedores e movimentações financeiras. ⭐ NOVO: Exclusão de pedido em cascata (remove contas vinculadas automaticamente).',
+                'version' => '1.5.0',
+                'description' => 'API RESTful para integração com o Sistema Financeiro Empresarial. Gerencie contas a pagar/receber, produtos, clientes, fornecedores e movimentações financeiras. ⭐ NOVO: Pedido Pai - vincule pedidos bonificados ao pedido principal.',
                 'changelog' => [
+                    'v1.5.0 (Fevereiro 2026)' => [
+                        '🚀 Pedido Pai - Referência para bonificados',
+                        '✅ Novo campo pedido_pai_id em pedidos (vincula bonificado ao pedido principal)',
+                        '✅ POST /api/v1/pedidos aceita pedido_pai_id',
+                        '✅ PATCH /api/v1/pedidos/{id} aceita pedido_pai_id',
+                        '✅ Visualização do pedido pai e pedidos filhos (bonificados) na interface web',
+                    ],
                     'v1.4.0 (Fevereiro 2026)' => [
                         '🚀 Exclusão em CASCATA de Pedidos',
                         '✅ DELETE /api/v1/pedidos/{id} agora exclui automaticamente:',
@@ -78,7 +85,7 @@ class ApiDocController extends Controller
                         '✅ Campo bonificado em pedidos (1 = grátis, 0 = normal)',
                         '✅ Campo frete em pedidos (deduzido do lucro)',
                         '✅ Campo desconto em pedidos',
-                        '✅ PATCH /api/v1/pedidos/{id}/frete - Atualizar frete/desconto/bonificado',
+                        '✅ PATCH /api/v1/pedidos/{id} - Atualização parcial do pedido (frete, desconto, bonificado, status, observacoes, etc)',
                         '✅ Baixa de parcelas atualiza status da conta principal automaticamente',
                         '✅ Resposta completa na baixa de parcelas (parcela + resumo da conta)',
                     ],
@@ -975,16 +982,17 @@ class ApiDocController extends Controller
                         [
                             'method' => 'POST',
                             'endpoint' => '/api/v1/pedidos',
-                            'description' => 'Cria um novo pedido',
+                            'description' => 'Cria um novo pedido. Para pedidos bonificados, informe bonificado=1 e pedido_pai_id com o ID do pedido principal.',
                             'body' => [
                                 'empresa_id' => ['type' => 'integer', 'required' => true, 'description' => 'ID da empresa'],
                                 'cliente_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID do cliente'],
                                 'numero_pedido' => ['type' => 'string', 'required' => false, 'description' => 'Número do pedido (gerado automaticamente se não fornecido)'],
                                 'data_pedido' => ['type' => 'date', 'required' => true, 'description' => 'Data do pedido (YYYY-MM-DD)'],
                                 'total' => ['type' => 'decimal', 'required' => true, 'description' => 'Valor total do pedido'],
-                                'frete' => ['type' => 'decimal', 'required' => false, 'description' => '🆕 Valor do frete (deduzido do lucro)'],
-                                'desconto' => ['type' => 'decimal', 'required' => false, 'description' => '🆕 Valor do desconto'],
-                                'bonificado' => ['type' => 'integer', 'required' => false, 'description' => '🆕 1 = pedido bonificado (grátis), 0 = normal (padrão: 0)'],
+                                'frete' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor do frete (deduzido do lucro)'],
+                                'desconto' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor do desconto'],
+                                'bonificado' => ['type' => 'integer', 'required' => false, 'description' => '1 = pedido bonificado (grátis), 0 = normal (padrão: 0)'],
+                                'pedido_pai_id' => ['type' => 'integer', 'required' => false, 'description' => '🆕 ID do pedido principal (para vincular bonificado ao pedido de origem)'],
                                 'status' => ['type' => 'string', 'required' => false, 'description' => 'Status (padrão: pendente)'],
                                 'origem' => ['type' => 'string', 'required' => false, 'description' => 'Origem (padrão: externo)'],
                                 'observacoes' => ['type' => 'text', 'required' => false, 'description' => 'Observações do pedido'],
@@ -992,35 +1000,33 @@ class ApiDocController extends Controller
                             ],
                             'response' => [
                                 'success' => true,
-                                'id' => 1,
-                                'valor_total' => 299.90,
-                                'valor_custo_total' => 180.00,
-                                'frete' => 15.00,
-                                'desconto' => 10.00,
-                                'bonificado' => 0,
-                                'lucro' => 94.90,
-                                'margem_lucro' => 31.66,
+                                'id' => 2,
                                 'message' => 'Pedido criado com sucesso'
                             ],
                             'example' => [
                                 'empresa_id' => 1,
                                 'cliente_id' => 10,
-                                'numero_pedido' => 'PED-2026-001',
-                                'data_pedido' => '2026-02-05',
-                                'total' => 299.90,
-                                'frete' => 15.00,
-                                'desconto' => 10.00,
-                                'bonificado' => 0,
+                                'numero_pedido' => 'PED-2026-001-BONIF',
+                                'data_pedido' => '2026-02-12',
+                                'total' => 150.00,
+                                'bonificado' => 1,
+                                'pedido_pai_id' => 1,
                                 'status' => 'pendente',
+                                'observacoes' => 'Bonificação referente ao pedido PED-2026-001',
                                 'itens' => [
-                                    ['produto_id' => 5, 'quantidade' => 2, 'valor_unitario' => 99.90, 'custo_unitario' => 60.00]
+                                    ['produto_id' => 5, 'quantidade' => 1, 'valor_unitario' => 150.00, 'custo_unitario' => 80.00]
                                 ]
+                            ],
+                            'notes' => [
+                                'Para pedidos bonificados: defina bonificado=1 e pedido_pai_id com o ID do pedido principal',
+                                'O pedido_pai_id deve ser um pedido existente no sistema',
+                                'Se o pedido pai for excluído, o pedido_pai_id será automaticamente setado como NULL'
                             ]
                         ],
                         [
                             'method' => 'PATCH',
-                            'endpoint' => '/api/v1/pedidos/{id}/frete',
-                            'description' => '🆕 Atualiza frete, desconto e/ou bonificado de um pedido (rota simplificada)',
+                            'endpoint' => '/api/v1/pedidos/{id}',
+                            'description' => '🆕 Atualização parcial do pedido - envie apenas os campos que deseja alterar',
                             'params' => [
                                 ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID do pedido'],
                             ],
@@ -1028,26 +1034,46 @@ class ApiDocController extends Controller
                                 'frete' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor do frete'],
                                 'desconto' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor do desconto'],
                                 'bonificado' => ['type' => 'integer', 'required' => false, 'description' => '1 = bonificado, 0 = normal'],
+                                'pedido_pai_id' => ['type' => 'integer', 'required' => false, 'description' => '🆕 ID do pedido principal (vincular bonificado ao pedido de origem)'],
+                                'status' => ['type' => 'string', 'required' => false, 'description' => 'Status: pendente, processando, concluido, cancelado'],
+                                'observacoes' => ['type' => 'text', 'required' => false, 'description' => 'Observações do pedido'],
+                                'numero_pedido' => ['type' => 'string', 'required' => false, 'description' => 'Número do pedido'],
+                                'cliente_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID do cliente vinculado'],
+                                'data_pedido' => ['type' => 'date', 'required' => false, 'description' => 'Data do pedido (YYYY-MM-DD)'],
+                                'valor_total' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor total do pedido'],
+                                'valor_custo_total' => ['type' => 'decimal', 'required' => false, 'description' => 'Custo total do pedido'],
                             ],
                             'response' => [
                                 'success' => true,
                                 'message' => 'Pedido atualizado com sucesso',
+                                'campos_atualizados' => ['bonificado', 'pedido_pai_id'],
                                 'pedido' => [
-                                    'id' => 1,
-                                    'numero_pedido' => 'PED-001',
+                                    'id' => 2,
+                                    'numero_pedido' => 'PED-001-BONIF',
+                                    'cliente_id' => 10,
+                                    'status' => 'pendente',
                                     'valor_total' => 150.00,
                                     'valor_custo_total' => 80.00,
-                                    'frete' => 25.50,
-                                    'desconto' => 10.00,
+                                    'frete' => 0,
+                                    'desconto' => 0,
                                     'bonificado' => 1,
-                                    'lucro' => 34.50,
-                                    'margem_lucro' => 23.00
+                                    'pedido_pai_id' => 1,
+                                    'pedido_pai_numero' => 'PED-001',
+                                    'observacoes' => null,
+                                    'lucro' => 70.00,
+                                    'margem_lucro' => 46.67
                                 ]
                             ],
                             'example' => [
-                                'frete' => 25.50,
-                                'desconto' => 10.00,
-                                'bonificado' => 1
+                                'bonificado' => 1,
+                                'pedido_pai_id' => 1
+                            ],
+                            'notes' => [
+                                'Envie apenas os campos que deseja alterar',
+                                'Use pedido_pai_id para vincular um pedido bonificado ao pedido principal',
+                                'A resposta inclui pedido_pai_numero com o número do pedido pai',
+                                'A rota antiga PATCH /api/v1/pedidos/{id}/frete continua funcionando por retrocompatibilidade',
+                                'O lucro é recalculado automaticamente: valor_total - valor_custo_total - frete'
                             ]
                         ],
                         [

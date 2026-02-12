@@ -39,10 +39,13 @@ class PedidoVinculado extends Model
         $sql = "SELECT p.*, 
                        c.nome_razao_social as cliente_nome,
                        e.razao_social as empresa_nome,
-                       (SELECT COUNT(*) FROM pedidos_itens WHERE pedido_id = p.id) as total_itens
+                       (SELECT COUNT(*) FROM pedidos_itens WHERE pedido_id = p.id) as total_itens,
+                       pp.numero_pedido as pedido_pai_numero,
+                       (SELECT COUNT(*) FROM {$this->table} pf WHERE pf.pedido_pai_id = p.id) as total_filhos
                 FROM {$this->table} p
                 LEFT JOIN clientes c ON p.cliente_id = c.id
                 INNER JOIN empresas e ON p.empresa_id = e.id
+                LEFT JOIN {$this->table} pp ON p.pedido_pai_id = pp.id
                 WHERE 1=1";
         
         $params = [];
@@ -112,10 +115,14 @@ class PedidoVinculado extends Model
         $sql = "SELECT p.*, 
                        c.nome_razao_social as cliente_nome, c.email as cliente_email, c.telefone as cliente_telefone,
                        c.codigo_cliente as cliente_codigo,
-                       e.razao_social as empresa_nome
+                       e.razao_social as empresa_nome,
+                       pp.numero_pedido as pedido_pai_numero,
+                       pp.valor_total as pedido_pai_valor,
+                       pp.status as pedido_pai_status
                 FROM {$this->table} p
                 LEFT JOIN clientes c ON p.cliente_id = c.id
                 INNER JOIN empresas e ON p.empresa_id = e.id
+                LEFT JOIN {$this->table} pp ON p.pedido_pai_id = pp.id
                 WHERE p.id = :id";
         
         $stmt = $this->db->prepare($sql);
@@ -210,9 +217,9 @@ class PedidoVinculado extends Model
     public function create($data)
     {
         $sql = "INSERT INTO {$this->table} 
-                (empresa_id, origem, origem_id, numero_pedido, cliente_id, data_pedido, data_atualizacao, status, valor_total, valor_custo_total, frete, desconto, bonificado, observacoes, dados_origem) 
+                (empresa_id, origem, origem_id, numero_pedido, cliente_id, data_pedido, data_atualizacao, status, valor_total, valor_custo_total, frete, desconto, bonificado, pedido_pai_id, observacoes, dados_origem) 
                 VALUES 
-                (:empresa_id, :origem, :origem_id, :numero_pedido, :cliente_id, :data_pedido, :data_atualizacao, :status, :valor_total, :valor_custo_total, :frete, :desconto, :bonificado, :observacoes, :dados_origem)";
+                (:empresa_id, :origem, :origem_id, :numero_pedido, :cliente_id, :data_pedido, :data_atualizacao, :status, :valor_total, :valor_custo_total, :frete, :desconto, :bonificado, :pedido_pai_id, :observacoes, :dados_origem)";
         
         $stmt = $this->db->prepare($sql);
         
@@ -230,6 +237,7 @@ class PedidoVinculado extends Model
             'frete' => $data['frete'] ?? 0,
             'desconto' => $data['desconto'] ?? 0,
             'bonificado' => $data['bonificado'] ?? 0,
+            'pedido_pai_id' => $data['pedido_pai_id'] ?? null,
             'observacoes' => $data['observacoes'] ?? null,
             'dados_origem' => isset($data['dados_origem']) ? json_encode($data['dados_origem']) : null
         ]);
@@ -311,26 +319,24 @@ class PedidoVinculado extends Model
     }
     
     /**
-     * Atualizar frete, desconto e bonificado do pedido
+     * Atualização parcial do pedido (aceita qualquer campo)
      */
-    public function updateFreteDesconto($id, $frete = null, $desconto = null, $bonificado = null)
+    public function updateParcial($id, $data)
     {
+        $allowedFields = [
+            'frete', 'desconto', 'bonificado', 'pedido_pai_id', 'status', 'observacoes',
+            'numero_pedido', 'cliente_id', 'data_pedido', 
+            'valor_total', 'valor_custo_total'
+        ];
+        
         $updates = [];
         $params = ['id' => $id];
         
-        if ($frete !== null) {
-            $updates[] = "frete = :frete";
-            $params['frete'] = $frete;
-        }
-        
-        if ($desconto !== null) {
-            $updates[] = "desconto = :desconto";
-            $params['desconto'] = $desconto;
-        }
-        
-        if ($bonificado !== null) {
-            $updates[] = "bonificado = :bonificado";
-            $params['bonificado'] = $bonificado;
+        foreach ($allowedFields as $field) {
+            if (array_key_exists($field, $data)) {
+                $updates[] = "{$field} = :{$field}";
+                $params[$field] = $data[$field];
+            }
         }
         
         if (empty($updates)) {
@@ -345,6 +351,19 @@ class PedidoVinculado extends Model
     }
     
     /**
+     * Atualizar frete, desconto e bonificado do pedido (retrocompatibilidade)
+     */
+    public function updateFreteDesconto($id, $frete = null, $desconto = null, $bonificado = null)
+    {
+        $data = [];
+        if ($frete !== null) $data['frete'] = $frete;
+        if ($desconto !== null) $data['desconto'] = $desconto;
+        if ($bonificado !== null) $data['bonificado'] = $bonificado;
+        
+        return $this->updateParcial($id, $data);
+    }
+    
+    /**
      * Calcular totais do pedido baseado nos itens
      */
     public function recalcularTotais($id)
@@ -356,6 +375,24 @@ class PedidoVinculado extends Model
         
         $stmt = $this->db->prepare($sql);
         return $stmt->execute(['id' => $id]);
+    }
+    
+    /**
+     * Buscar pedidos filhos (bonificados) de um pedido pai
+     */
+    public function findFilhos($pedidoPaiId)
+    {
+        $sql = "SELECT p.*, 
+                       c.nome_razao_social as cliente_nome
+                FROM {$this->table} p
+                LEFT JOIN clientes c ON p.cliente_id = c.id
+                WHERE p.pedido_pai_id = :pedido_pai_id
+                ORDER BY p.id DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['pedido_pai_id' => $pedidoPaiId]);
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
     
     /**

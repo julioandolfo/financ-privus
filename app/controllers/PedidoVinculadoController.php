@@ -199,10 +199,14 @@ class PedidoVinculadoController extends Controller
         
         $itens = $this->itemModel->findByPedido($id);
         
+        // Buscar pedidos filhos (bonificados vinculados a este pedido)
+        $pedidosFilhos = $this->pedidoModel->findFilhos($id);
+        
         return $this->render('pedidos/show', [
             'title' => 'Pedido #' . $pedido['numero_pedido'],
             'pedido' => $pedido,
-            'itens' => $itens
+            'itens' => $itens,
+            'pedidosFilhos' => $pedidosFilhos
         ]);
     }
     

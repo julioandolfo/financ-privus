@@ -1623,9 +1623,9 @@ class ApiRestController extends Controller
     }
     
     /**
-     * Atualizar frete, desconto e/ou bonificado de um pedido (rota simplificada)
-     * PATCH /api/v1/pedidos/{id}/frete
-     * Body: { "frete": 15.00, "desconto": 5.00, "bonificado": 1 }
+     * Atualização parcial de pedido
+     * PATCH /api/v1/pedidos/{id}
+     * Aceita qualquer campo: frete, desconto, bonificado, status, observacoes, numero_pedido, cliente_id, etc.
      */
     public function pedidosUpdateFrete(Request $request, Response $response, $id)
     {
@@ -1642,17 +1642,30 @@ class ApiRestController extends Controller
         
         $input = json_decode(file_get_contents('php://input'), true);
         
-        $frete = isset($input['frete']) ? floatval($input['frete']) : null;
-        $desconto = isset($input['desconto']) ? floatval($input['desconto']) : null;
-        $bonificado = isset($input['bonificado']) ? intval($input['bonificado']) : null;
-        
-        if ($frete === null && $desconto === null && $bonificado === null) {
-            $data = ['success' => false, 'error' => 'Informe ao menos um dos campos: frete, desconto ou bonificado'];
+        if (empty($input)) {
+            $data = ['success' => false, 'error' => 'Informe ao menos um campo para atualizar'];
             $this->logSuccess($request, 400, $data);
             return $response->json($data, 400);
         }
         
-        $model->updateFreteDesconto($id, $frete, $desconto, $bonificado);
+        // Campos aceitos para atualização parcial
+        $camposAceitos = ['frete', 'desconto', 'bonificado', 'pedido_pai_id', 'status', 'observacoes', 
+                          'numero_pedido', 'cliente_id', 'data_pedido', 'valor_total', 'valor_custo_total'];
+        
+        $dadosAtualizar = [];
+        foreach ($camposAceitos as $campo) {
+            if (array_key_exists($campo, $input)) {
+                $dadosAtualizar[$campo] = $input[$campo];
+            }
+        }
+        
+        if (empty($dadosAtualizar)) {
+            $data = ['success' => false, 'error' => 'Nenhum campo válido informado. Campos aceitos: ' . implode(', ', $camposAceitos)];
+            $this->logSuccess($request, 400, $data);
+            return $response->json($data, 400);
+        }
+        
+        $model->updateParcial($id, $dadosAtualizar);
         
         // Buscar pedido atualizado
         $pedidoAtualizado = $model->findById($id);
@@ -1664,20 +1677,28 @@ class ApiRestController extends Controller
         $lucro = $valorTotal - $custoTotal - $freteAtual;
         $margem = $valorTotal > 0 ? round(($lucro / $valorTotal) * 100, 2) : 0;
         
+        $pedidoResponse = [
+            'id' => intval($pedidoAtualizado['id']),
+            'numero_pedido' => $pedidoAtualizado['numero_pedido'],
+            'cliente_id' => $pedidoAtualizado['cliente_id'],
+            'status' => $pedidoAtualizado['status'],
+            'valor_total' => floatval($pedidoAtualizado['valor_total'] ?? 0),
+            'valor_custo_total' => floatval($pedidoAtualizado['valor_custo_total'] ?? 0),
+            'frete' => floatval($pedidoAtualizado['frete'] ?? 0),
+            'desconto' => floatval($pedidoAtualizado['desconto'] ?? 0),
+            'bonificado' => intval($pedidoAtualizado['bonificado'] ?? 0),
+            'pedido_pai_id' => $pedidoAtualizado['pedido_pai_id'] ? intval($pedidoAtualizado['pedido_pai_id']) : null,
+            'pedido_pai_numero' => $pedidoAtualizado['pedido_pai_numero'] ?? null,
+            'observacoes' => $pedidoAtualizado['observacoes'] ?? null,
+            'lucro' => round($lucro, 2),
+            'margem_lucro' => $margem
+        ];
+        
         $data = [
             'success' => true, 
             'message' => 'Pedido atualizado com sucesso',
-            'pedido' => [
-                'id' => $pedidoAtualizado['id'],
-                'numero_pedido' => $pedidoAtualizado['numero_pedido'],
-                'valor_total' => $pedidoAtualizado['valor_total'],
-                'valor_custo_total' => $pedidoAtualizado['valor_custo_total'],
-                'frete' => $pedidoAtualizado['frete'],
-                'desconto' => $pedidoAtualizado['desconto'],
-                'bonificado' => $pedidoAtualizado['bonificado'],
-                'lucro' => $lucro,
-                'margem_lucro' => $margem
-            ]
+            'campos_atualizados' => array_keys($dadosAtualizar),
+            'pedido' => $pedidoResponse
         ];
         $this->logSuccess($request, 200, $data);
         $response->json($data);

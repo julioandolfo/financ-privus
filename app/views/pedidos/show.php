@@ -62,6 +62,41 @@
                         <p class="text-lg font-semibold text-gray-900 dark:text-gray-100"><?= date('d/m/Y H:i', strtotime($pedido['data_atualizacao'])) ?></p>
                     </div>
                 </div>
+
+                <?php if (!empty($pedido['pedido_pai_id'])): ?>
+                    <div class="mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 text-purple-600 dark:text-purple-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                                </svg>
+                                <span class="text-sm font-medium text-purple-700 dark:text-purple-300">Pedido Pai (Principal):</span>
+                                <a href="/pedidos/<?= $pedido['pedido_pai_id'] ?>" class="ml-2 text-purple-600 dark:text-purple-400 font-bold hover:underline">
+                                    #<?= htmlspecialchars($pedido['pedido_pai_numero'] ?? $pedido['pedido_pai_id']) ?>
+                                </a>
+                            </div>
+                            <?php if (!empty($pedido['pedido_pai_status'])): ?>
+                                <?php
+                                $paiStatusColors = [
+                                    'pendente' => 'bg-yellow-100 text-yellow-800',
+                                    'processando' => 'bg-blue-100 text-blue-800',
+                                    'concluido' => 'bg-green-100 text-green-800',
+                                    'cancelado' => 'bg-red-100 text-red-800'
+                                ];
+                                $paiStatusColor = $paiStatusColors[$pedido['pedido_pai_status']] ?? 'bg-gray-100 text-gray-800';
+                                ?>
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-sm text-purple-600 dark:text-purple-400">
+                                        R$ <?= number_format($pedido['pedido_pai_valor'] ?? 0, 2, ',', '.') ?>
+                                    </span>
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full <?= $paiStatusColor ?>">
+                                        <?= ucfirst($pedido['pedido_pai_status']) ?>
+                                    </span>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <!-- Itens do Pedido -->
@@ -90,6 +125,65 @@
                     <?php endforeach; ?>
                 </div>
             </div>
+
+            <!-- Pedidos Filhos (Bonificados) -->
+            <?php if (!empty($pedidosFilhos)): ?>
+                <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl border border-purple-200 dark:border-purple-700">
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center">
+                        <svg class="w-6 h-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+                        </svg>
+                        Pedidos Bonificados Vinculados
+                        <span class="ml-2 px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 rounded-full">
+                            <?= count($pedidosFilhos) ?>
+                        </span>
+                    </h3>
+                    <div class="space-y-3">
+                        <?php foreach ($pedidosFilhos as $filho): 
+                            $filhoStatusColors = [
+                                'pendente' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+                                'processando' => 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+                                'concluido' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+                                'cancelado' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                            ];
+                            $filhoStatusColor = $filhoStatusColors[$filho['status']] ?? 'bg-gray-100 text-gray-800';
+                        ?>
+                            <a href="/pedidos/<?= $filho['id'] ?>" class="block border border-purple-100 dark:border-purple-800 rounded-lg p-4 hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors">
+                                <div class="flex justify-between items-center">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+                                            </svg>
+                                            BONIFICADO
+                                        </span>
+                                        <span class="font-semibold text-gray-900 dark:text-gray-100">
+                                            #<?= htmlspecialchars($filho['numero_pedido']) ?>
+                                        </span>
+                                        <?php if (!empty($filho['cliente_nome'])): ?>
+                                            <span class="text-sm text-gray-500 dark:text-gray-400">- <?= htmlspecialchars($filho['cliente_nome']) ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="flex items-center space-x-3">
+                                        <span class="font-semibold text-gray-900 dark:text-gray-100">
+                                            R$ <?= number_format($filho['valor_total'], 2, ',', '.') ?>
+                                        </span>
+                                        <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full <?= $filhoStatusColor ?>">
+                                            <?= ucfirst($filho['status']) ?>
+                                        </span>
+                                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <?php if (!empty($filho['observacoes'])): ?>
+                                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400"><?= htmlspecialchars($filho['observacoes']) ?></p>
+                                <?php endif; ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
         </div>
 
         <!-- Sidebar -->

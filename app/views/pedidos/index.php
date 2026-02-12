@@ -105,7 +105,20 @@
                         ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="font-semibold text-gray-900 dark:text-gray-100">#<?= htmlspecialchars($pedido['numero_pedido']) ?></span>
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-semibold text-gray-900 dark:text-gray-100">#<?= htmlspecialchars($pedido['numero_pedido']) ?></span>
+                                    <?php if (!empty($pedido['bonificado'])): ?>
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" title="Pedido Bonificado<?= !empty($pedido['pedido_pai_numero']) ? ' - Pai: #' . $pedido['pedido_pai_numero'] : '' ?>">
+                                            <svg class="w-3 h-3 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path></svg>
+                                            BONIF
+                                        </span>
+                                    <?php endif; ?>
+                                    <?php if (!empty($pedido['total_filhos']) && $pedido['total_filhos'] > 0): ?>
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400" title="<?= $pedido['total_filhos'] ?> pedido(s) bonificado(s) vinculado(s)">
+                                            <?= $pedido['total_filhos'] ?> bonif.
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="text-gray-900 dark:text-gray-100"><?= htmlspecialchars($pedido['cliente_nome'] ?? 'Sem cliente') ?></span>
