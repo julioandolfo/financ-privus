@@ -65,9 +65,10 @@ class ApiDocController extends Controller
                 'description' => 'API RESTful para integração com o Sistema Financeiro Empresarial. Gerencie contas a pagar/receber, produtos, clientes, fornecedores e movimentações financeiras. ⭐ NOVO: Pedido Pai - vincule pedidos bonificados ao pedido principal.',
                 'changelog' => [
                     'v1.5.0 (Fevereiro 2026)' => [
-                        '🚀 Pedido Pai - Referência para bonificados',
+                        '🚀 Pedido Pai + Atualização em Lote',
                         '✅ Novo campo pedido_pai_id em pedidos (vincula bonificado ao pedido principal)',
                         '✅ POST /api/v1/pedidos aceita pedido_pai_id',
+                        '✅ PATCH /api/v1/pedidos - Atualização em LOTE (envie array com vários pedidos)',
                         '✅ PATCH /api/v1/pedidos/{id} aceita pedido_pai_id',
                         '✅ Visualização do pedido pai e pedidos filhos (bonificados) na interface web',
                     ],
@@ -1025,8 +1026,47 @@ class ApiDocController extends Controller
                         ],
                         [
                             'method' => 'PATCH',
+                            'endpoint' => '/api/v1/pedidos',
+                            'description' => '🆕 Atualização em LOTE de pedidos - envie um array com vários pedidos de uma vez',
+                            'body' => [
+                                'pedidos' => ['type' => 'array', 'required' => true, 'description' => 'Array de objetos com id + campos a atualizar'],
+                                'pedidos[].id' => ['type' => 'integer', 'required' => true, 'description' => 'ID do pedido'],
+                                'pedidos[].frete' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor do frete'],
+                                'pedidos[].desconto' => ['type' => 'decimal', 'required' => false, 'description' => 'Valor do desconto'],
+                                'pedidos[].bonificado' => ['type' => 'integer', 'required' => false, 'description' => '1 = bonificado, 0 = normal'],
+                                'pedidos[].pedido_pai_id' => ['type' => 'integer', 'required' => false, 'description' => 'ID do pedido principal'],
+                                'pedidos[].status' => ['type' => 'string', 'required' => false, 'description' => 'Status do pedido'],
+                                'pedidos[].observacoes' => ['type' => 'text', 'required' => false, 'description' => 'Observações'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'message' => '3 pedido(s) atualizado(s)',
+                                'total_atualizados' => 3,
+                                'total_erros' => 0,
+                                'atualizados' => [
+                                    ['id' => 1, 'numero_pedido' => 'PED-001', 'campos_atualizados' => ['frete'], 'frete' => 25.50, 'valor_total' => 300.00, 'lucro' => 94.50],
+                                    ['id' => 2, 'numero_pedido' => 'PED-002', 'campos_atualizados' => ['frete', 'desconto'], 'frete' => 30.00, 'valor_total' => 500.00, 'lucro' => 170.00],
+                                    ['id' => 3, 'numero_pedido' => 'PED-003', 'campos_atualizados' => ['bonificado', 'pedido_pai_id'], 'frete' => 0, 'valor_total' => 150.00, 'lucro' => 70.00]
+                                ]
+                            ],
+                            'example' => [
+                                'pedidos' => [
+                                    ['id' => 1, 'frete' => 25.50],
+                                    ['id' => 2, 'frete' => 30.00, 'desconto' => 5.00],
+                                    ['id' => 3, 'bonificado' => 1, 'pedido_pai_id' => 1]
+                                ]
+                            ],
+                            'notes' => [
+                                'Envie um array de pedidos, cada um com o "id" obrigatório e os campos que deseja alterar',
+                                'Cada pedido pode ter campos diferentes - envie apenas o que deseja atualizar',
+                                'Pedidos com erro (não encontrado, sem campos válidos) são reportados no array "erros"',
+                                'A resposta retorna os pedidos atualizados com lucro recalculado'
+                            ]
+                        ],
+                        [
+                            'method' => 'PATCH',
                             'endpoint' => '/api/v1/pedidos/{id}',
-                            'description' => '🆕 Atualização parcial do pedido - envie apenas os campos que deseja alterar',
+                            'description' => 'Atualização parcial de um pedido individual - envie apenas os campos que deseja alterar',
                             'params' => [
                                 ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID do pedido'],
                             ],

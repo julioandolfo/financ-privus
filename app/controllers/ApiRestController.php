@@ -1704,6 +1704,98 @@ class ApiRestController extends Controller
         $response->json($data);
     }
 
+    /**
+     * Atualização em lote de pedidos
+     * PATCH /api/v1/pedidos
+     * Body: { "pedidos": [ { "id": 1, "frete": 25.50 }, { "id": 2, "frete": 30.00, "desconto": 5.00 } ] }
+     */
+    public function pedidosBatchUpdate(Request $request, Response $response)
+    {
+        $token = $this->authenticate($request, $response);
+        
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        if (empty($input['pedidos']) || !is_array($input['pedidos'])) {
+            $data = ['success' => false, 'error' => 'Informe o campo "pedidos" como um array de objetos. Ex: { "pedidos": [{ "id": 1, "frete": 25.50 }] }'];
+            $this->logSuccess($request, 400, $data);
+            return $response->json($data, 400);
+        }
+        
+        $model = new PedidoVinculado();
+        $camposAceitos = ['frete', 'desconto', 'bonificado', 'pedido_pai_id', 'status', 'observacoes', 
+                          'numero_pedido', 'cliente_id', 'data_pedido', 'valor_total', 'valor_custo_total'];
+        
+        $atualizados = [];
+        $erros = [];
+        
+        foreach ($input['pedidos'] as $index => $item) {
+            // Validar se tem ID
+            if (empty($item['id'])) {
+                $erros[] = ['index' => $index, 'error' => 'Campo "id" é obrigatório'];
+                continue;
+            }
+            
+            $pedidoId = intval($item['id']);
+            
+            // Verificar se o pedido existe e pertence à empresa
+            $pedido = $model->findById($pedidoId);
+            if (!$pedido || ($token['empresa_id'] && $pedido['empresa_id'] != $token['empresa_id'])) {
+                $erros[] = ['index' => $index, 'id' => $pedidoId, 'error' => 'Pedido não encontrado'];
+                continue;
+            }
+            
+            // Filtrar campos válidos
+            $dadosAtualizar = [];
+            foreach ($camposAceitos as $campo) {
+                if (array_key_exists($campo, $item)) {
+                    $dadosAtualizar[$campo] = $item[$campo];
+                }
+            }
+            
+            if (empty($dadosAtualizar)) {
+                $erros[] = ['index' => $index, 'id' => $pedidoId, 'error' => 'Nenhum campo válido para atualizar'];
+                continue;
+            }
+            
+            // Atualizar
+            $model->updateParcial($pedidoId, $dadosAtualizar);
+            
+            // Buscar atualizado
+            $pedidoAtualizado = $model->findById($pedidoId);
+            $valorTotal = floatval($pedidoAtualizado['valor_total'] ?? 0);
+            $custoTotal = floatval($pedidoAtualizado['valor_custo_total'] ?? 0);
+            $freteAtual = floatval($pedidoAtualizado['frete'] ?? 0);
+            $lucro = $valorTotal - $custoTotal - $freteAtual;
+            
+            $atualizados[] = [
+                'id' => $pedidoId,
+                'numero_pedido' => $pedidoAtualizado['numero_pedido'],
+                'campos_atualizados' => array_keys($dadosAtualizar),
+                'frete' => floatval($pedidoAtualizado['frete'] ?? 0),
+                'desconto' => floatval($pedidoAtualizado['desconto'] ?? 0),
+                'bonificado' => intval($pedidoAtualizado['bonificado'] ?? 0),
+                'pedido_pai_id' => $pedidoAtualizado['pedido_pai_id'] ? intval($pedidoAtualizado['pedido_pai_id']) : null,
+                'valor_total' => $valorTotal,
+                'lucro' => round($lucro, 2)
+            ];
+        }
+        
+        $data = [
+            'success' => true,
+            'message' => count($atualizados) . ' pedido(s) atualizado(s)' . (count($erros) > 0 ? ', ' . count($erros) . ' erro(s)' : ''),
+            'total_atualizados' => count($atualizados),
+            'total_erros' => count($erros),
+            'atualizados' => $atualizados
+        ];
+        
+        if (!empty($erros)) {
+            $data['erros'] = $erros;
+        }
+        
+        $this->logSuccess($request, 200, $data);
+        $response->json($data);
+    }
+
     // =====================================================
     // VALIDAÇÕES ADICIONAIS
     // =====================================================
