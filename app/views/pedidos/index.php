@@ -264,41 +264,19 @@
                     <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    Esta função irá recalcular os valores totais e custos dos pedidos selecionados com base nos custos atuais dos produtos.
+                    Esta função irá buscar <strong>todos os pedidos que possuem itens com custo R$ 0,00</strong> e atualizar com o custo atual cadastrado no produto.
                 </p>
             </div>
 
             <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Origem dos Pedidos</label>
-                    <select name="origem_filtro" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                        <option value="">Todas as origens</option>
-                        <option value="manual">Manual</option>
-                        <option value="woocommerce">WooCommerce</option>
-                        <option value="externo">Externo</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status dos Pedidos</label>
-                    <select name="status_filtro" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                        <option value="">Todos os status</option>
-                        <option value="pendente">Pendente</option>
-                        <option value="processando">Processando</option>
-                        <option value="concluido">Concluído</option>
-                        <option value="cancelado">Cancelado</option>
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Inicial</label>
-                        <input type="date" name="data_inicio_filtro" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Final</label>
-                        <input type="date" name="data_fim_filtro" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                    </div>
+                <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-2">
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">O que será feito:</p>
+                    <ul class="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
+                        <li>Busca todos os pedidos com itens sem custo (R$ 0,00)</li>
+                        <li>Para cada item sem custo, busca o custo atual do produto vinculado</li>
+                        <li>Atualiza o custo unitário e total do item</li>
+                        <li>Recalcula os totais e margens do pedido</li>
+                    </ul>
                 </div>
 
                 <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
@@ -306,7 +284,7 @@
                         <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                         </svg>
-                        Atenção: Esta ação irá atualizar os valores dos pedidos. Certifique-se de que os custos dos produtos estão corretos antes de prosseguir.
+                        Itens que já possuem custo cadastrado <strong>não serão alterados</strong>. Certifique-se de que os custos dos produtos estão corretos antes de prosseguir.
                     </p>
                 </div>
             </div>

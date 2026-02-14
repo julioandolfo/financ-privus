@@ -324,26 +324,28 @@ class PedidoVinculadoController extends Controller
         try {
             $this->db->beginTransaction();
             
-            // Buscar apenas pedidos que possuem itens com custo zero/nulo (independente de filtros)
+            // Buscar pedidos que possuem itens com custo zero/nulo (independente de filtros)
+            // Usa <= 0 para pegar 0, 0.00, NULL e negativos
             $sqlPedidos = "SELECT DISTINCT p.id, p.numero_pedido 
                            FROM pedidos_vinculados p
                            INNER JOIN pedidos_itens pi ON pi.pedido_id = p.id
                            WHERE p.empresa_id = :empresa_id
-                             AND (pi.custo_unitario IS NULL OR pi.custo_unitario = 0)";
+                             AND (pi.custo_unitario IS NULL OR pi.custo_unitario <= 0 OR pi.custo_total IS NULL OR pi.custo_total <= 0)";
             $stmtPedidos = $this->db->prepare($sqlPedidos);
             $stmtPedidos->execute(['empresa_id' => $empresaId]);
             $pedidos = $stmtPedidos->fetchAll(\PDO::FETCH_ASSOC);
             
             $totalRecalculados = 0;
             $totalItensAtualizados = 0;
+            $itensIgnorados = 0;
             $erros = [];
             
             foreach ($pedidos as $pedido) {
                 try {
-                    // Buscar apenas itens SEM custo deste pedido
+                    // Buscar itens SEM custo deste pedido
                     $sqlItens = "SELECT pi.* FROM pedidos_itens pi
                                  WHERE pi.pedido_id = :pedido_id
-                                   AND (pi.custo_unitario IS NULL OR pi.custo_unitario = 0)";
+                                   AND (pi.custo_unitario IS NULL OR pi.custo_unitario <= 0 OR pi.custo_total IS NULL OR pi.custo_total <= 0)";
                     $stmtItens = $this->db->prepare($sqlItens);
                     $stmtItens->execute(['pedido_id' => $pedido['id']]);
                     $itensSemCusto = $stmtItens->fetchAll(\PDO::FETCH_ASSOC);
@@ -354,9 +356,10 @@ class PedidoVinculadoController extends Controller
                         if ($item['produto_id']) {
                             $produto = $this->produtoModel->findById($item['produto_id']);
                             
-                            if ($produto && ($produto['custo_unitario'] ?? 0) > 0) {
-                                $novoCustoUnitario = $produto['custo_unitario'];
-                                $novoCustoTotal = $item['quantidade'] * $novoCustoUnitario;
+                            if ($produto && floatval($produto['custo_unitario'] ?? 0) > 0) {
+                                $novoCustoUnitario = floatval($produto['custo_unitario']);
+                                $quantidade = floatval($item['quantidade'] ?? 1);
+                                $novoCustoTotal = $quantidade * $novoCustoUnitario;
                                 
                                 $sqlUpdateItem = "UPDATE pedidos_itens SET 
                                                  custo_unitario = :custo_unitario,
@@ -371,12 +374,15 @@ class PedidoVinculadoController extends Controller
                                 
                                 $totalItensAtualizados++;
                                 $atualizouAlgo = true;
+                            } else {
+                                $itensIgnorados++;
                             }
+                        } else {
+                            $itensIgnorados++;
                         }
                     }
                     
                     if ($atualizouAlgo) {
-                        // Recalcular totais do pedido somente se algo mudou
                         $this->pedidoModel->recalcularTotais($pedido['id']);
                         $totalRecalculados++;
                     }
@@ -390,12 +396,15 @@ class PedidoVinculadoController extends Controller
             
             if ($totalRecalculados > 0) {
                 $mensagem = "✅ {$totalRecalculados} pedido(s) recalculado(s), {$totalItensAtualizados} item(ns) atualizado(s) com custo.";
+                if ($itensIgnorados > 0) {
+                    $mensagem .= " {$itensIgnorados} item(ns) não atualizado(s) (produto sem custo cadastrado).";
+                }
                 if (!empty($erros)) {
                     $mensagem .= " Alguns pedidos apresentaram erros.";
                 }
                 $this->session->set('success', $mensagem);
             } else if (count($pedidos) > 0) {
-                $this->session->set('info', count($pedidos) . ' pedido(s) com itens sem custo encontrado(s), porém nenhum produto possui custo cadastrado para atualizar.');
+                $this->session->set('info', count($pedidos) . ' pedido(s) com ' . $itensIgnorados . ' item(ns) sem custo encontrado(s), porém os produtos vinculados não possuem custo cadastrado para atualizar.');
             } else {
                 $this->session->set('info', 'Nenhum pedido com itens sem custo encontrado. Todos os pedidos já possuem custo nos itens.');
             }
