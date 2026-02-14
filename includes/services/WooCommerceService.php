@@ -168,6 +168,9 @@ class WooCommerceService
     private function sincronizarPedidos($config, $empresaId, $opcoes = [])
     {
         $total = 0;
+        $totalNovos = 0;
+        $totalAtualizados = 0;
+        $totalPulados = 0;
         $erros = [];
         $contaReceberModel = new \App\Models\ContaReceber();
         
@@ -184,166 +187,100 @@ class WooCommerceService
         // Status que indicam que o pagamento foi confirmado
         $statusPagamentoConfirmado = ['em_processamento', 'concluido'];
         
+        $isPedidoUnico = !empty($opcoes['pedido_unico_id']);
+        
+        // Limite desejado de pedidos NOVOS a importar
+        $limiteNovos = isset($opcoes['limite']) && $opcoes['limite'] > 0 ? intval($opcoes['limite']) : 0;
+        
         try {
-            $pedidos = $this->buscarPedidosWooCommerce($config, $opcoes);
-            
-            $isPedidoUnico = !empty($opcoes['pedido_unico_id']);
-            
-            \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
-                ($isPedidoUnico ? 'Sincronização de pedido único' : 'Sincronização em lote') . 
-                ' - Pedidos encontrados: ' . count($pedidos), 
-                ['empresa_id' => $empresaId]);
-            
-            foreach ($pedidos as $pedWoo) {
-                try {
-                    $numeroPedido = $pedWoo['number'] ?? $pedWoo['id'];
-                    
-                    \App\Models\LogSistema::debug('WooCommerce', 'sincronizarPedidos', 
-                        "=== Processando pedido #{$numeroPedido} ===",
-                        [
-                            'woo_id' => $pedWoo['id'],
-                            'status' => $pedWoo['status'],
-                            'total' => $pedWoo['total'],
-                            'payment_method' => $pedWoo['payment_method'] ?? 'N/A',
-                            'cliente' => ($pedWoo['billing']['first_name'] ?? '') . ' ' . ($pedWoo['billing']['last_name'] ?? ''),
-                            'itens' => count($pedWoo['line_items'] ?? [])
-                        ]);
-                    
-                    // =============================================
-                    // PASSO 1: BUSCAR OU CRIAR CLIENTE
-                    // =============================================
-                    $metaData = $pedWoo['meta_data'] ?? [];
-                    $clienteId = $this->buscarOuCriarCliente($pedWoo['billing'], $empresaId, $metaData);
-                    
-                    \App\Models\LogSistema::debug('WooCommerce', 'sincronizarPedidos', 
-                        "Pedido #{$numeroPedido}: cliente_id = {$clienteId}");
-                    
-                    // =============================================
-                    // PASSO 2: MAPEAR STATUS
-                    // =============================================
-                    $statusWoo = $pedWoo['status'];
-                    $statusSistema = $mapeamentoStatus['wc-' . $statusWoo] 
-                        ?? $mapeamentoStatus[$statusWoo] 
-                        ?? $this->mapearStatus($statusWoo);
-                    
-                    // =============================================
-                    // PASSO 3: IDENTIFICAR FORMA DE PAGAMENTO
-                    // =============================================
-                    $formaPagamentoWoo = $pedWoo['payment_method'] ?? '';
-                    $formaPagamentoTitulo = $pedWoo['payment_method_title'] ?? $formaPagamentoWoo;
-                    $acaoFormaPgto = $acoesFormasPagamento[$formaPagamentoWoo] ?? [];
-                    
-                    // =============================================
-                    // PASSO 4: CRIAR OU ATUALIZAR PEDIDO
-                    // =============================================
-                    $dados = [
-                        'empresa_id' => $empresaId,
-                        'cliente_id' => $clienteId,
-                        'origem' => 'woocommerce',
-                        'origem_id' => $pedWoo['id'],
-                        'numero_pedido' => $numeroPedido,
-                        'data_pedido' => date('Y-m-d H:i:s', strtotime($pedWoo['date_created'])),
-                        'status' => $statusSistema,
-                        'valor_total' => $pedWoo['total'],
-                        'frete' => $pedWoo['shipping_total'] ?? 0,
-                        'desconto' => $pedWoo['discount_total'] ?? 0,
-                        'observacoes' => "Pagamento: {$formaPagamentoTitulo}",
-                        'dados_origem' => $pedWoo
-                    ];
-                    
-                    // Verifica se pedido já existe
-                    $pedidoExistente = $this->buscarPedidoExistente($numeroPedido, $empresaId, $pedWoo['id']);
-                    
-                    if ($pedidoExistente) {
-                        // Atualiza pedido existente (inclusive cliente_id se mudou)
-                        $this->pedidoModel->update($pedidoExistente['id'], $dados);
-                        $pedidoId = $pedidoExistente['id'];
-                        
-                        \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
-                            "Pedido #{$numeroPedido}: atualizado (ID: {$pedidoId})",
-                            ['status_anterior' => $pedidoExistente['status'], 'status_novo' => $statusSistema]);
-                        
-                        // Se status mudou, verifica baixa automática
-                        if ($pedidoExistente['status'] !== $statusSistema && empty($acaoFormaPgto['nao_criar_receita'])) {
-                            $this->verificarBaixaAutomatica(
-                                $pedidoId,
-                                $statusSistema,
-                                $acaoFormaPgto,
-                                $statusPagamentoConfirmado,
-                                $pedWoo,
-                                $empresaId,
-                                $contaReceberModel
-                            );
-                        }
+            if ($isPedidoUnico) {
+                // Pedido único: busca direto, sem paginação
+                $pedidos = $this->buscarPedidosWooCommerce($config, $opcoes);
+                
+                \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                    'Sincronização de pedido único - Pedidos encontrados: ' . count($pedidos), 
+                    ['empresa_id' => $empresaId]);
+                
+                foreach ($pedidos as $pedWoo) {
+                    $resultado = $this->processarPedidoWoo($pedWoo, $empresaId, $config, $mapeamentoStatus, $acoesFormasPagamento, $statusPagamentoConfirmado, $contaReceberModel);
+                    if ($resultado['sucesso']) {
+                        $total++;
+                        if ($resultado['novo']) $totalNovos++;
+                        else $totalAtualizados++;
                     } else {
-                        // Cria pedido novo
-                        $pedidoId = $this->pedidoModel->create($dados);
-                        
-                        if (!$pedidoId) {
-                            throw new \Exception("Falha ao criar pedido no banco de dados");
-                        }
-                        
-                        \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
-                            "Pedido #{$numeroPedido}: criado (ID: {$pedidoId})",
-                            ['cliente_id' => $clienteId, 'status' => $statusSistema, 'valor' => $pedWoo['total']]);
+                        $erros[] = $resultado['erro'];
+                    }
+                }
+            } else {
+                // Sincronização em lote: busca pedidos paginados e pula os já importados
+                $pagina = 1;
+                $porPagina = 50; // Busca blocos de 50 por vez na API
+                $maxPaginas = 20; // Limite de segurança para não ficar em loop infinito
+                $continuarBuscando = true;
+                
+                // Se não há limite definido, usa o per_page original
+                if ($limiteNovos <= 0) {
+                    $limiteNovos = 0; // 0 = sem limite, importa tudo que encontrar
+                }
+                
+                \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                    "Sincronização em lote - Limite de novos pedidos: " . ($limiteNovos > 0 ? $limiteNovos : 'sem limite'),
+                    ['empresa_id' => $empresaId]);
+                
+                while ($continuarBuscando && $pagina <= $maxPaginas) {
+                    // Busca uma página de pedidos do WooCommerce
+                    $opcoesPage = $opcoes;
+                    $opcoesPage['limite'] = $porPagina;
+                    $opcoesPage['pagina'] = $pagina;
+                    
+                    $pedidos = $this->buscarPedidosWooCommerce($config, $opcoesPage);
+                    
+                    if (empty($pedidos)) {
+                        \App\Models\LogSistema::debug('WooCommerce', 'sincronizarPedidos', 
+                            "Página {$pagina}: nenhum pedido retornado, encerrando busca.");
+                        break;
                     }
                     
-                    // =============================================
-                    // PASSO 5: PROCESSAR PRODUTOS/ITENS DO PEDIDO
-                    // =============================================
-                    $lineItems = $pedWoo['line_items'] ?? [];
-                    \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
-                        "Pedido #{$numeroPedido}: line_items encontrados: " . count($lineItems));
+                    \App\Models\LogSistema::debug('WooCommerce', 'sincronizarPedidos', 
+                        "Página {$pagina}: " . count($pedidos) . " pedidos recebidos da API");
                     
-                    if (!empty($lineItems)) {
-                        try {
-                            $qtdProcessados = $this->processarItensDoPedido($pedidoId, $lineItems, $empresaId, $numeroPedido, $config);
-                            \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
-                                "Pedido #{$numeroPedido}: {$qtdProcessados} itens processados com sucesso");
-                        } catch (\Throwable $eItens) {
-                            \App\Models\LogSistema::error('WooCommerce', 'sincronizarPedidos', 
-                                "Pedido #{$numeroPedido}: ERRO ao processar itens: " . $eItens->getMessage(),
-                                ['trace' => $eItens->getTraceAsString()]);
+                    foreach ($pedidos as $pedWoo) {
+                        $numeroPedido = $pedWoo['number'] ?? $pedWoo['id'];
+                        
+                        // Verifica se pedido já existe no sistema
+                        $pedidoExistente = $this->buscarPedidoExistente($numeroPedido, $empresaId, $pedWoo['id']);
+                        
+                        if ($pedidoExistente) {
+                            $totalPulados++;
+                            \App\Models\LogSistema::debug('WooCommerce', 'sincronizarPedidos', 
+                                "Pedido #{$numeroPedido}: já importado (ID: {$pedidoExistente['id']}), pulando...");
+                            continue;
                         }
-                    } else {
-                        \App\Models\LogSistema::warning('WooCommerce', 'sincronizarPedidos', 
-                            "Pedido #{$numeroPedido}: NENHUM line_item no pedido WooCommerce!");
-                    }
-                    
-                    // =============================================
-                    // PASSO 6: CONTA A RECEBER (apenas para pedidos novos)
-                    // =============================================
-                    if (!$pedidoExistente) {
-                        if (!empty($acaoFormaPgto['nao_criar_receita'])) {
-                            \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
-                                "Pedido #{$numeroPedido}: conta a receber NÃO criada (forma pgto '{$formaPagamentoTitulo}' configurada como 'não criar receita')"
-                            );
+                        
+                        // Pedido novo: processar
+                        $resultado = $this->processarPedidoWoo($pedWoo, $empresaId, $config, $mapeamentoStatus, $acoesFormasPagamento, $statusPagamentoConfirmado, $contaReceberModel);
+                        if ($resultado['sucesso']) {
+                            $total++;
+                            $totalNovos++;
+                            
+                            // Se atingiu o limite de novos, para
+                            if ($limiteNovos > 0 && $totalNovos >= $limiteNovos) {
+                                \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                                    "Limite de {$limiteNovos} pedidos novos atingido, encerrando.");
+                                $continuarBuscando = false;
+                                break;
+                            }
                         } else {
-                            $this->criarContaReceberDoPedido(
-                                $pedidoId,
-                                $pedWoo,
-                                $empresaId,
-                                $clienteId,
-                                $statusSistema,
-                                $acaoFormaPgto,
-                                $statusPagamentoConfirmado,
-                                $contaReceberModel
-                            );
+                            $erros[] = $resultado['erro'];
                         }
                     }
                     
-                    $total++;
+                    // Se retornou menos que o solicitado, não há mais páginas
+                    if (count($pedidos) < $porPagina) {
+                        $continuarBuscando = false;
+                    }
                     
-                    \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
-                        "Pedido #{$numeroPedido}: sincronizado com sucesso! " .
-                        "(Cliente: #{$clienteId}, Itens: " . count($lineItems) . ", Status: {$statusSistema})");
-                    
-                } catch (\Exception $e) {
-                    $numPed = $pedWoo['number'] ?? $pedWoo['id'] ?? '?';
-                    $erros[] = "Pedido {$numPed}: " . $e->getMessage();
-                    \App\Models\LogSistema::error('WooCommerce', 'sincronizarPedidos', 
-                        "Erro pedido #{$numPed}: " . $e->getMessage(),
-                        ['trace' => $e->getTraceAsString()]);
+                    $pagina++;
                 }
             }
         } catch (\Exception $e) {
@@ -352,7 +289,171 @@ class WooCommerceService
                 "Erro geral ao buscar pedidos: " . $e->getMessage());
         }
         
-        return ['total' => $total, 'erros' => $erros];
+        \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+            "Sincronização concluída: {$totalNovos} novos, {$totalAtualizados} atualizados, {$totalPulados} pulados (já existiam), " . count($erros) . " erros");
+        
+        return ['total' => $total, 'novos' => $totalNovos, 'atualizados' => $totalAtualizados, 'pulados' => $totalPulados, 'erros' => $erros];
+    }
+    
+    /**
+     * Processa um pedido individual do WooCommerce (criar ou atualizar)
+     * Retorna ['sucesso' => bool, 'novo' => bool, 'erro' => string|null]
+     */
+    private function processarPedidoWoo($pedWoo, $empresaId, $config, $mapeamentoStatus, $acoesFormasPagamento, $statusPagamentoConfirmado, $contaReceberModel)
+    {
+        try {
+            $numeroPedido = $pedWoo['number'] ?? $pedWoo['id'];
+            
+            \App\Models\LogSistema::debug('WooCommerce', 'sincronizarPedidos', 
+                "=== Processando pedido #{$numeroPedido} ===",
+                [
+                    'woo_id' => $pedWoo['id'],
+                    'status' => $pedWoo['status'],
+                    'total' => $pedWoo['total'],
+                    'payment_method' => $pedWoo['payment_method'] ?? 'N/A',
+                    'cliente' => ($pedWoo['billing']['first_name'] ?? '') . ' ' . ($pedWoo['billing']['last_name'] ?? ''),
+                    'itens' => count($pedWoo['line_items'] ?? [])
+                ]);
+            
+            // =============================================
+            // PASSO 1: BUSCAR OU CRIAR CLIENTE
+            // =============================================
+            $metaData = $pedWoo['meta_data'] ?? [];
+            $clienteId = $this->buscarOuCriarCliente($pedWoo['billing'], $empresaId, $metaData);
+            
+            \App\Models\LogSistema::debug('WooCommerce', 'sincronizarPedidos', 
+                "Pedido #{$numeroPedido}: cliente_id = {$clienteId}");
+            
+            // =============================================
+            // PASSO 2: MAPEAR STATUS
+            // =============================================
+            $statusWoo = $pedWoo['status'];
+            $statusSistema = $mapeamentoStatus['wc-' . $statusWoo] 
+                ?? $mapeamentoStatus[$statusWoo] 
+                ?? $this->mapearStatus($statusWoo);
+            
+            // =============================================
+            // PASSO 3: IDENTIFICAR FORMA DE PAGAMENTO
+            // =============================================
+            $formaPagamentoWoo = $pedWoo['payment_method'] ?? '';
+            $formaPagamentoTitulo = $pedWoo['payment_method_title'] ?? $formaPagamentoWoo;
+            $acaoFormaPgto = $acoesFormasPagamento[$formaPagamentoWoo] ?? [];
+            
+            // =============================================
+            // PASSO 4: CRIAR OU ATUALIZAR PEDIDO
+            // =============================================
+            $dados = [
+                'empresa_id' => $empresaId,
+                'cliente_id' => $clienteId,
+                'origem' => 'woocommerce',
+                'origem_id' => $pedWoo['id'],
+                'numero_pedido' => $numeroPedido,
+                'data_pedido' => date('Y-m-d H:i:s', strtotime($pedWoo['date_created'])),
+                'status' => $statusSistema,
+                'valor_total' => $pedWoo['total'],
+                'frete' => $pedWoo['shipping_total'] ?? 0,
+                'desconto' => $pedWoo['discount_total'] ?? 0,
+                'observacoes' => "Pagamento: {$formaPagamentoTitulo}",
+                'dados_origem' => $pedWoo
+            ];
+            
+            // Verifica se pedido já existe
+            $pedidoExistente = $this->buscarPedidoExistente($numeroPedido, $empresaId, $pedWoo['id']);
+            $isNovo = false;
+            
+            if ($pedidoExistente) {
+                // Atualiza pedido existente
+                $this->pedidoModel->update($pedidoExistente['id'], $dados);
+                $pedidoId = $pedidoExistente['id'];
+                
+                \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                    "Pedido #{$numeroPedido}: atualizado (ID: {$pedidoId})",
+                    ['status_anterior' => $pedidoExistente['status'], 'status_novo' => $statusSistema]);
+                
+                // Se status mudou, verifica baixa automática
+                if ($pedidoExistente['status'] !== $statusSistema && empty($acaoFormaPgto['nao_criar_receita'])) {
+                    $this->verificarBaixaAutomatica(
+                        $pedidoId,
+                        $statusSistema,
+                        $acaoFormaPgto,
+                        $statusPagamentoConfirmado,
+                        $pedWoo,
+                        $empresaId,
+                        $contaReceberModel
+                    );
+                }
+            } else {
+                // Cria pedido novo
+                $pedidoId = $this->pedidoModel->create($dados);
+                $isNovo = true;
+                
+                if (!$pedidoId) {
+                    throw new \Exception("Falha ao criar pedido no banco de dados");
+                }
+                
+                \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                    "Pedido #{$numeroPedido}: criado (ID: {$pedidoId})",
+                    ['cliente_id' => $clienteId, 'status' => $statusSistema, 'valor' => $pedWoo['total']]);
+            }
+            
+            // =============================================
+            // PASSO 5: PROCESSAR PRODUTOS/ITENS DO PEDIDO
+            // =============================================
+            $lineItems = $pedWoo['line_items'] ?? [];
+            \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                "Pedido #{$numeroPedido}: line_items encontrados: " . count($lineItems));
+            
+            if (!empty($lineItems)) {
+                try {
+                    $qtdProcessados = $this->processarItensDoPedido($pedidoId, $lineItems, $empresaId, $numeroPedido, $config);
+                    \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                        "Pedido #{$numeroPedido}: {$qtdProcessados} itens processados com sucesso");
+                } catch (\Throwable $eItens) {
+                    \App\Models\LogSistema::error('WooCommerce', 'sincronizarPedidos', 
+                        "Pedido #{$numeroPedido}: ERRO ao processar itens: " . $eItens->getMessage(),
+                        ['trace' => $eItens->getTraceAsString()]);
+                }
+            } else {
+                \App\Models\LogSistema::warning('WooCommerce', 'sincronizarPedidos', 
+                    "Pedido #{$numeroPedido}: NENHUM line_item no pedido WooCommerce!");
+            }
+            
+            // =============================================
+            // PASSO 6: CONTA A RECEBER (apenas para pedidos novos)
+            // =============================================
+            if ($isNovo) {
+                if (!empty($acaoFormaPgto['nao_criar_receita'])) {
+                    \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                        "Pedido #{$numeroPedido}: conta a receber NÃO criada (forma pgto '{$formaPagamentoTitulo}' configurada como 'não criar receita')"
+                    );
+                } else {
+                    $this->criarContaReceberDoPedido(
+                        $pedidoId,
+                        $pedWoo,
+                        $empresaId,
+                        $clienteId,
+                        $statusSistema,
+                        $acaoFormaPgto,
+                        $statusPagamentoConfirmado,
+                        $contaReceberModel
+                    );
+                }
+            }
+            
+            \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                "Pedido #{$numeroPedido}: sincronizado com sucesso! " .
+                "(Cliente: #{$clienteId}, Itens: " . count($lineItems) . ", Status: {$statusSistema})");
+            
+            return ['sucesso' => true, 'novo' => $isNovo, 'erro' => null];
+            
+        } catch (\Exception $e) {
+            $numPed = $pedWoo['number'] ?? $pedWoo['id'] ?? '?';
+            $msgErro = "Pedido {$numPed}: " . $e->getMessage();
+            \App\Models\LogSistema::error('WooCommerce', 'sincronizarPedidos', 
+                "Erro pedido #{$numPed}: " . $e->getMessage(),
+                ['trace' => $e->getTraceAsString()]);
+            return ['sucesso' => false, 'novo' => false, 'erro' => $msgErro];
+        }
     }
     
     /**
@@ -1384,12 +1485,21 @@ class WooCommerceService
         $url = $baseUrl;
         $params = [];
         
-        // Limite de registros
+        // Limite de registros por página
         if (isset($opcoes['limite']) && $opcoes['limite'] > 0) {
             $params[] = 'per_page=' . intval($opcoes['limite']);
         } else {
             $params[] = 'per_page=50';
         }
+        
+        // Paginação
+        if (isset($opcoes['pagina']) && $opcoes['pagina'] > 1) {
+            $params[] = 'page=' . intval($opcoes['pagina']);
+        }
+        
+        // Ordenação: mais recentes primeiro
+        $params[] = 'orderby=date';
+        $params[] = 'order=desc';
         
         // Filtro por período
         if (isset($opcoes['periodo'])) {
