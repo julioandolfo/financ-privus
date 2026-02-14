@@ -507,9 +507,9 @@ class WooCommerceService
                 
                 // =============================================
                 // BUSCAR CUSTO DO PRODUTO (ordem de prioridade)
-                // 1. _supplier_cost_from_acf (meta fixo)
+                // 1. cod_fornecedor + tabela custo_produtos_personizi
                 // 2. Campo personalizado configurado na integração
-                // 3. cod_fornecedor + tabela custo_produtos_personizi
+                // 3. _supplier_cost_from_acf (meta fixo)
                 // =============================================
                 $custoUnitario = 0;
                 $custoOrigem = 'nenhum';
@@ -519,23 +519,33 @@ class WooCommerceService
                 \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
                     "Pedido #{$numeroPedido}: '{$nomeProduto}' -> iniciando busca de custo (WOO ID: {$produtoWooId}, campo_custo_config: " . ($campoCusto ?: 'NÃO CONFIGURADO') . ", meta_data no item: " . count($itemMetaData) . ")");
                 
-                // Prioridade 1: _supplier_cost_from_acf (meta interno fixo)
-                \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
-                    "Pedido #{$numeroPedido}: [1/3] Tentando _supplier_cost_from_acf no line_item...");
-                $custoSupplier = $this->buscarCustoPorCampoPersonalizado($itemMetaData, '_supplier_cost_from_acf');
-                if ($custoSupplier === null && $produtoWooId && $config) {
-                    \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
-                        "Pedido #{$numeroPedido}: [1/3] Não encontrado no line_item, buscando via API produto #{$produtoWooId}...");
-                    $custoSupplier = $this->buscarCustoProdutoWooViaApi($produtoWooId, $config, '_supplier_cost_from_acf');
+                // Prioridade 1: cod_fornecedor + tabela custo_produtos_personizi
+                $codFornecedor = $this->extrairCodFornecedor($item);
+                
+                if (empty($codFornecedor) && $produtoWooId && $config) {
+                    $codFornecedor = $this->buscarCodFornecedorDoProdutoWoo($produtoWooId, $config);
+                    
+                    if (empty($codFornecedor) && $variacaoId) {
+                        $codFornecedor = $this->buscarCodFornecedorDoProdutoWoo($variacaoId, $config);
+                    }
                 }
-                if ($custoSupplier !== null && $custoSupplier > 0) {
-                    $custoUnitario = $custoSupplier;
-                    $custoOrigem = '_supplier_cost_from_acf';
-                    \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
-                        "Pedido #{$numeroPedido}: '{$nomeProduto}' custo=R\${$custoUnitario} (via _supplier_cost_from_acf)");
+                
+                if (!empty($codFornecedor)) {
+                    \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                        "Pedido #{$numeroPedido}: [1/3] Tentando cod_fornecedor='{$codFornecedor}' na tabela custo_produtos_personizi...");
+                    $custoEncontrado = $this->buscarCustoPorCodFornecedor($codFornecedor);
+                    if ($custoEncontrado !== null) {
+                        $custoUnitario = $custoEncontrado;
+                        $custoOrigem = 'cod_fornecedor';
+                        \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
+                            "Pedido #{$numeroPedido}: '{$nomeProduto}' custo=R\${$custoUnitario} (via cod_fornecedor '{$codFornecedor}')");
+                    } else {
+                        \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                            "Pedido #{$numeroPedido}: [1/3] cod_fornecedor='{$codFornecedor}': NÃO encontrado na tabela");
+                    }
                 } else {
                     \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
-                        "Pedido #{$numeroPedido}: [1/3] _supplier_cost_from_acf: NÃO encontrado");
+                        "Pedido #{$numeroPedido}: [1/3] Pulado - sem cod_fornecedor");
                 }
                 
                 // Prioridade 2: Campo personalizado configurado na integração
@@ -566,30 +576,30 @@ class WooCommerceService
                     }
                 }
                 
-                // Prioridade 3: cod_fornecedor + tabela custo_produtos_personizi
-                $codFornecedor = $this->extrairCodFornecedor($item);
-                
-                if (empty($codFornecedor) && $produtoWooId && $config) {
-                    $codFornecedor = $this->buscarCodFornecedorDoProdutoWoo($produtoWooId, $config);
-                    
-                    if (empty($codFornecedor) && $variacaoId) {
-                        $codFornecedor = $this->buscarCodFornecedorDoProdutoWoo($variacaoId, $config);
+                // Prioridade 3: _supplier_cost_from_acf (meta fixo)
+                if ($custoUnitario == 0) {
+                    \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                        "Pedido #{$numeroPedido}: [3/3] Tentando _supplier_cost_from_acf no line_item...");
+                    $custoSupplier = $this->buscarCustoPorCampoPersonalizado($itemMetaData, '_supplier_cost_from_acf');
+                    if ($custoSupplier === null && $produtoWooId && $config) {
+                        \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                            "Pedido #{$numeroPedido}: [3/3] Não encontrado no line_item, buscando via API produto #{$produtoWooId}...");
+                        $custoSupplier = $this->buscarCustoProdutoWooViaApi($produtoWooId, $config, '_supplier_cost_from_acf');
+                    }
+                    if ($custoSupplier !== null && $custoSupplier > 0) {
+                        $custoUnitario = $custoSupplier;
+                        $custoOrigem = '_supplier_cost_from_acf';
+                        \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
+                            "Pedido #{$numeroPedido}: '{$nomeProduto}' custo=R\${$custoUnitario} (via _supplier_cost_from_acf)");
+                    } else {
+                        \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                            "Pedido #{$numeroPedido}: [3/3] _supplier_cost_from_acf: NÃO encontrado");
                     }
                 }
                 
-                if ($custoUnitario == 0 && !empty($codFornecedor)) {
-                    \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
-                        "Pedido #{$numeroPedido}: [3/3] Tentando cod_fornecedor='{$codFornecedor}' na tabela custo_produtos_personizi...");
-                    $custoEncontrado = $this->buscarCustoPorCodFornecedor($codFornecedor);
-                    if ($custoEncontrado !== null) {
-                        $custoUnitario = $custoEncontrado;
-                        $custoOrigem = 'cod_fornecedor';
-                    }
-                    \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
-                        "Pedido #{$numeroPedido}: '{$nomeProduto}' cod_fornecedor='{$codFornecedor}' custo=R\${$custoUnitario} (via {$custoOrigem})");
-                } elseif ($custoUnitario == 0) {
+                if ($custoUnitario == 0) {
                     \App\Models\LogSistema::warning('WooCommerce', 'processarItens', 
-                        "Pedido #{$numeroPedido}: '{$nomeProduto}' CUSTO R\$0 - nenhuma fonte encontrou custo. Tentativas: [1] _supplier_cost_from_acf, [2] campo_custo: " . ($campoCusto ?: 'NÃO CONFIG') . ", [3] cod_fornecedor: " . ($codFornecedor ?: 'N/A'));
+                        "Pedido #{$numeroPedido}: '{$nomeProduto}' CUSTO R\$0 - nenhuma fonte encontrou custo. Tentativas: [1] cod_fornecedor: " . ($codFornecedor ?: 'N/A') . ", [2] campo_custo: " . ($campoCusto ?: 'NÃO CONFIG') . ", [3] _supplier_cost_from_acf");
                 }
                 
                 $custoTotal = round($custoUnitario * $quantidade, 2);
@@ -1994,20 +2004,30 @@ class WooCommerceService
             
             // =============================================
             // BUSCAR CUSTO DO PRODUTO (ordem de prioridade)
-            // 1. _supplier_cost_from_acf
+            // 1. cod_fornecedor + tabela custo_produtos_personizi
             // 2. Campo personalizado configurado
-            // 3. cod_fornecedor + tabela custo_produtos_personizi
+            // 3. _supplier_cost_from_acf
             // =============================================
             $custoUnitario = 0;
             $prodMetaData = $prodWoo['meta_data'] ?? [];
             
-            // Prioridade 1: _supplier_cost_from_acf
+            // Prioridade 1: cod_fornecedor + tabela custo_produtos_personizi
+            $codFornecedor = null;
             if (!empty($prodMetaData)) {
-                $custoSupplier = $this->buscarCustoPorCampoPersonalizado($prodMetaData, '_supplier_cost_from_acf');
-                if ($custoSupplier !== null && $custoSupplier > 0) {
-                    $custoUnitario = $custoSupplier;
+                foreach ($prodMetaData as $meta) {
+                    if (in_array($meta['key'] ?? '', ['cod_fornecedor', '_cod_fornecedor', 'codigo_fornecedor', '_codigo_fornecedor'])) {
+                        $codFornecedor = $meta['value'] ?? null;
+                        break;
+                    }
+                }
+            }
+            
+            if (!empty($codFornecedor)) {
+                $custoEncontrado = $this->buscarCustoPorCodFornecedor($codFornecedor);
+                if ($custoEncontrado !== null) {
+                    $custoUnitario = $custoEncontrado;
                     \App\Models\LogSistema::info('WooCommerce', 'webhookProduto', 
-                        "Custo R\${$custoUnitario} encontrado via _supplier_cost_from_acf para '{$nome}'");
+                        "Custo R\${$custoUnitario} encontrado via cod_fornecedor '{$codFornecedor}' para '{$nome}'");
                 }
             }
             
@@ -2024,21 +2044,13 @@ class WooCommerceService
                 }
             }
             
-            // Prioridade 3: cod_fornecedor + tabela custo_produtos_personizi
-            $codFornecedor = null;
-            if (!empty($prodMetaData)) {
-                foreach ($prodMetaData as $meta) {
-                    if (in_array($meta['key'] ?? '', ['cod_fornecedor', '_cod_fornecedor', 'codigo_fornecedor', '_codigo_fornecedor'])) {
-                        $codFornecedor = $meta['value'] ?? null;
-                        break;
-                    }
-                }
-            }
-            
-            if ($custoUnitario == 0 && !empty($codFornecedor)) {
-                $custoEncontrado = $this->buscarCustoPorCodFornecedor($codFornecedor);
-                if ($custoEncontrado !== null) {
-                    $custoUnitario = $custoEncontrado;
+            // Prioridade 3: _supplier_cost_from_acf
+            if ($custoUnitario == 0 && !empty($prodMetaData)) {
+                $custoSupplier = $this->buscarCustoPorCampoPersonalizado($prodMetaData, '_supplier_cost_from_acf');
+                if ($custoSupplier !== null && $custoSupplier > 0) {
+                    $custoUnitario = $custoSupplier;
+                    \App\Models\LogSistema::info('WooCommerce', 'webhookProduto', 
+                        "Custo R\${$custoUnitario} encontrado via _supplier_cost_from_acf para '{$nome}'");
                 }
             }
             
