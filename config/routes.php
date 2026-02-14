@@ -255,6 +255,9 @@ return [
     'POST /integracoes/{id}/woocommerce/config/categorias/atualizar' => ['handler' => 'IntegracaoWooConfigController@atualizarCategorias', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/{id}/woocommerce/config/categorias/salvar' => ['handler' => 'IntegracaoWooConfigController@salvarMapeamentoCategorias', 'middleware' => ['AuthMiddleware']],
     
+    // Config campo custo produto
+    'POST /integracoes/{id}/woocommerce/config/campo-custo' => ['handler' => 'IntegracaoWooConfigController@salvarCampoCusto', 'middleware' => ['AuthMiddleware']],
+    
     // WooCommerce - Dashboard
     'GET /integracoes/{id}/woocommerce/dashboard' => ['handler' => 'IntegracaoWooDashboardController@index', 'middleware' => ['AuthMiddleware']],
     'GET /integracoes/{id}/woocommerce/dashboard/metricas' => ['handler' => 'IntegracaoWooDashboardController@metricas', 'middleware' => ['AuthMiddleware']],

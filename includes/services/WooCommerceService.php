@@ -506,33 +506,68 @@ class WooCommerceService
                 $variacaoId = $item['variation_id'] ?? null;
                 
                 // =============================================
-                // BUSCAR cod_fornecedor E CUSTO
+                // BUSCAR CUSTO DO PRODUTO (ordem de prioridade)
+                // 1. _supplier_cost_from_acf (meta fixo)
+                // 2. Campo personalizado configurado na integração
+                // 3. cod_fornecedor + tabela custo_produtos_personizi
                 // =============================================
+                $custoUnitario = 0;
+                $custoOrigem = 'nenhum';
+                $itemMetaData = $item['meta_data'] ?? [];
+                
+                // Prioridade 1: _supplier_cost_from_acf (meta interno fixo)
+                $custoSupplier = $this->buscarCustoPorCampoPersonalizado($itemMetaData, '_supplier_cost_from_acf');
+                if ($custoSupplier === null && $produtoWooId && $config) {
+                    $custoSupplier = $this->buscarCustoProdutoWooViaApi($produtoWooId, $config, '_supplier_cost_from_acf');
+                }
+                if ($custoSupplier !== null && $custoSupplier > 0) {
+                    $custoUnitario = $custoSupplier;
+                    $custoOrigem = '_supplier_cost_from_acf';
+                    \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
+                        "Pedido #{$numeroPedido}: '{$nomeProduto}' custo=R\${$custoUnitario} (via _supplier_cost_from_acf)");
+                }
+                
+                // Prioridade 2: Campo personalizado configurado na integração
+                if ($custoUnitario == 0) {
+                    $campoCusto = $config['campo_custo_produto'] ?? null;
+                    if (!empty($campoCusto)) {
+                        $custoCustom = $this->buscarCustoPorCampoPersonalizado($itemMetaData, $campoCusto);
+                        
+                        if ($custoCustom === null && $produtoWooId && $config) {
+                            $custoCustom = $this->buscarCustoProdutoWooViaApi($produtoWooId, $config, $campoCusto);
+                        }
+                        
+                        if ($custoCustom !== null && $custoCustom > 0) {
+                            $custoUnitario = $custoCustom;
+                            $custoOrigem = "campo_personalizado ({$campoCusto})";
+                            \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
+                                "Pedido #{$numeroPedido}: '{$nomeProduto}' custo=R\${$custoUnitario} (via campo personalizado '{$campoCusto}')");
+                        }
+                    }
+                }
+                
+                // Prioridade 3: cod_fornecedor + tabela custo_produtos_personizi
                 $codFornecedor = $this->extrairCodFornecedor($item);
                 
-                // Se não encontrou no line_item, tenta buscar no produto WooCommerce via API
                 if (empty($codFornecedor) && $produtoWooId && $config) {
-                    // Busca no produto principal
                     $codFornecedor = $this->buscarCodFornecedorDoProdutoWoo($produtoWooId, $config);
                     
-                    // Se é variação e não encontrou, tenta na variação
                     if (empty($codFornecedor) && $variacaoId) {
                         $codFornecedor = $this->buscarCodFornecedorDoProdutoWoo($variacaoId, $config);
                     }
                 }
                 
-                // Busca custo na tabela custo_produtos_personizi
-                $custoUnitario = 0;
-                if (!empty($codFornecedor)) {
+                if ($custoUnitario == 0 && !empty($codFornecedor)) {
                     $custoEncontrado = $this->buscarCustoPorCodFornecedor($codFornecedor);
                     if ($custoEncontrado !== null) {
                         $custoUnitario = $custoEncontrado;
+                        $custoOrigem = 'cod_fornecedor';
                     }
                     \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
-                        "Pedido #{$numeroPedido}: '{$nomeProduto}' cod_fornecedor='{$codFornecedor}' custo=R\${$custoUnitario}");
-                } else {
+                        "Pedido #{$numeroPedido}: '{$nomeProduto}' cod_fornecedor='{$codFornecedor}' custo=R\${$custoUnitario} (via {$custoOrigem})");
+                } elseif ($custoUnitario == 0) {
                     \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
-                        "Pedido #{$numeroPedido}: '{$nomeProduto}' sem cod_fornecedor, custo=R\$0");
+                        "Pedido #{$numeroPedido}: '{$nomeProduto}' sem custo encontrado (_supplier_cost_from_acf: N/A, campo_custo: " . ($campoCusto ?? 'N/A') . ", cod_fornecedor: " . ($codFornecedor ?: 'N/A') . ")");
                 }
                 
                 $custoTotal = round($custoUnitario * $quantidade, 2);
@@ -1029,6 +1064,94 @@ class WooCommerceService
         }
         
         return $cod;
+    }
+    
+    /**
+     * Busca custo do produto via campo personalizado (ACF ou meta_data) no WooCommerce
+     * 
+     * @param array $metaData Array de meta_data do produto ou line_item
+     * @param string $campoCusto Meta key configurada (ex: acf[field_67210d632de40], _cost, etc.)
+     * @return float|null O custo encontrado ou null
+     */
+    private function buscarCustoPorCampoPersonalizado($metaData, $campoCusto)
+    {
+        if (empty($metaData) || empty($campoCusto)) {
+            return null;
+        }
+        
+        // Possíveis variações da meta key para buscar
+        $keysParaBuscar = [$campoCusto];
+        
+        // Se é formato ACF (acf[field_xxx]), também busca por _field_xxx e field_xxx
+        if (preg_match('/^acf\[(.+)\]$/i', $campoCusto, $matches)) {
+            $acfFieldKey = $matches[1];
+            $keysParaBuscar[] = $acfFieldKey;
+            $keysParaBuscar[] = '_' . $acfFieldKey;
+        }
+        
+        // Também tenta com e sem underscore no início
+        if (strpos($campoCusto, '_') !== 0) {
+            $keysParaBuscar[] = '_' . $campoCusto;
+        } else {
+            $keysParaBuscar[] = ltrim($campoCusto, '_');
+        }
+        
+        foreach ($metaData as $meta) {
+            $key = $meta['key'] ?? '';
+            if (in_array($key, $keysParaBuscar)) {
+                $valor = $meta['value'] ?? null;
+                if ($valor !== null && $valor !== '' && is_numeric($valor) && floatval($valor) > 0) {
+                    \App\Models\LogSistema::info('WooCommerce', 'custoCampoPersonalizado', 
+                        "Custo encontrado via campo '{$key}': R\${$valor}");
+                    return floatval($valor);
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Busca custo do produto via campo personalizado diretamente na API do WooCommerce
+     * Usado quando o campo não está no line_item (geralmente ACF fields só aparecem no produto)
+     */
+    private function buscarCustoProdutoWooViaApi($produtoWooId, $config, $campoCusto)
+    {
+        if (empty($produtoWooId) || empty($config) || empty($campoCusto)) {
+            return null;
+        }
+        
+        try {
+            $url = rtrim($config['url_site'], '/') . '/wp-json/wc/v3/products/' . $produtoWooId;
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_USERPWD, $config['consumer_key'] . ':' . $config['consumer_secret']);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode === 200) {
+                $produto = json_decode($response, true);
+                if ($produto && !empty($produto['meta_data'])) {
+                    $custo = $this->buscarCustoPorCampoPersonalizado($produto['meta_data'], $campoCusto);
+                    if ($custo !== null) {
+                        \App\Models\LogSistema::debug('WooCommerce', 'custoCampoPersonalizado', 
+                            "Custo R\${$custo} encontrado via API para produto WOO #{$produtoWooId}");
+                        return $custo;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            \App\Models\LogSistema::warning('WooCommerce', 'custoCampoPersonalizado', 
+                "Erro ao buscar custo via API para produto #{$produtoWooId}: " . $e->getMessage());
+        }
+        
+        return null;
     }
     
     private function buscarCustoPorCodFornecedor($codFornecedor)
@@ -1822,10 +1945,42 @@ class WooCommerceService
             \App\Models\LogSistema::info('WooCommerce', 'webhookProduto', 
                 "Processando produto: '{$nome}' (SKU: {$sku}, WOO ID: {$produtoWooId})");
             
-            // Busca cod_fornecedor nos meta_data do produto
+            // =============================================
+            // BUSCAR CUSTO DO PRODUTO (ordem de prioridade)
+            // 1. _supplier_cost_from_acf
+            // 2. Campo personalizado configurado
+            // 3. cod_fornecedor + tabela custo_produtos_personizi
+            // =============================================
+            $custoUnitario = 0;
+            $prodMetaData = $prodWoo['meta_data'] ?? [];
+            
+            // Prioridade 1: _supplier_cost_from_acf
+            if (!empty($prodMetaData)) {
+                $custoSupplier = $this->buscarCustoPorCampoPersonalizado($prodMetaData, '_supplier_cost_from_acf');
+                if ($custoSupplier !== null && $custoSupplier > 0) {
+                    $custoUnitario = $custoSupplier;
+                    \App\Models\LogSistema::info('WooCommerce', 'webhookProduto', 
+                        "Custo R\${$custoUnitario} encontrado via _supplier_cost_from_acf para '{$nome}'");
+                }
+            }
+            
+            // Prioridade 2: Campo personalizado configurado na integração
+            if ($custoUnitario == 0) {
+                $campoCusto = $config['campo_custo_produto'] ?? null;
+                if (!empty($campoCusto) && !empty($prodMetaData)) {
+                    $custoCustom = $this->buscarCustoPorCampoPersonalizado($prodMetaData, $campoCusto);
+                    if ($custoCustom !== null && $custoCustom > 0) {
+                        $custoUnitario = $custoCustom;
+                        \App\Models\LogSistema::info('WooCommerce', 'webhookProduto', 
+                            "Custo R\${$custoUnitario} encontrado via campo personalizado '{$campoCusto}' para '{$nome}'");
+                    }
+                }
+            }
+            
+            // Prioridade 3: cod_fornecedor + tabela custo_produtos_personizi
             $codFornecedor = null;
-            if (!empty($prodWoo['meta_data'])) {
-                foreach ($prodWoo['meta_data'] as $meta) {
+            if (!empty($prodMetaData)) {
+                foreach ($prodMetaData as $meta) {
                     if (in_array($meta['key'] ?? '', ['cod_fornecedor', '_cod_fornecedor', 'codigo_fornecedor', '_codigo_fornecedor'])) {
                         $codFornecedor = $meta['value'] ?? null;
                         break;
@@ -1833,9 +1988,7 @@ class WooCommerceService
                 }
             }
             
-            // Busca custo pelo cod_fornecedor
-            $custoUnitario = 0;
-            if (!empty($codFornecedor)) {
+            if ($custoUnitario == 0 && !empty($codFornecedor)) {
                 $custoEncontrado = $this->buscarCustoPorCodFornecedor($codFornecedor);
                 if ($custoEncontrado !== null) {
                     $custoUnitario = $custoEncontrado;

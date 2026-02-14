@@ -366,6 +366,60 @@ class IntegracaoWooConfigController extends Controller
     }
     
     /**
+     * Salva campo personalizado de custo do produto
+     */
+    public function salvarCampoCusto(Request $request, Response $response, $integracaoId)
+    {
+        try {
+            $data = $request->isJson() ? $request->json() : $request->post();
+            $campoCusto = trim($data['campo_custo_produto'] ?? '');
+            
+            $config = $this->wooModel->findByIntegracaoId($integracaoId);
+            
+            if (!$config) {
+                return $response->json(['success' => false, 'error' => 'Integração não encontrada'], 404);
+            }
+            
+            $db = \App\Core\Database::getInstance()->getConnection();
+            
+            // Verifica se a coluna existe, se não, cria
+            try {
+                $stmt = $db->query("SHOW COLUMNS FROM integracoes_woocommerce LIKE 'campo_custo_produto'");
+                if ($stmt->rowCount() === 0) {
+                    $db->exec("ALTER TABLE integracoes_woocommerce ADD COLUMN campo_custo_produto VARCHAR(255) NULL COMMENT 'Meta key do campo personalizado de custo no WooCommerce' AFTER acoes_formas_pagamento");
+                }
+            } catch (\Throwable $e) {
+                LogSistema::warning('WooConfig', 'salvarCampoCusto', 'Erro ao verificar/criar coluna: ' . $e->getMessage());
+            }
+            
+            $sql = "UPDATE integracoes_woocommerce 
+                    SET campo_custo_produto = :campo 
+                    WHERE integracao_id = :integracao_id";
+            
+            $stmt = $db->prepare($sql);
+            $result = $stmt->execute([
+                'campo' => $campoCusto ?: null,
+                'integracao_id' => $integracaoId
+            ]);
+            
+            if ($result) {
+                LogSistema::info('WooConfig', 'salvarCampoCusto', 
+                    "Campo de custo salvo: '{$campoCusto}' para integração #{$integracaoId}");
+                return $response->json([
+                    'success' => true,
+                    'message' => 'Campo de custo salvo com sucesso!'
+                ]);
+            } else {
+                return $response->json(['success' => false, 'error' => 'Erro ao salvar'], 500);
+            }
+            
+        } catch (\Exception $e) {
+            LogSistema::error('WooConfig', 'salvarCampoCusto', 'ERRO: ' . $e->getMessage());
+            return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+    
+    /**
      * Tela de configuração de categorias
      */
     public function configurarCategorias(Request $request, Response $response, $integracaoId)

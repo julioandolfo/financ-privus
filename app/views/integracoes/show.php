@@ -270,6 +270,24 @@
         });
     }
 
+    function salvarCampoCusto() {
+        const campo = document.getElementById('campoCustoProduto').value.trim();
+        fetch('<?= $this->baseUrl('/integracoes/' . $integracao['id'] . '/woocommerce/config/campo-custo') ?>', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ campo_custo_produto: campo })
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                alert('✓ Campo de custo salvo com sucesso!');
+            } else {
+                alert('✗ Erro: ' + (d.error || 'Erro desconhecido'));
+            }
+        })
+        .catch(e => alert('Erro ao salvar: ' + e.message));
+    }
+
     function copiarWebhookUrlShow() {
         const url = document.getElementById('webhookUrlShow').textContent.trim();
         navigator.clipboard.writeText(url).then(() => {
@@ -317,6 +335,23 @@
                             <dd class="mt-1 flex gap-2">
                                 <?= $configuracao['sincronizar_produtos'] ? '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Produtos</span>' : '' ?>
                                 <?= $configuracao['sincronizar_pedidos'] ? '<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Pedidos</span>' : '' ?>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-semibold text-gray-600 dark:text-gray-400">Campo de Custo (meta_key)</dt>
+                            <dd class="mt-1">
+                                <form id="formCampoCusto" class="flex gap-2 items-center">
+                                    <input type="text" name="campo_custo_produto" id="campoCustoProduto" 
+                                        value="<?= htmlspecialchars($configuracao['campo_custo_produto'] ?? '') ?>" 
+                                        placeholder="Ex: acf[field_67210d632de40] ou _price_cost"
+                                        class="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                                    <button type="button" onclick="salvarCampoCusto()" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+                                        Salvar
+                                    </button>
+                                </form>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Meta key do campo personalizado no WooCommerce que contém o custo do produto. Se preenchido, será verificado antes do cod_fornecedor.
+                                </p>
                             </dd>
                         </div>
                         <div>
