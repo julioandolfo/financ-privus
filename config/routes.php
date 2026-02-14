@@ -405,8 +405,11 @@ return [
     'POST /transacoes-pendentes/aprovar-lote' => ['handler' => 'TransacaoPendenteController@aprovarLote', 'middleware' => ['AuthMiddleware']],
     
     // Logs do Sistema (protegido - apenas admin)
+    // Rota alternativa /sistema/registros caso /logs seja bloqueado pelo WAF/ModSecurity
     'GET /logs' => ['handler' => 'LogController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /sistema/registros' => ['handler' => 'LogController@index', 'middleware' => ['AuthMiddleware']],
     'POST /logs/limpar' => ['handler' => 'LogController@limpar', 'middleware' => ['AuthMiddleware']],
+    'POST /sistema/registros/limpar' => ['handler' => 'LogController@limpar', 'middleware' => ['AuthMiddleware']],
     
     // ========================================
     // NOTIFICAÇÕES

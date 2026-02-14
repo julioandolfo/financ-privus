@@ -92,11 +92,29 @@ if ($produto['custo_unitario'] > 0) {
                         </div>
                     <?php endif; ?>
 
+                    <!-- SKU -->
+                    <?php if (!empty($produto['sku'])): ?>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">SKU</label>
+                            <p class="text-gray-900 dark:text-white font-mono font-medium"><?= htmlspecialchars($produto['sku']) ?></p>
+                        </div>
+                    <?php endif; ?>
+
                     <!-- Código de Barras -->
-                    <?php if ($produto['codigo_barras']): ?>
+                    <?php if (!empty($produto['codigo_barras'])): ?>
                         <div>
                             <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Código de Barras</label>
                             <p class="text-gray-900 dark:text-white font-mono font-medium"><?= htmlspecialchars($produto['codigo_barras']) ?></p>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <!-- Cod Fornecedor -->
+                    <?php if (!empty($produto['cod_fornecedor'])): ?>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Cód. Fornecedor</label>
+                            <p class="text-gray-900 dark:text-white font-mono font-medium">
+                                <?= htmlspecialchars($produto['cod_fornecedor']) ?>
+                            </p>
                         </div>
                     <?php endif; ?>
 
@@ -131,10 +149,30 @@ if ($produto['custo_unitario'] > 0) {
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
                 <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6">Precificação</h2>
                 
+                <?php if (empty($produto['custo_unitario']) || $produto['custo_unitario'] == 0): ?>
+                    <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                        <div class="flex items-start gap-3">
+                            <span class="text-amber-500 text-xl">⚠️</span>
+                            <div>
+                                <p class="font-semibold text-amber-800 dark:text-amber-200">Custo não informado</p>
+                                <p class="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                                    <?php if (!empty($produto['cod_fornecedor'])): ?>
+                                        O cód. fornecedor <strong><?= htmlspecialchars($produto['cod_fornecedor']) ?></strong> foi encontrado, mas não há preço correspondente na tabela de custos.
+                                        Verifique se o cod_fornecedor está correto na tabela <code>custo_produtos_personizi</code>.
+                                    <?php else: ?>
+                                        Este produto não possui <strong>cod_fornecedor</strong> do WooCommerce. O custo não pode ser buscado automaticamente.
+                                        Adicione o campo personalizado <code>cod_fornecedor</code> no produto do WooCommerce.
+                                    <?php endif; ?>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+                
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Custo Unitário</label>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">
+                        <p class="text-2xl font-bold <?= ($produto['custo_unitario'] > 0) ? 'text-gray-900 dark:text-white' : 'text-red-500' ?>">
                             R$ <?= number_format($produto['custo_unitario'], 2, ',', '.') ?>
                         </p>
                     </div>

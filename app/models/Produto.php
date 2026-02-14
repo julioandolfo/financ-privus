@@ -192,14 +192,22 @@ class Produto extends Model
      */
     public function create($data)
     {
-        $sql = "INSERT INTO {$this->table} 
-                (empresa_id, categoria_id, codigo, sku, codigo_barras, nome, descricao, custo_unitario, preco_venda, unidade_medida, estoque, estoque_minimo) 
-                VALUES 
-                (:empresa_id, :categoria_id, :codigo, :sku, :codigo_barras, :nome, :descricao, :custo_unitario, :preco_venda, :unidade_medida, :estoque, :estoque_minimo)";
+        // Verifica se coluna cod_fornecedor existe
+        $temCodFornecedor = $this->colunaExiste('cod_fornecedor');
+        
+        $colunas = 'empresa_id, categoria_id, codigo, sku, codigo_barras, nome, descricao, custo_unitario, preco_venda, unidade_medida, estoque, estoque_minimo';
+        $placeholders = ':empresa_id, :categoria_id, :codigo, :sku, :codigo_barras, :nome, :descricao, :custo_unitario, :preco_venda, :unidade_medida, :estoque, :estoque_minimo';
+        
+        if ($temCodFornecedor) {
+            $colunas .= ', cod_fornecedor';
+            $placeholders .= ', :cod_fornecedor';
+        }
+        
+        $sql = "INSERT INTO {$this->table} ({$colunas}) VALUES ({$placeholders})";
         
         $stmt = $this->db->prepare($sql);
         
-        $success = $stmt->execute([
+        $params = [
             'empresa_id' => $data['empresa_id'],
             'categoria_id' => $data['categoria_id'] ?? null,
             'codigo' => $data['codigo'],
@@ -212,7 +220,13 @@ class Produto extends Model
             'unidade_medida' => $data['unidade_medida'] ?? 'UN',
             'estoque' => $data['estoque'] ?? 0,
             'estoque_minimo' => $data['estoque_minimo'] ?? 0
-        ]);
+        ];
+        
+        if ($temCodFornecedor) {
+            $params['cod_fornecedor'] = $data['cod_fornecedor'] ?? null;
+        }
+        
+        $success = $stmt->execute($params);
         
         return $success ? $this->db->lastInsertId() : false;
     }
@@ -222,6 +236,8 @@ class Produto extends Model
      */
     public function update($id, $data)
     {
+        $temCodFornecedor = $this->colunaExiste('cod_fornecedor');
+        
         $sql = "UPDATE {$this->table} SET
                 categoria_id = :categoria_id,
                 codigo = :codigo,
@@ -233,12 +249,17 @@ class Produto extends Model
                 preco_venda = :preco_venda,
                 unidade_medida = :unidade_medida,
                 estoque = :estoque,
-                estoque_minimo = :estoque_minimo
-                WHERE id = :id";
+                estoque_minimo = :estoque_minimo";
+        
+        if ($temCodFornecedor && array_key_exists('cod_fornecedor', $data)) {
+            $sql .= ", cod_fornecedor = :cod_fornecedor";
+        }
+        
+        $sql .= " WHERE id = :id";
         
         $stmt = $this->db->prepare($sql);
         
-        return $stmt->execute([
+        $params = [
             'id' => $id,
             'categoria_id' => $data['categoria_id'] ?? null,
             'codigo' => $data['codigo'],
@@ -251,7 +272,37 @@ class Produto extends Model
             'unidade_medida' => $data['unidade_medida'] ?? 'UN',
             'estoque' => $data['estoque'] ?? 0,
             'estoque_minimo' => $data['estoque_minimo'] ?? 0
-        ]);
+        ];
+        
+        if ($temCodFornecedor && array_key_exists('cod_fornecedor', $data)) {
+            $params['cod_fornecedor'] = $data['cod_fornecedor'] ?? null;
+        }
+        
+        return $stmt->execute($params);
+    }
+    
+    /**
+     * Verifica se uma coluna existe na tabela
+     */
+    private function colunaExiste($coluna)
+    {
+        static $cache = [];
+        $key = $this->table . '.' . $coluna;
+        
+        if (isset($cache[$key])) {
+            return $cache[$key];
+        }
+        
+        try {
+            $sql = "SHOW COLUMNS FROM {$this->table} LIKE :coluna";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['coluna' => $coluna]);
+            $cache[$key] = $stmt->rowCount() > 0;
+        } catch (\Throwable $e) {
+            $cache[$key] = false;
+        }
+        
+        return $cache[$key];
     }
     
     /**

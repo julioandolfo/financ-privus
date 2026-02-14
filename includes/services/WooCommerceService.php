@@ -502,16 +502,54 @@ class WooCommerceService
                         'unidade_medida' => 'UN',
                         'estoque' => 0,
                         'estoque_minimo' => 0,
+                        'cod_fornecedor' => $codFornecedor ?: null,
                     ];
                     
                     $produtoId = $this->produtoModel->create($dadosProduto);
                     
                     if ($produtoId) {
                         \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
-                            "Pedido #{$numeroPedido}: produto criado '{$nomeProduto}' (SKU: {$sku}, custo: R\${$custoUnitario}) -> ID #{$produtoId}");
+                            "Pedido #{$numeroPedido}: produto criado '{$nomeProduto}' (SKU: {$sku}, custo: R\${$custoUnitario}, cod_fornecedor: " . ($codFornecedor ?: 'N/A') . ") -> ID #{$produtoId}");
+                        
+                        // Salva imagem do produto se disponível
+                        $imagemUrl = $item['image']['src'] ?? null;
+                        if ($imagemUrl) {
+                            $this->salvarImagemProduto($produtoId, $imagemUrl, $nomeProduto);
+                        }
                     } else {
                         \App\Models\LogSistema::warning('WooCommerce', 'processarItens', 
                             "Pedido #{$numeroPedido}: falha ao criar produto '{$nomeProduto}'");
+                    }
+                }
+                
+                // Salva imagem se produto existia mas não tinha foto
+                if ($produtoId && !empty($item['image']['src'])) {
+                    try {
+                        $fotoModel = new \App\Models\ProdutoFoto();
+                        $fotoPrincipal = $fotoModel->findPrincipal($produtoId);
+                        if (!$fotoPrincipal) {
+                            $this->salvarImagemProduto($produtoId, $item['image']['src'], $nomeProduto);
+                        }
+                    } catch (\Throwable $e) {
+                        // Não é crítico
+                    }
+                }
+                
+                // Salva cod_fornecedor no produto existente se não tinha
+                if ($produtoId && !empty($codFornecedor)) {
+                    try {
+                        $db = \App\Core\Database::getInstance()->getConnection();
+                        // Verifica se coluna existe
+                        $sqlCheck = "SHOW COLUMNS FROM produtos LIKE 'cod_fornecedor'";
+                        $stmtCheck = $db->prepare($sqlCheck);
+                        $stmtCheck->execute();
+                        if ($stmtCheck->rowCount() > 0) {
+                            $sqlUp = "UPDATE produtos SET cod_fornecedor = :cod WHERE id = :id AND (cod_fornecedor IS NULL OR cod_fornecedor = '')";
+                            $stmtUp = $db->prepare($sqlUp);
+                            $stmtUp->execute(['cod' => $codFornecedor, 'id' => $produtoId]);
+                        }
+                    } catch (\Throwable $e) {
+                        // Não é crítico
                     }
                 }
                 
@@ -912,6 +950,71 @@ class WooCommerceService
     /**
      * Busca categoria padrão de venda da empresa
      */
+    /**
+     * Salva imagem do produto WooCommerce como foto principal
+     */
+    private function salvarImagemProduto($produtoId, $imagemUrl, $nomeProduto = '')
+    {
+        try {
+            if (empty($imagemUrl)) return;
+            
+            // Baixa a imagem
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $imagemUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            $imageData = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+            curl_close($ch);
+            
+            if ($httpCode !== 200 || empty($imageData)) {
+                \App\Models\LogSistema::warning('WooCommerce', 'salvarImagem', 
+                    "Falha ao baixar imagem do produto #{$produtoId}: HTTP {$httpCode}");
+                return;
+            }
+            
+            // Define extensão
+            $extensao = 'jpg';
+            if (strpos($contentType, 'png') !== false) $extensao = 'png';
+            elseif (strpos($contentType, 'gif') !== false) $extensao = 'gif';
+            elseif (strpos($contentType, 'webp') !== false) $extensao = 'webp';
+            
+            // Cria diretório
+            $baseDir = defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__, 2);
+            $uploadDir = $baseDir . '/public/uploads/produtos';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            
+            // Salva arquivo
+            $nomeArquivo = 'woo_' . $produtoId . '_' . time() . '.' . $extensao;
+            $caminhoCompleto = $uploadDir . '/' . $nomeArquivo;
+            file_put_contents($caminhoCompleto, $imageData);
+            
+            // Registra na tabela de fotos
+            $fotoModel = new \App\Models\ProdutoFoto();
+            $fotoModel->create([
+                'produto_id' => $produtoId,
+                'arquivo' => $nomeArquivo,
+                'caminho' => '/uploads/produtos/' . $nomeArquivo,
+                'tamanho' => strlen($imageData),
+                'tipo' => $contentType,
+                'principal' => 1,
+                'ordem' => 0,
+            ]);
+            
+            \App\Models\LogSistema::info('WooCommerce', 'salvarImagem', 
+                "Imagem salva para produto #{$produtoId}: {$nomeArquivo}");
+                
+        } catch (\Throwable $e) {
+            \App\Models\LogSistema::warning('WooCommerce', 'salvarImagem', 
+                "Erro ao salvar imagem do produto #{$produtoId}: " . $e->getMessage());
+        }
+    }
+    
     private function getCategoriaVendaId($empresaId)
     {
         $db = \App\Core\Database::getInstance()->getConnection();
