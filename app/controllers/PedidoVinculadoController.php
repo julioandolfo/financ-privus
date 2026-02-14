@@ -353,30 +353,69 @@ class PedidoVinculadoController extends Controller
                     $atualizouAlgo = false;
                     
                     foreach ($itensSemCusto as $item) {
-                        if ($item['produto_id']) {
-                            $produto = $this->produtoModel->findById($item['produto_id']);
+                        $produto = null;
+                        $produtoId = $item['produto_id'] ?? null;
+                        
+                        // 1. Busca pelo produto_id vinculado
+                        if ($produtoId) {
+                            $produto = $this->produtoModel->findById($produtoId);
+                        }
+                        
+                        // 2. Se não tem produto_id ou não encontrou, busca por SKU/nome
+                        if (!$produto || floatval($produto['custo_unitario'] ?? 0) <= 0) {
+                            $produtoEncontrado = null;
                             
-                            if ($produto && floatval($produto['custo_unitario'] ?? 0) > 0) {
-                                $novoCustoUnitario = floatval($produto['custo_unitario']);
-                                $quantidade = floatval($item['quantidade'] ?? 1);
-                                $novoCustoTotal = $quantidade * $novoCustoUnitario;
-                                
-                                $sqlUpdateItem = "UPDATE pedidos_itens SET 
-                                                 custo_unitario = :custo_unitario,
-                                                 custo_total = :custo_total
-                                                 WHERE id = :id";
-                                $stmtItem = $this->db->prepare($sqlUpdateItem);
-                                $stmtItem->execute([
-                                    'custo_unitario' => $novoCustoUnitario,
-                                    'custo_total' => $novoCustoTotal,
-                                    'id' => $item['id']
-                                ]);
-                                
-                                $totalItensAtualizados++;
-                                $atualizouAlgo = true;
-                            } else {
-                                $itensIgnorados++;
+                            // Tenta buscar por nome exato
+                            $nomeProdutoItem = $item['nome_produto'] ?? '';
+                            if (!empty($nomeProdutoItem)) {
+                                $sqlBuscaNome = "SELECT * FROM produtos 
+                                                 WHERE nome = :nome AND empresa_id = :empresa_id AND ativo = 1
+                                                 LIMIT 1";
+                                $stmtBusca = $this->db->prepare($sqlBuscaNome);
+                                $stmtBusca->execute(['nome' => $nomeProdutoItem, 'empresa_id' => $empresaId]);
+                                $produtoEncontrado = $stmtBusca->fetch(\PDO::FETCH_ASSOC);
                             }
+                            
+                            // Tenta buscar por nome parcial (LIKE)
+                            if (!$produtoEncontrado && !empty($nomeProdutoItem)) {
+                                $sqlBuscaLike = "SELECT * FROM produtos 
+                                                 WHERE nome LIKE :nome AND empresa_id = :empresa_id AND ativo = 1
+                                                 LIMIT 1";
+                                $stmtBusca2 = $this->db->prepare($sqlBuscaLike);
+                                $stmtBusca2->execute(['nome' => '%' . $nomeProdutoItem . '%', 'empresa_id' => $empresaId]);
+                                $produtoEncontrado = $stmtBusca2->fetch(\PDO::FETCH_ASSOC);
+                            }
+                            
+                            if ($produtoEncontrado && floatval($produtoEncontrado['custo_unitario'] ?? 0) > 0) {
+                                $produto = $produtoEncontrado;
+                                
+                                // Vincula o produto_id ao item se não estava vinculado
+                                if (!$produtoId) {
+                                    $sqlVincula = "UPDATE pedidos_itens SET produto_id = :produto_id WHERE id = :id";
+                                    $stmtVincula = $this->db->prepare($sqlVincula);
+                                    $stmtVincula->execute(['produto_id' => $produtoEncontrado['id'], 'id' => $item['id']]);
+                                }
+                            }
+                        }
+                        
+                        if ($produto && floatval($produto['custo_unitario'] ?? 0) > 0) {
+                            $novoCustoUnitario = floatval($produto['custo_unitario']);
+                            $quantidade = floatval($item['quantidade'] ?? 1);
+                            $novoCustoTotal = $quantidade * $novoCustoUnitario;
+                            
+                            $sqlUpdateItem = "UPDATE pedidos_itens SET 
+                                             custo_unitario = :custo_unitario,
+                                             custo_total = :custo_total
+                                             WHERE id = :id";
+                            $stmtItem = $this->db->prepare($sqlUpdateItem);
+                            $stmtItem->execute([
+                                'custo_unitario' => $novoCustoUnitario,
+                                'custo_total' => $novoCustoTotal,
+                                'id' => $item['id']
+                            ]);
+                            
+                            $totalItensAtualizados++;
+                            $atualizouAlgo = true;
                         } else {
                             $itensIgnorados++;
                         }

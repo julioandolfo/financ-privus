@@ -523,11 +523,8 @@ class WooCommerceService
                 $codFornecedor = $this->extrairCodFornecedor($item);
                 
                 if (empty($codFornecedor) && $produtoWooId && $config) {
-                    $codFornecedor = $this->buscarCodFornecedorDoProdutoWoo($produtoWooId, $config);
-                    
-                    if (empty($codFornecedor) && $variacaoId) {
-                        $codFornecedor = $this->buscarCodFornecedorDoProdutoWoo($variacaoId, $config);
-                    }
+                    // Busca no produto pai e na variação (se houver) via API WooCommerce
+                    $codFornecedor = $this->buscarCodFornecedorDoProdutoWoo($produtoWooId, $config, $variacaoId);
                 }
                 
                 if (!empty($codFornecedor)) {
@@ -1034,20 +1031,26 @@ class WooCommerceService
     /**
      * Extrai cod_fornecedor de um line_item do WooCommerce
      * 
-     * O campo personalizado pode vir como:
-     * - meta_data do line_item (campo personalizado do produto)
-     * - meta_data do pedido
+     * Verifica meta keys padrão E as do plugin Easy Product Creator:
+     * - cod_fornecedor, _cod_fornecedor, codigo_fornecedor, _codigo_fornecedor (padrão)
+     * - _supplier_code, _supplier_code_2, _supplier_code_3 (Easy Product Creator)
      */
     private function extrairCodFornecedor($item)
     {
+        // Meta keys para buscar cod_fornecedor (ordem de prioridade)
+        $metaKeys = [
+            'cod_fornecedor', '_cod_fornecedor', 'codigo_fornecedor', '_codigo_fornecedor',
+            '_supplier_code', '_supplier_code_2', '_supplier_code_3'
+        ];
+        
         // 1. Busca nos meta_data do line_item
         if (!empty($item['meta_data']) && is_array($item['meta_data'])) {
-            foreach ($item['meta_data'] as $meta) {
-                $key = $meta['key'] ?? '';
-                $value = $meta['value'] ?? '';
-                
-                if (in_array($key, ['cod_fornecedor', '_cod_fornecedor', 'codigo_fornecedor', '_codigo_fornecedor'])) {
-                    if (!empty($value)) {
+            foreach ($metaKeys as $targetKey) {
+                foreach ($item['meta_data'] as $meta) {
+                    $key = $meta['key'] ?? '';
+                    $value = $meta['value'] ?? '';
+                    
+                    if ($key === $targetKey && !empty($value) && !filter_var($value, FILTER_VALIDATE_URL)) {
                         return $value;
                     }
                 }
@@ -1281,13 +1284,66 @@ class WooCommerceService
      * Busca cod_fornecedor diretamente do produto no WooCommerce via API
      * Usado quando o line_item não contém o meta_data do produto
      */
-    private function buscarCodFornecedorDoProdutoWoo($produtoWooId, $config)
+    /**
+     * Busca cod_fornecedor diretamente do produto/variação no WooCommerce via API
+     * Verifica meta keys padrão E as do plugin Easy Product Creator
+     *
+     * @param int $produtoWooId ID do produto ou variação no WooCommerce
+     * @param array $config Configuração da integração
+     * @param int|null $variacaoWooId ID da variação no WooCommerce (se for produto variável)
+     * @return string|null
+     */
+    private function buscarCodFornecedorDoProdutoWoo($produtoWooId, $config, $variacaoWooId = null)
     {
         if (empty($produtoWooId) || empty($config)) {
             return null;
         }
         
+        // Meta keys para buscar cod_fornecedor (inclui Easy Product Creator)
+        $metaKeys = [
+            'cod_fornecedor', '_cod_fornecedor', 'codigo_fornecedor', '_codigo_fornecedor',
+            '_supplier_code', '_supplier_code_2', '_supplier_code_3'
+        ];
+        
         try {
+            // Se tem variação, busca primeiro na variação (via API de variações do WooCommerce)
+            if (!empty($variacaoWooId) && $variacaoWooId > 0 && $variacaoWooId != $produtoWooId) {
+                $urlVariacao = rtrim($config['url_site'], '/') . '/wp-json/wc/v3/products/' . $produtoWooId . '/variations/' . $variacaoWooId;
+                
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $urlVariacao);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_USERPWD, $config['consumer_key'] . ':' . $config['consumer_secret']);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                
+                if ($httpCode === 200) {
+                    $variacao = json_decode($response, true);
+                    if ($variacao && !empty($variacao['meta_data'])) {
+                        $keysDisp = array_map(fn($m) => $m['key'] ?? '', $variacao['meta_data']);
+                        \App\Models\LogSistema::debug('WooCommerce', 'buscarCodFornecedor', 
+                            "Variação WOO #{$variacaoWooId} (produto #{$produtoWooId}): meta_keys disponíveis: " . implode(', ', $keysDisp));
+                        
+                        foreach ($metaKeys as $targetKey) {
+                            foreach ($variacao['meta_data'] as $meta) {
+                                $key = $meta['key'] ?? '';
+                                $value = $meta['value'] ?? '';
+                                if ($key === $targetKey && !empty($value) && !filter_var($value, FILTER_VALIDATE_URL)) {
+                                    \App\Models\LogSistema::debug('WooCommerce', 'buscarCodFornecedor', 
+                                        "cod_fornecedor encontrado na variação WOO #{$variacaoWooId}: '{$value}' (meta_key: {$key})");
+                                    return $value;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Busca no produto pai
             $url = rtrim($config['url_site'], '/') . '/wp-json/wc/v3/products/' . $produtoWooId;
             
             $ch = curl_init();
@@ -1304,13 +1360,18 @@ class WooCommerceService
             if ($httpCode === 200) {
                 $produto = json_decode($response, true);
                 if ($produto && !empty($produto['meta_data'])) {
-                    foreach ($produto['meta_data'] as $meta) {
-                        $key = $meta['key'] ?? '';
-                        if (in_array($key, ['cod_fornecedor', '_cod_fornecedor', 'codigo_fornecedor', '_codigo_fornecedor'])) {
-                            if (!empty($meta['value'])) {
+                    $keysDisp = array_map(fn($m) => $m['key'] ?? '', $produto['meta_data']);
+                    \App\Models\LogSistema::debug('WooCommerce', 'buscarCodFornecedor', 
+                        "Produto WOO #{$produtoWooId}: meta_keys disponíveis: " . implode(', ', array_slice($keysDisp, 0, 30)));
+                    
+                    foreach ($metaKeys as $targetKey) {
+                        foreach ($produto['meta_data'] as $meta) {
+                            $key = $meta['key'] ?? '';
+                            $value = $meta['value'] ?? '';
+                            if ($key === $targetKey && !empty($value) && !filter_var($value, FILTER_VALIDATE_URL)) {
                                 \App\Models\LogSistema::debug('WooCommerce', 'buscarCodFornecedor', 
-                                    "cod_fornecedor encontrado no produto WOO #{$produtoWooId}: {$meta['value']}");
-                                return $meta['value'];
+                                    "cod_fornecedor encontrado no produto WOO #{$produtoWooId}: '{$value}' (meta_key: {$key})");
+                                return $value;
                             }
                         }
                     }
@@ -2016,12 +2077,23 @@ class WooCommerceService
             $prodMetaData = $prodWoo['meta_data'] ?? [];
             
             // Prioridade 1: cod_fornecedor + tabela custo_produtos_personizi
+            // Inclui meta keys padrão e do plugin Easy Product Creator
+            $codFornecedorKeys = [
+                'cod_fornecedor', '_cod_fornecedor', 'codigo_fornecedor', '_codigo_fornecedor',
+                '_supplier_code', '_supplier_code_2', '_supplier_code_3'
+            ];
             $codFornecedor = null;
             if (!empty($prodMetaData)) {
-                foreach ($prodMetaData as $meta) {
-                    if (in_array($meta['key'] ?? '', ['cod_fornecedor', '_cod_fornecedor', 'codigo_fornecedor', '_codigo_fornecedor'])) {
-                        $codFornecedor = $meta['value'] ?? null;
-                        break;
+                foreach ($codFornecedorKeys as $targetKey) {
+                    foreach ($prodMetaData as $meta) {
+                        $key = $meta['key'] ?? '';
+                        $value = $meta['value'] ?? '';
+                        if ($key === $targetKey && !empty($value) && !filter_var($value, FILTER_VALIDATE_URL)) {
+                            $codFornecedor = $value;
+                            \App\Models\LogSistema::debug('WooCommerce', 'webhookProduto', 
+                                "cod_fornecedor extraído via meta_key '{$key}': '{$value}' para '{$nome}'");
+                            break 2;
+                        }
                     }
                 }
             }
@@ -2064,6 +2136,9 @@ class WooCommerceService
                 $produtoExistente = $this->produtoModel->findBySku($sku, $empresaId);
             }
             
+            // Limpa prefixo do cod_fornecedor se necessário
+            $codFornecedorLimpo = !empty($codFornecedor) ? $this->limparCodFornecedor($codFornecedor) : null;
+            
             $dados = [
                 'empresa_id' => $empresaId,
                 'categoria_id' => $this->getCategoriaVendaId($empresaId),
@@ -2077,6 +2152,7 @@ class WooCommerceService
                 'unidade_medida' => 'UN',
                 'estoque' => intval($prodWoo['stock_quantity'] ?? 0),
                 'estoque_minimo' => 0,
+                'cod_fornecedor' => $codFornecedorLimpo,
             ];
             
             if ($produtoExistente) {
