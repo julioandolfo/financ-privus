@@ -105,7 +105,7 @@ class WooCommerceService
             if ($isPedidoUnico) {
                 $mensagem = "Sincronização de pedido único #{$opcoes['pedido_unico_id']} concluída: {$resultados['pedidos']} pedido(s) processado(s)";
             } else {
-                $mensagem = "Sincronização concluída: {$resultados['produtos']} produtos, {$resultados['pedidos']} pedidos";
+            $mensagem = "Sincronização concluída: {$resultados['produtos']} produtos, {$resultados['pedidos']} pedidos";
             }
             $tipoLog = empty($resultados['erros']) ? IntegracaoLog::TIPO_SUCESSO : IntegracaoLog::TIPO_AVISO;
             $this->logModel->create($integracaoId, $tipoLog, $mensagem, $resultados);
@@ -195,13 +195,13 @@ class WooCommerceService
         try {
             if ($isPedidoUnico) {
                 // Pedido único: busca direto, sem paginação
-                $pedidos = $this->buscarPedidosWooCommerce($config, $opcoes);
-                
+            $pedidos = $this->buscarPedidosWooCommerce($config, $opcoes);
+            
                 \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
                     'Sincronização de pedido único - Pedidos encontrados: ' . count($pedidos), 
                     ['empresa_id' => $empresaId]);
                 
-                foreach ($pedidos as $pedWoo) {
+            foreach ($pedidos as $pedWoo) {
                     $resultado = $this->processarPedidoWoo($pedWoo, $empresaId, $config, $mapeamentoStatus, $acoesFormasPagamento, $statusPagamentoConfirmado, $contaReceberModel);
                     if ($resultado['sucesso']) {
                         $total++;
@@ -342,15 +342,15 @@ class WooCommerceService
             // =============================================
             // PASSO 4: CRIAR OU ATUALIZAR PEDIDO
             // =============================================
-            $dados = [
-                'empresa_id' => $empresaId,
-                'cliente_id' => $clienteId,
+                    $dados = [
+                        'empresa_id' => $empresaId,
+                        'cliente_id' => $clienteId,
                 'origem' => 'woocommerce',
                 'origem_id' => $pedWoo['id'],
                 'numero_pedido' => $numeroPedido,
                 'data_pedido' => date('Y-m-d H:i:s', strtotime($pedWoo['date_created'])),
                 'status' => $statusSistema,
-                'valor_total' => $pedWoo['total'],
+                        'valor_total' => $pedWoo['total'],
                 'frete' => $pedWoo['shipping_total'] ?? 0,
                 'desconto' => $pedWoo['discount_total'] ?? 0,
                 'observacoes' => "Pagamento: {$formaPagamentoTitulo}",
@@ -446,7 +446,7 @@ class WooCommerceService
             
             return ['sucesso' => true, 'novo' => $isNovo, 'erro' => null];
             
-        } catch (\Exception $e) {
+                } catch (\Exception $e) {
             $numPed = $pedWoo['number'] ?? $pedWoo['id'] ?? '?';
             $msgErro = "Pedido {$numPed}: " . $e->getMessage();
             \App\Models\LogSistema::error('WooCommerce', 'sincronizarPedidos', 

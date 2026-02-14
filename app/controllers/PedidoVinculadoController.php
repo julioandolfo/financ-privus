@@ -320,21 +320,19 @@ class PedidoVinculadoController extends Controller
      */
     public function recalcular(Request $request, Response $response)
     {
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        $logs = []; // Acumula logs para gravar no final
+        $logs = [];
         
         try {
-            // Buscar pedidos que possuem itens com custo zero/nulo
-            $sqlPedidos = "SELECT DISTINCT p.id, p.numero_pedido 
+            // Buscar pedidos que possuem itens com custo zero/nulo (busca direto sem filtro de empresa)
+            $sqlPedidos = "SELECT DISTINCT p.id, p.numero_pedido, p.empresa_id
                            FROM pedidos_vinculados p
                            INNER JOIN pedidos_itens pi ON pi.pedido_id = p.id
-                           WHERE p.empresa_id = :empresa_id
-                             AND (pi.custo_unitario IS NULL OR pi.custo_unitario <= 0 OR pi.custo_total IS NULL OR pi.custo_total <= 0)";
+                           WHERE (pi.custo_unitario IS NULL OR pi.custo_unitario <= 0 OR pi.custo_total IS NULL OR pi.custo_total <= 0)";
             $stmtPedidos = $this->db->prepare($sqlPedidos);
-            $stmtPedidos->execute(['empresa_id' => $empresaId]);
+            $stmtPedidos->execute();
             $pedidos = $stmtPedidos->fetchAll(\PDO::FETCH_ASSOC);
             
-            $logs[] = "=== RECALCULAR PEDIDOS === empresa_id: {$empresaId}, pedidos encontrados: " . count($pedidos);
+            $logs[] = "=== RECALCULAR PEDIDOS === pedidos encontrados: " . count($pedidos);
             
             $totalRecalculados = 0;
             $totalItensAtualizados = 0;
@@ -350,7 +348,8 @@ class PedidoVinculadoController extends Controller
                     $stmtItens->execute(['pedido_id' => $pedido['id']]);
                     $itensSemCusto = $stmtItens->fetchAll(\PDO::FETCH_ASSOC);
                     
-                    $logs[] = "Pedido #{$pedido['numero_pedido']} (ID:{$pedido['id']}): " . count($itensSemCusto) . " item(ns) sem custo";
+                    $empresaIdPedido = $pedido['empresa_id'];
+                    $logs[] = "Pedido #{$pedido['numero_pedido']} (ID:{$pedido['id']}, empresa:{$empresaIdPedido}): " . count($itensSemCusto) . " item(ns) sem custo";
                     
                     $atualizouAlgo = false;
                     
@@ -372,24 +371,24 @@ class PedidoVinculadoController extends Controller
                             $logs[] = "  [1] Pulado - produto_id NULL";
                         }
                         
-                        // 2. Se não tem produto ou custo é 0, busca por nome
+                        // 2. Se não tem produto ou custo é 0, busca por nome (usa empresa_id do pedido)
                         if (!$produto || floatval($produto['custo_unitario'] ?? 0) <= 0) {
                             $produtoEncontrado = null;
                             
                             // 2a. Nome exato
                             if (!empty($nomeProdutoItem)) {
                                 $stmtBusca = $this->db->prepare("SELECT * FROM produtos WHERE nome = :nome AND empresa_id = :emp AND ativo = 1 LIMIT 1");
-                                $stmtBusca->execute(['nome' => $nomeProdutoItem, 'emp' => $empresaId]);
+                                $stmtBusca->execute(['nome' => $nomeProdutoItem, 'emp' => $empresaIdPedido]);
                                 $produtoEncontrado = $stmtBusca->fetch(\PDO::FETCH_ASSOC);
                                 $logs[] = $produtoEncontrado 
                                     ? "  [2a] Nome exato: ID:{$produtoEncontrado['id']} custo=R\${$produtoEncontrado['custo_unitario']}" 
-                                    : "  [2a] Nome exato: NAO encontrado";
+                                    : "  [2a] Nome exato: NAO encontrado (empresa={$empresaIdPedido})";
                             }
                             
                             // 2b. Nome LIKE
                             if (!$produtoEncontrado && !empty($nomeProdutoItem)) {
                                 $stmtBusca2 = $this->db->prepare("SELECT * FROM produtos WHERE nome LIKE :nome AND empresa_id = :emp AND ativo = 1 LIMIT 1");
-                                $stmtBusca2->execute(['nome' => '%' . $nomeProdutoItem . '%', 'emp' => $empresaId]);
+                                $stmtBusca2->execute(['nome' => '%' . $nomeProdutoItem . '%', 'emp' => $empresaIdPedido]);
                                 $produtoEncontrado = $stmtBusca2->fetch(\PDO::FETCH_ASSOC);
                                 $logs[] = $produtoEncontrado 
                                     ? "  [2b] Nome LIKE: ID:{$produtoEncontrado['id']} custo=R\${$produtoEncontrado['custo_unitario']}" 
