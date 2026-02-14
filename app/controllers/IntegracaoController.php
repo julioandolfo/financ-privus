@@ -409,48 +409,90 @@ class IntegracaoController extends Controller
      */
     public function webhook(Request $request, Response $response, $integracaoId)
     {
-        $integracao = $this->integracaoModel->findById($integracaoId);
-        
-        if (!$integracao || $integracao['tipo'] !== IntegracaoConfig::TIPO_WOOCOMMERCE) {
-            return $response->json(['erro' => 'Integração inválida'], 404);
-        }
-        
-        $config = $this->woocommerceModel->findByIntegracaoId($integracaoId);
-        
-        if (!$config) {
-            return $response->json(['erro' => 'Configuração não encontrada'], 404);
-        }
+        // Log imediato para saber que o webhook foi chamado
+        \App\Models\LogSistema::info('WooCommerce', 'webhook_controller', 
+            "Webhook recebido para integração #{$integracaoId}",
+            ['method' => $_SERVER['REQUEST_METHOD'] ?? 'N/A', 'topic' => $_SERVER['HTTP_X_WC_WEBHOOK_TOPIC'] ?? 'N/A']);
         
         try {
-            // Verifica assinatura do webhook
-            $signature = $_SERVER['HTTP_X_WC_WEBHOOK_SIGNATURE'] ?? '';
-            $payload = file_get_contents('php://input');
+            $integracao = $this->integracaoModel->findById($integracaoId);
             
-            if ($config['webhook_secret']) {
+            if (!$integracao || $integracao['tipo'] !== IntegracaoConfig::TIPO_WOOCOMMERCE) {
+                \App\Models\LogSistema::error('WooCommerce', 'webhook_controller', 
+                    "Integração #{$integracaoId} inválida ou não é WooCommerce");
+                return $response->json(['erro' => 'Integração inválida'], 404);
+            }
+            
+            $config = $this->woocommerceModel->findByIntegracaoId($integracaoId);
+            
+            if (!$config) {
+                \App\Models\LogSistema::error('WooCommerce', 'webhook_controller', 
+                    "Config não encontrada para integração #{$integracaoId}");
+                return $response->json(['erro' => 'Configuração não encontrada'], 404);
+            }
+            
+            // Lê payload
+            $payload = file_get_contents('php://input');
+            $topic = $_SERVER['HTTP_X_WC_WEBHOOK_TOPIC'] ?? '';
+            
+            \App\Models\LogSistema::debug('WooCommerce', 'webhook_controller', 
+                "Topic: {$topic}, Payload size: " . strlen($payload) . " bytes");
+            
+            // Verifica assinatura do webhook (se configurada)
+            if (!empty($config['webhook_secret'])) {
+                $signature = $_SERVER['HTTP_X_WC_WEBHOOK_SIGNATURE'] ?? '';
                 $expectedSignature = base64_encode(hash_hmac('sha256', $payload, $config['webhook_secret'], true));
                 if ($signature !== $expectedSignature) {
+                    \App\Models\LogSistema::error('WooCommerce', 'webhook_controller', 
+                        "Assinatura inválida! Esperada: {$expectedSignature}, Recebida: {$signature}");
                     $this->logModel->create($integracaoId, IntegracaoLog::TIPO_ERRO, 'Webhook: Assinatura inválida');
                     return $response->json(['erro' => 'Assinatura inválida'], 401);
                 }
             }
             
-            // Processa webhook
+            // Decodifica payload
             $data = json_decode($payload, true);
-            $topic = $_SERVER['HTTP_X_WC_WEBHOOK_TOPIC'] ?? '';
             
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                \App\Models\LogSistema::error('WooCommerce', 'webhook_controller', 
+                    "Payload JSON inválido: " . json_last_error_msg(),
+                    ['payload_preview' => substr($payload, 0, 500)]);
+                return $response->json(['erro' => 'Payload JSON inválido'], 400);
+            }
+            
+            // Ignora pings do WooCommerce (webhook de teste)
+            if (empty($topic) || $topic === 'action.woocommerce_webhook_payload') {
+                \App\Models\LogSistema::info('WooCommerce', 'webhook_controller', 
+                    "Ping/teste do WooCommerce recebido - OK");
+                return $response->json(['sucesso' => true, 'mensagem' => 'Ping recebido']);
+            }
+            
+            // Processa webhook
             $service = new WooCommerceService();
             $resultado = $service->processarWebhook($integracaoId, $topic, $data, $integracao['empresa_id']);
             
             if ($resultado['sucesso']) {
-                $this->logModel->create($integracaoId, IntegracaoLog::TIPO_SUCESSO, "Webhook processado: {$topic}");
+                $this->logModel->create($integracaoId, IntegracaoLog::TIPO_SUCESSO, 
+                    "Webhook ({$topic}): " . ($resultado['mensagem'] ?? 'OK'));
                 return $response->json(['sucesso' => true]);
             } else {
-                $this->logModel->create($integracaoId, IntegracaoLog::TIPO_ERRO, "Webhook falhou: {$resultado['erro']}");
+                $this->logModel->create($integracaoId, IntegracaoLog::TIPO_ERRO, 
+                    "Webhook ({$topic}) falhou: " . ($resultado['erro'] ?? 'Erro desconhecido'));
                 return $response->json(['erro' => $resultado['erro']], 400);
             }
             
-        } catch (\Exception $e) {
-            $this->logModel->create($integracaoId, IntegracaoLog::TIPO_ERRO, 'Erro no webhook: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            \App\Models\LogSistema::error('WooCommerce', 'webhook_controller', 
+                "ERRO FATAL no webhook: " . $e->getMessage(),
+                ['trace' => $e->getTraceAsString()]);
+            
+            try {
+                $this->logModel->create($integracaoId, IntegracaoLog::TIPO_ERRO, 
+                    'Erro fatal no webhook: ' . $e->getMessage());
+            } catch (\Throwable $e2) {
+                // Não pode nem logar
+            }
+            
             return $response->json(['erro' => $e->getMessage()], 500);
         }
     }

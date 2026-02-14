@@ -297,7 +297,7 @@ class WooCommerceService
                     
                     if (!empty($lineItems)) {
                         try {
-                            $qtdProcessados = $this->processarItensDoPedido($pedidoId, $lineItems, $empresaId, $numeroPedido);
+                            $qtdProcessados = $this->processarItensDoPedido($pedidoId, $lineItems, $empresaId, $numeroPedido, $config);
                             \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
                                 "Pedido #{$numeroPedido}: {$qtdProcessados} itens processados com sucesso");
                         } catch (\Throwable $eItens) {
@@ -362,15 +362,13 @@ class WooCommerceService
      * 1. Busca produto no sistema por SKU ou cria novo
      * 2. Cria o item do pedido vinculado ao produto
      */
-    private function processarItensDoPedido($pedidoId, $lineItems, $empresaId, $numeroPedido)
+    private function processarItensDoPedido($pedidoId, $lineItems, $empresaId, $numeroPedido, $config = null)
     {
         \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
             "=== INICIO processarItensDoPedido #{$numeroPedido} === pedido_id={$pedidoId}, itens=" . count($lineItems));
         
         // Verifica se o model de itens está disponível
         if (!$this->pedidoItemModel) {
-            \App\Models\LogSistema::error('WooCommerce', 'processarItens', 
-                "pedidoItemModel é NULL! Tentando instanciar...");
             try {
                 $this->pedidoItemModel = new \App\Models\PedidoItem();
             } catch (\Throwable $e) {
@@ -380,7 +378,7 @@ class WooCommerceService
             }
         }
         
-        // Primeiro, remove itens antigos deste pedido (para atualização)
+        // Remove itens antigos deste pedido (para atualização)
         try {
             $itensExistentes = $this->pedidoItemModel->findByPedido($pedidoId);
             if (!empty($itensExistentes)) {
@@ -394,6 +392,7 @@ class WooCommerceService
         }
         
         $totalItens = 0;
+        $custoTotalPedido = 0;
         
         foreach ($lineItems as $item) {
             try {
@@ -406,6 +405,39 @@ class WooCommerceService
                 $variacaoId = $item['variation_id'] ?? null;
                 
                 // =============================================
+                // BUSCAR cod_fornecedor E CUSTO
+                // =============================================
+                $codFornecedor = $this->extrairCodFornecedor($item);
+                
+                // Se não encontrou no line_item, tenta buscar no produto WooCommerce via API
+                if (empty($codFornecedor) && $produtoWooId && $config) {
+                    // Busca no produto principal
+                    $codFornecedor = $this->buscarCodFornecedorDoProdutoWoo($produtoWooId, $config);
+                    
+                    // Se é variação e não encontrou, tenta na variação
+                    if (empty($codFornecedor) && $variacaoId) {
+                        $codFornecedor = $this->buscarCodFornecedorDoProdutoWoo($variacaoId, $config);
+                    }
+                }
+                
+                // Busca custo na tabela custo_produtos_personizi
+                $custoUnitario = 0;
+                if (!empty($codFornecedor)) {
+                    $custoEncontrado = $this->buscarCustoPorCodFornecedor($codFornecedor);
+                    if ($custoEncontrado !== null) {
+                        $custoUnitario = $custoEncontrado;
+                    }
+                    \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
+                        "Pedido #{$numeroPedido}: '{$nomeProduto}' cod_fornecedor='{$codFornecedor}' custo=R\${$custoUnitario}");
+                } else {
+                    \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                        "Pedido #{$numeroPedido}: '{$nomeProduto}' sem cod_fornecedor, custo=R\$0");
+                }
+                
+                $custoTotal = round($custoUnitario * $quantidade, 2);
+                $custoTotalPedido += $custoTotal;
+                
+                // =============================================
                 // BUSCA OU CRIA O PRODUTO NO SISTEMA
                 // =============================================
                 $produtoId = null;
@@ -415,22 +447,41 @@ class WooCommerceService
                     $produtoExistente = $this->produtoModel->findBySku($sku, $empresaId);
                     if ($produtoExistente) {
                         $produtoId = $produtoExistente['id'];
-                        \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
-                            "Pedido #{$numeroPedido}: produto encontrado por SKU '{$sku}' -> ID #{$produtoId}");
+                        
+                        // Atualiza custo do produto se encontrou e era zero
+                        if ($custoUnitario > 0 && (empty($produtoExistente['custo_unitario']) || $produtoExistente['custo_unitario'] == 0)) {
+                            try {
+                                $db = \App\Core\Database::getInstance()->getConnection();
+                                $sqlUp = "UPDATE produtos SET custo_unitario = :custo WHERE id = :id";
+                                $stmtUp = $db->prepare($sqlUp);
+                                $stmtUp->execute(['custo' => $custoUnitario, 'id' => $produtoId]);
+                                \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
+                                    "Produto #{$produtoId}: custo atualizado para R\${$custoUnitario} (cod_fornecedor: {$codFornecedor})");
+                            } catch (\Throwable $e) {
+                                // Não é crítico
+                            }
+                        }
                     }
                 }
                 
                 // 2. Busca por nome se não encontrou por SKU
                 if (!$produtoId && !empty($nomeProduto)) {
                     $db = \App\Core\Database::getInstance()->getConnection();
-                    $sql = "SELECT id FROM produtos WHERE nome = :nome AND empresa_id = :empresa_id AND ativo = 1 LIMIT 1";
+                    $sql = "SELECT id, custo_unitario FROM produtos WHERE nome = :nome AND empresa_id = :empresa_id AND ativo = 1 LIMIT 1";
                     $stmt = $db->prepare($sql);
                     $stmt->execute(['nome' => $nomeProduto, 'empresa_id' => $empresaId]);
-                    $produtoEncontrado = $stmt->fetchColumn();
+                    $produtoEncontrado = $stmt->fetch(\PDO::FETCH_ASSOC);
                     if ($produtoEncontrado) {
-                        $produtoId = $produtoEncontrado;
-                        \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
-                            "Pedido #{$numeroPedido}: produto encontrado por nome '{$nomeProduto}' -> ID #{$produtoId}");
+                        $produtoId = $produtoEncontrado['id'];
+                        
+                        // Atualiza custo se necessário
+                        if ($custoUnitario > 0 && (empty($produtoEncontrado['custo_unitario']) || $produtoEncontrado['custo_unitario'] == 0)) {
+                            try {
+                                $sqlUp = "UPDATE produtos SET custo_unitario = :custo WHERE id = :id";
+                                $stmtUp = $db->prepare($sqlUp);
+                                $stmtUp->execute(['custo' => $custoUnitario, 'id' => $produtoId]);
+                            } catch (\Throwable $e) { }
+                        }
                     }
                 }
                 
@@ -446,7 +497,7 @@ class WooCommerceService
                         'codigo_barras' => null,
                         'nome' => $nomeProduto,
                         'descricao' => null,
-                        'custo_unitario' => 0,
+                        'custo_unitario' => $custoUnitario,
                         'preco_venda' => $precoUnitario,
                         'unidade_medida' => 'UN',
                         'estoque' => 0,
@@ -457,8 +508,7 @@ class WooCommerceService
                     
                     if ($produtoId) {
                         \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
-                            "Pedido #{$numeroPedido}: produto criado '{$nomeProduto}' (SKU: {$sku}) -> ID #{$produtoId}",
-                            ['preco' => $precoUnitario, 'woo_product_id' => $produtoWooId]);
+                            "Pedido #{$numeroPedido}: produto criado '{$nomeProduto}' (SKU: {$sku}, custo: R\${$custoUnitario}) -> ID #{$produtoId}");
                     } else {
                         \App\Models\LogSistema::warning('WooCommerce', 'processarItens', 
                             "Pedido #{$numeroPedido}: falha ao criar produto '{$nomeProduto}'");
@@ -481,8 +531,8 @@ class WooCommerceService
                     'quantidade' => $quantidade,
                     'valor_unitario' => $precoUnitario,
                     'valor_total' => $precoTotal,
-                    'custo_unitario' => 0,
-                    'custo_total' => 0,
+                    'custo_unitario' => $custoUnitario,
+                    'custo_total' => $custoTotal,
                 ];
                 
                 $itemId = $this->pedidoItemModel->create($dadosItem);
@@ -490,18 +540,33 @@ class WooCommerceService
                 if ($itemId) {
                     $totalItens++;
                     \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
-                        "Pedido #{$numeroPedido}: item criado '{$nomeProduto}' x{$quantidade} = R\${$precoTotal} (Item ID: #{$itemId}, Produto ID: #{$produtoId})");
+                        "Pedido #{$numeroPedido}: item '{$nomeProduto}' x{$quantidade} venda=R\${$precoTotal} custo=R\${$custoTotal} (cod_fornecedor: " . ($codFornecedor ?: 'N/A') . ")");
                 }
                 
             } catch (\Throwable $e) {
                 \App\Models\LogSistema::error('WooCommerce', 'processarItens', 
                     "Pedido #{$numeroPedido}: erro ao processar item '{$nomeProduto}': " . $e->getMessage(),
-                    ['trace' => $e->getTraceAsString(), 'item_data' => json_encode($item)]);
+                    ['trace' => $e->getTraceAsString()]);
+            }
+        }
+        
+        // Atualiza custo total do pedido
+        if ($custoTotalPedido > 0) {
+            try {
+                $db = \App\Core\Database::getInstance()->getConnection();
+                $sql = "UPDATE pedidos_vinculados SET valor_custo_total = :custo WHERE id = :id";
+                $stmt = $db->prepare($sql);
+                $stmt->execute(['custo' => $custoTotalPedido, 'id' => $pedidoId]);
+                \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
+                    "Pedido #{$numeroPedido}: custo total atualizado para R\${$custoTotalPedido}");
+            } catch (\Throwable $e) {
+                \App\Models\LogSistema::warning('WooCommerce', 'processarItens', 
+                    "Pedido #{$numeroPedido}: erro ao atualizar custo total: " . $e->getMessage());
             }
         }
         
         \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
-            "Pedido #{$numeroPedido}: {$totalItens}/" . count($lineItems) . " itens processados com sucesso");
+            "Pedido #{$numeroPedido}: {$totalItens}/" . count($lineItems) . " itens processados, custo total: R\${$custoTotalPedido}");
         
         return $totalItens;
     }
@@ -734,6 +799,114 @@ class WooCommerceService
             \App\Models\LogSistema::error('WooCommerce', 'baixaAutomatica', 
                 "Erro ao dar baixa automática pedido #{$pedWoo['number']}: " . $e->getMessage());
         }
+    }
+    
+    /**
+     * Extrai cod_fornecedor de um line_item do WooCommerce
+     * 
+     * O campo personalizado pode vir como:
+     * - meta_data do line_item (campo personalizado do produto)
+     * - meta_data do pedido
+     */
+    private function extrairCodFornecedor($item)
+    {
+        // 1. Busca nos meta_data do line_item
+        if (!empty($item['meta_data']) && is_array($item['meta_data'])) {
+            foreach ($item['meta_data'] as $meta) {
+                $key = $meta['key'] ?? '';
+                $value = $meta['value'] ?? '';
+                
+                if (in_array($key, ['cod_fornecedor', '_cod_fornecedor', 'codigo_fornecedor', '_codigo_fornecedor'])) {
+                    if (!empty($value)) {
+                        return $value;
+                    }
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Busca custo de produto na tabela custo_produtos_personizi pelo cod_fornecedor
+     *
+     * @param string $codFornecedor Código do fornecedor
+     * @return float|null Custo do produto ou null se não encontrado
+     */
+    private function buscarCustoPorCodFornecedor($codFornecedor)
+    {
+        if (empty($codFornecedor)) {
+            return null;
+        }
+        
+        try {
+            $db = \App\Core\Database::getInstance()->getConnection();
+            $sql = "SELECT preco FROM custo_produtos_personizi WHERE cod_fornecedor = :cod LIMIT 1";
+            $stmt = $db->prepare($sql);
+            $stmt->execute(['cod' => $codFornecedor]);
+            $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            if ($result && isset($result['preco'])) {
+                \App\Models\LogSistema::debug('WooCommerce', 'buscarCusto', 
+                    "Custo encontrado para cod_fornecedor '{$codFornecedor}': R\$ {$result['preco']}");
+                return floatval($result['preco']);
+            }
+            
+            \App\Models\LogSistema::debug('WooCommerce', 'buscarCusto', 
+                "Custo NÃO encontrado para cod_fornecedor '{$codFornecedor}'");
+            return null;
+        } catch (\Throwable $e) {
+            \App\Models\LogSistema::warning('WooCommerce', 'buscarCusto', 
+                "Erro ao buscar custo por cod_fornecedor '{$codFornecedor}': " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Busca cod_fornecedor diretamente do produto no WooCommerce via API
+     * Usado quando o line_item não contém o meta_data do produto
+     */
+    private function buscarCodFornecedorDoProdutoWoo($produtoWooId, $config)
+    {
+        if (empty($produtoWooId) || empty($config)) {
+            return null;
+        }
+        
+        try {
+            $url = rtrim($config['url_site'], '/') . '/wp-json/wc/v3/products/' . $produtoWooId;
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_USERPWD, $config['consumer_key'] . ':' . $config['consumer_secret']);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($httpCode === 200) {
+                $produto = json_decode($response, true);
+                if ($produto && !empty($produto['meta_data'])) {
+                    foreach ($produto['meta_data'] as $meta) {
+                        $key = $meta['key'] ?? '';
+                        if (in_array($key, ['cod_fornecedor', '_cod_fornecedor', 'codigo_fornecedor', '_codigo_fornecedor'])) {
+                            if (!empty($meta['value'])) {
+                                \App\Models\LogSistema::debug('WooCommerce', 'buscarCodFornecedor', 
+                                    "cod_fornecedor encontrado no produto WOO #{$produtoWooId}: {$meta['value']}");
+                                return $meta['value'];
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            \App\Models\LogSistema::warning('WooCommerce', 'buscarCodFornecedor', 
+                "Erro ao buscar produto WOO #{$produtoWooId}: " . $e->getMessage());
+        }
+        
+        return null;
     }
     
     /**
@@ -1295,57 +1468,111 @@ class WooCommerceService
      */
     public function processarWebhook($integracaoId, $topic, $data, $empresaId)
     {
+        \App\Models\LogSistema::info('WooCommerce', 'webhook', 
+            "=== WEBHOOK RECEBIDO === topic: {$topic}, integracao: {$integracaoId}",
+            ['empresa_id' => $empresaId, 'data_id' => $data['id'] ?? 'N/A']);
+        
         try {
+            // Carrega config para ter acesso às chaves da API (necessário para buscar cod_fornecedor)
+            $config = $this->woocommerceModel->findByIntegracaoId($integracaoId);
+            
             switch ($topic) {
                 case 'product.created':
                 case 'product.updated':
-                    return $this->processarWebhookProduto($data, $empresaId);
+                    return $this->processarWebhookProduto($data, $empresaId, $config);
                     
                 case 'product.deleted':
                     return $this->processarWebhookProdutoDeletado($data, $empresaId);
                     
                 case 'order.created':
                 case 'order.updated':
-                    return $this->processarWebhookPedido($data, $empresaId);
+                    return $this->processarWebhookPedido($data, $empresaId, $integracaoId, $config);
                     
                 case 'order.deleted':
                     return $this->processarWebhookPedidoDeletado($data, $empresaId);
                     
                 default:
+                    \App\Models\LogSistema::info('WooCommerce', 'webhook', 
+                        "Evento não tratado: {$topic}");
                     return ['sucesso' => true, 'mensagem' => 'Evento não tratado'];
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \App\Models\LogSistema::error('WooCommerce', 'webhook', 
+                "Erro fatal no webhook ({$topic}): " . $e->getMessage(),
+                ['trace' => $e->getTraceAsString()]);
             return ['sucesso' => false, 'erro' => $e->getMessage()];
         }
     }
     
     /**
-     * Processa webhook de produto
+     * Processa webhook de produto (created/updated)
      */
-    private function processarWebhookProduto($prodWoo, $empresaId)
+    private function processarWebhookProduto($prodWoo, $empresaId, $config = null)
     {
         try {
-            // Busca produto por SKU
-            $produtoExistente = null; // Implementar busca por SKU
+            $nome = $prodWoo['name'] ?? 'Produto sem nome';
+            $sku = $prodWoo['sku'] ?? '';
+            $produtoWooId = $prodWoo['id'] ?? null;
+            
+            \App\Models\LogSistema::info('WooCommerce', 'webhookProduto', 
+                "Processando produto: '{$nome}' (SKU: {$sku}, WOO ID: {$produtoWooId})");
+            
+            // Busca cod_fornecedor nos meta_data do produto
+            $codFornecedor = null;
+            if (!empty($prodWoo['meta_data'])) {
+                foreach ($prodWoo['meta_data'] as $meta) {
+                    if (in_array($meta['key'] ?? '', ['cod_fornecedor', '_cod_fornecedor', 'codigo_fornecedor', '_codigo_fornecedor'])) {
+                        $codFornecedor = $meta['value'] ?? null;
+                        break;
+                    }
+                }
+            }
+            
+            // Busca custo pelo cod_fornecedor
+            $custoUnitario = 0;
+            if (!empty($codFornecedor)) {
+                $custoEncontrado = $this->buscarCustoPorCodFornecedor($codFornecedor);
+                if ($custoEncontrado !== null) {
+                    $custoUnitario = $custoEncontrado;
+                }
+            }
+            
+            // Busca produto existente por SKU
+            $produtoExistente = null;
+            if (!empty($sku)) {
+                $produtoExistente = $this->produtoModel->findBySku($sku, $empresaId);
+            }
             
             $dados = [
                 'empresa_id' => $empresaId,
-                'nome' => $prodWoo['name'],
-                'descricao' => $prodWoo['description'] ?? null,
-                'sku' => $prodWoo['sku'] ?? null,
-                'preco_venda' => $prodWoo['price'] ?? 0,
-                'estoque' => $prodWoo['stock_quantity'] ?? 0,
-                'ativo' => $prodWoo['status'] === 'publish' ? 1 : 0
+                'categoria_id' => $this->getCategoriaVendaId($empresaId),
+                'codigo' => $sku ?: 'WOO-' . ($produtoWooId ?: uniqid()),
+                'sku' => $sku ?: null,
+                'codigo_barras' => null,
+                'nome' => $nome,
+                'descricao' => strip_tags($prodWoo['description'] ?? ''),
+                'custo_unitario' => $custoUnitario,
+                'preco_venda' => floatval($prodWoo['price'] ?? 0),
+                'unidade_medida' => 'UN',
+                'estoque' => intval($prodWoo['stock_quantity'] ?? 0),
+                'estoque_minimo' => 0,
             ];
             
             if ($produtoExistente) {
                 $this->produtoModel->update($produtoExistente['id'], $dados);
-                return ['sucesso' => true, 'mensagem' => 'Produto atualizado'];
+                \App\Models\LogSistema::info('WooCommerce', 'webhookProduto', 
+                    "Produto atualizado: #{$produtoExistente['id']} - {$nome} (custo: R\${$custoUnitario})");
+                return ['sucesso' => true, 'mensagem' => "Produto #{$produtoExistente['id']} atualizado"];
             } else {
-                $this->produtoModel->create($dados);
-                return ['sucesso' => true, 'mensagem' => 'Produto criado'];
+                $novoId = $this->produtoModel->create($dados);
+                \App\Models\LogSistema::info('WooCommerce', 'webhookProduto', 
+                    "Produto criado: #{$novoId} - {$nome} (custo: R\${$custoUnitario})");
+                return ['sucesso' => true, 'mensagem' => "Produto #{$novoId} criado"];
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \App\Models\LogSistema::error('WooCommerce', 'webhookProduto', 
+                "Erro ao processar produto: " . $e->getMessage(),
+                ['trace' => $e->getTraceAsString(), 'produto' => $prodWoo['name'] ?? 'N/A']);
             return ['sucesso' => false, 'erro' => $e->getMessage()];
         }
     }
@@ -1356,38 +1583,170 @@ class WooCommerceService
     private function processarWebhookProdutoDeletado($prodWoo, $empresaId)
     {
         try {
-            // Implementar exclusão/desativação
-            return ['sucesso' => true, 'mensagem' => 'Produto desativado'];
-        } catch (\Exception $e) {
+            $sku = $prodWoo['sku'] ?? '';
+            $produtoWooId = $prodWoo['id'] ?? null;
+            
+            \App\Models\LogSistema::info('WooCommerce', 'webhookProdutoDeletado', 
+                "Desativando produto WOO #{$produtoWooId} (SKU: {$sku})");
+            
+            if (!empty($sku)) {
+                $produtoExistente = $this->produtoModel->findBySku($sku, $empresaId);
+                if ($produtoExistente) {
+                    $db = \App\Core\Database::getInstance()->getConnection();
+                    $sql = "UPDATE produtos SET ativo = 0 WHERE id = :id";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute(['id' => $produtoExistente['id']]);
+                    
+                    \App\Models\LogSistema::info('WooCommerce', 'webhookProdutoDeletado', 
+                        "Produto #{$produtoExistente['id']} desativado");
+                    return ['sucesso' => true, 'mensagem' => "Produto #{$produtoExistente['id']} desativado"];
+                }
+            }
+            
+            return ['sucesso' => true, 'mensagem' => 'Produto não encontrado no sistema'];
+        } catch (\Throwable $e) {
+            \App\Models\LogSistema::error('WooCommerce', 'webhookProdutoDeletado', 
+                "Erro: " . $e->getMessage());
             return ['sucesso' => false, 'erro' => $e->getMessage()];
         }
     }
     
     /**
-     * Processa webhook de pedido
+     * Processa webhook de pedido (created/updated)
+     * Fluxo completo: cliente + produtos + itens + conta a receber
      */
-    private function processarWebhookPedido($pedWoo, $empresaId)
+    private function processarWebhookPedido($pedWoo, $empresaId, $integracaoId = null, $config = null)
     {
         try {
-            $clienteId = $this->buscarOuCriarCliente($pedWoo['billing'], $empresaId);
+            $numeroPedido = $pedWoo['number'] ?? $pedWoo['id'] ?? '?';
+            $statusWoo = $pedWoo['status'] ?? 'pending';
             
+            \App\Models\LogSistema::info('WooCommerce', 'webhookPedido', 
+                "=== Processando pedido #{$numeroPedido} via Webhook ===",
+                [
+                    'woo_id' => $pedWoo['id'] ?? 'N/A',
+                    'status' => $statusWoo,
+                    'total' => $pedWoo['total'] ?? 0,
+                    'payment_method' => $pedWoo['payment_method'] ?? 'N/A',
+                    'cliente' => ($pedWoo['billing']['first_name'] ?? '') . ' ' . ($pedWoo['billing']['last_name'] ?? ''),
+                    'itens' => count($pedWoo['line_items'] ?? [])
+                ]);
+            
+            // Carrega configurações
+            $acoesFormasPagamento = [];
+            $mapeamentoStatus = [];
+            
+            if ($config) {
+                $acoesFormasPagamento = !empty($config['acoes_formas_pagamento']) 
+                    ? json_decode($config['acoes_formas_pagamento'], true) : [];
+                $mapeamentoStatus = !empty($config['mapeamento_status']) 
+                    ? json_decode($config['mapeamento_status'], true) : [];
+            }
+            
+            $statusPagamentoConfirmado = ['em_processamento', 'concluido'];
+            
+            // PASSO 1: CLIENTE
+            $metaData = $pedWoo['meta_data'] ?? [];
+            $clienteId = $this->buscarOuCriarCliente($pedWoo['billing'] ?? [], $empresaId, $metaData);
+            
+            \App\Models\LogSistema::info('WooCommerce', 'webhookPedido', 
+                "Pedido #{$numeroPedido}: cliente_id={$clienteId}");
+            
+            // PASSO 2: MAPEAR STATUS
+            $statusSistema = $mapeamentoStatus['wc-' . $statusWoo] 
+                ?? $mapeamentoStatus[$statusWoo] 
+                ?? $this->mapearStatus($statusWoo);
+            
+            // PASSO 3: FORMA DE PAGAMENTO
+            $formaPagamentoWoo = $pedWoo['payment_method'] ?? '';
+            $formaPagamentoTitulo = $pedWoo['payment_method_title'] ?? $formaPagamentoWoo;
+            $acaoFormaPgto = $acoesFormasPagamento[$formaPagamentoWoo] ?? [];
+            
+            // PASSO 4: DADOS DO PEDIDO
             $dados = [
                 'empresa_id' => $empresaId,
                 'cliente_id' => $clienteId,
-                'numero_pedido' => $pedWoo['number'],
-                'data_pedido' => $pedWoo['date_created'],
-                'status' => $this->mapearStatus($pedWoo['status']),
-                'valor_total' => $pedWoo['total'],
-                'origem' => 'woocommerce'
+                'origem' => 'woocommerce',
+                'origem_id' => $pedWoo['id'] ?? null,
+                'numero_pedido' => $numeroPedido,
+                'data_pedido' => date('Y-m-d H:i:s', strtotime($pedWoo['date_created'] ?? 'now')),
+                'status' => $statusSistema,
+                'valor_total' => $pedWoo['total'] ?? 0,
+                'frete' => $pedWoo['shipping_total'] ?? 0,
+                'desconto' => $pedWoo['discount_total'] ?? 0,
+                'observacoes' => "Pagamento: {$formaPagamentoTitulo} (via Webhook)",
+                'dados_origem' => $pedWoo
             ];
             
-            // Busca pedido existente
-            // Implementar busca por numero_pedido
+            // PASSO 5: CRIAR OU ATUALIZAR PEDIDO
+            $pedidoExistente = $this->buscarPedidoExistente($numeroPedido, $empresaId, $pedWoo['id'] ?? null);
             
-            $this->pedidoModel->create($dados);
-            return ['sucesso' => true, 'mensagem' => 'Pedido criado'];
-        } catch (\Exception $e) {
-            return ['sucesso' => false, 'erro' => $e->getMessage()];
+            if ($pedidoExistente) {
+                $this->pedidoModel->update($pedidoExistente['id'], $dados);
+                $pedidoId = $pedidoExistente['id'];
+                
+                \App\Models\LogSistema::info('WooCommerce', 'webhookPedido', 
+                    "Pedido #{$numeroPedido}: atualizado (ID: {$pedidoId})",
+                    ['status_anterior' => $pedidoExistente['status'], 'status_novo' => $statusSistema]);
+                
+                // Se status mudou, verifica baixa automática
+                if ($pedidoExistente['status'] !== $statusSistema && empty($acaoFormaPgto['nao_criar_receita'])) {
+                    $contaReceberModel = new \App\Models\ContaReceber();
+                    $this->verificarBaixaAutomatica(
+                        $pedidoId, $statusSistema, $acaoFormaPgto,
+                        $statusPagamentoConfirmado, $pedWoo, $empresaId, $contaReceberModel
+                    );
+                }
+            } else {
+                $pedidoId = $this->pedidoModel->create($dados);
+                
+                if (!$pedidoId) {
+                    throw new \Exception("Falha ao criar pedido no banco");
+                }
+                
+                \App\Models\LogSistema::info('WooCommerce', 'webhookPedido', 
+                    "Pedido #{$numeroPedido}: criado (ID: {$pedidoId})");
+            }
+            
+            // PASSO 6: PROCESSAR ITENS/PRODUTOS
+            $lineItems = $pedWoo['line_items'] ?? [];
+            if (!empty($lineItems)) {
+                try {
+                    $qtdItens = $this->processarItensDoPedido($pedidoId, $lineItems, $empresaId, $numeroPedido, $config);
+                    \App\Models\LogSistema::info('WooCommerce', 'webhookPedido', 
+                        "Pedido #{$numeroPedido}: {$qtdItens} itens processados");
+                } catch (\Throwable $eItens) {
+                    \App\Models\LogSistema::error('WooCommerce', 'webhookPedido', 
+                        "Pedido #{$numeroPedido}: erro nos itens: " . $eItens->getMessage());
+                }
+            }
+            
+            // PASSO 7: CONTA A RECEBER (apenas para pedidos novos)
+            if (!$pedidoExistente) {
+                if (!empty($acaoFormaPgto['nao_criar_receita'])) {
+                    \App\Models\LogSistema::info('WooCommerce', 'webhookPedido', 
+                        "Pedido #{$numeroPedido}: receita NÃO criada ('{$formaPagamentoTitulo}' = não criar receita)");
+                } else {
+                    $contaReceberModel = new \App\Models\ContaReceber();
+                    $this->criarContaReceberDoPedido(
+                        $pedidoId, $pedWoo, $empresaId, $clienteId,
+                        $statusSistema, $acaoFormaPgto, $statusPagamentoConfirmado, $contaReceberModel
+                    );
+                }
+            }
+            
+            \App\Models\LogSistema::info('WooCommerce', 'webhookPedido', 
+                "Pedido #{$numeroPedido}: webhook processado com sucesso!");
+            
+            $acao = $pedidoExistente ? 'atualizado' : 'criado';
+            return ['sucesso' => true, 'mensagem' => "Pedido #{$numeroPedido} {$acao} (ID: {$pedidoId})"];
+            
+        } catch (\Throwable $e) {
+            $numPed = $pedWoo['number'] ?? $pedWoo['id'] ?? '?';
+            \App\Models\LogSistema::error('WooCommerce', 'webhookPedido', 
+                "ERRO no pedido #{$numPed}: " . $e->getMessage(),
+                ['trace' => $e->getTraceAsString()]);
+            return ['sucesso' => false, 'erro' => "Pedido #{$numPed}: " . $e->getMessage()];
         }
     }
     
@@ -1397,9 +1756,29 @@ class WooCommerceService
     private function processarWebhookPedidoDeletado($pedWoo, $empresaId)
     {
         try {
-            // Implementar exclusão/desativação
-            return ['sucesso' => true, 'mensagem' => 'Pedido removido'];
-        } catch (\Exception $e) {
+            $numeroPedido = $pedWoo['number'] ?? $pedWoo['id'] ?? '?';
+            
+            \App\Models\LogSistema::info('WooCommerce', 'webhookPedidoDeletado', 
+                "Pedido #{$numeroPedido}: solicitação de exclusão via webhook");
+            
+            $pedidoExistente = $this->buscarPedidoExistente($numeroPedido, $empresaId, $pedWoo['id'] ?? null);
+            
+            if ($pedidoExistente) {
+                // Atualiza status para cancelado
+                $db = \App\Core\Database::getInstance()->getConnection();
+                $sql = "UPDATE pedidos_vinculados SET status = 'cancelado' WHERE id = :id";
+                $stmt = $db->prepare($sql);
+                $stmt->execute(['id' => $pedidoExistente['id']]);
+                
+                \App\Models\LogSistema::info('WooCommerce', 'webhookPedidoDeletado', 
+                    "Pedido #{$numeroPedido} (ID: {$pedidoExistente['id']}) marcado como cancelado");
+                return ['sucesso' => true, 'mensagem' => "Pedido #{$numeroPedido} cancelado"];
+            }
+            
+            return ['sucesso' => true, 'mensagem' => 'Pedido não encontrado no sistema'];
+        } catch (\Throwable $e) {
+            \App\Models\LogSistema::error('WooCommerce', 'webhookPedidoDeletado', 
+                "Erro: " . $e->getMessage());
             return ['sucesso' => false, 'erro' => $e->getMessage()];
         }
     }
