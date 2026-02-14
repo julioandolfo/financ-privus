@@ -871,8 +871,54 @@ class WooCommerceService
      * @param string $codFornecedor Código do fornecedor
      * @return float|null Custo do produto ou null se não encontrado
      */
+    
+    /**
+     * Limpa prefixos de fornecedor do cod_fornecedor
+     * Remove textos como XBZ, SPOT, ASIA que são identificadores do fornecedor
+     * e não fazem parte do código real do produto
+     * 
+     * Ex: "XBZ08203" -> "08203", "SPOT-12345" -> "12345", "ASIA_99887" -> "99887"
+     */
+    private function limparCodFornecedor($cod)
+    {
+        if (empty($cod)) return $cod;
+        
+        $original = $cod;
+        
+        // Prefixos a remover (case insensitive)
+        $prefixos = ['XBZ', 'SPOT', 'ASIA'];
+        
+        $codUpper = strtoupper(trim($cod));
+        
+        foreach ($prefixos as $prefixo) {
+            if (strpos($codUpper, $prefixo) === 0) {
+                // Remove o prefixo
+                $cod = substr($cod, strlen($prefixo));
+                // Remove separadores no início (-, _, espaço)
+                $cod = ltrim($cod, '-_ ');
+                break;
+            }
+        }
+        
+        $cod = trim($cod);
+        
+        if ($cod !== $original) {
+            \App\Models\LogSistema::debug('WooCommerce', 'limparCodFornecedor', 
+                "Código limpo: '{$original}' -> '{$cod}'");
+        }
+        
+        return $cod;
+    }
+    
     private function buscarCustoPorCodFornecedor($codFornecedor)
     {
+        if (empty($codFornecedor)) {
+            return null;
+        }
+        
+        // Limpa prefixos de fornecedor conhecidos (XBZ, SPOT, ASIA)
+        $codFornecedor = $this->limparCodFornecedor($codFornecedor);
+        
         if (empty($codFornecedor)) {
             return null;
         }
