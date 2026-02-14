@@ -514,10 +514,18 @@ class WooCommerceService
                 $custoUnitario = 0;
                 $custoOrigem = 'nenhum';
                 $itemMetaData = $item['meta_data'] ?? [];
+                $campoCusto = $config['campo_custo_produto'] ?? null;
+                
+                \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                    "Pedido #{$numeroPedido}: '{$nomeProduto}' -> iniciando busca de custo (WOO ID: {$produtoWooId}, campo_custo_config: " . ($campoCusto ?: 'NÃO CONFIGURADO') . ", meta_data no item: " . count($itemMetaData) . ")");
                 
                 // Prioridade 1: _supplier_cost_from_acf (meta interno fixo)
+                \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                    "Pedido #{$numeroPedido}: [1/3] Tentando _supplier_cost_from_acf no line_item...");
                 $custoSupplier = $this->buscarCustoPorCampoPersonalizado($itemMetaData, '_supplier_cost_from_acf');
                 if ($custoSupplier === null && $produtoWooId && $config) {
+                    \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                        "Pedido #{$numeroPedido}: [1/3] Não encontrado no line_item, buscando via API produto #{$produtoWooId}...");
                     $custoSupplier = $this->buscarCustoProdutoWooViaApi($produtoWooId, $config, '_supplier_cost_from_acf');
                 }
                 if ($custoSupplier !== null && $custoSupplier > 0) {
@@ -525,15 +533,21 @@ class WooCommerceService
                     $custoOrigem = '_supplier_cost_from_acf';
                     \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
                         "Pedido #{$numeroPedido}: '{$nomeProduto}' custo=R\${$custoUnitario} (via _supplier_cost_from_acf)");
+                } else {
+                    \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                        "Pedido #{$numeroPedido}: [1/3] _supplier_cost_from_acf: NÃO encontrado");
                 }
                 
                 // Prioridade 2: Campo personalizado configurado na integração
                 if ($custoUnitario == 0) {
-                    $campoCusto = $config['campo_custo_produto'] ?? null;
                     if (!empty($campoCusto)) {
+                        \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                            "Pedido #{$numeroPedido}: [2/3] Tentando campo personalizado '{$campoCusto}' no line_item...");
                         $custoCustom = $this->buscarCustoPorCampoPersonalizado($itemMetaData, $campoCusto);
                         
                         if ($custoCustom === null && $produtoWooId && $config) {
+                            \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                                "Pedido #{$numeroPedido}: [2/3] Não encontrado no line_item, buscando via API produto #{$produtoWooId}...");
                             $custoCustom = $this->buscarCustoProdutoWooViaApi($produtoWooId, $config, $campoCusto);
                         }
                         
@@ -542,7 +556,13 @@ class WooCommerceService
                             $custoOrigem = "campo_personalizado ({$campoCusto})";
                             \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
                                 "Pedido #{$numeroPedido}: '{$nomeProduto}' custo=R\${$custoUnitario} (via campo personalizado '{$campoCusto}')");
+                        } else {
+                            \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                                "Pedido #{$numeroPedido}: [2/3] Campo personalizado '{$campoCusto}': NÃO encontrado");
                         }
+                    } else {
+                        \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                            "Pedido #{$numeroPedido}: [2/3] Pulado - campo personalizado NÃO configurado na integração");
                     }
                 }
                 
@@ -558,6 +578,8 @@ class WooCommerceService
                 }
                 
                 if ($custoUnitario == 0 && !empty($codFornecedor)) {
+                    \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                        "Pedido #{$numeroPedido}: [3/3] Tentando cod_fornecedor='{$codFornecedor}' na tabela custo_produtos_personizi...");
                     $custoEncontrado = $this->buscarCustoPorCodFornecedor($codFornecedor);
                     if ($custoEncontrado !== null) {
                         $custoUnitario = $custoEncontrado;
@@ -566,8 +588,8 @@ class WooCommerceService
                     \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
                         "Pedido #{$numeroPedido}: '{$nomeProduto}' cod_fornecedor='{$codFornecedor}' custo=R\${$custoUnitario} (via {$custoOrigem})");
                 } elseif ($custoUnitario == 0) {
-                    \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
-                        "Pedido #{$numeroPedido}: '{$nomeProduto}' sem custo encontrado (_supplier_cost_from_acf: N/A, campo_custo: " . ($campoCusto ?? 'N/A') . ", cod_fornecedor: " . ($codFornecedor ?: 'N/A') . ")");
+                    \App\Models\LogSistema::warning('WooCommerce', 'processarItens', 
+                        "Pedido #{$numeroPedido}: '{$nomeProduto}' CUSTO R\$0 - nenhuma fonte encontrou custo. Tentativas: [1] _supplier_cost_from_acf, [2] campo_custo: " . ($campoCusto ?: 'NÃO CONFIG') . ", [3] cod_fornecedor: " . ($codFornecedor ?: 'N/A'));
                 }
                 
                 $custoTotal = round($custoUnitario * $quantidade, 2);
@@ -1104,6 +1126,9 @@ class WooCommerceService
                     \App\Models\LogSistema::info('WooCommerce', 'custoCampoPersonalizado', 
                         "Custo encontrado via campo '{$key}': R\${$valor}");
                     return floatval($valor);
+                } else {
+                    \App\Models\LogSistema::debug('WooCommerce', 'custoCampoPersonalizado', 
+                        "Campo '{$key}' encontrado mas valor inválido/vazio: '" . ($valor ?? 'NULL') . "'");
                 }
             }
         }
@@ -1138,13 +1163,35 @@ class WooCommerceService
             if ($httpCode === 200) {
                 $produto = json_decode($response, true);
                 if ($produto && !empty($produto['meta_data'])) {
+                    // Log das meta_keys disponíveis no produto para diagnóstico
+                    $metaKeys = array_map(function($m) { 
+                        $key = $m['key'] ?? '?';
+                        $val = $m['value'] ?? '';
+                        // Resumo do valor (máx 50 chars)
+                        if (is_array($val)) $val = json_encode($val);
+                        $val = is_string($val) ? substr($val, 0, 50) : $val;
+                        return "{$key}=" . $val;
+                    }, $produto['meta_data']);
+                    
+                    \App\Models\LogSistema::debug('WooCommerce', 'custoCampoPersonalizado', 
+                        "Produto WOO #{$produtoWooId}: buscando '{$campoCusto}' | meta_keys disponíveis: " . implode(', ', $metaKeys));
+                    
                     $custo = $this->buscarCustoPorCampoPersonalizado($produto['meta_data'], $campoCusto);
                     if ($custo !== null) {
                         \App\Models\LogSistema::debug('WooCommerce', 'custoCampoPersonalizado', 
                             "Custo R\${$custo} encontrado via API para produto WOO #{$produtoWooId}");
                         return $custo;
+                    } else {
+                        \App\Models\LogSistema::debug('WooCommerce', 'custoCampoPersonalizado', 
+                            "Campo '{$campoCusto}' NÃO encontrado nos meta_data do produto WOO #{$produtoWooId}");
                     }
+                } else {
+                    \App\Models\LogSistema::debug('WooCommerce', 'custoCampoPersonalizado', 
+                        "Produto WOO #{$produtoWooId}: sem meta_data na resposta da API");
                 }
+            } else {
+                \App\Models\LogSistema::debug('WooCommerce', 'custoCampoPersonalizado', 
+                    "Produto WOO #{$produtoWooId}: API retornou HTTP {$httpCode}");
             }
         } catch (\Throwable $e) {
             \App\Models\LogSistema::warning('WooCommerce', 'custoCampoPersonalizado', 
