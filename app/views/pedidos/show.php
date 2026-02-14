@@ -274,9 +274,64 @@
             </div>
 
             <!-- Excluir -->
-            <form method="POST" action="/pedidos/<?= $pedido['id'] ?>/delete" onsubmit="return confirm('Tem certeza que deseja excluir este pedido?')">
-                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg">Excluir Pedido</button>
-            </form>
+            <button type="button" onclick="abrirModalExcluir()" class="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg">Excluir Pedido</button>
         </div>
     </div>
 </div>
+
+<!-- Modal Excluir Pedido -->
+<div id="modalExcluir" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onclick="fecharModalExcluir(event)">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6" onclick="event.stopPropagation()">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Excluir Pedido #<?= $pedido['numero_pedido'] ?></h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Esta ação não pode ser desfeita</p>
+            </div>
+        </div>
+
+        <form method="POST" action="/pedidos/<?= $pedido['id'] ?>/delete">
+            <div class="space-y-3 mb-6">
+                <label class="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 cursor-pointer">
+                    <input type="checkbox" name="excluir_receitas" value="1" checked class="mt-1 w-5 h-5 rounded text-red-600 focus:ring-red-500">
+                    <div>
+                        <span class="font-semibold text-gray-900 dark:text-gray-100">Excluir contas a receber vinculadas</span>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Remove todas as receitas/parcelas geradas por este pedido</p>
+                    </div>
+                </label>
+                
+                <label class="flex items-start gap-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800 cursor-pointer">
+                    <input type="checkbox" name="excluir_itens" value="1" checked class="mt-1 w-5 h-5 rounded text-orange-600 focus:ring-orange-500">
+                    <div>
+                        <span class="font-semibold text-gray-900 dark:text-gray-100">Excluir itens do pedido</span>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Remove todos os itens/produtos vinculados ao pedido</p>
+                    </div>
+                </label>
+            </div>
+            
+            <div class="flex gap-3">
+                <button type="submit" class="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all">
+                    Sim, Excluir
+                </button>
+                <button type="button" onclick="fecharModalExcluir()" class="flex-1 px-4 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl transition-all">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function abrirModalExcluir() {
+    document.getElementById('modalExcluir').classList.remove('hidden');
+}
+function fecharModalExcluir(event) {
+    if (!event || event.target.id === 'modalExcluir') {
+        document.getElementById('modalExcluir').classList.add('hidden');
+    }
+}
+</script>

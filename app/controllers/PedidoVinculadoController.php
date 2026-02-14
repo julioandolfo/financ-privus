@@ -238,12 +238,51 @@ class PedidoVinculadoController extends Controller
      */
     public function destroy(Request $request, Response $response, $id)
     {
-        $success = $this->pedidoModel->delete($id);
+        $excluirReceitas = $request->post('excluir_receitas');
+        $excluirItens = $request->post('excluir_itens');
         
-        if ($success) {
-            $this->session->set('success', 'Pedido excluído com sucesso!');
-        } else {
-            $this->session->set('error', 'Erro ao excluir pedido.');
+        $mensagens = [];
+        
+        try {
+            // Excluir contas a receber vinculadas
+            if ($excluirReceitas) {
+                $db = Database::getInstance()->getConnection();
+                $sql = "SELECT COUNT(*) as total FROM contas_receber WHERE pedido_id = :pedido_id";
+                $stmt = $db->prepare($sql);
+                $stmt->execute(['pedido_id' => $id]);
+                $totalReceitas = $stmt->fetch(\PDO::FETCH_ASSOC)['total'] ?? 0;
+                
+                if ($totalReceitas > 0) {
+                    $sqlDel = "DELETE FROM contas_receber WHERE pedido_id = :pedido_id";
+                    $stmtDel = $db->prepare($sqlDel);
+                    $stmtDel->execute(['pedido_id' => $id]);
+                    $mensagens[] = "{$totalReceitas} conta(s) a receber excluída(s)";
+                }
+            }
+            
+            // Excluir itens do pedido
+            if ($excluirItens) {
+                $totalItens = $this->itemModel->countByPedido($id);
+                if ($totalItens > 0) {
+                    $this->itemModel->deleteByPedido($id);
+                    $mensagens[] = "{$totalItens} item(ns) excluído(s)";
+                }
+            }
+            
+            // Excluir o pedido
+            $success = $this->pedidoModel->delete($id);
+            
+            if ($success) {
+                $msg = 'Pedido excluído com sucesso!';
+                if (!empty($mensagens)) {
+                    $msg .= ' (' . implode(', ', $mensagens) . ')';
+                }
+                $this->session->set('success', $msg);
+            } else {
+                $this->session->set('error', 'Erro ao excluir pedido.');
+            }
+        } catch (\Throwable $e) {
+            $this->session->set('error', 'Erro ao excluir pedido: ' . $e->getMessage());
         }
         
         return $response->redirect('/pedidos');
