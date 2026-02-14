@@ -442,24 +442,29 @@ class WooCommerceService
                 // =============================================
                 $produtoId = null;
                 
-                // 1. Busca por SKU
+                // 1. Busca por SKU (incluindo inativos, para evitar duplicidade)
                 if (!empty($sku)) {
-                    $produtoExistente = $this->produtoModel->findBySku($sku, $empresaId);
+                    $db = \App\Core\Database::getInstance()->getConnection();
+                    $sql = "SELECT id, custo_unitario, ativo FROM produtos WHERE sku = :sku AND empresa_id = :empresa_id LIMIT 1";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute(['sku' => $sku, 'empresa_id' => $empresaId]);
+                    $produtoExistente = $stmt->fetch(\PDO::FETCH_ASSOC);
+                    
                     if ($produtoExistente) {
                         $produtoId = $produtoExistente['id'];
                         
-                        // Atualiza custo do produto se encontrou e era zero
+                        // Reativa se estava inativo
+                        if (empty($produtoExistente['ativo'])) {
+                            $db->prepare("UPDATE produtos SET ativo = 1 WHERE id = :id")->execute(['id' => $produtoId]);
+                        }
+                        
+                        // Atualiza custo se era zero
                         if ($custoUnitario > 0 && (empty($produtoExistente['custo_unitario']) || $produtoExistente['custo_unitario'] == 0)) {
                             try {
-                                $db = \App\Core\Database::getInstance()->getConnection();
                                 $sqlUp = "UPDATE produtos SET custo_unitario = :custo WHERE id = :id";
                                 $stmtUp = $db->prepare($sqlUp);
                                 $stmtUp->execute(['custo' => $custoUnitario, 'id' => $produtoId]);
-                                \App\Models\LogSistema::info('WooCommerce', 'processarItens', 
-                                    "Produto #{$produtoId}: custo atualizado para R\${$custoUnitario} (cod_fornecedor: {$codFornecedor})");
-                            } catch (\Throwable $e) {
-                                // Não é crítico
-                            }
+                            } catch (\Throwable $e) { }
                         }
                     }
                 }
@@ -474,7 +479,6 @@ class WooCommerceService
                     if ($produtoEncontrado) {
                         $produtoId = $produtoEncontrado['id'];
                         
-                        // Atualiza custo se necessário
                         if ($custoUnitario > 0 && (empty($produtoEncontrado['custo_unitario']) || $produtoEncontrado['custo_unitario'] == 0)) {
                             try {
                                 $sqlUp = "UPDATE produtos SET custo_unitario = :custo WHERE id = :id";
@@ -505,7 +509,23 @@ class WooCommerceService
                         'cod_fornecedor' => $codFornecedor ?: null,
                     ];
                     
-                    $produtoId = $this->produtoModel->create($dadosProduto);
+                    try {
+                        $produtoId = $this->produtoModel->create($dadosProduto);
+                    } catch (\Throwable $e) {
+                        // Se deu erro de duplicidade, busca o produto existente
+                        if (strpos($e->getMessage(), 'Duplicate entry') !== false && !empty($sku)) {
+                            $db = \App\Core\Database::getInstance()->getConnection();
+                            $sql = "SELECT id FROM produtos WHERE sku = :sku AND empresa_id = :empresa_id LIMIT 1";
+                            $stmt = $db->prepare($sql);
+                            $stmt->execute(['sku' => $sku, 'empresa_id' => $empresaId]);
+                            $produtoId = $stmt->fetchColumn();
+                            
+                            \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                                "Pedido #{$numeroPedido}: produto já existia (SKU duplicado '{$sku}') -> ID #{$produtoId}");
+                        } else {
+                            throw $e;
+                        }
+                    }
                     
                     if ($produtoId) {
                         \App\Models\LogSistema::info('WooCommerce', 'processarItens', 

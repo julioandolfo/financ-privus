@@ -359,13 +359,7 @@
                     </div>
                 </label>
                 
-                <label class="flex items-start gap-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800 cursor-pointer">
-                    <input type="checkbox" name="excluir_itens" value="1" checked class="mt-1 w-5 h-5 rounded text-orange-600 focus:ring-orange-500">
-                    <div>
-                        <span class="font-semibold text-gray-900 dark:text-gray-100">Excluir itens do pedido</span>
-                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Remove todos os itens/produtos vinculados ao pedido</p>
-                    </div>
-                </label>
+                <input type="hidden" name="excluir_itens" value="1">
             </div>
             
             <div class="flex gap-3">
