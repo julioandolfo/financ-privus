@@ -576,8 +576,9 @@ class WooCommerceService
                     }
                 }
                 
-                // Prioridade 3: _supplier_cost_from_acf (meta fixo)
-                if ($custoUnitario == 0) {
+                // Prioridade 3: _supplier_cost_from_acf (meta fixo, apenas se ativado)
+                $usarSupplierCost = !empty($config['usar_supplier_cost_acf']);
+                if ($custoUnitario == 0 && $usarSupplierCost) {
                     \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
                         "Pedido #{$numeroPedido}: [3/3] Tentando _supplier_cost_from_acf no line_item...");
                     $custoSupplier = $this->buscarCustoPorCampoPersonalizado($itemMetaData, '_supplier_cost_from_acf');
@@ -595,6 +596,9 @@ class WooCommerceService
                         \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
                             "Pedido #{$numeroPedido}: [3/3] _supplier_cost_from_acf: NÃO encontrado");
                     }
+                } elseif ($custoUnitario == 0 && !$usarSupplierCost) {
+                    \App\Models\LogSistema::debug('WooCommerce', 'processarItens', 
+                        "Pedido #{$numeroPedido}: [3/3] Pulado - _supplier_cost_from_acf DESATIVADO na integração");
                 }
                 
                 if ($custoUnitario == 0) {
@@ -2044,8 +2048,8 @@ class WooCommerceService
                 }
             }
             
-            // Prioridade 3: _supplier_cost_from_acf
-            if ($custoUnitario == 0 && !empty($prodMetaData)) {
+            // Prioridade 3: _supplier_cost_from_acf (apenas se ativado)
+            if ($custoUnitario == 0 && !empty($config['usar_supplier_cost_acf']) && !empty($prodMetaData)) {
                 $custoSupplier = $this->buscarCustoPorCampoPersonalizado($prodMetaData, '_supplier_cost_from_acf');
                 if ($custoSupplier !== null && $custoSupplier > 0) {
                     $custoUnitario = $custoSupplier;

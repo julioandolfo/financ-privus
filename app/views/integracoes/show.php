@@ -270,6 +270,20 @@
         });
     }
 
+    function salvarSupplierCost() {
+        const ativo = document.getElementById('checkSupplierCost').checked ? 1 : 0;
+        fetch('<?= $this->baseUrl('/integracoes/' . $integracao['id'] . '/woocommerce/config/campo-custo') ?>', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ usar_supplier_cost_acf: ativo })
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (!d.success) alert('✗ Erro: ' + (d.error || 'Erro desconhecido'));
+        })
+        .catch(e => alert('Erro ao salvar: ' + e.message));
+    }
+
     function salvarCampoCusto() {
         const campo = document.getElementById('campoCustoProduto').value.trim();
         fetch('<?= $this->baseUrl('/integracoes/' . $integracao['id'] . '/woocommerce/config/campo-custo') ?>', {
@@ -350,7 +364,22 @@
                                     </button>
                                 </form>
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    Meta key do campo personalizado no WooCommerce que contém o custo do produto. Se preenchido, será verificado antes do cod_fornecedor.
+                                    Meta key do campo personalizado no WooCommerce que contém o custo do produto. Verificado após a tabela custo_produtos_personizi.
+                                </p>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-semibold text-gray-600 dark:text-gray-400">Buscar custo via _supplier_cost_from_acf</dt>
+                            <dd class="mt-1">
+                                <label class="inline-flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="checkSupplierCost" 
+                                        <?= !empty($configuracao['usar_supplier_cost_acf']) ? 'checked' : '' ?>
+                                        onchange="salvarSupplierCost()"
+                                        class="w-5 h-5 text-blue-600 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Ativar busca no campo _supplier_cost_from_acf</span>
+                                </label>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Se ativado, busca custo no meta _supplier_cost_from_acf como última opção (após tabela de custos e campo personalizado).
                                 </p>
                             </dd>
                         </div>

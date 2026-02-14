@@ -372,7 +372,6 @@ class IntegracaoWooConfigController extends Controller
     {
         try {
             $data = $request->isJson() ? $request->json() : $request->post();
-            $campoCusto = trim($data['campo_custo_produto'] ?? '');
             
             $config = $this->wooModel->findByIntegracaoId($integracaoId);
             
@@ -382,25 +381,42 @@ class IntegracaoWooConfigController extends Controller
             
             $db = \App\Core\Database::getInstance()->getConnection();
             
-            // Verifica se a coluna existe, se não, cria
+            // Verifica se as colunas existem, se não, cria
             try {
                 $stmt = $db->query("SHOW COLUMNS FROM integracoes_woocommerce LIKE 'campo_custo_produto'");
                 if ($stmt->rowCount() === 0) {
                     $db->exec("ALTER TABLE integracoes_woocommerce ADD COLUMN campo_custo_produto VARCHAR(255) NULL COMMENT 'Meta key do campo personalizado de custo no WooCommerce' AFTER acoes_formas_pagamento");
                 }
+                $stmt = $db->query("SHOW COLUMNS FROM integracoes_woocommerce LIKE 'usar_supplier_cost_acf'");
+                if ($stmt->rowCount() === 0) {
+                    $db->exec("ALTER TABLE integracoes_woocommerce ADD COLUMN usar_supplier_cost_acf TINYINT(1) DEFAULT 0 COMMENT 'Ativar busca de custo via _supplier_cost_from_acf' AFTER campo_custo_produto");
+                }
             } catch (\Throwable $e) {
-                LogSistema::warning('WooConfig', 'salvarCampoCusto', 'Erro ao verificar/criar coluna: ' . $e->getMessage());
+                LogSistema::warning('WooConfig', 'salvarCampoCusto', 'Erro ao verificar/criar colunas: ' . $e->getMessage());
             }
             
-            $sql = "UPDATE integracoes_woocommerce 
-                    SET campo_custo_produto = :campo 
-                    WHERE integracao_id = :integracao_id";
+            // Verifica o que está sendo salvo
+            $sets = [];
+            $params = ['integracao_id' => $integracaoId];
+            
+            if (array_key_exists('campo_custo_produto', $data)) {
+                $sets[] = 'campo_custo_produto = :campo';
+                $params['campo'] = trim($data['campo_custo_produto']) ?: null;
+            }
+            
+            if (array_key_exists('usar_supplier_cost_acf', $data)) {
+                $sets[] = 'usar_supplier_cost_acf = :supplier';
+                $params['supplier'] = intval($data['usar_supplier_cost_acf']);
+            }
+            
+            if (empty($sets)) {
+                return $response->json(['success' => false, 'error' => 'Nenhum dado para salvar'], 400);
+            }
+            
+            $sql = "UPDATE integracoes_woocommerce SET " . implode(', ', $sets) . " WHERE integracao_id = :integracao_id";
             
             $stmt = $db->prepare($sql);
-            $result = $stmt->execute([
-                'campo' => $campoCusto ?: null,
-                'integracao_id' => $integracaoId
-            ]);
+            $result = $stmt->execute($params);
             
             if ($result) {
                 LogSistema::info('WooConfig', 'salvarCampoCusto', 
