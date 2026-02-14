@@ -9,6 +9,7 @@ use App\Models\PedidoVinculado;
 use App\Models\PedidoItem;
 use App\Models\Cliente;
 use App\Models\Produto;
+use App\Models\LogSistema;
 
 class PedidoVinculadoController extends Controller
 {
@@ -321,11 +322,13 @@ class PedidoVinculadoController extends Controller
     {
         $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         
+        LogSistema::info('Recalcular', 'inicio', 
+            "=== RECALCULAR PEDIDOS INICIADO === empresa_id: {$empresaId}");
+        
         try {
             $this->db->beginTransaction();
             
             // Buscar pedidos que possuem itens com custo zero/nulo (independente de filtros)
-            // Usa <= 0 para pegar 0, 0.00, NULL e negativos
             $sqlPedidos = "SELECT DISTINCT p.id, p.numero_pedido 
                            FROM pedidos_vinculados p
                            INNER JOIN pedidos_itens pi ON pi.pedido_id = p.id
@@ -334,6 +337,9 @@ class PedidoVinculadoController extends Controller
             $stmtPedidos = $this->db->prepare($sqlPedidos);
             $stmtPedidos->execute(['empresa_id' => $empresaId]);
             $pedidos = $stmtPedidos->fetchAll(\PDO::FETCH_ASSOC);
+            
+            LogSistema::info('Recalcular', 'busca', 
+                "Encontrados " . count($pedidos) . " pedido(s) com itens sem custo. IDs: " . implode(', ', array_column($pedidos, 'numero_pedido')));
             
             $totalRecalculados = 0;
             $totalItensAtualizados = 0;
@@ -350,23 +356,45 @@ class PedidoVinculadoController extends Controller
                     $stmtItens->execute(['pedido_id' => $pedido['id']]);
                     $itensSemCusto = $stmtItens->fetchAll(\PDO::FETCH_ASSOC);
                     
+                    LogSistema::info('Recalcular', 'pedido', 
+                        "Pedido #{$pedido['numero_pedido']} (ID:{$pedido['id']}): " . count($itensSemCusto) . " item(ns) sem custo");
+                    
                     $atualizouAlgo = false;
                     
                     foreach ($itensSemCusto as $item) {
                         $produto = null;
                         $produtoId = $item['produto_id'] ?? null;
+                        $nomeProdutoItem = $item['nome_produto'] ?? '';
+                        
+                        LogSistema::debug('Recalcular', 'item', 
+                            "  Item ID:{$item['id']} - '{$nomeProdutoItem}' | produto_id=" . ($produtoId ?: 'NULL') . 
+                            " | custo_atual=" . ($item['custo_unitario'] ?? 'NULL') . 
+                            " | custo_total_atual=" . ($item['custo_total'] ?? 'NULL') .
+                            " | codigo_origem=" . ($item['codigo_produto_origem'] ?? 'NULL'));
                         
                         // 1. Busca pelo produto_id vinculado
                         if ($produtoId) {
                             $produto = $this->produtoModel->findById($produtoId);
+                            if ($produto) {
+                                LogSistema::debug('Recalcular', 'busca1', 
+                                    "  [1] findById({$produtoId}): encontrado '{$produto['nome']}' custo=R\${$produto['custo_unitario']}");
+                            } else {
+                                LogSistema::debug('Recalcular', 'busca1', 
+                                    "  [1] findById({$produtoId}): NÃO encontrado");
+                            }
+                        } else {
+                            LogSistema::debug('Recalcular', 'busca1', 
+                                "  [1] Pulado - produto_id é NULL");
                         }
                         
-                        // 2. Se não tem produto_id ou não encontrou, busca por SKU/nome
+                        // 2. Se não tem produto_id ou produto sem custo, busca por SKU/nome
                         if (!$produto || floatval($produto['custo_unitario'] ?? 0) <= 0) {
+                            LogSistema::debug('Recalcular', 'busca2', 
+                                "  [2] Tentando busca alternativa por nome: '{$nomeProdutoItem}'");
+                            
                             $produtoEncontrado = null;
                             
                             // Tenta buscar por nome exato
-                            $nomeProdutoItem = $item['nome_produto'] ?? '';
                             if (!empty($nomeProdutoItem)) {
                                 $sqlBuscaNome = "SELECT * FROM produtos 
                                                  WHERE nome = :nome AND empresa_id = :empresa_id AND ativo = 1
@@ -374,6 +402,14 @@ class PedidoVinculadoController extends Controller
                                 $stmtBusca = $this->db->prepare($sqlBuscaNome);
                                 $stmtBusca->execute(['nome' => $nomeProdutoItem, 'empresa_id' => $empresaId]);
                                 $produtoEncontrado = $stmtBusca->fetch(\PDO::FETCH_ASSOC);
+                                
+                                if ($produtoEncontrado) {
+                                    LogSistema::debug('Recalcular', 'busca2', 
+                                        "  [2a] Nome exato: encontrado ID:{$produtoEncontrado['id']} '{$produtoEncontrado['nome']}' custo=R\${$produtoEncontrado['custo_unitario']}");
+                                } else {
+                                    LogSistema::debug('Recalcular', 'busca2', 
+                                        "  [2a] Nome exato: NÃO encontrado");
+                                }
                             }
                             
                             // Tenta buscar por nome parcial (LIKE)
@@ -384,6 +420,39 @@ class PedidoVinculadoController extends Controller
                                 $stmtBusca2 = $this->db->prepare($sqlBuscaLike);
                                 $stmtBusca2->execute(['nome' => '%' . $nomeProdutoItem . '%', 'empresa_id' => $empresaId]);
                                 $produtoEncontrado = $stmtBusca2->fetch(\PDO::FETCH_ASSOC);
+                                
+                                if ($produtoEncontrado) {
+                                    LogSistema::debug('Recalcular', 'busca2', 
+                                        "  [2b] Nome LIKE: encontrado ID:{$produtoEncontrado['id']} '{$produtoEncontrado['nome']}' custo=R\${$produtoEncontrado['custo_unitario']}");
+                                } else {
+                                    LogSistema::debug('Recalcular', 'busca2', 
+                                        "  [2b] Nome LIKE: NÃO encontrado");
+                                }
+                            }
+                            
+                            // Tenta buscar por codigo_produto_origem extraindo SKU
+                            if (!$produtoEncontrado) {
+                                $codigoOrigem = $item['codigo_produto_origem'] ?? '';
+                                if (!empty($codigoOrigem)) {
+                                    // Extrai possível SKU - busca por produtos com sku ou codigo que contenha parte do codigo_origem
+                                    $sqlBuscaSku = "SELECT * FROM produtos 
+                                                    WHERE empresa_id = :empresa_id AND ativo = 1
+                                                    AND (sku IS NOT NULL AND sku != '')
+                                                    AND nome LIKE :nome_like
+                                                    LIMIT 1";
+                                    $stmtBuscaSku = $this->db->prepare($sqlBuscaSku);
+                                    // Pega as primeiras palavras do nome para busca
+                                    $primeiraPalavra = explode(' ', $nomeProdutoItem)[0] ?? '';
+                                    if (strlen($primeiraPalavra) >= 3) {
+                                        $stmtBuscaSku->execute(['empresa_id' => $empresaId, 'nome_like' => $primeiraPalavra . '%']);
+                                        $produtoEncontrado = $stmtBuscaSku->fetch(\PDO::FETCH_ASSOC);
+                                        
+                                        if ($produtoEncontrado) {
+                                            LogSistema::debug('Recalcular', 'busca2', 
+                                                "  [2c] Primeira palavra '{$primeiraPalavra}': encontrado ID:{$produtoEncontrado['id']} '{$produtoEncontrado['nome']}' custo=R\${$produtoEncontrado['custo_unitario']}");
+                                        }
+                                    }
+                                }
                             }
                             
                             if ($produtoEncontrado && floatval($produtoEncontrado['custo_unitario'] ?? 0) > 0) {
@@ -394,14 +463,19 @@ class PedidoVinculadoController extends Controller
                                     $sqlVincula = "UPDATE pedidos_itens SET produto_id = :produto_id WHERE id = :id";
                                     $stmtVincula = $this->db->prepare($sqlVincula);
                                     $stmtVincula->execute(['produto_id' => $produtoEncontrado['id'], 'id' => $item['id']]);
+                                    LogSistema::info('Recalcular', 'vinculo', 
+                                        "  Vinculado produto_id={$produtoEncontrado['id']} ao item ID:{$item['id']}");
                                 }
+                            } else {
+                                LogSistema::warning('Recalcular', 'busca2', 
+                                    "  [2] Nenhum produto com custo > 0 encontrado para '{$nomeProdutoItem}'");
                             }
                         }
                         
                         if ($produto && floatval($produto['custo_unitario'] ?? 0) > 0) {
                             $novoCustoUnitario = floatval($produto['custo_unitario']);
                             $quantidade = floatval($item['quantidade'] ?? 1);
-                            $novoCustoTotal = $quantidade * $novoCustoUnitario;
+                            $novoCustoTotal = round($quantidade * $novoCustoUnitario, 2);
                             
                             $sqlUpdateItem = "UPDATE pedidos_itens SET 
                                              custo_unitario = :custo_unitario,
@@ -414,24 +488,37 @@ class PedidoVinculadoController extends Controller
                                 'id' => $item['id']
                             ]);
                             
+                            LogSistema::info('Recalcular', 'atualizado', 
+                                "  ✅ Item ID:{$item['id']} '{$nomeProdutoItem}' atualizado: custo=R\${$novoCustoUnitario} x {$quantidade} = R\${$novoCustoTotal}");
+                            
                             $totalItensAtualizados++;
                             $atualizouAlgo = true;
                         } else {
+                            LogSistema::warning('Recalcular', 'ignorado', 
+                                "  ❌ Item ID:{$item['id']} '{$nomeProdutoItem}' IGNORADO - sem produto/custo");
                             $itensIgnorados++;
                         }
                     }
                     
                     if ($atualizouAlgo) {
                         $this->pedidoModel->recalcularTotais($pedido['id']);
+                        LogSistema::info('Recalcular', 'totais', 
+                            "Pedido #{$pedido['numero_pedido']}: totais recalculados");
                         $totalRecalculados++;
                     }
                     
                 } catch (\Exception $e) {
+                    LogSistema::error('Recalcular', 'erro', 
+                        "Erro no pedido #{$pedido['numero_pedido']}: " . $e->getMessage());
                     $erros[] = "Erro no pedido #{$pedido['numero_pedido']}: " . $e->getMessage();
                 }
             }
             
             $this->db->commit();
+            
+            LogSistema::info('Recalcular', 'fim', 
+                "=== RECALCULAR CONCLUÍDO === pedidos: " . count($pedidos) . 
+                ", recalculados: {$totalRecalculados}, itens atualizados: {$totalItensAtualizados}, ignorados: {$itensIgnorados}, erros: " . count($erros));
             
             if ($totalRecalculados > 0) {
                 $mensagem = "✅ {$totalRecalculados} pedido(s) recalculado(s), {$totalItensAtualizados} item(ns) atualizado(s) com custo.";
@@ -443,7 +530,7 @@ class PedidoVinculadoController extends Controller
                 }
                 $this->session->set('success', $mensagem);
             } else if (count($pedidos) > 0) {
-                $this->session->set('info', count($pedidos) . ' pedido(s) com ' . $itensIgnorados . ' item(ns) sem custo encontrado(s), porém os produtos vinculados não possuem custo cadastrado para atualizar.');
+                $this->session->set('info', count($pedidos) . ' pedido(s) com ' . $itensIgnorados . ' item(ns) sem custo encontrado(s), porém os produtos vinculados não possuem custo cadastrado para atualizar. Verifique os logs em /sistema/registros');
             } else {
                 $this->session->set('info', 'Nenhum pedido com itens sem custo encontrado. Todos os pedidos já possuem custo nos itens.');
             }
@@ -454,6 +541,8 @@ class PedidoVinculadoController extends Controller
             
         } catch (\Exception $e) {
             $this->db->rollBack();
+            LogSistema::error('Recalcular', 'fatalError', 
+                "Erro fatal ao recalcular: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             $this->session->set('error', 'Erro ao recalcular pedidos: ' . $e->getMessage());
         }
         
