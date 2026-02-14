@@ -1054,7 +1054,7 @@ class WooCommerceService
                     $key = $meta['key'] ?? '';
                     $value = $meta['value'] ?? '';
                     
-                    if ($key === $targetKey && !empty($value) && !filter_var($value, FILTER_VALIDATE_URL)) {
+                    if ($key === $targetKey && $this->isValidCodFornecedor($value)) {
                         return $value;
                     }
                 }
@@ -1062,6 +1062,37 @@ class WooCommerceService
         }
         
         return null;
+    }
+    
+    /**
+     * Verifica se um valor é um cod_fornecedor válido (não é URL, referência ACF, ou lixo)
+     */
+    private function isValidCodFornecedor($value)
+    {
+        if (empty($value)) return false;
+        
+        $value = trim($value);
+        
+        // Ignora URLs
+        if (filter_var($value, FILTER_VALIDATE_URL)) return false;
+        
+        // Ignora referências internas ACF (ex: field_67210d292de3f)
+        if (preg_match('/^field_[a-f0-9]{10,}$/i', $value)) return false;
+        
+        // Ignora valores que são apenas "field_" seguido de qualquer coisa
+        if (stripos($value, 'field_') === 0) return false;
+        
+        // Ignora valores muito longos (provavelmente não é código de fornecedor)
+        if (strlen($value) > 100) return false;
+        
+        // Ignora valores que são arrays serializados ou JSON
+        if ($value[0] === '{' || $value[0] === '[' || $value[0] === 'a') {
+            if (preg_match('/^[a{[]/', $value) && (json_decode($value) !== null || @unserialize($value) !== false)) {
+                return false;
+            }
+        }
+        
+        return true;
     }
     
     /**
@@ -1081,6 +1112,13 @@ class WooCommerceService
     private function limparCodFornecedor($cod)
     {
         if (empty($cod)) return $cod;
+        
+        // Se for referência ACF (field_xxxxx), retorna null - não é cod_fornecedor real
+        if (preg_match('/^field_[a-f0-9]{10,}$/i', trim($cod))) {
+            \App\Models\LogSistema::debug('WooCommerce', 'limparCodFornecedor', 
+                "Ignorando referência ACF: '{$cod}' - não é cod_fornecedor válido");
+            return null;
+        }
         
         $original = $cod;
         
@@ -1336,7 +1374,7 @@ class WooCommerceService
                             foreach ($variacao['meta_data'] as $meta) {
                                 $key = $meta['key'] ?? '';
                                 $value = $meta['value'] ?? '';
-                                if ($key === $targetKey && !empty($value) && !filter_var($value, FILTER_VALIDATE_URL)) {
+                                if ($key === $targetKey && $this->isValidCodFornecedor($value)) {
                                     \App\Models\LogSistema::debug('WooCommerce', 'buscarCodFornecedor', 
                                         "cod_fornecedor encontrado na variação WOO #{$variacaoWooId}: '{$value}' (meta_key: {$key})");
                                     return $value;
@@ -1372,7 +1410,7 @@ class WooCommerceService
                         foreach ($produto['meta_data'] as $meta) {
                             $key = $meta['key'] ?? '';
                             $value = $meta['value'] ?? '';
-                            if ($key === $targetKey && !empty($value) && !filter_var($value, FILTER_VALIDATE_URL)) {
+                            if ($key === $targetKey && $this->isValidCodFornecedor($value)) {
                                 \App\Models\LogSistema::debug('WooCommerce', 'buscarCodFornecedor', 
                                     "cod_fornecedor encontrado no produto WOO #{$produtoWooId}: '{$value}' (meta_key: {$key})");
                                 return $value;
@@ -2104,7 +2142,7 @@ class WooCommerceService
                     foreach ($prodMetaData as $meta) {
                         $key = $meta['key'] ?? '';
                         $value = $meta['value'] ?? '';
-                        if ($key === $targetKey && !empty($value) && !filter_var($value, FILTER_VALIDATE_URL)) {
+                        if ($key === $targetKey && $this->isValidCodFornecedor($value)) {
                             $codFornecedor = $value;
                             \App\Models\LogSistema::debug('WooCommerce', 'webhookProduto', 
                                 "cod_fornecedor extraído via meta_key '{$key}': '{$value}' para '{$nome}'");

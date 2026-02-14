@@ -156,12 +156,19 @@ if ($produto['custo_unitario'] > 0) {
                             <div>
                                 <p class="font-semibold text-amber-800 dark:text-amber-200">Custo não informado</p>
                                 <p class="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                                    <?php if (!empty($produto['cod_fornecedor'])): ?>
-                                        O cód. fornecedor <strong><?= htmlspecialchars($produto['cod_fornecedor']) ?></strong> foi encontrado, mas não há preço correspondente na tabela de custos.
+                                    <?php 
+                                    $codForn = $produto['cod_fornecedor'] ?? '';
+                                    // Verifica se é referência ACF inválida (field_xxxxx)
+                                    $isAcfRef = preg_match('/^field_[a-f0-9]{10,}$/i', $codForn);
+                                    ?>
+                                    <?php if (!empty($codForn) && !$isAcfRef): ?>
+                                        O cód. fornecedor <strong><?= htmlspecialchars($codForn) ?></strong> foi encontrado, mas não há preço correspondente na tabela de custos.
                                         Verifique se o cod_fornecedor está correto na tabela <code>custo_produtos_personizi</code>.
                                     <?php else: ?>
-                                        Este produto não possui <strong>cod_fornecedor</strong> do WooCommerce. O custo não pode ser buscado automaticamente.
-                                        Adicione o campo personalizado <code>cod_fornecedor</code> no produto do WooCommerce.
+                                        Este produto não possui <strong>cod_fornecedor</strong> válido do WooCommerce. O custo não pode ser buscado automaticamente.
+                                        <?php if ($isAcfRef): ?>
+                                            <br><span class="text-xs">(Encontrado referência ACF <code><?= htmlspecialchars($codForn) ?></code> no lugar do código real)</span>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                 </p>
                             </div>
