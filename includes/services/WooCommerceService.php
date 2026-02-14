@@ -879,19 +879,45 @@ class WooCommerceService
         
         try {
             $db = \App\Core\Database::getInstance()->getConnection();
-            $sql = "SELECT preco FROM custo_produtos_personizi WHERE cod_fornecedor = :cod LIMIT 1";
+            
+            // 1. Busca exata
+            $sql = "SELECT preco, cod_fornecedor FROM custo_produtos_personizi WHERE cod_fornecedor = :cod LIMIT 1";
             $stmt = $db->prepare($sql);
             $stmt->execute(['cod' => $codFornecedor]);
             $result = $stmt->fetch(\PDO::FETCH_ASSOC);
             
             if ($result && isset($result['preco'])) {
                 \App\Models\LogSistema::debug('WooCommerce', 'buscarCusto', 
-                    "Custo encontrado para cod_fornecedor '{$codFornecedor}': R\$ {$result['preco']}");
+                    "Custo encontrado (exato) para '{$codFornecedor}': R\$ {$result['preco']}");
                 return floatval($result['preco']);
             }
             
+            // 2. Busca parcial (LIKE) — ex: produto tem "08203", tabela tem "08203-PRETO"
+            $sql2 = "SELECT preco, cod_fornecedor FROM custo_produtos_personizi WHERE cod_fornecedor LIKE :cod LIMIT 1";
+            $stmt2 = $db->prepare($sql2);
+            $stmt2->execute(['cod' => $codFornecedor . '%']);
+            $result2 = $stmt2->fetch(\PDO::FETCH_ASSOC);
+            
+            if ($result2 && isset($result2['preco'])) {
+                \App\Models\LogSistema::debug('WooCommerce', 'buscarCusto', 
+                    "Custo encontrado (LIKE '{$codFornecedor}%') -> '{$result2['cod_fornecedor']}': R\$ {$result2['preco']}");
+                return floatval($result2['preco']);
+            }
+            
+            // 3. Busca inversa — tabela tem "08203", produto tem "08203-PRETO"
+            $sql3 = "SELECT preco, cod_fornecedor FROM custo_produtos_personizi WHERE :cod LIKE CONCAT(cod_fornecedor, '%') ORDER BY LENGTH(cod_fornecedor) DESC LIMIT 1";
+            $stmt3 = $db->prepare($sql3);
+            $stmt3->execute(['cod' => $codFornecedor]);
+            $result3 = $stmt3->fetch(\PDO::FETCH_ASSOC);
+            
+            if ($result3 && isset($result3['preco'])) {
+                \App\Models\LogSistema::debug('WooCommerce', 'buscarCusto', 
+                    "Custo encontrado (inverso) '{$result3['cod_fornecedor']}' contido em '{$codFornecedor}': R\$ {$result3['preco']}");
+                return floatval($result3['preco']);
+            }
+            
             \App\Models\LogSistema::debug('WooCommerce', 'buscarCusto', 
-                "Custo NÃO encontrado para cod_fornecedor '{$codFornecedor}'");
+                "Custo NÃO encontrado para cod_fornecedor '{$codFornecedor}' (tentou exato + LIKE + inverso)");
             return null;
         } catch (\Throwable $e) {
             \App\Models\LogSistema::warning('WooCommerce', 'buscarCusto', 
