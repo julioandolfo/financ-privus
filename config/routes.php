@@ -97,6 +97,7 @@ return [
     'GET /produtos/{id}/edit' => ['handler' => 'ProdutoController@edit', 'middleware' => ['AuthMiddleware']],
     'POST /produtos/{id}' => ['handler' => 'ProdutoController@update', 'middleware' => ['AuthMiddleware']],
     'POST /produtos/{id}/delete' => ['handler' => 'ProdutoController@destroy', 'middleware' => ['AuthMiddleware']],
+    'POST /produtos/{id}/atualizar-custo' => ['handler' => 'ProdutoController@atualizarCusto', 'middleware' => ['AuthMiddleware']],
     'POST /produtos/{id}/upload-foto' => ['handler' => 'ProdutoController@uploadFoto', 'middleware' => ['AuthMiddleware']],
     'POST /produtos/fotos/{id}/delete' => ['handler' => 'ProdutoController@deleteFoto', 'middleware' => ['AuthMiddleware']],
     'POST /produtos/fotos/{id}/principal' => ['handler' => 'ProdutoController@setFotoPrincipal', 'middleware' => ['AuthMiddleware']],

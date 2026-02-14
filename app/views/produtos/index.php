@@ -191,13 +191,33 @@
                                     <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-700 dark:text-gray-300">
-                                    R$ <?= number_format($produto['custo_unitario'], 2, ',', '.') ?>
+                                    <span class="custo-display cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded transition-colors" 
+                                          data-id="<?= $produto['id'] ?>" 
+                                          data-custo="<?= $produto['custo_unitario'] ?>"
+                                          onclick="editarCusto(this)"
+                                          title="Clique para editar o custo">
+                                        R$ <?= number_format($produto['custo_unitario'], 2, ',', '.') ?>
+                                    </span>
+                                    <div class="custo-edit hidden" data-id="<?= $produto['id'] ?>">
+                                        <div class="flex items-center gap-1 justify-end">
+                                            <input type="text" 
+                                                   class="custo-input w-24 px-2 py-1 text-right text-sm rounded border border-blue-400 dark:border-blue-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                                   value="<?= number_format($produto['custo_unitario'], 2, ',', '.') ?>"
+                                                   onkeydown="custoKeyDown(event, <?= $produto['id'] ?>)">
+                                            <button onclick="salvarCustoInline(<?= $produto['id'] ?>)" class="p-1 text-green-600 hover:text-green-800" title="Salvar">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                            </button>
+                                            <button onclick="cancelarCusto(<?= $produto['id'] ?>)" class="p-1 text-red-500 hover:text-red-700" title="Cancelar">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
                                     R$ <?= number_format($produto['preco_venda'], 2, ',', '.') ?>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold <?= $margem > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' ?>">
-                                    <?= number_format($margem, 1, ',', '.') ?>%
+                                    <span class="margem-cell <?= $margem > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' ?>"><?= number_format($margem, 1, ',', '.') ?>%</span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-700 dark:text-gray-300">
                                     <span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs font-medium">
@@ -322,6 +342,96 @@
         <?php endif; ?>
     </div>
 </div>
+
+<script>
+function editarCusto(el) {
+    const id = el.dataset.id;
+    el.classList.add('hidden');
+    const editDiv = document.querySelector(`.custo-edit[data-id="${id}"]`);
+    editDiv.classList.remove('hidden');
+    const input = editDiv.querySelector('.custo-input');
+    input.focus();
+    input.select();
+}
+
+function cancelarCusto(id) {
+    const display = document.querySelector(`.custo-display[data-id="${id}"]`);
+    const editDiv = document.querySelector(`.custo-edit[data-id="${id}"]`);
+    display.classList.remove('hidden');
+    editDiv.classList.add('hidden');
+    // Restaurar valor original
+    const input = editDiv.querySelector('.custo-input');
+    const custoOriginal = parseFloat(display.dataset.custo);
+    input.value = custoOriginal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function custoKeyDown(event, id) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        salvarCustoInline(id);
+    } else if (event.key === 'Escape') {
+        cancelarCusto(id);
+    }
+}
+
+function salvarCustoInline(id) {
+    const editDiv = document.querySelector(`.custo-edit[data-id="${id}"]`);
+    const input = editDiv.querySelector('.custo-input');
+    const display = document.querySelector(`.custo-display[data-id="${id}"]`);
+    const valorInput = input.value.trim();
+    
+    // Feedback visual - loading
+    input.disabled = true;
+    input.classList.add('opacity-50');
+    
+    fetch(`/produtos/${id}/atualizar-custo`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ custo_unitario: valorInput })
+    })
+    .then(r => r.json())
+    .then(d => {
+        input.disabled = false;
+        input.classList.remove('opacity-50');
+        
+        if (d.success) {
+            // Atualiza o display
+            display.dataset.custo = d.custo_unitario;
+            display.innerHTML = 'R$ ' + d.custo_formatado;
+            input.value = d.custo_formatado;
+            
+            // Atualiza a margem na mesma linha
+            const row = display.closest('tr');
+            const margemCell = row.querySelector('.margem-cell');
+            if (margemCell) {
+                margemCell.textContent = d.margem_formatada;
+                // Atualiza cor da margem
+                margemCell.classList.remove('text-green-600', 'dark:text-green-400', 'text-red-600', 'dark:text-red-400');
+                if (d.margem > 0) {
+                    margemCell.classList.add('text-green-600', 'dark:text-green-400');
+                } else {
+                    margemCell.classList.add('text-red-600', 'dark:text-red-400');
+                }
+            }
+            
+            // Volta para o modo exibição
+            display.classList.remove('hidden');
+            editDiv.classList.add('hidden');
+            
+            // Flash verde para feedback
+            display.classList.add('bg-green-100', 'dark:bg-green-900/30');
+            setTimeout(() => display.classList.remove('bg-green-100', 'dark:bg-green-900/30'), 1500);
+        } else {
+            alert('Erro ao salvar custo: ' + (d.error || 'Erro desconhecido'));
+        }
+    })
+    .catch(e => {
+        input.disabled = false;
+        input.classList.remove('opacity-50');
+        alert('Erro ao salvar custo: ' + e.message);
+    });
+}
+</script>
 
 <?php
 $this->session->delete('old');

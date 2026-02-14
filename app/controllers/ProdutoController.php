@@ -306,6 +306,56 @@ class ProdutoController extends Controller
     }
     
     /**
+     * Atualiza custo unitário via AJAX (inline na listagem)
+     */
+    public function atualizarCusto(Request $request, Response $response, $id)
+    {
+        try {
+            $data = $request->isJson() ? $request->json() : $request->post();
+            $custoNovo = $data['custo_unitario'] ?? null;
+            
+            if ($custoNovo === null) {
+                return $response->json(['success' => false, 'error' => 'Custo não informado'], 400);
+            }
+            
+            // Converte formato BR (vírgula) para float
+            $custoNovo = str_replace('.', '', $custoNovo);
+            $custoNovo = str_replace(',', '.', $custoNovo);
+            $custoNovo = floatval($custoNovo);
+            
+            if ($custoNovo < 0) {
+                return $response->json(['success' => false, 'error' => 'Custo não pode ser negativo'], 400);
+            }
+            
+            $produto = $this->produtoModel->findById($id);
+            if (!$produto) {
+                return $response->json(['success' => false, 'error' => 'Produto não encontrado'], 404);
+            }
+            
+            $db = \App\Core\Database::getInstance()->getConnection();
+            $sql = "UPDATE produtos SET custo_unitario = :custo WHERE id = :id";
+            $stmt = $db->prepare($sql);
+            $stmt->execute(['custo' => $custoNovo, 'id' => $id]);
+            
+            // Recalcula margem
+            $margem = 0;
+            if ($custoNovo > 0) {
+                $margem = (($produto['preco_venda'] - $custoNovo) / $custoNovo) * 100;
+            }
+            
+            return $response->json([
+                'success' => true,
+                'custo_unitario' => $custoNovo,
+                'custo_formatado' => number_format($custoNovo, 2, ',', '.'),
+                'margem' => round($margem, 1),
+                'margem_formatada' => number_format($margem, 1, ',', '.') . '%'
+            ]);
+        } catch (\Throwable $e) {
+            return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+    
+    /**
      * Deleta produto
      */
     public function destroy(Request $request, Response $response, $id)
