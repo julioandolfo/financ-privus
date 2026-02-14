@@ -321,14 +321,10 @@ class PedidoVinculadoController extends Controller
     public function recalcular(Request $request, Response $response)
     {
         $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        
-        LogSistema::info('Recalcular', 'inicio', 
-            "=== RECALCULAR PEDIDOS INICIADO === empresa_id: {$empresaId}");
+        $logs = []; // Acumula logs para gravar no final
         
         try {
-            $this->db->beginTransaction();
-            
-            // Buscar pedidos que possuem itens com custo zero/nulo (independente de filtros)
+            // Buscar pedidos que possuem itens com custo zero/nulo
             $sqlPedidos = "SELECT DISTINCT p.id, p.numero_pedido 
                            FROM pedidos_vinculados p
                            INNER JOIN pedidos_itens pi ON pi.pedido_id = p.id
@@ -338,8 +334,7 @@ class PedidoVinculadoController extends Controller
             $stmtPedidos->execute(['empresa_id' => $empresaId]);
             $pedidos = $stmtPedidos->fetchAll(\PDO::FETCH_ASSOC);
             
-            LogSistema::info('Recalcular', 'busca', 
-                "Encontrados " . count($pedidos) . " pedido(s) com itens sem custo. IDs: " . implode(', ', array_column($pedidos, 'numero_pedido')));
+            $logs[] = "=== RECALCULAR PEDIDOS === empresa_id: {$empresaId}, pedidos encontrados: " . count($pedidos);
             
             $totalRecalculados = 0;
             $totalItensAtualizados = 0;
@@ -348,7 +343,6 @@ class PedidoVinculadoController extends Controller
             
             foreach ($pedidos as $pedido) {
                 try {
-                    // Buscar itens SEM custo deste pedido
                     $sqlItens = "SELECT pi.* FROM pedidos_itens pi
                                  WHERE pi.pedido_id = :pedido_id
                                    AND (pi.custo_unitario IS NULL OR pi.custo_unitario <= 0 OR pi.custo_total IS NULL OR pi.custo_total <= 0)";
@@ -356,8 +350,7 @@ class PedidoVinculadoController extends Controller
                     $stmtItens->execute(['pedido_id' => $pedido['id']]);
                     $itensSemCusto = $stmtItens->fetchAll(\PDO::FETCH_ASSOC);
                     
-                    LogSistema::info('Recalcular', 'pedido', 
-                        "Pedido #{$pedido['numero_pedido']} (ID:{$pedido['id']}): " . count($itensSemCusto) . " item(ns) sem custo");
+                    $logs[] = "Pedido #{$pedido['numero_pedido']} (ID:{$pedido['id']}): " . count($itensSemCusto) . " item(ns) sem custo";
                     
                     $atualizouAlgo = false;
                     
@@ -366,109 +359,52 @@ class PedidoVinculadoController extends Controller
                         $produtoId = $item['produto_id'] ?? null;
                         $nomeProdutoItem = $item['nome_produto'] ?? '';
                         
-                        LogSistema::debug('Recalcular', 'item', 
-                            "  Item ID:{$item['id']} - '{$nomeProdutoItem}' | produto_id=" . ($produtoId ?: 'NULL') . 
-                            " | custo_atual=" . ($item['custo_unitario'] ?? 'NULL') . 
-                            " | custo_total_atual=" . ($item['custo_total'] ?? 'NULL') .
-                            " | codigo_origem=" . ($item['codigo_produto_origem'] ?? 'NULL'));
+                        $logs[] = "  Item ID:{$item['id']} '{$nomeProdutoItem}' | produto_id=" . ($produtoId ?: 'NULL') . 
+                            " | custo_unit=" . ($item['custo_unitario'] ?? 'NULL') . " | cod_origem=" . ($item['codigo_produto_origem'] ?? 'NULL');
                         
                         // 1. Busca pelo produto_id vinculado
                         if ($produtoId) {
                             $produto = $this->produtoModel->findById($produtoId);
-                            if ($produto) {
-                                LogSistema::debug('Recalcular', 'busca1', 
-                                    "  [1] findById({$produtoId}): encontrado '{$produto['nome']}' custo=R\${$produto['custo_unitario']}");
-                            } else {
-                                LogSistema::debug('Recalcular', 'busca1', 
-                                    "  [1] findById({$produtoId}): NÃO encontrado");
-                            }
+                            $logs[] = $produto 
+                                ? "  [1] findById({$produtoId}): '{$produto['nome']}' custo=R\${$produto['custo_unitario']}" 
+                                : "  [1] findById({$produtoId}): NAO encontrado";
                         } else {
-                            LogSistema::debug('Recalcular', 'busca1', 
-                                "  [1] Pulado - produto_id é NULL");
+                            $logs[] = "  [1] Pulado - produto_id NULL";
                         }
                         
-                        // 2. Se não tem produto_id ou produto sem custo, busca por SKU/nome
+                        // 2. Se não tem produto ou custo é 0, busca por nome
                         if (!$produto || floatval($produto['custo_unitario'] ?? 0) <= 0) {
-                            LogSistema::debug('Recalcular', 'busca2', 
-                                "  [2] Tentando busca alternativa por nome: '{$nomeProdutoItem}'");
-                            
                             $produtoEncontrado = null;
                             
-                            // Tenta buscar por nome exato
+                            // 2a. Nome exato
                             if (!empty($nomeProdutoItem)) {
-                                $sqlBuscaNome = "SELECT * FROM produtos 
-                                                 WHERE nome = :nome AND empresa_id = :empresa_id AND ativo = 1
-                                                 LIMIT 1";
-                                $stmtBusca = $this->db->prepare($sqlBuscaNome);
-                                $stmtBusca->execute(['nome' => $nomeProdutoItem, 'empresa_id' => $empresaId]);
+                                $stmtBusca = $this->db->prepare("SELECT * FROM produtos WHERE nome = :nome AND empresa_id = :emp AND ativo = 1 LIMIT 1");
+                                $stmtBusca->execute(['nome' => $nomeProdutoItem, 'emp' => $empresaId]);
                                 $produtoEncontrado = $stmtBusca->fetch(\PDO::FETCH_ASSOC);
-                                
-                                if ($produtoEncontrado) {
-                                    LogSistema::debug('Recalcular', 'busca2', 
-                                        "  [2a] Nome exato: encontrado ID:{$produtoEncontrado['id']} '{$produtoEncontrado['nome']}' custo=R\${$produtoEncontrado['custo_unitario']}");
-                                } else {
-                                    LogSistema::debug('Recalcular', 'busca2', 
-                                        "  [2a] Nome exato: NÃO encontrado");
-                                }
+                                $logs[] = $produtoEncontrado 
+                                    ? "  [2a] Nome exato: ID:{$produtoEncontrado['id']} custo=R\${$produtoEncontrado['custo_unitario']}" 
+                                    : "  [2a] Nome exato: NAO encontrado";
                             }
                             
-                            // Tenta buscar por nome parcial (LIKE)
+                            // 2b. Nome LIKE
                             if (!$produtoEncontrado && !empty($nomeProdutoItem)) {
-                                $sqlBuscaLike = "SELECT * FROM produtos 
-                                                 WHERE nome LIKE :nome AND empresa_id = :empresa_id AND ativo = 1
-                                                 LIMIT 1";
-                                $stmtBusca2 = $this->db->prepare($sqlBuscaLike);
-                                $stmtBusca2->execute(['nome' => '%' . $nomeProdutoItem . '%', 'empresa_id' => $empresaId]);
+                                $stmtBusca2 = $this->db->prepare("SELECT * FROM produtos WHERE nome LIKE :nome AND empresa_id = :emp AND ativo = 1 LIMIT 1");
+                                $stmtBusca2->execute(['nome' => '%' . $nomeProdutoItem . '%', 'emp' => $empresaId]);
                                 $produtoEncontrado = $stmtBusca2->fetch(\PDO::FETCH_ASSOC);
-                                
-                                if ($produtoEncontrado) {
-                                    LogSistema::debug('Recalcular', 'busca2', 
-                                        "  [2b] Nome LIKE: encontrado ID:{$produtoEncontrado['id']} '{$produtoEncontrado['nome']}' custo=R\${$produtoEncontrado['custo_unitario']}");
-                                } else {
-                                    LogSistema::debug('Recalcular', 'busca2', 
-                                        "  [2b] Nome LIKE: NÃO encontrado");
-                                }
-                            }
-                            
-                            // Tenta buscar por codigo_produto_origem extraindo SKU
-                            if (!$produtoEncontrado) {
-                                $codigoOrigem = $item['codigo_produto_origem'] ?? '';
-                                if (!empty($codigoOrigem)) {
-                                    // Extrai possível SKU - busca por produtos com sku ou codigo que contenha parte do codigo_origem
-                                    $sqlBuscaSku = "SELECT * FROM produtos 
-                                                    WHERE empresa_id = :empresa_id AND ativo = 1
-                                                    AND (sku IS NOT NULL AND sku != '')
-                                                    AND nome LIKE :nome_like
-                                                    LIMIT 1";
-                                    $stmtBuscaSku = $this->db->prepare($sqlBuscaSku);
-                                    // Pega as primeiras palavras do nome para busca
-                                    $primeiraPalavra = explode(' ', $nomeProdutoItem)[0] ?? '';
-                                    if (strlen($primeiraPalavra) >= 3) {
-                                        $stmtBuscaSku->execute(['empresa_id' => $empresaId, 'nome_like' => $primeiraPalavra . '%']);
-                                        $produtoEncontrado = $stmtBuscaSku->fetch(\PDO::FETCH_ASSOC);
-                                        
-                                        if ($produtoEncontrado) {
-                                            LogSistema::debug('Recalcular', 'busca2', 
-                                                "  [2c] Primeira palavra '{$primeiraPalavra}': encontrado ID:{$produtoEncontrado['id']} '{$produtoEncontrado['nome']}' custo=R\${$produtoEncontrado['custo_unitario']}");
-                                        }
-                                    }
-                                }
+                                $logs[] = $produtoEncontrado 
+                                    ? "  [2b] Nome LIKE: ID:{$produtoEncontrado['id']} custo=R\${$produtoEncontrado['custo_unitario']}" 
+                                    : "  [2b] Nome LIKE: NAO encontrado";
                             }
                             
                             if ($produtoEncontrado && floatval($produtoEncontrado['custo_unitario'] ?? 0) > 0) {
                                 $produto = $produtoEncontrado;
-                                
-                                // Vincula o produto_id ao item se não estava vinculado
                                 if (!$produtoId) {
-                                    $sqlVincula = "UPDATE pedidos_itens SET produto_id = :produto_id WHERE id = :id";
-                                    $stmtVincula = $this->db->prepare($sqlVincula);
-                                    $stmtVincula->execute(['produto_id' => $produtoEncontrado['id'], 'id' => $item['id']]);
-                                    LogSistema::info('Recalcular', 'vinculo', 
-                                        "  Vinculado produto_id={$produtoEncontrado['id']} ao item ID:{$item['id']}");
+                                    $stmtVincula = $this->db->prepare("UPDATE pedidos_itens SET produto_id = :pid WHERE id = :id");
+                                    $stmtVincula->execute(['pid' => $produtoEncontrado['id'], 'id' => $item['id']]);
+                                    $logs[] = "  -> Vinculado produto_id={$produtoEncontrado['id']}";
                                 }
                             } else {
-                                LogSistema::warning('Recalcular', 'busca2', 
-                                    "  [2] Nenhum produto com custo > 0 encontrado para '{$nomeProdutoItem}'");
+                                $logs[] = "  [2] Nenhum produto com custo > 0 para '{$nomeProdutoItem}'";
                             }
                         }
                         
@@ -477,74 +413,57 @@ class PedidoVinculadoController extends Controller
                             $quantidade = floatval($item['quantidade'] ?? 1);
                             $novoCustoTotal = round($quantidade * $novoCustoUnitario, 2);
                             
-                            $sqlUpdateItem = "UPDATE pedidos_itens SET 
-                                             custo_unitario = :custo_unitario,
-                                             custo_total = :custo_total
-                                             WHERE id = :id";
-                            $stmtItem = $this->db->prepare($sqlUpdateItem);
-                            $stmtItem->execute([
-                                'custo_unitario' => $novoCustoUnitario,
-                                'custo_total' => $novoCustoTotal,
-                                'id' => $item['id']
-                            ]);
+                            $stmtItem = $this->db->prepare("UPDATE pedidos_itens SET custo_unitario = :cu, custo_total = :ct WHERE id = :id");
+                            $stmtItem->execute(['cu' => $novoCustoUnitario, 'ct' => $novoCustoTotal, 'id' => $item['id']]);
                             
-                            LogSistema::info('Recalcular', 'atualizado', 
-                                "  ✅ Item ID:{$item['id']} '{$nomeProdutoItem}' atualizado: custo=R\${$novoCustoUnitario} x {$quantidade} = R\${$novoCustoTotal}");
-                            
+                            $logs[] = "  OK Item ID:{$item['id']} custo=R\${$novoCustoUnitario} x {$quantidade} = R\${$novoCustoTotal}";
                             $totalItensAtualizados++;
                             $atualizouAlgo = true;
                         } else {
-                            LogSistema::warning('Recalcular', 'ignorado', 
-                                "  ❌ Item ID:{$item['id']} '{$nomeProdutoItem}' IGNORADO - sem produto/custo");
+                            $logs[] = "  IGNORADO Item ID:{$item['id']} - sem produto/custo";
                             $itensIgnorados++;
                         }
                     }
                     
                     if ($atualizouAlgo) {
                         $this->pedidoModel->recalcularTotais($pedido['id']);
-                        LogSistema::info('Recalcular', 'totais', 
-                            "Pedido #{$pedido['numero_pedido']}: totais recalculados");
+                        $logs[] = "Pedido #{$pedido['numero_pedido']}: totais recalculados OK";
                         $totalRecalculados++;
                     }
                     
-                } catch (\Exception $e) {
-                    LogSistema::error('Recalcular', 'erro', 
-                        "Erro no pedido #{$pedido['numero_pedido']}: " . $e->getMessage());
+                } catch (\Throwable $e) {
+                    $logs[] = "ERRO pedido #{$pedido['numero_pedido']}: " . $e->getMessage();
                     $erros[] = "Erro no pedido #{$pedido['numero_pedido']}: " . $e->getMessage();
                 }
             }
             
-            $this->db->commit();
-            
-            LogSistema::info('Recalcular', 'fim', 
-                "=== RECALCULAR CONCLUÍDO === pedidos: " . count($pedidos) . 
-                ", recalculados: {$totalRecalculados}, itens atualizados: {$totalItensAtualizados}, ignorados: {$itensIgnorados}, erros: " . count($erros));
+            $logs[] = "=== FIM === recalculados: {$totalRecalculados}, itens: {$totalItensAtualizados}, ignorados: {$itensIgnorados}, erros: " . count($erros);
             
             if ($totalRecalculados > 0) {
                 $mensagem = "✅ {$totalRecalculados} pedido(s) recalculado(s), {$totalItensAtualizados} item(ns) atualizado(s) com custo.";
                 if ($itensIgnorados > 0) {
                     $mensagem .= " {$itensIgnorados} item(ns) não atualizado(s) (produto sem custo cadastrado).";
                 }
-                if (!empty($erros)) {
-                    $mensagem .= " Alguns pedidos apresentaram erros.";
-                }
                 $this->session->set('success', $mensagem);
             } else if (count($pedidos) > 0) {
-                $this->session->set('info', count($pedidos) . ' pedido(s) com ' . $itensIgnorados . ' item(ns) sem custo encontrado(s), porém os produtos vinculados não possuem custo cadastrado para atualizar. Verifique os logs em /sistema/registros');
+                $this->session->set('info', count($pedidos) . ' pedido(s) com ' . $itensIgnorados . ' item(ns) sem custo, porém produtos não possuem custo para atualizar. Veja logs.');
             } else {
-                $this->session->set('info', 'Nenhum pedido com itens sem custo encontrado. Todos os pedidos já possuem custo nos itens.');
+                $this->session->set('info', 'Nenhum pedido com itens sem custo encontrado.');
             }
             
             if (!empty($erros)) {
                 $this->session->set('warning', implode('<br>', $erros));
             }
             
-        } catch (\Exception $e) {
-            $this->db->rollBack();
-            LogSistema::error('Recalcular', 'fatalError', 
-                "Erro fatal ao recalcular: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+        } catch (\Throwable $e) {
+            $logs[] = "ERRO FATAL: " . $e->getMessage();
             $this->session->set('error', 'Erro ao recalcular pedidos: ' . $e->getMessage());
         }
+        
+        // Grava todos os logs de uma vez no final (fora de qualquer transação)
+        try {
+            LogSistema::info('Recalcular', 'resultado', implode("\n", $logs));
+        } catch (\Throwable $ignore) {}
         
         return $response->redirect('/pedidos');
     }
