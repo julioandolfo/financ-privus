@@ -245,7 +245,33 @@
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(opcoes)
         })
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) {
+                // Servidor retornou erro (500, 502, 504, etc)
+                if (r.status === 504 || r.status === 502 || r.status === 408) {
+                    throw new Error('Timeout do servidor. A sincronização pode estar em andamento em segundo plano. Tente sincronizar em lotes menores (ex: 10 pedidos por vez). Verifique os logs.');
+                }
+                return r.text().then(txt => {
+                    // Se começa com < é HTML de erro
+                    if (txt.trim().startsWith('<')) {
+                        throw new Error(`Erro ${r.status} no servidor. Tente sincronizar menos pedidos por vez. Verifique os logs em /sistema/registros`);
+                    }
+                    try { return JSON.parse(txt); }
+                    catch(e) { throw new Error(`Erro ${r.status}: ${txt.substring(0, 200)}`); }
+                });
+            }
+            const contentType = r.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                return r.text().then(txt => {
+                    if (txt.trim().startsWith('<')) {
+                        throw new Error('Servidor retornou HTML ao invés de JSON. Possível timeout. Tente sincronizar menos pedidos. Verifique /sistema/registros');
+                    }
+                    try { return JSON.parse(txt); }
+                    catch(e) { throw new Error('Resposta inesperada: ' + txt.substring(0, 200)); }
+                });
+            }
+            return r.json();
+        })
         .then(d => {
             if (d.sucesso) {
                 let msg = '✓ Sincronização concluída!';
@@ -264,7 +290,7 @@
             }
         })
         .catch(e => {
-            alert('Erro ao sincronizar: ' + e.message);
+            alert('Erro: ' + e.message);
             btn.disabled = false;
             btn.innerHTML = '🔄 Sincronizar Agora';
         });

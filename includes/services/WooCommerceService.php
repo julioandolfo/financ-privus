@@ -47,6 +47,10 @@ class WooCommerceService
      */
     public function sincronizar($integracaoId, $opcoes = [])
     {
+        // Aumenta limite de tempo para sincronizações grandes
+        @set_time_limit(600); // 10 minutos
+        @ini_set('max_execution_time', '600');
+        
         $integracao = $this->integracaoModel->findById($integracaoId);
         
         if (!$integracao || $integracao['tipo'] !== 'woocommerce') {
@@ -1650,11 +1654,15 @@ class WooCommerceService
             $url .= '?' . implode('&', $params);
         }
         
+        \App\Models\LogSistema::debug('WooCommerce', 'buscarPedidos', 
+            "API request: " . preg_replace('/\?.+/', '?...', $url));
+        
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_USERPWD, $config['consumer_key'] . ':' . $config['consumer_secret']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         
         $response = curl_exec($ch);
@@ -1667,7 +1675,9 @@ class WooCommerceService
         }
         
         if ($httpCode !== 200) {
-            throw new \Exception("Erro na API WooCommerce. Código: {$httpCode}");
+            \App\Models\LogSistema::error('WooCommerce', 'buscarPedidos', 
+                "Erro API HTTP {$httpCode}: " . substr($response, 0, 500));
+            throw new \Exception("Erro na API WooCommerce. Código: {$httpCode}. Resposta: " . substr($response, 0, 200));
         }
         
         $data = json_decode($response, true);
@@ -1778,11 +1788,15 @@ class WooCommerceService
             $url .= '?' . implode('&', $params);
         }
         
+        \App\Models\LogSistema::debug('WooCommerce', 'buscarPedidos', 
+            "API request: " . preg_replace('/\?.+/', '?...', $url));
+        
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_USERPWD, $config['consumer_key'] . ':' . $config['consumer_secret']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         
         $response = curl_exec($ch);
@@ -1795,7 +1809,9 @@ class WooCommerceService
         }
         
         if ($httpCode !== 200) {
-            throw new \Exception("Erro na API WooCommerce. Código: {$httpCode}");
+            \App\Models\LogSistema::error('WooCommerce', 'buscarPedidos', 
+                "Erro API HTTP {$httpCode}: " . substr($response, 0, 500));
+            throw new \Exception("Erro na API WooCommerce. Código: {$httpCode}. Resposta: " . substr($response, 0, 200));
         }
         
         $data = json_decode($response, true);
