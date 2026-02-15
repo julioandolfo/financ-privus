@@ -295,16 +295,53 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Indicadores financeiros separados visualmente por empresa (últimos <?= isset($metricas_financeiras['periodo']) ? $metricas_financeiras['periodo'] : '30 dias' ?>)</p>
 
             <?php if (!empty($metricas_por_empresa ?? [])): ?>
-            <div class="space-y-8">
+            <div class="space-y-4">
                 <?php foreach ($metricas_por_empresa as $empresaId => $dados): ?>
-                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border-2 border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
-                        <h3 class="text-xl font-bold text-white"><?= htmlspecialchars($dados['empresa']['nome']) ?></h3>
-                        <?php if (!empty($dados['empresa']['cnpj'])): ?>
-                        <p class="text-indigo-100 text-sm">CNPJ: <?= htmlspecialchars($dados['empresa']['cnpj']) ?></p>
-                        <?php endif; ?>
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border-2 border-gray-200 dark:border-gray-700 overflow-hidden" x-data="{ expandido: false }">
+                    <!-- Cabeçalho clicável -->
+                    <div @click="expandido = !expandido" class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 cursor-pointer hover:from-indigo-700 hover:to-purple-700 transition-all">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-xl font-bold text-white"><?= htmlspecialchars($dados['empresa']['nome']) ?></h3>
+                                <?php if (!empty($dados['empresa']['cnpj'])): ?>
+                                <p class="text-indigo-100 text-sm">CNPJ: <?= htmlspecialchars($dados['empresa']['cnpj']) ?></p>
+                                <?php endif; ?>
+                            </div>
+                            <!-- Resumo rápido (sempre visível) + ícone expandir -->
+                            <div class="flex items-center gap-6">
+                                <div class="hidden md:flex items-center gap-4 text-white text-sm">
+                                    <div class="text-right">
+                                        <div class="text-xs opacity-75">Receitas</div>
+                                        <div class="font-bold">R$ <?= number_format($dados['receitas'], 0, ',', '.') ?></div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xs opacity-75">Despesas</div>
+                                        <div class="font-bold">R$ <?= number_format($dados['despesas'], 0, ',', '.') ?></div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xs opacity-75">Lucro</div>
+                                        <div class="font-bold">R$ <?= number_format($dados['lucro_liquido'], 0, ',', '.') ?></div>
+                                    </div>
+                                </div>
+                                <svg 
+                                    class="w-6 h-6 text-white transition-transform duration-200"
+                                    :class="{ 'rotate-180': expandido }"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </div>
                     </div>
-                    <div class="p-6">
+                    
+                    <!-- Conteúdo expansível -->
+                    <div x-show="expandido" 
+                         x-transition:enter="transition ease-out duration-300"
+                         x-transition:enter-start="opacity-0 -translate-y-4"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-200"
+                         x-transition:leave-start="opacity-100 translate-y-0"
+                         x-transition:leave-end="opacity-0 -translate-y-4"
+                         class="p-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                             <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white">
                                 <h4 class="text-xs font-semibold opacity-90 mb-1">Receitas</h4>
@@ -334,10 +371,10 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                                 <span class="text-xs text-gray-600 dark:text-gray-400 block">Ticket Médio</span>
                                 <span class="font-bold text-gray-900 dark:text-gray-100">R$ <?= number_format($dados['ticket_medio'], 0, ',', '.') ?></span>
                             </div>
-                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                            <a href="/contas-receber?status=vencido&empresa_id=<?= $empresaId ?>" class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors cursor-pointer">
                                 <span class="text-xs text-gray-600 dark:text-gray-400 block">Inadimplência</span>
                                 <span class="font-bold text-amber-600 dark:text-amber-400"><?= number_format($dados['taxa_inadimplencia'], 1) ?>%</span>
-                            </div>
+                            </a>
                             <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
                                 <span class="text-xs text-gray-600 dark:text-gray-400 block">Burn Rate</span>
                                 <span class="font-bold text-gray-900 dark:text-gray-100">R$ <?= number_format($dados['burn_rate'], 2, ',', '.') ?></span>
@@ -346,10 +383,10 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                                 <span class="text-xs text-gray-600 dark:text-gray-400 block">Runway</span>
                                 <span class="font-bold text-gray-900 dark:text-gray-100"><?= $dados['runway'] > 24 ? '24+' : number_format($dados['runway'], 0) ?> meses</span>
                             </div>
-                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                            <a href="/contas-receber?status=vencido&empresa_id=<?= $empresaId ?>" class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer">
                                 <span class="text-xs text-gray-600 dark:text-gray-400 block">Contas Vencidas</span>
                                 <span class="font-bold text-red-600 dark:text-red-400"><?= $dados['contas_vencidas'] ?> (R$ <?= number_format($dados['valor_vencido'], 2, ',', '.') ?>)</span>
-                            </div>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -404,7 +441,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             </div>
 
             <!-- Inadimplência -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
+            <a href="/contas-receber?status=vencido" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xl transition-all cursor-pointer block">
                 <div class="flex items-center justify-between mb-3">
                     <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Inadimplência</h4>
                     <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center">
@@ -414,7 +451,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                     </div>
                 </div>
                 <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><?= number_format($metricas_financeiras['inadimplencia_taxa'], 1) ?>%</p>
-            </div>
+            </a>
 
             <!-- Burn Rate / Runway -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
@@ -511,14 +548,14 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                     Riscos e Alertas
                 </h3>
                 <div class="space-y-3">
-                    <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
+                    <a href="/contas-receber?status=vencido" class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700 hover:bg-red-50 dark:hover:bg-red-900/10 -mx-2 px-2 py-1 rounded transition-colors cursor-pointer">
                         <span class="text-sm text-gray-600 dark:text-gray-400">Contas Vencidas</span>
                         <span class="font-bold text-red-600 dark:text-red-400"><?= number_format($metricas_financeiras['contas_vencidas']) ?></span>
-                    </div>
-                    <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
+                    </a>
+                    <a href="/contas-receber?status=vencido" class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700 hover:bg-red-50 dark:hover:bg-red-900/10 -mx-2 px-2 py-1 rounded transition-colors cursor-pointer">
                         <span class="text-sm text-gray-600 dark:text-gray-400">Valor em Atraso</span>
                         <span class="font-bold text-red-600 dark:text-red-400">R$ <?= number_format($metricas_financeiras['inadimplencia_valor'], 2, ',', '.') ?></span>
-                    </div>
+                    </a>
                     <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
                         <span class="text-sm text-gray-600 dark:text-gray-400">Movimentações Pendentes</span>
                         <span class="font-bold text-amber-600 dark:text-amber-400"><?= number_format($movimentacoes_caixa['pendentes']) ?></span>
