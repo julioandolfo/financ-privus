@@ -134,6 +134,39 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
     </div>
 
     <!-- ========================================
+         BANNER DE TRANSAÇÕES PENDENTES
+         ======================================== -->
+    <?php if (($sincronizacao_bancaria['transacoes_pendentes'] ?? 0) > 0): ?>
+    <div class="mb-8 animate-pulse-slow">
+        <a href="/transacoes-pendentes" class="block bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-500 rounded-2xl shadow-xl p-5 hover:shadow-2xl transition-all duration-300 group relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+            <div class="relative flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="flex-shrink-0 w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                        <span class="text-3xl font-black text-white"><?= $sincronizacao_bancaria['transacoes_pendentes'] ?></span>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">
+                            Transaç<?= $sincronizacao_bancaria['transacoes_pendentes'] > 1 ? 'ões' : 'ão' ?> bancária<?= $sincronizacao_bancaria['transacoes_pendentes'] > 1 ? 's' : '' ?> aguardando aprovação
+                        </h3>
+                        <p class="text-amber-100 text-sm">
+                            Importadas automaticamente dos bancos. Clique para revisar, classificar e aprovar.
+                        </p>
+                    </div>
+                </div>
+                <div class="flex-shrink-0 flex items-center gap-2 bg-white/20 backdrop-blur-sm px-5 py-2.5 rounded-xl text-white font-semibold group-hover:bg-white/30 transition">
+                    Revisar Agora
+                    <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                    </svg>
+                </div>
+            </div>
+        </a>
+    </div>
+    <style>.animate-pulse-slow { animation: pulse-slow 3s ease-in-out infinite; } @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.88; } }</style>
+    <?php endif; ?>
+
+    <!-- ========================================
          MÉTRICAS FINANCEIRAS AVANÇADAS
          ======================================== -->
     <?php $periodoAtual = $metricas_financeiras['periodo_selecionado'] ?? 'este_mes'; ?>

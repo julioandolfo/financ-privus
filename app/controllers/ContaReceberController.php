@@ -15,6 +15,7 @@ use App\Models\ContaBancaria;
 use App\Models\ParcelaReceber;
 use App\Models\PedidoVinculado;
 use App\Models\PedidoItem;
+use App\Models\TransacaoPendente;
 use includes\services\RateioService;
 use includes\services\MovimentacaoService;
 
@@ -155,6 +156,15 @@ class ContaReceberController extends Controller
             // Retorna os filtros aplicados para a view
             $filtersApplied = $request->all();
             
+            // Contar transações pendentes de aprovação (tipo crédito = receitas)
+            $transacaoPendenteModel = new TransacaoPendente();
+            $transacoesPendentesCount = 0;
+            if (!empty($filters['empresa_id'])) {
+                $transacoesPendentesCount = $transacaoPendenteModel->countByEmpresa($filters['empresa_id'], 'pendente');
+            } elseif ($empresaAtual) {
+                $transacoesPendentesCount = $transacaoPendenteModel->countByEmpresa($empresaAtual, 'pendente');
+            }
+            
             return $this->render('contas_receber/index', [
                 'title' => 'Contas a Receber',
                 'contasReceber' => $contasReceber,
@@ -164,6 +174,7 @@ class ContaReceberController extends Controller
                 'centrosCusto' => $centrosCusto,
                 'statusWooList' => $statusWooList,
                 'filters' => $filtersApplied,
+                'transacoes_pendentes_count' => $transacoesPendentesCount,
                 'paginacao' => [
                     'total_registros' => $totalRegistros,
                     'por_pagina' => $porPagina,

@@ -403,9 +403,13 @@ return [
     'GET /conexoes-bancarias/{id}/edit' => ['handler' => 'ConexaoBancariaController@edit', 'middleware' => ['AuthMiddleware']],
     'POST /conexoes-bancarias/{id}' => ['handler' => 'ConexaoBancariaController@update', 'middleware' => ['AuthMiddleware']],
     'POST /conexoes-bancarias/{id}/sincronizar' => ['handler' => 'ConexaoBancariaController@sincronizar', 'middleware' => ['AuthMiddleware']],
+    'POST /conexoes-bancarias/{id}/importar-extrato' => ['handler' => 'ConexaoBancariaController@importarExtrato', 'middleware' => ['AuthMiddleware']],
     'POST /conexoes-bancarias/{id}/testar' => ['handler' => 'ConexaoBancariaController@testarConexao', 'middleware' => ['AuthMiddleware']],
     'GET /api/conexoes-bancarias/{id}/saldo' => ['handler' => 'ConexaoBancariaController@saldo', 'middleware' => ['AuthMiddleware']],
     'POST /conexoes-bancarias/{id}/delete' => ['handler' => 'ConexaoBancariaController@destroy', 'middleware' => ['AuthMiddleware']],
+    
+    // Extrato Bancário API (visualização)
+    'GET /extrato-api' => ['handler' => 'ExtratoBancarioApiController@index', 'middleware' => ['AuthMiddleware']],
     
     // Transações Pendentes (protegido)
     'GET /transacoes-pendentes' => ['handler' => 'TransacaoPendenteController@index', 'middleware' => ['AuthMiddleware']],
@@ -413,6 +417,7 @@ return [
     'POST /transacoes-pendentes/{id}/aprovar' => ['handler' => 'TransacaoPendenteController@aprovar', 'middleware' => ['AuthMiddleware']],
     'POST /transacoes-pendentes/{id}/ignorar' => ['handler' => 'TransacaoPendenteController@ignorar', 'middleware' => ['AuthMiddleware']],
     'POST /transacoes-pendentes/aprovar-lote' => ['handler' => 'TransacaoPendenteController@aprovarLote', 'middleware' => ['AuthMiddleware']],
+    'POST /transacoes-pendentes/ignorar-lote' => ['handler' => 'TransacaoPendenteController@ignorarLote', 'middleware' => ['AuthMiddleware']],
     
     // Logs do Sistema (protegido - apenas admin)
     // Rota alternativa /sistema/registros caso /logs seja bloqueado pelo WAF/ModSecurity

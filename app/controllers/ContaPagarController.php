@@ -12,6 +12,7 @@ use App\Models\CategoriaFinanceira;
 use App\Models\CentroCusto;
 use App\Models\FormaPagamento;
 use App\Models\ContaBancaria;
+use App\Models\TransacaoPendente;
 use includes\services\RateioService;
 use includes\services\MovimentacaoService;
 
@@ -147,6 +148,15 @@ class ContaPagarController extends Controller
             // Retorna os filtros aplicados para a view
             $filtersApplied = $request->all();
             
+            // Contar transações pendentes de aprovação (tipo débito = despesas)
+            $transacaoPendenteModel = new TransacaoPendente();
+            $transacoesPendentesCount = 0;
+            if ($empresaId) {
+                $transacoesPendentesCount = $transacaoPendenteModel->countByEmpresa($empresaId, 'pendente');
+            } elseif ($empresaAtual) {
+                $transacoesPendentesCount = $transacaoPendenteModel->countByEmpresa($empresaAtual, 'pendente');
+            }
+            
             return $this->render('contas_pagar/index', [
                 'title' => 'Contas a Pagar',
                 'contasPagar' => $contasPagar,
@@ -156,6 +166,7 @@ class ContaPagarController extends Controller
                 'centrosCusto' => $centrosCusto,
                 'formasPagamento' => $formasPagamento,
                 'filters' => $filtersApplied,
+                'transacoes_pendentes_count' => $transacoesPendentesCount,
                 'paginacao' => [
                     'total_registros' => $totalRegistros,
                     'por_pagina' => $porPagina,

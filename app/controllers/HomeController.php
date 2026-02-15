@@ -784,6 +784,17 @@ class HomeController extends Controller
                 ];
             }
             
+            // Transações bancárias pendentes de aprovação
+            if ($transacoesPendentes > 0) {
+                $alertas[] = [
+                    'tipo' => 'warning',
+                    'icone' => 'bank',
+                    'titulo' => $transacoesPendentes . ' Transaç' . ($transacoesPendentes > 1 ? 'ões' : 'ão') . ' Bancária' . ($transacoesPendentes > 1 ? 's' : '') . ' Pendente' . ($transacoesPendentes > 1 ? 's' : ''),
+                    'mensagem' => 'Há transações importadas dos bancos aguardando sua revisão e aprovação.',
+                    'link' => '/transacoes-pendentes'
+                ];
+            }
+            
             // Movimentações pendentes
             if ($movimentacoesPendentes > 10) {
                 $alertas[] = [

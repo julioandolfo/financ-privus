@@ -388,7 +388,8 @@ use App\Models\ConexaoBancaria;
                 </template>
 
                 <!-- Ações -->
-                <div class="px-6 py-4 flex gap-2 flex-wrap">
+                <div class="px-6 py-4 flex gap-2 flex-wrap"
+                     x-data="{ importandoExtrato: false, resultadoExtrato: null, erroExtrato: null, showResultadoExtrato: false }">
                     <button @click="
                         sincronizando = true; 
                         showResultado = false; 
@@ -424,13 +425,95 @@ use App\Models\ConexaoBancaria;
                         })
                         .finally(() => sincronizando = false)
                     "
-                            :disabled="sincronizando"
+                            :disabled="sincronizando || importandoExtrato"
                             class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2">
                         <svg class="w-4 h-4" :class="sincronizando && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                         </svg>
                         <span x-text="sincronizando ? 'Sincronizando...' : 'Sincronizar'"></span>
                     </button>
+                    
+                    <!-- Importar Extrato Completo (apenas visualização) -->
+                    <button @click="
+                        importandoExtrato = true; 
+                        showResultadoExtrato = false; 
+                        resultadoExtrato = null; 
+                        erroExtrato = null;
+                        fetch('/conexoes-bancarias/<?= $conexao['id'] ?>/importar-extrato', {
+                            method:'POST', 
+                            headers:{
+                                'X-Requested-With':'XMLHttpRequest',
+                                'Content-Type':'application/json'
+                            },
+                            body: JSON.stringify({
+                                data_inicio: dataInicio,
+                                data_fim: dataFim
+                            })
+                        })
+                        .then(r => r.json())
+                        .then(d => { 
+                            if(d.success) { 
+                                resultadoExtrato = d;
+                            } else { 
+                                erroExtrato = d.error || 'Erro desconhecido';
+                                if(d.detalhes) erroExtrato += '\n\nDetalhes:\n' + d.detalhes.join('\n');
+                            }
+                            showResultadoExtrato = true;
+                        })
+                        .catch(e => { 
+                            erroExtrato = 'Erro: ' + e.message; 
+                            showResultadoExtrato = true; 
+                        })
+                        .finally(() => importandoExtrato = false)
+                    "
+                            :disabled="sincronizando || importandoExtrato"
+                            class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2"
+                            title="Importar extrato completo (créditos e débitos) apenas para visualização">
+                        <svg class="w-4 h-4" :class="importandoExtrato && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span x-text="importandoExtrato ? 'Importando...' : 'Extrato'"></span>
+                    </button>
+                    
+                    <!-- Resultado da Importação de Extrato -->
+                    <template x-if="showResultadoExtrato">
+                        <div class="w-full mt-2 rounded-xl p-3" :class="erroExtrato ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' : 'bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800'">
+                            <template x-if="resultadoExtrato">
+                                <div>
+                                    <p class="text-sm font-semibold text-purple-800 dark:text-purple-200 mb-2" x-text="resultadoExtrato.message"></p>
+                                    <div class="grid grid-cols-4 gap-2 text-center mb-2">
+                                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2">
+                                            <p class="text-lg font-bold text-purple-600" x-text="resultadoExtrato.resumo?.total || 0"></p>
+                                            <p class="text-[10px] text-gray-500">Total</p>
+                                        </div>
+                                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2">
+                                            <p class="text-lg font-bold text-red-600" x-text="resultadoExtrato.resumo?.debitos || 0"></p>
+                                            <p class="text-[10px] text-gray-500">Débitos</p>
+                                        </div>
+                                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2">
+                                            <p class="text-lg font-bold text-green-600" x-text="resultadoExtrato.resumo?.creditos || 0"></p>
+                                            <p class="text-[10px] text-gray-500">Créditos</p>
+                                        </div>
+                                        <div class="bg-white dark:bg-gray-800 rounded-lg p-2">
+                                            <p class="text-lg font-bold text-blue-600" x-text="resultadoExtrato.resumo?.novas || 0"></p>
+                                            <p class="text-[10px] text-gray-500">Novas</p>
+                                        </div>
+                                    </div>
+                                    <a href="/extrato-api?conexao_bancaria_id=<?= $conexao['id'] ?>" 
+                                       class="inline-flex items-center gap-1 text-xs font-semibold text-purple-700 dark:text-purple-300 hover:underline">
+                                        Ver extrato completo →
+                                    </a>
+                                </div>
+                            </template>
+                            <template x-if="erroExtrato">
+                                <div>
+                                    <p class="text-sm font-semibold text-red-800 dark:text-red-300">Erro ao importar extrato</p>
+                                    <pre class="text-xs text-red-600 dark:text-red-400 mt-1 whitespace-pre-wrap" x-text="erroExtrato"></pre>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    
                     <button @click="showOpcoes = !showOpcoes" 
                             :class="showOpcoes ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'"
                             class="px-3 py-2.5 hover:bg-gray-200 dark:hover:bg-gray-600 text-sm font-semibold rounded-xl transition" title="Opções de período">
@@ -441,6 +524,11 @@ use App\Models\ConexaoBancaria;
                     <a href="/conexoes-bancarias/<?= $conexao['id'] ?>" 
                        class="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-xl transition">
                         Detalhes
+                    </a>
+                    <a href="/extrato-api?conexao_bancaria_id=<?= $conexao['id'] ?>" 
+                       class="px-4 py-2.5 bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 text-sm font-semibold rounded-xl transition"
+                       title="Ver extrato importado">
+                        Ver Extrato
                     </a>
                     <button @click="fetch('/conexoes-bancarias/<?= $conexao['id'] ?>/testar', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r => r.json()).then(d => alert(d.message || d.error)).catch(e => alert('Erro ao testar'))"
                             class="px-4 py-2.5 bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-sm font-semibold rounded-xl transition">

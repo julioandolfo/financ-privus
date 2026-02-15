@@ -20,6 +20,7 @@ require_once APP_ROOT . '/app/models/ConexaoBancaria.php';
 require_once APP_ROOT . '/app/models/TransacaoPendente.php';
 require_once APP_ROOT . '/app/models/RegraClassificacao.php';
 require_once APP_ROOT . '/app/models/ContaBancaria.php';
+require_once APP_ROOT . '/app/models/ExtratoBancarioApi.php';
 require_once APP_ROOT . '/includes/services/BankApiInterface.php';
 require_once APP_ROOT . '/includes/services/AbstractBankService.php';
 require_once APP_ROOT . '/includes/services/BankServiceFactory.php';
@@ -38,6 +39,7 @@ if (file_exists(APP_ROOT . '/includes/services/OpenBankingService.php')) {
 use App\Core\Database;
 use App\Models\ConexaoBancaria;
 use App\Models\TransacaoPendente;
+use App\Models\ExtratoBancarioApi;
 use Includes\Services\BankServiceFactory;
 use Includes\Services\ClassificadorIAService;
 
@@ -209,6 +211,7 @@ try {
             $dataFim = date('Y-m-d');
             
             $transacoes = $service->getTransacoes($conexaoCredenciais, $dataInicio, $dataFim);
+            $transacoesCompletas = $transacoes; // Guardar cópia completa para extrato visual
             echo "  Encontradas " . count($transacoes) . " transações no período\n";
             
             // Filtrar por tipo_sync (apenas_despesas, apenas_receitas ou ambos)
@@ -273,6 +276,36 @@ try {
             
             echo "  + {$novas} novas | {$duplicadas} duplicadas | {$jaLancadas} já lançadas manualmente\n";
             $totalNovas += $novas;
+            
+            // === 4b. Salvar extrato completo para visualização ===
+            // Usa $transacoesCompletas (antes do filtro tipo_sync) para o extrato visual
+            try {
+                $extratoModel = new ExtratoBancarioApi();
+                $extratoNovas = 0;
+                $extratoDuplicadas = 0;
+                
+                foreach ($transacoesCompletas as $tExtrato) {
+                    $extratoId = $extratoModel->inserir([
+                        'empresa_id' => $conexao['empresa_id'],
+                        'conexao_bancaria_id' => $conexao['id'],
+                        'conta_bancaria_id' => $conexao['conta_bancaria_id'] ?? null,
+                        'data_transacao' => $tExtrato['data_transacao'],
+                        'descricao' => $tExtrato['descricao_original'] ?? $tExtrato['descricao'] ?? '',
+                        'valor' => $tExtrato['valor'],
+                        'tipo' => $tExtrato['tipo'] ?? 'debito',
+                        'saldo_apos' => $tExtrato['saldo_apos'] ?? null,
+                        'banco_transacao_id' => $tExtrato['banco_transacao_id'] ?? null,
+                        'metodo_pagamento' => $tExtrato['metodo_pagamento'] ?? null,
+                        'origem' => $tExtrato['origem'] ?? 'api',
+                        'dados_raw' => $tExtrato
+                    ]);
+                    if ($extratoId) { $extratoNovas++; } else { $extratoDuplicadas++; }
+                }
+                
+                echo "  Extrato visual: {$extratoNovas} novas | {$extratoDuplicadas} duplicadas\n";
+            } catch (\Exception $eExtrato) {
+                echo "  ! Erro ao salvar extrato visual: " . $eExtrato->getMessage() . "\n";
+            }
             
             // === 5. Atualizar status da conexão ===
             $conexaoModel->atualizarUltimaSync($conexao['id']);

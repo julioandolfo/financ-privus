@@ -11,6 +11,8 @@ use App\Models\CategoriaFinanceira;
 use App\Models\CentroCusto;
 use App\Models\Fornecedor;
 use App\Models\Cliente;
+use App\Models\ContaBancaria;
+use App\Models\FormaPagamento;
 use App\Models\Usuario;
 
 class TransacaoPendenteController extends Controller
@@ -75,15 +77,23 @@ class TransacaoPendenteController extends Controller
         $fornecedores = [];
         $clientes = [];
         
+        $contasBancarias = [];
+        $formasPagamento = [];
+        
         if ($empresaId) {
             $transacoes = $this->transacaoModel->findByEmpresa($empresaId, $filtros);
             $estatisticas = $this->transacaoModel->getEstatisticas($empresaId);
             
-            // Buscar categorias e centros de custo para os filtros
             $categorias = $this->categoriaModel->findAll($empresaId);
             $centrosCusto = $this->centroCustoModel->findAll($empresaId);
             $fornecedores = $this->fornecedorModel->findAll(['empresa_id' => $empresaId]);
             $clientes = $this->clienteModel->findAll(['empresa_id' => $empresaId]);
+            
+            $contaBancariaModel = new ContaBancaria();
+            $contasBancarias = $contaBancariaModel->findAll($empresaId);
+            
+            $formaPagamentoModel = new FormaPagamento();
+            $formasPagamento = $formaPagamentoModel->findAll();
         }
         
         return $this->render('transacoes_pendentes/index', [
@@ -94,6 +104,8 @@ class TransacaoPendenteController extends Controller
             'centros_custo' => $centrosCusto,
             'fornecedores' => $fornecedores,
             'clientes' => $clientes,
+            'contas_bancarias' => $contasBancarias,
+            'formas_pagamento' => $formasPagamento,
             'empresas_usuario' => $empresasUsuario,
             'empresa_id_selecionada' => $empresaId
         ]);
@@ -153,20 +165,26 @@ class TransacaoPendenteController extends Controller
         $data = $request->all();
         
         try {
-            // Determinar se é conta a pagar ou receber
+            $dataVencimento = !empty($data['data_vencimento']) ? $data['data_vencimento'] : $transacao['data_transacao'];
+            $dataPagamento = !empty($data['data_pagamento']) ? $data['data_pagamento'] : $transacao['data_transacao'];
+            $dataCompetencia = !empty($data['data_competencia']) ? $data['data_competencia'] : $transacao['data_transacao'];
+            $observacoes = !empty($data['observacoes']) ? $data['observacoes'] : 'Importado via Open Banking';
+            
             if ($transacao['tipo'] === 'debito') {
-                // Criar conta a pagar
                 $contaData = [
                     'empresa_id' => $empresaId,
                     'categoria_id' => $data['categoria_id'] ?? $transacao['categoria_sugerida_id'],
                     'centro_custo_id' => $data['centro_custo_id'] ?? $transacao['centro_custo_sugerido_id'],
                     'fornecedor_id' => $data['fornecedor_id'] ?? $transacao['fornecedor_sugerido_id'],
+                    'conta_bancaria_id' => $data['conta_bancaria_id'] ?? null,
+                    'forma_pagamento_id' => $data['forma_pagamento_id'] ?? null,
                     'descricao' => $data['descricao'] ?? $transacao['descricao_original'],
                     'valor' => abs($transacao['valor']),
-                    'data_vencimento' => $transacao['data_transacao'],
-                    'data_pagamento' => $transacao['data_transacao'],
+                    'data_vencimento' => $dataVencimento,
+                    'data_competencia' => $dataCompetencia,
+                    'data_pagamento' => $dataPagamento,
                     'status' => 'pago',
-                    'observacoes' => 'Importado automaticamente via Open Banking'
+                    'observacoes' => $observacoes
                 ];
                 
                 $contaId = $this->contaPagarModel->create($contaData);
@@ -175,18 +193,20 @@ class TransacaoPendenteController extends Controller
                     $this->transacaoModel->vincularContaPagar($id, $contaId);
                 }
             } else {
-                // Criar conta a receber
                 $contaData = [
                     'empresa_id' => $empresaId,
                     'categoria_id' => $data['categoria_id'] ?? $transacao['categoria_sugerida_id'],
                     'centro_custo_id' => $data['centro_custo_id'] ?? $transacao['centro_custo_sugerido_id'],
                     'cliente_id' => $data['cliente_id'] ?? $transacao['cliente_sugerido_id'],
+                    'conta_bancaria_id' => $data['conta_bancaria_id'] ?? null,
+                    'forma_pagamento_id' => $data['forma_pagamento_id'] ?? null,
                     'descricao' => $data['descricao'] ?? $transacao['descricao_original'],
                     'valor' => $transacao['valor'],
-                    'data_vencimento' => $transacao['data_transacao'],
-                    'data_recebimento' => $transacao['data_transacao'],
+                    'data_vencimento' => $dataVencimento,
+                    'data_competencia' => $dataCompetencia,
+                    'data_recebimento' => $dataPagamento,
                     'status' => 'recebido',
-                    'observacoes' => 'Importado automaticamente via Open Banking'
+                    'observacoes' => $observacoes
                 ];
                 
                 $contaId = $this->contaReceberModel->create($contaData);
@@ -317,7 +337,48 @@ class TransacaoPendenteController extends Controller
             'success' => true,
             'aprovadas' => $aprovadas,
             'erros' => $erros,
-            'message' => "{$aprovadas} transações aprovadas" . (count($erros) > 0 ? " com {count($erros)} erros" : "")
+            'message' => "{$aprovadas} transações aprovadas" . (count($erros) > 0 ? " com " . count($erros) . " erros" : "")
+        ]);
+    }
+    
+    /**
+     * Ignorar múltiplas transações em lote
+     */
+    public function ignorarLote(Request $request, Response $response)
+    {
+        $data = $request->all();
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
+        $usuarioId = $_SESSION['usuario_id'] ?? null;
+        
+        if (empty($data['transacoes']) || !is_array($data['transacoes'])) {
+            return $response->json(['error' => 'Nenhuma transação selecionada'], 400);
+        }
+        
+        $ignoradas = 0;
+        $erros = [];
+        
+        foreach ($data['transacoes'] as $transacaoId) {
+            try {
+                $transacao = $this->transacaoModel->findById($transacaoId);
+                
+                if (!$transacao || $transacao['empresa_id'] != $empresaId) {
+                    $erros[] = "Transação #{$transacaoId}: não encontrada ou sem permissão";
+                    continue;
+                }
+                
+                $this->transacaoModel->ignorar($transacaoId, $usuarioId, $data['observacao'] ?? 'Ignorada em lote');
+                $ignoradas++;
+                
+            } catch (\Exception $e) {
+                $erros[] = "Transação #{$transacaoId}: " . $e->getMessage();
+            }
+        }
+        
+        return $response->json([
+            'success' => true,
+            'ignoradas' => $ignoradas,
+            'erros' => $erros,
+            'message' => "{$ignoradas} transações ignoradas" . (count($erros) > 0 ? " com " . count($erros) . " erros" : "")
         ]);
     }
 }

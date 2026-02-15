@@ -38,6 +38,28 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
         </div>
     </div>
 
+    <!-- Banner Transações Pendentes -->
+    <?php if (($transacoes_pendentes_count ?? 0) > 0): ?>
+    <div class="mb-6">
+        <a href="/transacoes-pendentes" class="flex items-center justify-between bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-4 hover:border-amber-400 dark:hover:border-amber-600 transition-all group">
+            <div class="flex items-center gap-3">
+                <div class="flex-shrink-0 w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center shadow-sm">
+                    <span class="text-lg font-bold text-white"><?= $transacoes_pendentes_count ?></span>
+                </div>
+                <div>
+                    <p class="font-semibold text-amber-900 dark:text-amber-100">
+                        Transaç<?= $transacoes_pendentes_count > 1 ? 'ões' : 'ão' ?> importada<?= $transacoes_pendentes_count > 1 ? 's' : '' ?> do banco aguardando aprovação
+                    </p>
+                    <p class="text-sm text-amber-700 dark:text-amber-300">Clique para revisar e lançar como contas a pagar</p>
+                </div>
+            </div>
+            <div class="flex-shrink-0 text-amber-600 dark:text-amber-400 group-hover:translate-x-1 transition-transform">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+            </div>
+        </a>
+    </div>
+    <?php endif; ?>
+
     <!-- Filtros Avançados -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 mb-8" x-data="{ showFilters: <?= !empty(array_filter($filters ?? [])) ? 'true' : 'false' ?> }">
         <!-- Filtros Rápidos -->

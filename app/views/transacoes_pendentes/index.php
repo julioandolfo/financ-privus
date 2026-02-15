@@ -3,6 +3,14 @@ $old = $this->session->get('old') ?? [];
 $errors = $this->session->get('errors') ?? [];
 ?>
 
+<style>
+.ts-wrapper { min-width: 180px !important; }
+.ts-wrapper .ts-dropdown { z-index: 9999 !important; position: absolute !important; }
+.ts-wrapper .ts-control { min-height: 38px !important; padding: 6px 10px !important; }
+.ts-wrapper .ts-control input { min-width: 80px !important; }
+.card-transacao:focus-within { z-index: 9000 !important; }
+</style>
+
 <div class="max-w-7xl mx-auto" x-data="transacoesPendentes()">
     <!-- Seletor de Empresa -->
     <?php if (!empty($empresas_usuario) && count($empresas_usuario) > 0): ?>
@@ -21,282 +29,351 @@ $errors = $this->session->get('errors') ?? [];
     <?php endif; ?>
     
     <!-- Header -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-            <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
-                📋 Transações Pendentes
-            </h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-2">
-                Revise e aprove transações importadas automaticamente dos bancos
-            </p>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Transações Pendentes</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">Revise, classifique e aprove transações importadas dos bancos</p>
         </div>
-        <div class="flex gap-3">
-            <a href="/conexoes-bancarias" class="inline-flex items-center px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
-                </svg>
-                Gerenciar Conexões
-            </a>
-        </div>
+        <a href="/conexoes-bancarias" class="inline-flex items-center px-5 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+            </svg>
+            Conexões
+        </a>
     </div>
 
     <!-- Filtros -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <form method="GET" action="/transacoes-pendentes" class="space-y-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
+        <form method="GET" action="/transacoes-pendentes">
             <input type="hidden" name="empresa_id" value="<?= htmlspecialchars($empresa_id_selecionada ?? '') ?>">
-            
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <!-- Filtro: Tipo -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Tipo</label>
-                    <select name="tipo" onchange="this.form.submit()" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <select name="tipo" onchange="this.form.submit()" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm">
                         <option value="">Todos</option>
-                        <option value="debito" <?= ($filtros['tipo'] ?? '') === 'debito' ? 'selected' : '' ?>>Despesas (débitos)</option>
-                        <option value="credito" <?= ($filtros['tipo'] ?? '') === 'credito' ? 'selected' : '' ?>>Receitas (créditos)</option>
+                        <option value="debito" <?= ($filtros['tipo'] ?? '') === 'debito' ? 'selected' : '' ?>>Despesas</option>
+                        <option value="credito" <?= ($filtros['tipo'] ?? '') === 'credito' ? 'selected' : '' ?>>Receitas</option>
                     </select>
                 </div>
-
-                <!-- Filtro: Status -->
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Status</label>
-                    <select name="status" onchange="this.form.submit()" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <select name="status" onchange="this.form.submit()" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm">
                         <option value="pendente" <?= ($filtros['status'] ?? 'pendente') === 'pendente' ? 'selected' : '' ?>>Pendentes</option>
                         <option value="aprovada" <?= ($filtros['status'] ?? '') === 'aprovada' ? 'selected' : '' ?>>Aprovadas</option>
                         <option value="ignorada" <?= ($filtros['status'] ?? '') === 'ignorada' ? 'selected' : '' ?>>Ignoradas</option>
                         <option value="" <?= ($filtros['status'] ?? 'pendente') === '' ? 'selected' : '' ?>>Todas</option>
                     </select>
                 </div>
-
-                <!-- Filtro: Banco/Origem -->
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Banco</label>
-                    <select name="banco" onchange="this.form.submit()" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <select name="banco" onchange="this.form.submit()" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm">
                         <option value="">Todos</option>
                         <option value="sicoob" <?= ($filtros['banco'] ?? '') === 'sicoob' ? 'selected' : '' ?>>Sicoob</option>
                         <option value="sicredi" <?= ($filtros['banco'] ?? '') === 'sicredi' ? 'selected' : '' ?>>Sicredi</option>
                         <option value="itau" <?= ($filtros['banco'] ?? '') === 'itau' ? 'selected' : '' ?>>Itaú</option>
                         <option value="bradesco" <?= ($filtros['banco'] ?? '') === 'bradesco' ? 'selected' : '' ?>>Bradesco</option>
                         <option value="mercadopago" <?= ($filtros['banco'] ?? '') === 'mercadopago' ? 'selected' : '' ?>>Mercado Pago</option>
-                        <option value="ofx" <?= ($filtros['banco'] ?? '') === 'ofx' ? 'selected' : '' ?>>OFX (importação)</option>
                     </select>
                 </div>
-
-                <!-- Filtro: Data Início -->
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">De</label>
-                    <input type="date" name="data_inicio" value="<?= htmlspecialchars($filtros['data_inicio'] ?? '') ?>" onchange="this.form.submit()"
-                           class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <input type="date" name="data_inicio" value="<?= htmlspecialchars($filtros['data_inicio'] ?? '') ?>" onchange="this.form.submit()" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm">
                 </div>
-
-                <!-- Filtro: Data Fim -->
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Até</label>
-                    <input type="date" name="data_fim" value="<?= htmlspecialchars($filtros['data_fim'] ?? '') ?>" onchange="this.form.submit()"
-                           class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <input type="date" name="data_fim" value="<?= htmlspecialchars($filtros['data_fim'] ?? '') ?>" onchange="this.form.submit()" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm">
                 </div>
             </div>
-
             <?php 
             $temFiltroAtivo = !empty($filtros['tipo']) || !empty($filtros['banco']) || !empty($filtros['data_inicio']) || !empty($filtros['data_fim']) || ($filtros['status'] ?? 'pendente') !== 'pendente';
             if ($temFiltroAtivo): ?>
-            <div class="flex items-center gap-2 pt-2">
-                <span class="text-xs text-gray-500 dark:text-gray-400">Filtros ativos:</span>
-                <?php if (!empty($filtros['tipo'])): ?>
-                    <span class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium">
-                        <?= $filtros['tipo'] === 'debito' ? 'Despesas' : 'Receitas' ?>
-                    </span>
-                <?php endif; ?>
-                <?php if (!empty($filtros['banco'])): ?>
-                    <span class="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium">
-                        <?= ucfirst($filtros['banco']) ?>
-                    </span>
-                <?php endif; ?>
-                <a href="/transacoes-pendentes?empresa_id=<?= $empresa_id_selecionada ?>" class="text-xs text-red-600 dark:text-red-400 hover:underline ml-2">Limpar filtros</a>
+            <div class="flex items-center gap-2 pt-2 mt-2 border-t border-gray-100 dark:border-gray-700">
+                <span class="text-xs text-gray-500">Filtros:</span>
+                <?php if (!empty($filtros['tipo'])): ?><span class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs"><?= $filtros['tipo'] === 'debito' ? 'Despesas' : 'Receitas' ?></span><?php endif; ?>
+                <?php if (!empty($filtros['banco'])): ?><span class="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs"><?= ucfirst($filtros['banco']) ?></span><?php endif; ?>
+                <a href="/transacoes-pendentes?empresa_id=<?= $empresa_id_selecionada ?>" class="text-xs text-red-600 hover:underline ml-2">Limpar</a>
             </div>
             <?php endif; ?>
         </form>
     </div>
 
     <!-- Estatísticas -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Pendentes</p>
-                    <p class="text-3xl font-bold text-yellow-600 dark:text-yellow-400 mt-2"><?= $estatisticas['pendentes'] ?? 0 ?></p>
-                </div>
-                <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-            </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Pendentes</p>
+            <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1"><?= $estatisticas['pendentes'] ?? 0 ?></p>
         </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Aprovadas</p>
-                    <p class="text-3xl font-bold text-green-600 dark:text-green-400 mt-2"><?= $estatisticas['aprovadas'] ?? 0 ?></p>
-                </div>
-                <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-            </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Aprovadas</p>
+            <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1"><?= $estatisticas['aprovadas'] ?? 0 ?></p>
         </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Débitos</p>
-                    <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-2">R$ <?= number_format($estatisticas['total_debitos'] ?? 0, 2, ',', '.') ?></p>
-                </div>
-                <div class="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
-                    </svg>
-                </div>
-            </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Total Débitos</p>
+            <p class="text-xl font-bold text-red-600 dark:text-red-400 mt-1">R$ <?= number_format($estatisticas['total_debitos'] ?? 0, 2, ',', '.') ?></p>
         </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Créditos</p>
-                    <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">R$ <?= number_format($estatisticas['total_creditos'] ?? 0, 2, ',', '.') ?></p>
-                </div>
-                <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
-                    </svg>
-                </div>
-            </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Total Créditos</p>
+            <p class="text-xl font-bold text-green-600 dark:text-green-400 mt-1">R$ <?= number_format($estatisticas['total_creditos'] ?? 0, 2, ',', '.') ?></p>
         </div>
     </div>
 
-    <!-- Lista de Transações -->
     <?php if (empty($transacoes)): ?>
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
-            <svg class="w-24 h-24 mx-auto text-gray-400 dark:text-gray-600 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
-            </svg>
-            <h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Nenhuma Transação Pendente</h3>
-            <p class="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                Ótimo! Todas as transações foram processadas ou não há transações novas dos seus bancos.
-            </p>
-            <a href="/conexoes-bancarias" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200">
-                Sincronizar Agora
-            </a>
+            <div class="text-5xl mb-4">✅</div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Nenhuma Transação Pendente</h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-6">Todas as transações foram processadas.</p>
+            <a href="/conexoes-bancarias" class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition">Sincronizar Agora</a>
         </div>
     <?php else: ?>
-        <!-- Ações em lote -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 mb-6" x-show="selecionadas.length > 0" x-cloak>
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-700 dark:text-gray-300">
-                    <strong x-text="selecionadas.length"></strong> transação(ões) selecionada(s)
+        <!-- Barra de Ações em Lote (sticky) -->
+        <div class="sticky top-0 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 mb-4 flex items-center justify-between" x-show="selecionadas.length > 0" x-cloak x-transition>
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <span x-text="selecionadas.length" class="text-blue-600 dark:text-blue-400"></span> selecionada(s)
                 </span>
-                <div class="flex gap-3">
-                    <button @click="aprovarLote()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium">
-                        Aprovar Selecionadas
-                    </button>
-                    <button @click="selecionadas = []" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium">
-                        Desmarcar Todas
-                    </button>
-                </div>
+            </div>
+            <div class="flex gap-2">
+                <button @click="aprovarLote()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    Aprovar Selecionadas
+                </button>
+                <button @click="ignorarLote()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    Ignorar Selecionadas
+                </button>
+                <button @click="selecionadas = []" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition">
+                    Desmarcar
+                </button>
             </div>
         </div>
 
-        <div class="space-y-4">
-            <?php foreach ($transacoes as $transacao): ?>
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl transition-shadow duration-200">
-                    <div class="flex items-start gap-4">
+        <!-- Selecionar Todas -->
+        <div class="flex items-center gap-3 mb-3 px-2">
+            <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400">
+                <input type="checkbox" @change="toggleTodas($event)" class="w-4 h-4 rounded text-blue-600">
+                Selecionar todas
+            </label>
+            <span class="text-xs text-gray-400">(<?= count($transacoes) ?> transações)</span>
+        </div>
+
+        <!-- Cards de Transações -->
+        <div class="space-y-3">
+            <?php foreach ($transacoes as $index => $transacao): 
+                $zIndex = 1000 - $index;
+                $isDebito = $transacao['tipo'] === 'debito';
+            ?>
+            <div class="card-transacao bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-visible relative"
+                 style="z-index: <?= $zIndex ?>;"
+                 x-data="{ expanded: false }">
+                
+                <!-- Linha Principal -->
+                <div class="p-4">
+                    <div class="flex items-start gap-3 mb-3">
                         <!-- Checkbox -->
-                        <input 
-                            type="checkbox" 
-                            :value="<?= $transacao['id'] ?>"
-                            x-model="selecionadas"
-                            class="mt-1 w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                        >
-
-                        <!-- Conteúdo Principal -->
-                        <div class="flex-1">
-                            <div class="flex items-start justify-between mb-4">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <span class="px-3 py-1 rounded-full text-xs font-semibold <?= $transacao['tipo'] === 'debito' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' ?>">
-                                            <?= $transacao['tipo'] === 'debito' ? 'SAÍDA' : 'ENTRADA' ?>
-                                        </span>
-                                        <span class="text-sm text-gray-600 dark:text-gray-400"><?= htmlspecialchars($transacao['banco'] ?? '') ?> - <?= htmlspecialchars($transacao['identificacao'] ?? 'Sem identificação') ?></span>
-                                        <?php if ($transacao['confianca_ia']): ?>
-                                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                                                IA: <?= number_format($transacao['confianca_ia'], 0) ?>% confiança
-                                            </span>
-                                        <?php endif; ?>
-                                    </div>
-                                    <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
-                                        <?= htmlspecialchars($transacao['descricao_original']) ?>
-                                    </h3>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                                        Data: <?= date('d/m/Y', strtotime($transacao['data_transacao'])) ?>
-                                    </p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-2xl font-bold <?= $transacao['tipo'] === 'debito' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' ?>">
-                                        R$ <?= number_format(abs($transacao['valor']), 2, ',', '.') ?>
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- Sugestões da IA -->
-                            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-4">
-                                <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">Classificação Sugerida:</h4>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                                    <div>
-                                        <span class="text-blue-700 dark:text-blue-300 font-medium">Categoria:</span>
-                                        <span class="text-gray-900 dark:text-gray-100 ml-2"><?= htmlspecialchars($transacao['categoria_sugerida_nome'] ?? 'Não sugerida') ?></span>
-                                    </div>
-                                    <div>
-                                        <span class="text-blue-700 dark:text-blue-300 font-medium">Centro de Custo:</span>
-                                        <span class="text-gray-900 dark:text-gray-100 ml-2"><?= htmlspecialchars($transacao['centro_custo_sugerido_nome'] ?? 'Não sugerido') ?></span>
-                                    </div>
-                                </div>
-                                <?php if ($transacao['justificativa_ia']): ?>
-                                    <p class="text-xs text-blue-600 dark:text-blue-400 mt-2">💡 <?= htmlspecialchars($transacao['justificativa_ia']) ?></p>
-                                <?php endif; ?>
-                            </div>
-
-                            <!-- Ações -->
-                            <div class="flex gap-3">
-                                <button 
-                                    @click="aprovar(<?= $transacao['id'] ?>)" 
-                                    class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                    Aprovar e Lançar
-                                </button>
-                                <a 
-                                    href="/transacoes-pendentes/<?= $transacao['id'] ?>" 
-                                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                    </svg>
-                                    Editar
-                                </a>
-                                <button 
-                                    @click="ignorar(<?= $transacao['id'] ?>)" 
-                                    class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium flex items-center justify-center gap-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                    </svg>
-                                    Ignorar
-                                </button>
-                            </div>
+                        <div class="pt-1">
+                            <input type="checkbox" 
+                                   value="<?= $transacao['id'] ?>"
+                                   x-model="selecionadas"
+                                   class="w-5 h-5 rounded text-blue-600">
+                        </div>
+                        
+                        <!-- Data e Badges -->
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                                <?= date('d/m/Y', strtotime($transacao['data_transacao'])) ?>
+                            </span>
+                            <span class="px-2 py-1 rounded text-xs font-semibold <?= $isDebito ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400' : 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400' ?>">
+                                <?= $isDebito ? 'SAÍDA' : 'ENTRADA' ?>
+                            </span>
+                            <?php if (!empty($transacao['metodo_pagamento'])): ?>
+                                <span class="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400">
+                                    <?= htmlspecialchars($transacao['metodo_pagamento']) ?>
+                                </span>
+                            <?php endif; ?>
+                            <span class="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                                <?= ucfirst($transacao['origem'] ?? $transacao['banco'] ?? 'API') ?>
+                            </span>
+                            <?php if ($transacao['confianca_ia']): ?>
+                                <span class="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-400">
+                                    IA <?= number_format($transacao['confianca_ia'], 0) ?>%
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <div class="flex-1"></div>
+                        
+                        <!-- Valor -->
+                        <div class="text-xl font-bold whitespace-nowrap <?= $isDebito ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' ?>">
+                            R$ <?= number_format(abs($transacao['valor']), 2, ',', '.') ?>
+                        </div>
+                        
+                        <!-- Toggle Expandir -->
+                        <button type="button" @click="expanded = !expanded"
+                                class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1 transition"
+                                :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300': expanded }">
+                            <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': expanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                            <span x-text="expanded ? 'Menos' : 'Mais'"></span>
+                        </button>
+                    </div>
+                    
+                    <!-- Descrição -->
+                    <div class="ml-8 mb-4 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border-l-4 <?= $isDebito ? 'border-red-500' : 'border-green-500' ?>">
+                        <div class="font-medium text-gray-900 dark:text-gray-100">
+                            <?= htmlspecialchars($transacao['descricao_original']) ?>
+                        </div>
+                        <?php if ($transacao['justificativa_ia']): ?>
+                            <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">💡 <?= htmlspecialchars($transacao['justificativa_ia']) ?></p>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <!-- Campos Principais (sempre visíveis) -->
+                    <div class="ml-8 grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <!-- Categoria -->
+                        <div class="relative" style="z-index: <?= 100 - $index ?>;">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Categoria *</label>
+                            <select name="cat_<?= $transacao['id'] ?>" id="cat_<?= $transacao['id'] ?>" data-transacao="<?= $transacao['id'] ?>" data-field="categoria_id"
+                                    class="select-search-tp w-full">
+                                <option value="">Selecione...</option>
+                                <?php foreach ($categorias as $cat): ?>
+                                    <option value="<?= $cat['id'] ?>" <?= ($transacao['categoria_sugerida_id'] == $cat['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($cat['nome']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <!-- Fornecedor / Cliente -->
+                        <?php if ($isDebito): ?>
+                        <div class="relative" style="z-index: <?= 100 - $index ?>;">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Fornecedor</label>
+                            <select name="forn_<?= $transacao['id'] ?>" id="forn_<?= $transacao['id'] ?>" data-transacao="<?= $transacao['id'] ?>" data-field="fornecedor_id"
+                                    class="select-search-tp w-full">
+                                <option value="">Selecione...</option>
+                                <?php foreach ($fornecedores as $f): ?>
+                                    <option value="<?= $f['id'] ?>" <?= ($transacao['fornecedor_sugerido_id'] == $f['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($f['nome_razao_social']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <?php else: ?>
+                        <div class="relative" style="z-index: <?= 100 - $index ?>;">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Cliente</label>
+                            <select name="cli_<?= $transacao['id'] ?>" id="cli_<?= $transacao['id'] ?>" data-transacao="<?= $transacao['id'] ?>" data-field="cliente_id"
+                                    class="select-search-tp w-full">
+                                <option value="">Selecione...</option>
+                                <?php foreach ($clientes as $c): ?>
+                                    <option value="<?= $c['id'] ?>" <?= ($transacao['cliente_sugerido_id'] == $c['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($c['nome_razao_social']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <!-- Vencimento -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vencimento</label>
+                            <input type="date" id="venc_<?= $transacao['id'] ?>" data-transacao="<?= $transacao['id'] ?>" data-field="data_vencimento"
+                                   value="<?= $transacao['data_transacao'] ?>"
+                                   class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                         </div>
                     </div>
                 </div>
+                
+                <!-- Expandir para mais opções -->
+                <div x-show="!expanded" @click="expanded = true"
+                     class="px-4 py-2 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-t border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition group">
+                    <div class="flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        Datas, centro de custo, conta bancária, forma de pagamento
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                </div>
+                
+                <!-- Seção Expandida -->
+                <div x-show="expanded" x-transition class="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 p-4">
+                    <!-- Datas -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            <span class="font-medium">Datas Adicionais</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Data de Competência</label>
+                            <input type="date" id="comp_<?= $transacao['id'] ?>" data-transacao="<?= $transacao['id'] ?>" data-field="data_competencia"
+                                   value="<?= $transacao['data_transacao'] ?>"
+                                   class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Data de Pagamento</label>
+                            <input type="date" id="pgto_<?= $transacao['id'] ?>" data-transacao="<?= $transacao['id'] ?>" data-field="data_pagamento"
+                                   value="<?= $transacao['data_transacao'] ?>"
+                                   class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        </div>
+                    </div>
+                    
+                    <!-- Classificação Adicional -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                        <div class="relative" style="z-index: <?= 100 - $index ?>;">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Centro de Custo</label>
+                            <select id="cc_<?= $transacao['id'] ?>" data-transacao="<?= $transacao['id'] ?>" data-field="centro_custo_id"
+                                    class="select-search-tp w-full">
+                                <option value="">Selecione...</option>
+                                <?php foreach ($centros_custo as $cc): ?>
+                                    <option value="<?= $cc['id'] ?>" <?= ($transacao['centro_custo_sugerido_id'] == $cc['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($cc['nome']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="relative" style="z-index: <?= 100 - $index ?>;">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Conta Bancária</label>
+                            <select id="cb_<?= $transacao['id'] ?>" data-transacao="<?= $transacao['id'] ?>" data-field="conta_bancaria_id"
+                                    class="select-search-tp w-full">
+                                <option value="">Selecione...</option>
+                                <?php foreach ($contas_bancarias as $cb): ?>
+                                    <option value="<?= $cb['id'] ?>">
+                                        <?= htmlspecialchars($cb['banco_nome'] ?? 'Conta ' . $cb['id']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="relative" style="z-index: <?= 100 - $index ?>;">
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Forma de Pagamento</label>
+                            <select id="fp_<?= $transacao['id'] ?>" data-transacao="<?= $transacao['id'] ?>" data-field="forma_pagamento_id"
+                                    class="select-search-tp w-full">
+                                <option value="">Selecione...</option>
+                                <?php foreach ($formas_pagamento as $fp): ?>
+                                    <option value="<?= $fp['id'] ?>"><?= htmlspecialchars($fp['nome']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Observações</label>
+                            <input type="text" id="obs_<?= $transacao['id'] ?>" data-transacao="<?= $transacao['id'] ?>" data-field="observacoes"
+                                   placeholder="Observações..."
+                                   class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        </div>
+                    </div>
+                    
+                    <!-- Ações individuais -->
+                    <div class="flex gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <button type="button" @click="aprovarComDados(<?= $transacao['id'] ?>)"
+                                class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            Aprovar e Lançar
+                        </button>
+                        <button type="button" @click="ignorar(<?= $transacao['id'] ?>)"
+                                class="px-4 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium flex items-center justify-center gap-2 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            Ignorar
+                        </button>
+                    </div>
+                </div>
+            </div>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
@@ -307,51 +384,86 @@ function transacoesPendentes() {
     return {
         selecionadas: [],
         
-        async aprovar(id) {
-            if (!confirm('Deseja aprovar esta transação e lançá-la nas contas a pagar/receber?')) return;
+        init() {
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    if (typeof initAllSelectSearch === 'function') {
+                        document.querySelectorAll('.select-search-tp').forEach(el => {
+                            if (!el.tomselect && typeof TomSelect !== 'undefined') {
+                                new TomSelect(el, { create: false, allowEmptyOption: true, plugins: ['dropdown_input'] });
+                            }
+                        });
+                    }
+                }, 200);
+            });
+        },
+        
+        toggleTodas(e) {
+            if (e.target.checked) {
+                this.selecionadas = <?= json_encode(array_map(fn($t) => (string)$t['id'], $transacoes)) ?>;
+            } else {
+                this.selecionadas = [];
+            }
+        },
+        
+        getValorCampo(id, prefix) {
+            const el = document.getElementById(prefix + '_' + id);
+            if (!el) return null;
+            if (el.tomselect) return el.tomselect.getValue() || null;
+            return el.value || null;
+        },
+        
+        coletarDados(id) {
+            return {
+                categoria_id: this.getValorCampo(id, 'cat'),
+                fornecedor_id: this.getValorCampo(id, 'forn'),
+                cliente_id: this.getValorCampo(id, 'cli'),
+                centro_custo_id: this.getValorCampo(id, 'cc'),
+                conta_bancaria_id: this.getValorCampo(id, 'cb'),
+                forma_pagamento_id: this.getValorCampo(id, 'fp'),
+                data_vencimento: this.getValorCampo(id, 'venc'),
+                data_competencia: this.getValorCampo(id, 'comp'),
+                data_pagamento: this.getValorCampo(id, 'pgto'),
+                observacoes: this.getValorCampo(id, 'obs')
+            };
+        },
+        
+        async aprovarComDados(id) {
+            const dados = this.coletarDados(id);
+            if (!dados.categoria_id) {
+                alert('Selecione uma categoria antes de aprovar.');
+                return;
+            }
+            if (!confirm('Aprovar e lançar esta transação?')) return;
             
             try {
                 const res = await fetch(`/transacoes-pendentes/${id}/aprovar`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
                 });
                 const data = await res.json();
-                
-                if (data.success) {
-                    alert(data.message);
-                    location.reload();
-                } else {
-                    alert('Erro: ' + (data.error || 'Erro desconhecido'));
-                }
-            } catch (err) {
-                alert('Erro: ' + err.message);
-            }
+                if (data.success) { location.reload(); }
+                else { alert('Erro: ' + (data.error || 'Erro desconhecido')); }
+            } catch (err) { alert('Erro: ' + err.message); }
         },
         
         async ignorar(id) {
-            if (!confirm('Deseja ignorar esta transação?')) return;
-            
+            if (!confirm('Ignorar esta transação?')) return;
             try {
                 const res = await fetch(`/transacoes-pendentes/${id}/ignorar`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
                 const data = await res.json();
-                
-                if (data.success) {
-                    alert(data.message);
-                    location.reload();
-                } else {
-                    alert('Erro: ' + (data.error || 'Erro desconhecido'));
-                }
-            } catch (err) {
-                alert('Erro: ' + err.message);
-            }
+                if (data.success) { location.reload(); }
+                else { alert('Erro: ' + (data.error || 'Erro desconhecido')); }
+            } catch (err) { alert('Erro: ' + err.message); }
         },
         
         async aprovarLote() {
             if (this.selecionadas.length === 0) return;
-            if (!confirm(`Deseja aprovar ${this.selecionadas.length} transações selecionadas?`)) return;
+            if (!confirm(`Aprovar ${this.selecionadas.length} transações com as classificações sugeridas?`)) return;
             
             try {
                 const res = await fetch('/transacoes-pendentes/aprovar-lote', {
@@ -360,16 +472,25 @@ function transacoesPendentes() {
                     body: JSON.stringify({ transacoes: this.selecionadas })
                 });
                 const data = await res.json();
-                
-                if (data.success) {
-                    alert(data.message);
-                    location.reload();
-                } else {
-                    alert('Erro: ' + (data.error || 'Erro desconhecido'));
-                }
-            } catch (err) {
-                alert('Erro: ' + err.message);
-            }
+                if (data.success) { alert(data.message); location.reload(); }
+                else { alert('Erro: ' + (data.error || 'Erro desconhecido')); }
+            } catch (err) { alert('Erro: ' + err.message); }
+        },
+        
+        async ignorarLote() {
+            if (this.selecionadas.length === 0) return;
+            if (!confirm(`Ignorar ${this.selecionadas.length} transações selecionadas?`)) return;
+            
+            try {
+                const res = await fetch('/transacoes-pendentes/ignorar-lote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transacoes: this.selecionadas })
+                });
+                const data = await res.json();
+                if (data.success) { alert(data.message); location.reload(); }
+                else { alert('Erro: ' + (data.error || 'Erro desconhecido')); }
+            } catch (err) { alert('Erro: ' + err.message); }
         }
     }
 }

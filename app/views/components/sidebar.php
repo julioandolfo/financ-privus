@@ -192,6 +192,11 @@ $menuItems = [
                 'path' => '/transacoes-pendentes',
                 'active' => $isActive('/transacoes-pendentes')
             ],
+            [
+                'title' => 'Extrato Bancário (API)',
+                'path' => '/extrato-api',
+                'active' => $isActive('/extrato-api')
+            ],
         ]
     ],
     [

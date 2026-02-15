@@ -14,6 +14,7 @@ use App\Models\TransacaoPendente;
 use App\Models\ContaPagar;
 use App\Models\ContaReceber;
 use App\Models\MovimentacaoCaixa;
+use App\Models\ExtratoBancarioApi;
 use Includes\Services\BankServiceFactory;
 use Includes\Services\ClassificadorIAService;
 
@@ -863,6 +864,146 @@ class ConexaoBancariaController extends Controller
         }
         
         return false;
+    }
+    
+    /**
+     * Importar extrato completo (crédito + débito) apenas para visualização
+     */
+    public function importarExtrato(Request $request, Response $response, $id)
+    {
+        $conexao = $this->conexaoModel->getConexaoComCredenciais($id);
+        
+        if (!$conexao) {
+            return $response->json(['error' => 'Conexão não encontrada'], 404);
+        }
+        
+        $detalhes = [];
+        
+        try {
+            $service = BankServiceFactory::create($conexao['banco']);
+            
+            $input = json_decode(file_get_contents('php://input'), true) ?? [];
+            $dataInicio = !empty($input['data_inicio']) ? $input['data_inicio'] : date('Y-m-d', strtotime('-30 days'));
+            $dataFim = !empty($input['data_fim']) ? $input['data_fim'] : date('Y-m-d');
+            
+            $diffDays = (strtotime($dataFim) - strtotime($dataInicio)) / 86400;
+            if ($diffDays > 90) {
+                $dataInicio = date('Y-m-d', strtotime('-90 days', strtotime($dataFim)));
+                $detalhes[] = "Período limitado a 90 dias (máximo da API)";
+            }
+            
+            $detalhes[] = "Período: " . date('d/m/Y', strtotime($dataInicio)) . " a " . date('d/m/Y', strtotime($dataFim));
+            
+            // Autenticação
+            $detalhes[] = "Autenticando...";
+            $tokenData = $service->autenticar($conexao);
+            if (!empty($tokenData['access_token'])) {
+                $detalhes[] = "Token obtido com sucesso";
+                $conexao['access_token'] = $tokenData['access_token'];
+                $conexao['token_expira_em'] = date('Y-m-d H:i:s', time() + ($tokenData['expires_in'] ?? 3600));
+            }
+            
+            // Buscar TODAS as transações (sem filtro de tipo)
+            $detalhes[] = "Buscando extrato completo na API...";
+            $transacoes = $service->getTransacoes($conexao, $dataInicio, $dataFim);
+            $totalBanco = count($transacoes);
+            $detalhes[] = "API retornou {$totalBanco} transações";
+            
+            if ($totalBanco === 0) {
+                return $response->json([
+                    'success' => true,
+                    'message' => "Nenhuma transação encontrada no período.",
+                    'resumo' => ['total' => 0, 'novas' => 0, 'duplicadas' => 0, 'debitos' => 0, 'creditos' => 0],
+                    'detalhes' => $detalhes
+                ]);
+            }
+            
+            // Salvar no extrato de visualização
+            $extratoModel = new ExtratoBancarioApi();
+            $novas = 0;
+            $duplicadas = 0;
+            $debitos = 0;
+            $creditos = 0;
+            $totalDebitos = 0;
+            $totalCreditos = 0;
+            
+            foreach ($transacoes as $t) {
+                $tipo = $t['tipo'] ?? 'debito';
+                if ($tipo === 'debito') {
+                    $debitos++;
+                    $totalDebitos += abs($t['valor']);
+                } else {
+                    $creditos++;
+                    $totalCreditos += abs($t['valor']);
+                }
+                
+                $novaId = $extratoModel->inserir([
+                    'empresa_id' => $conexao['empresa_id'],
+                    'conexao_bancaria_id' => $conexao['id'],
+                    'conta_bancaria_id' => $conexao['conta_bancaria_id'] ?? null,
+                    'data_transacao' => $t['data_transacao'],
+                    'descricao' => $t['descricao_original'] ?? $t['descricao'] ?? '',
+                    'valor' => $t['valor'],
+                    'tipo' => $tipo,
+                    'saldo_apos' => $t['saldo_apos'] ?? null,
+                    'banco_transacao_id' => $t['banco_transacao_id'] ?? null,
+                    'metodo_pagamento' => $t['metodo_pagamento'] ?? null,
+                    'origem' => $t['origem'] ?? 'api',
+                    'dados_raw' => $t
+                ]);
+                
+                if ($novaId) {
+                    $novas++;
+                } else {
+                    $duplicadas++;
+                }
+            }
+            
+            $detalhes[] = "{$novas} novas transações salvas no extrato";
+            if ($duplicadas > 0) {
+                $detalhes[] = "{$duplicadas} já existiam (duplicadas)";
+            }
+            $detalhes[] = "Débitos: {$debitos} (R$ " . number_format($totalDebitos, 2, ',', '.') . ")";
+            $detalhes[] = "Créditos: {$creditos} (R$ " . number_format($totalCreditos, 2, ',', '.') . ")";
+            
+            // Atualizar saldo
+            $saldoInfo = null;
+            try {
+                $saldoData = $service->getSaldo($conexao);
+                $this->conexaoModel->atualizarSaldo($id, $saldoData['saldo']);
+                $saldoInfo = 'R$ ' . number_format($saldoData['saldo'], 2, ',', '.');
+            } catch (\Exception $e) {
+                // silencioso
+            }
+            
+            $mensagem = "{$novas} transações importadas para o extrato ({$debitos} débitos, {$creditos} créditos).";
+            if ($duplicadas > 0) $mensagem .= " {$duplicadas} já existiam.";
+            
+            return $response->json([
+                'success' => true,
+                'message' => $mensagem,
+                'resumo' => [
+                    'total' => $totalBanco,
+                    'novas' => $novas,
+                    'duplicadas' => $duplicadas,
+                    'debitos' => $debitos,
+                    'creditos' => $creditos,
+                    'total_debitos' => $totalDebitos,
+                    'total_creditos' => $totalCreditos,
+                    'saldo' => $saldoInfo,
+                    'periodo' => date('d/m/Y', strtotime($dataInicio)) . ' a ' . date('d/m/Y', strtotime($dataFim))
+                ],
+                'detalhes' => $detalhes
+            ]);
+            
+        } catch (\Exception $e) {
+            $this->conexaoModel->registrarErro($id, $e->getMessage());
+            $detalhes[] = "ERRO: " . $e->getMessage();
+            return $response->json([
+                'error' => 'Erro ao importar extrato: ' . $e->getMessage(),
+                'detalhes' => $detalhes
+            ], 500);
+        }
     }
     
     /**
