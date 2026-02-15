@@ -445,17 +445,25 @@ class ConexaoBancariaController extends Controller
             return $response->json(['error' => 'Conexão não encontrada'], 404);
         }
         
+        $detalhes = [];
+        $saldoInfo = null;
+        
         try {
             $service = BankServiceFactory::create($conexao['banco']);
             
-            // Buscar transações dos últimos 30 dias
+            // Buscar transações dos últimos 30 dias (incluindo hoje)
             $dataInicio = date('Y-m-d', strtotime('-30 days'));
             $dataFim = date('Y-m-d');
             
+            $detalhes[] = "Período: " . date('d/m/Y', strtotime($dataInicio)) . " a " . date('d/m/Y');
+            
             $transacoes = $service->getTransacoes($conexao, $dataInicio, $dataFim);
+            $totalBanco = count($transacoes);
+            $detalhes[] = "Transações retornadas pelo banco: {$totalBanco}";
             
             // Filtrar transações conforme tipo_sync configurado
             $tipoSync = $conexao['tipo_sync'] ?? 'ambos';
+            $totalFiltradas = 0;
             if ($tipoSync !== 'ambos') {
                 $transacoes = array_filter($transacoes, function($t) use ($tipoSync) {
                     if ($tipoSync === 'apenas_despesas') {
@@ -467,27 +475,69 @@ class ConexaoBancariaController extends Controller
                     return true;
                 });
                 $transacoes = array_values($transacoes);
+                $totalFiltradas = $totalBanco - count($transacoes);
+                $tipoLabel = $tipoSync === 'apenas_despesas' ? 'Apenas despesas' : 'Apenas receitas';
+                $detalhes[] = "Filtro aplicado: {$tipoLabel} ({$totalFiltradas} ignoradas)";
             }
             
             // Processar e salvar transações
-            $novasTransacoes = $this->processarTransacoes($transacoes, $conexao);
+            $resultado = $this->processarTransacoes($transacoes, $conexao);
+            
+            if ($resultado['novas'] > 0) {
+                $detalhes[] = "{$resultado['novas']} transações novas importadas";
+            }
+            if ($resultado['duplicadas'] > 0) {
+                $detalhes[] = "{$resultado['duplicadas']} já existiam (duplicadas ignoradas)";
+            }
+            if ($resultado['erros'] > 0) {
+                $detalhes[] = "{$resultado['erros']} erros ao processar";
+            }
             
             // Atualizar saldo
             try {
                 $saldoData = $service->getSaldo($conexao);
                 $this->conexaoModel->atualizarSaldo($id, $saldoData['saldo']);
+                $saldoInfo = 'R$ ' . number_format($saldoData['saldo'], 2, ',', '.');
+                
+                if (!empty($conexao['conta_bancaria_id'])) {
+                    $contaBancariaModel = new \App\Models\ContaBancaria();
+                    $contaBancariaModel->setSaldoReal($conexao['conta_bancaria_id'], $saldoData['saldo']);
+                }
             } catch (\Exception $e) {
-                // Se falhar obter saldo, não é fatal
+                $detalhes[] = "Saldo: erro ao obter (" . $e->getMessage() . ")";
             }
             
             // Atualizar data de sincronização
             $this->conexaoModel->atualizarUltimaSync($id);
             $this->conexaoModel->update($id, ['status_conexao' => 'ativa', 'ultimo_erro' => null]);
             
+            // Montar mensagem resumida
+            $mensagem = "Sincronização concluída!";
+            if ($totalBanco === 0) {
+                $mensagem = "Nenhuma transação encontrada no período.";
+            } elseif ($resultado['novas'] > 0) {
+                $mensagem = "{$resultado['novas']} nova(s) transação(ões) importada(s).";
+            } else {
+                $mensagem = "Todas as {$totalBanco} transações do período já foram importadas anteriormente.";
+            }
+            
+            if ($saldoInfo) {
+                $mensagem .= "\nSaldo atualizado: {$saldoInfo}";
+            }
+            
             return $response->json([
                 'success' => true,
-                'message' => count($novasTransacoes) . ' novas transações sincronizadas',
-                'total' => count($novasTransacoes)
+                'message' => $mensagem,
+                'resumo' => [
+                    'total_banco' => $totalBanco,
+                    'filtradas' => $totalFiltradas,
+                    'novas' => $resultado['novas'],
+                    'duplicadas' => $resultado['duplicadas'],
+                    'erros' => $resultado['erros'],
+                    'saldo' => $saldoInfo,
+                    'periodo' => $dataInicio . ' a ' . $dataFim
+                ],
+                'detalhes' => $detalhes
             ]);
             
         } catch (\Exception $e) {
@@ -500,47 +550,59 @@ class ConexaoBancariaController extends Controller
     
     /**
      * Processar transações sincronizadas
+     * Retorna array com contadores: novas, duplicadas, erros
      */
     private function processarTransacoes($transacoes, $conexao)
     {
         $transacaoPendenteModel = new TransacaoPendente();
         $classificadorService = new ClassificadorIAService($conexao['empresa_id']);
         
-        $novas = [];
+        $novas = 0;
+        $duplicadas = 0;
+        $erros = 0;
         
         foreach ($transacoes as $transacao) {
-            // Classificar (regras fixas -> histórico -> IA -> fallback)
-            $classificacao = $classificadorService->analisar($transacao);
-            
-            // Salvar transação pendente
-            $transacaoData = [
-                'empresa_id' => $conexao['empresa_id'],
-                'conexao_bancaria_id' => $conexao['id'],
-                'data_transacao' => $transacao['data_transacao'],
-                'descricao_original' => $transacao['descricao_original'],
-                'valor' => $transacao['valor'],
-                'tipo' => $transacao['tipo'],
-                'origem' => $transacao['origem'],
-                'banco_transacao_id' => $transacao['banco_transacao_id'] ?? null,
-                'metodo_pagamento' => $transacao['metodo_pagamento'] ?? null,
-                'saldo_apos' => $transacao['saldo_apos'] ?? null,
-                'referencia_externa' => $transacao['banco_transacao_id'] ?? null,
-                'categoria_sugerida_id' => $classificacao['categoria_id'] ?? $conexao['categoria_padrao_id'],
-                'centro_custo_sugerido_id' => $classificacao['centro_custo_id'] ?? $conexao['centro_custo_padrao_id'],
-                'fornecedor_sugerido_id' => $classificacao['fornecedor_id'] ?? null,
-                'cliente_sugerido_id' => $classificacao['cliente_id'] ?? null,
-                'confianca_ia' => $classificacao['confianca'] ?? null,
-                'justificativa_ia' => $classificacao['justificativa'] ?? null,
-                'status' => 'pendente'
-            ];
-            
-            $novaId = $transacaoPendenteModel->create($transacaoData);
-            if ($novaId) {
-                $novas[] = $novaId;
+            try {
+                // Classificar (regras fixas -> histórico -> IA -> fallback)
+                $classificacao = $classificadorService->analisar($transacao);
+                
+                $transacaoData = [
+                    'empresa_id' => $conexao['empresa_id'],
+                    'conexao_bancaria_id' => $conexao['id'],
+                    'data_transacao' => $transacao['data_transacao'],
+                    'descricao_original' => $transacao['descricao_original'],
+                    'valor' => $transacao['valor'],
+                    'tipo' => $transacao['tipo'],
+                    'origem' => $transacao['origem'],
+                    'banco_transacao_id' => $transacao['banco_transacao_id'] ?? null,
+                    'metodo_pagamento' => $transacao['metodo_pagamento'] ?? null,
+                    'saldo_apos' => $transacao['saldo_apos'] ?? null,
+                    'referencia_externa' => $transacao['banco_transacao_id'] ?? null,
+                    'categoria_sugerida_id' => $classificacao['categoria_id'] ?? $conexao['categoria_padrao_id'],
+                    'centro_custo_sugerido_id' => $classificacao['centro_custo_id'] ?? $conexao['centro_custo_padrao_id'],
+                    'fornecedor_sugerido_id' => $classificacao['fornecedor_id'] ?? null,
+                    'cliente_sugerido_id' => $classificacao['cliente_id'] ?? null,
+                    'confianca_ia' => $classificacao['confianca'] ?? null,
+                    'justificativa_ia' => $classificacao['justificativa'] ?? null,
+                    'status' => 'pendente'
+                ];
+                
+                $novaId = $transacaoPendenteModel->create($transacaoData);
+                if ($novaId) {
+                    $novas++;
+                } else {
+                    $duplicadas++;
+                }
+            } catch (\Exception $e) {
+                $erros++;
             }
         }
         
-        return $novas;
+        return [
+            'novas' => $novas,
+            'duplicadas' => $duplicadas,
+            'erros' => $erros
+        ];
     }
     
     /**

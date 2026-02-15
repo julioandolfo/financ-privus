@@ -161,7 +161,14 @@ use App\Models\ConexaoBancaria;
                 $statusLabels = ['ativa' => 'Ativa', 'erro' => 'Erro', 'expirada' => 'Expirada', 'desconectada' => 'Desconectada'];
             ?>
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-shadow"
-                 x-data="{ saldo: '<?= $conexao['saldo_banco'] !== null ? number_format($conexao['saldo_banco'], 2, ',', '.') : '---' ?>', carregando: false, sincronizando: false }">
+                 x-data="{ 
+                    saldo: '<?= $conexao['saldo_banco'] !== null ? number_format($conexao['saldo_banco'], 2, ',', '.') : '---' ?>', 
+                    carregando: false, 
+                    sincronizando: false,
+                    resultadoSync: null,
+                    erroSync: null,
+                    showResultado: false
+                 }">
                 
                 <!-- Header do Card -->
                 <div class="p-6 border-b border-gray-100 dark:border-gray-700">
@@ -243,9 +250,107 @@ use App\Models\ConexaoBancaria;
                     </div>
                 </div>
 
+                <!-- Resultado da Sincronização (inline) -->
+                <template x-if="showResultado && resultadoSync">
+                    <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-green-50 dark:bg-green-900/20">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-green-800 dark:text-green-300" x-text="resultadoSync.message"></p>
+                                <div class="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-2 text-center">
+                                        <p class="text-lg font-bold text-blue-600 dark:text-blue-400" x-text="resultadoSync.resumo?.total_banco ?? 0"></p>
+                                        <p class="text-[10px] text-gray-500 dark:text-gray-400">Do banco</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-2 text-center">
+                                        <p class="text-lg font-bold text-green-600 dark:text-green-400" x-text="resultadoSync.resumo?.novas ?? 0"></p>
+                                        <p class="text-[10px] text-gray-500 dark:text-gray-400">Novas</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-2 text-center">
+                                        <p class="text-lg font-bold text-yellow-600 dark:text-yellow-400" x-text="resultadoSync.resumo?.duplicadas ?? 0"></p>
+                                        <p class="text-[10px] text-gray-500 dark:text-gray-400">Já existiam</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-2 text-center" x-show="resultadoSync.resumo?.saldo">
+                                        <p class="text-lg font-bold text-gray-900 dark:text-gray-100" x-text="resultadoSync.resumo?.saldo ?? '---'"></p>
+                                        <p class="text-[10px] text-gray-500 dark:text-gray-400">Saldo</p>
+                                    </div>
+                                </div>
+                                <template x-if="resultadoSync.detalhes && resultadoSync.detalhes.length > 0">
+                                    <details class="mt-2">
+                                        <summary class="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
+                                            Ver detalhes
+                                        </summary>
+                                        <ul class="mt-1 space-y-0.5">
+                                            <template x-for="detalhe in resultadoSync.detalhes" :key="detalhe">
+                                                <li class="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                                    <span class="w-1 h-1 bg-gray-400 rounded-full flex-shrink-0"></span>
+                                                    <span x-text="detalhe"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </details>
+                                </template>
+                            </div>
+                            <button @click="showResultado = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Resultado de Erro (inline) -->
+                <template x-if="showResultado && erroSync">
+                    <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-red-50 dark:bg-red-900/20">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div class="flex-1">
+                                <p class="text-sm font-semibold text-red-800 dark:text-red-300">Erro na sincronização</p>
+                                <p class="text-xs text-red-600 dark:text-red-400 mt-1" x-text="erroSync"></p>
+                            </div>
+                            <button @click="showResultado = false; erroSync = null" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
                 <!-- Ações -->
                 <div class="px-6 py-4 flex gap-2 flex-wrap">
-                    <button @click="sincronizando = true; fetch('/conexoes-bancarias/<?= $conexao['id'] ?>/sincronizar', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r => r.json()).then(d => { if(d.success) { alert(d.message); location.reload(); } else alert(d.error || 'Erro'); }).catch(e => alert('Erro')).finally(() => sincronizando = false)"
+                    <button @click="
+                        sincronizando = true; 
+                        showResultado = false; 
+                        resultadoSync = null; 
+                        erroSync = null;
+                        fetch('/conexoes-bancarias/<?= $conexao['id'] ?>/sincronizar', {
+                            method:'POST', 
+                            headers:{'X-Requested-With':'XMLHttpRequest'}
+                        })
+                        .then(r => r.json())
+                        .then(d => { 
+                            if(d.success) { 
+                                resultadoSync = d; 
+                                if(d.resumo && d.resumo.saldo) { 
+                                    saldo = d.resumo.saldo.replace('R$ ', ''); 
+                                }
+                            } else { 
+                                erroSync = d.error || 'Erro desconhecido'; 
+                            }
+                            showResultado = true;
+                        })
+                        .catch(e => { 
+                            erroSync = 'Erro de comunicação com o servidor'; 
+                            showResultado = true; 
+                        })
+                        .finally(() => sincronizando = false)
+                    "
                             :disabled="sincronizando"
                             class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2">
                         <svg class="w-4 h-4" :class="sincronizando && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
