@@ -41,6 +41,55 @@ use App\Models\TransacaoPendente;
 use Includes\Services\BankServiceFactory;
 use Includes\Services\ClassificadorIAService;
 
+/**
+ * Verifica se a transação do banco já foi lançada manualmente
+ * em contas_pagar, contas_receber ou movimentacoes_caixa.
+ */
+function transacaoJaLancadaCron($db, $empresaId, $contaBancariaId, $transacao): bool
+{
+    $valor = abs((float) $transacao['valor']);
+    $data = $transacao['data_transacao'];
+    $tipo = $transacao['tipo'] ?? '';
+    $valorMin = $valor - 0.01;
+    $valorMax = $valor + 0.01;
+    
+    if ($tipo === 'debito') {
+        $sql = "SELECT COUNT(*) FROM contas_pagar 
+                WHERE empresa_id = :empresa_id 
+                AND ABS(valor_total) BETWEEN :valor_min AND :valor_max
+                AND (data_vencimento = :data OR data_pagamento = :data2)
+                AND status != 'cancelado' AND deleted_at IS NULL";
+        $params = ['empresa_id' => $empresaId, 'valor_min' => $valorMin, 'valor_max' => $valorMax, 'data' => $data, 'data2' => $data];
+        if ($contaBancariaId) { $sql .= " AND conta_bancaria_id = :conta_id"; $params['conta_id'] = $contaBancariaId; }
+        $stmt = $db->prepare($sql); $stmt->execute($params);
+        if ((int) $stmt->fetchColumn() > 0) return true;
+    }
+    
+    if ($tipo === 'credito') {
+        $sql = "SELECT COUNT(*) FROM contas_receber 
+                WHERE empresa_id = :empresa_id 
+                AND ABS(valor_total) BETWEEN :valor_min AND :valor_max
+                AND (data_vencimento = :data OR data_recebimento = :data2)
+                AND status != 'cancelado' AND deleted_at IS NULL";
+        $params = ['empresa_id' => $empresaId, 'valor_min' => $valorMin, 'valor_max' => $valorMax, 'data' => $data, 'data2' => $data];
+        if ($contaBancariaId) { $sql .= " AND conta_bancaria_id = :conta_id"; $params['conta_id'] = $contaBancariaId; }
+        $stmt = $db->prepare($sql); $stmt->execute($params);
+        if ((int) $stmt->fetchColumn() > 0) return true;
+    }
+    
+    $tipoMov = $tipo === 'debito' ? 'saida' : 'entrada';
+    $sql = "SELECT COUNT(*) FROM movimentacoes_caixa 
+            WHERE empresa_id = :empresa_id AND tipo = :tipo_mov
+            AND ABS(valor) BETWEEN :valor_min AND :valor_max
+            AND data_movimentacao = :data";
+    $params = ['empresa_id' => $empresaId, 'tipo_mov' => $tipoMov, 'valor_min' => $valorMin, 'valor_max' => $valorMax, 'data' => $data];
+    if ($contaBancariaId) { $sql .= " AND conta_bancaria_id = :conta_id"; $params['conta_id'] = $contaBancariaId; }
+    $stmt = $db->prepare($sql); $stmt->execute($params);
+    if ((int) $stmt->fetchColumn() > 0) return true;
+    
+    return false;
+}
+
 echo "[" . date('Y-m-d H:i:s') . "] Iniciando sincronização bancária automática...\n";
 
 try {
@@ -151,9 +200,12 @@ try {
                 echo "  ! Erro ao buscar saldo: " . $e->getMessage() . "\n";
             }
             
-            // === 3. Buscar Transações (últimos 30 dias) ===
-            echo "  Buscando transações...\n";
-            $dataInicio = date('Y-m-d', strtotime('-30 days'));
+            // === 3. Buscar Transações ===
+            // Na sync automática: busca apenas os últimos 2 dias (hoje + ontem)
+            // Isso evita reimportar transações já cadastradas manualmente
+            // Para períodos maiores, use a sincronização manual na interface
+            echo "  Buscando transações (últimos 2 dias)...\n";
+            $dataInicio = date('Y-m-d', strtotime('-1 day'));
             $dataFim = date('Y-m-d');
             
             $transacoes = $service->getTransacoes($conexaoCredenciais, $dataInicio, $dataFim);
@@ -178,12 +230,19 @@ try {
             $classificadorService = new ClassificadorIAService($conexao['empresa_id']);
             $novas = 0;
             $duplicadas = 0;
+            $jaLancadas = 0;
+            $contaBancariaId = $conexao['conta_bancaria_id'] ?? null;
             
             foreach ($transacoes as $transacao) {
+                // Verificar se já foi lançada manualmente em contas a pagar/receber/movimentações
+                if (transacaoJaLancadaCron($db, $conexao['empresa_id'], $contaBancariaId, $transacao)) {
+                    $jaLancadas++;
+                    continue;
+                }
+                
                 // Classificar (regras fixas -> histórico -> IA -> fallback)
                 $classificacao = $classificadorService->analisar($transacao);
                 
-                // Preparar dados para salvar
                 $transacaoData = [
                     'empresa_id' => $conexao['empresa_id'],
                     'conexao_bancaria_id' => $conexao['id'],
@@ -212,7 +271,7 @@ try {
                 }
             }
             
-            echo "  + {$novas} novas transações importadas ({$duplicadas} duplicadas ignoradas)\n";
+            echo "  + {$novas} novas | {$duplicadas} duplicadas | {$jaLancadas} já lançadas manualmente\n";
             $totalNovas += $novas;
             
             // === 5. Atualizar status da conexão ===

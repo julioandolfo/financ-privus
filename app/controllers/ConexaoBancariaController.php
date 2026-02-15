@@ -11,6 +11,9 @@ use App\Models\CentroCusto;
 use App\Models\Empresa;
 use App\Models\Usuario;
 use App\Models\TransacaoPendente;
+use App\Models\ContaPagar;
+use App\Models\ContaReceber;
+use App\Models\MovimentacaoCaixa;
 use Includes\Services\BankServiceFactory;
 use Includes\Services\ClassificadorIAService;
 
@@ -447,19 +450,70 @@ class ConexaoBancariaController extends Controller
         
         $detalhes = [];
         $saldoInfo = null;
+        $debugApi = [];
         
         try {
             $service = BankServiceFactory::create($conexao['banco']);
             
-            // Buscar transações dos últimos 30 dias (incluindo hoje)
-            $dataInicio = date('Y-m-d', strtotime('-30 days'));
-            $dataFim = date('Y-m-d');
+            // Aceitar período customizado via POST ou usar padrão (últimos 7 dias)
+            $input = json_decode(file_get_contents('php://input'), true) ?? [];
+            $dataInicio = !empty($input['data_inicio']) ? $input['data_inicio'] : date('Y-m-d', strtotime('-7 days'));
+            $dataFim = !empty($input['data_fim']) ? $input['data_fim'] : date('Y-m-d');
             
-            $detalhes[] = "Período: " . date('d/m/Y', strtotime($dataInicio)) . " a " . date('d/m/Y');
+            // Validar limites (máximo 3 meses para o Sicoob)
+            $diffDays = (strtotime($dataFim) - strtotime($dataInicio)) / 86400;
+            if ($diffDays > 90) {
+                $dataInicio = date('Y-m-d', strtotime('-90 days', strtotime($dataFim)));
+                $detalhes[] = "Período limitado a 90 dias (máximo da API)";
+            }
+            if ($diffDays < 0) {
+                return $response->json(['error' => 'Data inicial deve ser anterior à data final'], 400);
+            }
             
+            $detalhes[] = "Período solicitado: " . date('d/m/Y', strtotime($dataInicio)) . " a " . date('d/m/Y', strtotime($dataFim)) . " ({$diffDays} dias)";
+            $detalhes[] = "Banco: " . ucfirst($conexao['banco']);
+            $detalhes[] = "Conta: " . ($conexao['banco_conta_id'] ?? $conexao['identificacao'] ?? 'N/A');
+            
+            // Autenticação
+            $detalhes[] = "Autenticando...";
+            $tokenData = $service->autenticar($conexao);
+            if (!empty($tokenData['access_token'])) {
+                $detalhes[] = "Token obtido com sucesso (expira em " . ($tokenData['expires_in'] ?? '?') . "s)";
+                $conexao['access_token'] = $tokenData['access_token'];
+                $conexao['token_expira_em'] = date('Y-m-d H:i:s', time() + ($tokenData['expires_in'] ?? 3600));
+            }
+            
+            // Buscar transações
+            $detalhes[] = "Buscando transações na API...";
             $transacoes = $service->getTransacoes($conexao, $dataInicio, $dataFim);
             $totalBanco = count($transacoes);
-            $detalhes[] = "Transações retornadas pelo banco: {$totalBanco}";
+            
+            // Capturar debug da API (se disponível)
+            if (property_exists($service, 'lastDebug') && !empty($service->lastDebug)) {
+                foreach ($service->lastDebug as $mesDebug) {
+                    $mesLabel = $mesDebug['mes'] ?? '?';
+                    $mesCount = $mesDebug['transacoes_count'] ?? 0;
+                    $mesErro = $mesDebug['erro'] ?? null;
+                    
+                    if ($mesErro) {
+                        $detalhes[] = "Mês {$mesLabel}: ERRO - {$mesErro}";
+                    } else {
+                        $detalhes[] = "Mês {$mesLabel}: {$mesCount} transações encontradas" . 
+                            (!empty($mesDebug['saldoAtual']) ? " (saldo: {$mesDebug['saldoAtual']})" : '');
+                    }
+                }
+                $debugApi = $service->lastDebug;
+            }
+            
+            $detalhes[] = "Total transações retornadas pela API: {$totalBanco}";
+            
+            if ($totalBanco === 0) {
+                $detalhes[] = "A API retornou 0 transações. Possíveis causas:";
+                $detalhes[] = "  - Não há movimentações no período selecionado";
+                $detalhes[] = "  - O número da conta pode estar incorreto";
+                $detalhes[] = "  - O certificado pode não ter permissão para esta conta";
+                $detalhes[] = "  - Tente ampliar o período de consulta";
+            }
             
             // Filtrar transações conforme tipo_sync configurado
             $tipoSync = $conexao['tipo_sync'] ?? 'ambos';
@@ -477,7 +531,7 @@ class ConexaoBancariaController extends Controller
                 $transacoes = array_values($transacoes);
                 $totalFiltradas = $totalBanco - count($transacoes);
                 $tipoLabel = $tipoSync === 'apenas_despesas' ? 'Apenas despesas' : 'Apenas receitas';
-                $detalhes[] = "Filtro aplicado: {$tipoLabel} ({$totalFiltradas} ignoradas)";
+                $detalhes[] = "Filtro aplicado: {$tipoLabel} ({$totalFiltradas} ignoradas pelo filtro)";
             }
             
             // Processar e salvar transações
@@ -487,7 +541,10 @@ class ConexaoBancariaController extends Controller
                 $detalhes[] = "{$resultado['novas']} transações novas importadas";
             }
             if ($resultado['duplicadas'] > 0) {
-                $detalhes[] = "{$resultado['duplicadas']} já existiam (duplicadas ignoradas)";
+                $detalhes[] = "{$resultado['duplicadas']} já existiam em transações pendentes (hash duplicado)";
+            }
+            if ($resultado['ja_lancadas'] > 0) {
+                $detalhes[] = "{$resultado['ja_lancadas']} já encontradas em contas a pagar/receber (ignoradas)";
             }
             if ($resultado['erros'] > 0) {
                 $detalhes[] = "{$resultado['erros']} erros ao processar";
@@ -503,6 +560,7 @@ class ConexaoBancariaController extends Controller
                     $contaBancariaModel = new \App\Models\ContaBancaria();
                     $contaBancariaModel->setSaldoReal($conexao['conta_bancaria_id'], $saldoData['saldo']);
                 }
+                $detalhes[] = "Saldo atualizado: {$saldoInfo}";
             } catch (\Exception $e) {
                 $detalhes[] = "Saldo: erro ao obter (" . $e->getMessage() . ")";
             }
@@ -512,17 +570,16 @@ class ConexaoBancariaController extends Controller
             $this->conexaoModel->update($id, ['status_conexao' => 'ativa', 'ultimo_erro' => null]);
             
             // Montar mensagem resumida
-            $mensagem = "Sincronização concluída!";
             if ($totalBanco === 0) {
-                $mensagem = "Nenhuma transação encontrada no período.";
+                $mensagem = "API retornou 0 transações no período " . date('d/m', strtotime($dataInicio)) . " a " . date('d/m', strtotime($dataFim)) . ".";
             } elseif ($resultado['novas'] > 0) {
-                $mensagem = "{$resultado['novas']} nova(s) transação(ões) importada(s).";
+                $mensagem = "{$resultado['novas']} nova(s) transação(ões) importada(s) de {$totalBanco} do banco.";
             } else {
-                $mensagem = "Todas as {$totalBanco} transações do período já foram importadas anteriormente.";
+                $mensagem = "Todas as {$totalBanco} transações do período já foram importadas.";
             }
             
             if ($saldoInfo) {
-                $mensagem .= "\nSaldo atualizado: {$saldoInfo}";
+                $mensagem .= " Saldo: {$saldoInfo}";
             }
             
             return $response->json([
@@ -533,24 +590,29 @@ class ConexaoBancariaController extends Controller
                     'filtradas' => $totalFiltradas,
                     'novas' => $resultado['novas'],
                     'duplicadas' => $resultado['duplicadas'],
+                    'ja_lancadas' => $resultado['ja_lancadas'],
                     'erros' => $resultado['erros'],
                     'saldo' => $saldoInfo,
-                    'periodo' => $dataInicio . ' a ' . $dataFim
+                    'periodo' => date('d/m/Y', strtotime($dataInicio)) . ' a ' . date('d/m/Y', strtotime($dataFim))
                 ],
-                'detalhes' => $detalhes
+                'detalhes' => $detalhes,
+                'debug_api' => $debugApi
             ]);
             
         } catch (\Exception $e) {
             $this->conexaoModel->registrarErro($id, $e->getMessage());
+            $detalhes[] = "ERRO: " . $e->getMessage();
             return $response->json([
-                'error' => 'Erro ao sincronizar: ' . $e->getMessage()
+                'error' => 'Erro ao sincronizar: ' . $e->getMessage(),
+                'detalhes' => $detalhes
             ], 500);
         }
     }
     
     /**
      * Processar transações sincronizadas
-     * Retorna array com contadores: novas, duplicadas, erros
+     * Verifica duplicatas contra: transacoes_pendentes (hash), contas_pagar, contas_receber, movimentacoes_caixa
+     * Retorna array com contadores: novas, duplicadas, ja_lancadas, erros
      */
     private function processarTransacoes($transacoes, $conexao)
     {
@@ -559,15 +621,25 @@ class ConexaoBancariaController extends Controller
         
         $novas = 0;
         $duplicadas = 0;
+        $jaLancadas = 0;
         $erros = 0;
+        
+        $empresaId = $conexao['empresa_id'];
+        $contaBancariaId = $conexao['conta_bancaria_id'] ?? null;
         
         foreach ($transacoes as $transacao) {
             try {
+                // Verificar se já existe em contas_pagar ou contas_receber (por valor + data + empresa)
+                if ($this->transacaoJaLancada($empresaId, $contaBancariaId, $transacao)) {
+                    $jaLancadas++;
+                    continue;
+                }
+                
                 // Classificar (regras fixas -> histórico -> IA -> fallback)
                 $classificacao = $classificadorService->analisar($transacao);
                 
                 $transacaoData = [
-                    'empresa_id' => $conexao['empresa_id'],
+                    'empresa_id' => $empresaId,
                     'conexao_bancaria_id' => $conexao['id'],
                     'data_transacao' => $transacao['data_transacao'],
                     'descricao_original' => $transacao['descricao_original'],
@@ -601,8 +673,110 @@ class ConexaoBancariaController extends Controller
         return [
             'novas' => $novas,
             'duplicadas' => $duplicadas,
+            'ja_lancadas' => $jaLancadas,
             'erros' => $erros
         ];
+    }
+    
+    /**
+     * Verifica se a transação do banco já foi lançada manualmente
+     * em contas_pagar, contas_receber ou movimentacoes_caixa.
+     * Compara por: empresa_id + valor + data + conta_bancaria_id (se disponível)
+     */
+    private function transacaoJaLancada($empresaId, $contaBancariaId, $transacao): bool
+    {
+        $db = \App\Core\Database::getInstance()->getConnection();
+        $valor = abs((float) $transacao['valor']);
+        $data = $transacao['data_transacao'];
+        $tipo = $transacao['tipo'] ?? '';
+        
+        // Margem de R$ 0.01 para evitar problemas de arredondamento
+        $valorMin = $valor - 0.01;
+        $valorMax = $valor + 0.01;
+        
+        // Verificar em contas_pagar (débitos)
+        if ($tipo === 'debito') {
+            $sql = "SELECT COUNT(*) FROM contas_pagar 
+                    WHERE empresa_id = :empresa_id 
+                    AND ABS(valor_total) BETWEEN :valor_min AND :valor_max
+                    AND (data_vencimento = :data OR data_pagamento = :data2)
+                    AND status != 'cancelado'
+                    AND deleted_at IS NULL";
+            $params = [
+                'empresa_id' => $empresaId,
+                'valor_min' => $valorMin,
+                'valor_max' => $valorMax,
+                'data' => $data,
+                'data2' => $data
+            ];
+            
+            if ($contaBancariaId) {
+                $sql .= " AND conta_bancaria_id = :conta_id";
+                $params['conta_id'] = $contaBancariaId;
+            }
+            
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            if ((int) $stmt->fetchColumn() > 0) {
+                return true;
+            }
+        }
+        
+        // Verificar em contas_receber (créditos)
+        if ($tipo === 'credito') {
+            $sql = "SELECT COUNT(*) FROM contas_receber 
+                    WHERE empresa_id = :empresa_id 
+                    AND ABS(valor_total) BETWEEN :valor_min AND :valor_max
+                    AND (data_vencimento = :data OR data_recebimento = :data2)
+                    AND status != 'cancelado'
+                    AND deleted_at IS NULL";
+            $params = [
+                'empresa_id' => $empresaId,
+                'valor_min' => $valorMin,
+                'valor_max' => $valorMax,
+                'data' => $data,
+                'data2' => $data
+            ];
+            
+            if ($contaBancariaId) {
+                $sql .= " AND conta_bancaria_id = :conta_id";
+                $params['conta_id'] = $contaBancariaId;
+            }
+            
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            if ((int) $stmt->fetchColumn() > 0) {
+                return true;
+            }
+        }
+        
+        // Verificar em movimentacoes_caixa (ambos)
+        $tipoMov = $tipo === 'debito' ? 'saida' : 'entrada';
+        $sql = "SELECT COUNT(*) FROM movimentacoes_caixa 
+                WHERE empresa_id = :empresa_id 
+                AND tipo = :tipo_mov
+                AND ABS(valor) BETWEEN :valor_min AND :valor_max
+                AND data_movimentacao = :data";
+        $params = [
+            'empresa_id' => $empresaId,
+            'tipo_mov' => $tipoMov,
+            'valor_min' => $valorMin,
+            'valor_max' => $valorMax,
+            'data' => $data
+        ];
+        
+        if ($contaBancariaId) {
+            $sql .= " AND conta_bancaria_id = :conta_id";
+            $params['conta_id'] = $contaBancariaId;
+        }
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        if ((int) $stmt->fetchColumn() > 0) {
+            return true;
+        }
+        
+        return false;
     }
     
     /**

@@ -190,7 +190,20 @@ class SicoobBankService extends AbstractBankService
         $mesFim = (int) date('m', strtotime($dataFim));
         $anoFim = (int) date('Y', strtotime($dataFim));
 
+        $this->logError('getTransacoes - Parâmetros', [
+            'numeroConta' => $numeroConta,
+            'dataInicio' => $dataInicio,
+            'dataFim' => $dataFim,
+            'mesInicio' => $mesInicio,
+            'anoInicio' => $anoInicio,
+            'diaInicio' => $diaInicio,
+            'mesFim' => $mesFim,
+            'anoFim' => $anoFim,
+            'diaFim' => $diaFim
+        ]);
+
         $transacoes = [];
+        $debugMeses = [];
 
         $currentYear = $anoInicio;
         $currentMonth = $mesInicio;
@@ -209,6 +222,7 @@ class SicoobBankService extends AbstractBankService
             }
 
             $url = $this->baseUrl . "/extrato/{$currentMonth}/{$currentYear}";
+            $mesDebug = ['mes' => "{$currentMonth}/{$currentYear}", 'url' => $url, 'params' => $params];
 
             try {
                 $response = $this->httpRequest(
@@ -219,16 +233,30 @@ class SicoobBankService extends AbstractBankService
                     $conexao
                 );
 
-                // Resposta oficial: transacoes está no root do response
+                $mesDebug['response_keys'] = is_array($response) ? array_keys($response) : 'not_array';
+                $mesDebug['saldoAtual'] = $response['saldoAtual'] ?? null;
+
                 $items = $response['transacoes'] ?? [];
-                if (is_array($items)) {
+                $mesDebug['transacoes_count'] = is_array($items) ? count($items) : 0;
+
+                if (is_array($items) && count($items) > 0) {
+                    $mesDebug['primeira_transacao'] = [
+                        'data' => $items[0]['data'] ?? 'n/a',
+                        'descricao' => $items[0]['descricao'] ?? 'n/a',
+                        'valor' => $items[0]['valor'] ?? 'n/a',
+                        'tipo' => $items[0]['tipo'] ?? 'n/a'
+                    ];
                     $transacoes = array_merge($transacoes, $this->normalizarTransacoes($items));
                 }
+
+                $this->logError("Extrato {$currentMonth}/{$currentYear}", $mesDebug);
+
             } catch (\Exception $e) {
-                $this->logError("Erro ao buscar extrato {$currentMonth}/{$currentYear}", [
-                    'erro' => $e->getMessage()
-                ]);
+                $mesDebug['erro'] = $e->getMessage();
+                $this->logError("Erro ao buscar extrato {$currentMonth}/{$currentYear}", $mesDebug);
             }
+
+            $debugMeses[] = $mesDebug;
 
             $currentMonth++;
             if ($currentMonth > 12) {
@@ -237,8 +265,19 @@ class SicoobBankService extends AbstractBankService
             }
         }
 
+        $this->logError('getTransacoes - Resultado final', [
+            'total_transacoes' => count($transacoes),
+            'meses_consultados' => count($debugMeses)
+        ]);
+
+        // Armazenar debug para acesso pelo controller
+        $this->lastDebug = $debugMeses;
+
         return $transacoes;
     }
+
+    /** @var array Debug da última consulta de transações */
+    public $lastDebug = [];
 
     public function testarConexao(array $conexao): bool
     {

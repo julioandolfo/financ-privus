@@ -167,7 +167,11 @@ use App\Models\ConexaoBancaria;
                     sincronizando: false,
                     resultadoSync: null,
                     erroSync: null,
-                    showResultado: false
+                    showResultado: false,
+                    showOpcoes: false,
+                    dataInicio: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0],
+                    dataFim: new Date().toISOString().split('T')[0],
+                    periodoPreset: '7dias'
                  }">
                 
                 <!-- Header do Card -->
@@ -259,7 +263,7 @@ use App\Models\ConexaoBancaria;
                             </svg>
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm font-semibold text-green-800 dark:text-green-300" x-text="resultadoSync.message"></p>
-                                <div class="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                <div class="mt-2 grid grid-cols-3 sm:grid-cols-5 gap-1.5">
                                     <div class="bg-white dark:bg-gray-800 rounded-lg p-2 text-center">
                                         <p class="text-lg font-bold text-blue-600 dark:text-blue-400" x-text="resultadoSync.resumo?.total_banco ?? 0"></p>
                                         <p class="text-[10px] text-gray-500 dark:text-gray-400">Do banco</p>
@@ -270,7 +274,11 @@ use App\Models\ConexaoBancaria;
                                     </div>
                                     <div class="bg-white dark:bg-gray-800 rounded-lg p-2 text-center">
                                         <p class="text-lg font-bold text-yellow-600 dark:text-yellow-400" x-text="resultadoSync.resumo?.duplicadas ?? 0"></p>
-                                        <p class="text-[10px] text-gray-500 dark:text-gray-400">Já existiam</p>
+                                        <p class="text-[10px] text-gray-500 dark:text-gray-400">Já pendentes</p>
+                                    </div>
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-2 text-center" x-show="(resultadoSync.resumo?.ja_lancadas ?? 0) > 0">
+                                        <p class="text-lg font-bold text-purple-600 dark:text-purple-400" x-text="resultadoSync.resumo?.ja_lancadas ?? 0"></p>
+                                        <p class="text-[10px] text-gray-500 dark:text-gray-400">Já lançadas</p>
                                     </div>
                                     <div class="bg-white dark:bg-gray-800 rounded-lg p-2 text-center" x-show="resultadoSync.resumo?.saldo">
                                         <p class="text-lg font-bold text-gray-900 dark:text-gray-100" x-text="resultadoSync.resumo?.saldo ?? '---'"></p>
@@ -311,7 +319,7 @@ use App\Models\ConexaoBancaria;
                             </svg>
                             <div class="flex-1">
                                 <p class="text-sm font-semibold text-red-800 dark:text-red-300">Erro na sincronização</p>
-                                <p class="text-xs text-red-600 dark:text-red-400 mt-1" x-text="erroSync"></p>
+                                <pre class="text-xs text-red-600 dark:text-red-400 mt-1 whitespace-pre-wrap break-words font-sans" x-text="erroSync"></pre>
                             </div>
                             <button @click="showResultado = false; erroSync = null" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -319,6 +327,63 @@ use App\Models\ConexaoBancaria;
                                 </svg>
                             </button>
                         </div>
+                    </div>
+                </template>
+
+                <!-- Opções de Sincronização -->
+                <template x-if="showOpcoes">
+                    <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Período de Sincronização</p>
+                            <button @click="showOpcoes = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <!-- Presets rápidos -->
+                        <div class="flex flex-wrap gap-1.5 mb-3">
+                            <button @click="periodoPreset='hoje'; dataInicio=dataFim=new Date().toISOString().split('T')[0]"
+                                    :class="periodoPreset==='hoje' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600'"
+                                    class="px-2.5 py-1 text-xs font-medium rounded-lg transition">Hoje</button>
+                            <button @click="periodoPreset='7dias'; dataInicio=new Date(Date.now()-7*86400000).toISOString().split('T')[0]; dataFim=new Date().toISOString().split('T')[0]"
+                                    :class="periodoPreset==='7dias' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600'"
+                                    class="px-2.5 py-1 text-xs font-medium rounded-lg transition">7 dias</button>
+                            <button @click="periodoPreset='15dias'; dataInicio=new Date(Date.now()-15*86400000).toISOString().split('T')[0]; dataFim=new Date().toISOString().split('T')[0]"
+                                    :class="periodoPreset==='15dias' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600'"
+                                    class="px-2.5 py-1 text-xs font-medium rounded-lg transition">15 dias</button>
+                            <button @click="periodoPreset='30dias'; dataInicio=new Date(Date.now()-30*86400000).toISOString().split('T')[0]; dataFim=new Date().toISOString().split('T')[0]"
+                                    :class="periodoPreset==='30dias' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600'"
+                                    class="px-2.5 py-1 text-xs font-medium rounded-lg transition">30 dias</button>
+                            <button @click="periodoPreset='60dias'; dataInicio=new Date(Date.now()-60*86400000).toISOString().split('T')[0]; dataFim=new Date().toISOString().split('T')[0]"
+                                    :class="periodoPreset==='60dias' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600'"
+                                    class="px-2.5 py-1 text-xs font-medium rounded-lg transition">60 dias</button>
+                            <button @click="periodoPreset='90dias'; dataInicio=new Date(Date.now()-90*86400000).toISOString().split('T')[0]; dataFim=new Date().toISOString().split('T')[0]"
+                                    :class="periodoPreset==='90dias' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600'"
+                                    class="px-2.5 py-1 text-xs font-medium rounded-lg transition">90 dias</button>
+                            <button @click="periodoPreset='custom'"
+                                    :class="periodoPreset==='custom' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600'"
+                                    class="px-2.5 py-1 text-xs font-medium rounded-lg transition">Personalizado</button>
+                        </div>
+                        
+                        <!-- Campos de data -->
+                        <div class="grid grid-cols-2 gap-2" x-show="periodoPreset==='custom'" x-transition>
+                            <div>
+                                <label class="text-[10px] text-gray-500 dark:text-gray-400">De</label>
+                                <input type="date" x-model="dataInicio"
+                                       class="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-500 dark:text-gray-400">Até</label>
+                                <input type="date" x-model="dataFim"
+                                       class="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                            </div>
+                        </div>
+                        
+                        <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-2">
+                            Máx. 90 dias (limitação da API). Transações já lançadas em contas a pagar/receber serão ignoradas automaticamente.
+                        </p>
                     </div>
                 </template>
 
@@ -331,7 +396,14 @@ use App\Models\ConexaoBancaria;
                         erroSync = null;
                         fetch('/conexoes-bancarias/<?= $conexao['id'] ?>/sincronizar', {
                             method:'POST', 
-                            headers:{'X-Requested-With':'XMLHttpRequest'}
+                            headers:{
+                                'X-Requested-With':'XMLHttpRequest',
+                                'Content-Type':'application/json'
+                            },
+                            body: JSON.stringify({
+                                data_inicio: dataInicio,
+                                data_fim: dataFim
+                            })
                         })
                         .then(r => r.json())
                         .then(d => { 
@@ -341,12 +413,13 @@ use App\Models\ConexaoBancaria;
                                     saldo = d.resumo.saldo.replace('R$ ', ''); 
                                 }
                             } else { 
-                                erroSync = d.error || 'Erro desconhecido'; 
+                                erroSync = d.error || 'Erro desconhecido';
+                                if(d.detalhes) erroSync += '\n\nDetalhes:\n' + d.detalhes.join('\n');
                             }
                             showResultado = true;
                         })
                         .catch(e => { 
-                            erroSync = 'Erro de comunicação com o servidor'; 
+                            erroSync = 'Erro de comunicação com o servidor: ' + e.message; 
                             showResultado = true; 
                         })
                         .finally(() => sincronizando = false)
@@ -357,6 +430,13 @@ use App\Models\ConexaoBancaria;
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                         </svg>
                         <span x-text="sincronizando ? 'Sincronizando...' : 'Sincronizar'"></span>
+                    </button>
+                    <button @click="showOpcoes = !showOpcoes" 
+                            :class="showOpcoes ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'"
+                            class="px-3 py-2.5 hover:bg-gray-200 dark:hover:bg-gray-600 text-sm font-semibold rounded-xl transition" title="Opções de período">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
                     </button>
                     <a href="/conexoes-bancarias/<?= $conexao['id'] ?>" 
                        class="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-xl transition">
