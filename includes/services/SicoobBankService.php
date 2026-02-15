@@ -494,12 +494,27 @@ class SicoobBankService extends AbstractBankService
             }
 
             // Enriquecer descrição com informação complementar quando disponível
+            // A API do Sicoob retorna descInfComplementar com múltiplas linhas:
+            // Ex: "Recebimento PIX\nMAD MAIS MADEIRAS LTDA\n10.785.708/0001-59\nPIX"
             $descricaoCompleta = $descricao;
-            if ($infoComplementar && stripos($descricaoCompleta, $infoComplementar) === false) {
-                $descricaoCompleta .= ' - ' . $infoComplementar;
+            if ($infoComplementar) {
+                // Separar linhas da info complementar para extrair dados estruturados
+                $linhas = preg_split('/[\r\n]+/', $infoComplementar);
+                $linhas = array_map('trim', $linhas);
+                $linhas = array_filter($linhas);
+                
+                // Montar descrição rica: descrição do banco + todas as linhas complementares
+                $partes = [$descricao];
+                foreach ($linhas as $linha) {
+                    // Evitar repetir info que já está na descrição
+                    if (stripos($descricao, $linha) === false) {
+                        $partes[] = $linha;
+                    }
+                }
+                $descricaoCompleta = implode(' | ', $partes);
             }
             if ($cpfCnpj && stripos($descricaoCompleta, $cpfCnpj) === false) {
-                $descricaoCompleta .= ' [' . $cpfCnpj . ']';
+                $descricaoCompleta .= ' | CNPJ/CPF: ' . $cpfCnpj;
             }
 
             // Gerar ID único usando transactionId se disponível

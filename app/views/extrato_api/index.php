@@ -169,9 +169,23 @@ $saldoPeriodo = $totalCreditos - $totalDebitos;
                                 <?= date('d/m/Y', strtotime($t['data_transacao'])) ?>
                             </td>
                             <td class="px-4 py-3">
-                                <div class="font-medium text-gray-900 dark:text-gray-100 max-w-md truncate">
-                                    <?= htmlspecialchars($t['descricao']) ?>
+                                <?php 
+                                    $descPartes = array_map('trim', explode('|', $t['descricao']));
+                                    $descPrincipal = $descPartes[0] ?? $t['descricao'];
+                                    $descDetalhes = array_filter(array_slice($descPartes, 1));
+                                ?>
+                                <div class="font-medium text-gray-900 dark:text-gray-100">
+                                    <?= htmlspecialchars($descPrincipal) ?>
                                 </div>
+                                <?php if (!empty($descDetalhes)): ?>
+                                    <div class="flex flex-wrap gap-1 mt-0.5">
+                                        <?php foreach ($descDetalhes as $det): ?>
+                                            <span class="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-1.5 py-0.5 rounded">
+                                                <?= htmlspecialchars($det) ?>
+                                            </span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
                                 <?php if (!empty($t['metodo_pagamento'])): ?>
                                     <span class="text-xs text-gray-400 dark:text-gray-500"><?= htmlspecialchars($t['metodo_pagamento']) ?></span>
                                 <?php endif; ?>

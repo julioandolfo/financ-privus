@@ -35,7 +35,7 @@ class ExtratoBancarioApi extends Model
             'conexao_bancaria_id' => $data['conexao_bancaria_id'],
             'conta_bancaria_id' => $data['conta_bancaria_id'] ?? null,
             'data_transacao' => $data['data_transacao'],
-            'descricao' => substr($data['descricao'] ?? '', 0, 500),
+            'descricao' => $data['descricao'] ?? '',
             'valor' => $data['valor'],
             'tipo' => $data['tipo'],
             'saldo_apos' => $data['saldo_apos'] ?? null,
@@ -228,7 +228,7 @@ class ExtratoBancarioApi extends Model
             number_format(abs($data['valor']), 2, '.', ''),
             $data['tipo'],
             $data['banco_transacao_id'] ?? '',
-            substr($data['descricao'] ?? '', 0, 100)
+            substr($data['descricao'] ?? '', 0, 255)
         ]);
         return hash('sha256', $str);
     }

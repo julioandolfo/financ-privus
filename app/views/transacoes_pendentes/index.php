@@ -231,62 +231,56 @@ $errors = $this->session->get('errors') ?? [];
                         $netAmount = $extras['net_amount'] ?? '';
                         $temExtras = $infoComplementar || $cpfCnpj || $numDocumento || $payerEmail || $externalRef;
                     ?>
+                    <?php
+                        // Separar descrição em partes (separadas por |)
+                        $descCompleta = $transacao['descricao_original'] ?? '';
+                        $descPartes = array_map('trim', explode('|', $descCompleta));
+                        $descPrincipal = $descPartes[0] ?? $descCompleta;
+                        $descDetalhes = array_slice($descPartes, 1);
+                        $descDetalhes = array_filter($descDetalhes);
+                    ?>
                     <div class="ml-8 mb-4 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border-l-4 <?= $isDebito ? 'border-red-500' : 'border-green-500' ?>">
-                        <div class="font-medium text-gray-900 dark:text-gray-100">
-                            <?= htmlspecialchars($transacao['descricao_original']) ?>
+                        <div class="font-semibold text-gray-900 dark:text-gray-100">
+                            <?= htmlspecialchars($descPrincipal) ?>
                         </div>
                         
-                        <?php if ($infoComplementar): ?>
-                            <p class="text-sm text-gray-700 dark:text-gray-300 mt-1.5 bg-white/60 dark:bg-gray-800/60 px-2 py-1 rounded">
-                                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mr-1">Detalhe:</span>
+                        <?php if (!empty($descDetalhes)): ?>
+                        <div class="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                            <?php foreach ($descDetalhes as $detalhe): ?>
+                                <span class="inline-flex items-center text-sm text-gray-700 dark:text-gray-300 bg-white/70 dark:bg-gray-800/70 px-2 py-0.5 rounded">
+                                    <?= htmlspecialchars($detalhe) ?>
+                                </span>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($infoComplementar && empty($descDetalhes)): ?>
+                            <p class="text-sm text-gray-700 dark:text-gray-300 mt-1.5 bg-white/60 dark:bg-gray-800/60 px-2 py-1 rounded whitespace-pre-line">
                                 <?= htmlspecialchars($infoComplementar) ?>
                             </p>
                         <?php endif; ?>
                         
-                        <?php if ($cpfCnpj || $numDocumento || $payerEmail || $externalRef): ?>
+                        <?php 
+                        // Mostrar dados extras que não estão já na descrição
+                        $metaItens = [];
+                        if ($cpfCnpj && stripos($descCompleta, $cpfCnpj) === false) {
+                            $metaItens[] = ['label' => 'CPF/CNPJ', 'value' => $cpfCnpj];
+                        }
+                        if ($numDocumento) $metaItens[] = ['label' => 'Doc', 'value' => $numDocumento];
+                        if ($payerEmail) $metaItens[] = ['label' => 'Pagador', 'value' => $payerEmail];
+                        if ($externalRef) $metaItens[] = ['label' => 'Ref', 'value' => $externalRef];
+                        if ($dataLote) $metaItens[] = ['label' => 'Lote', 'value' => $dataLote];
+                        if ($feeAmount && (float)$feeAmount > 0) $metaItens[] = ['label' => 'Taxa', 'value' => 'R$ ' . number_format((float)$feeAmount, 2, ',', '.')];
+                        if ($netAmount && (float)$netAmount > 0) $metaItens[] = ['label' => 'Líquido', 'value' => 'R$ ' . number_format((float)$netAmount, 2, ',', '.')];
+                        ?>
+                        <?php if (!empty($metaItens)): ?>
                         <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs">
-                            <?php if ($cpfCnpj): ?>
+                            <?php foreach ($metaItens as $meta): ?>
                                 <span class="text-gray-600 dark:text-gray-400">
-                                    <span class="font-semibold text-gray-500 dark:text-gray-500">CPF/CNPJ:</span> 
-                                    <?= htmlspecialchars($cpfCnpj) ?>
+                                    <span class="font-semibold text-gray-500 dark:text-gray-500"><?= $meta['label'] ?>:</span> 
+                                    <?= htmlspecialchars($meta['value']) ?>
                                 </span>
-                            <?php endif; ?>
-                            <?php if ($numDocumento): ?>
-                                <span class="text-gray-600 dark:text-gray-400">
-                                    <span class="font-semibold text-gray-500 dark:text-gray-500">Doc:</span> 
-                                    <?= htmlspecialchars($numDocumento) ?>
-                                </span>
-                            <?php endif; ?>
-                            <?php if ($payerEmail): ?>
-                                <span class="text-gray-600 dark:text-gray-400">
-                                    <span class="font-semibold text-gray-500 dark:text-gray-500">Pagador:</span> 
-                                    <?= htmlspecialchars($payerEmail) ?>
-                                </span>
-                            <?php endif; ?>
-                            <?php if ($externalRef): ?>
-                                <span class="text-gray-600 dark:text-gray-400">
-                                    <span class="font-semibold text-gray-500 dark:text-gray-500">Ref:</span> 
-                                    <?= htmlspecialchars($externalRef) ?>
-                                </span>
-                            <?php endif; ?>
-                            <?php if ($dataLote): ?>
-                                <span class="text-gray-600 dark:text-gray-400">
-                                    <span class="font-semibold text-gray-500 dark:text-gray-500">Lote:</span> 
-                                    <?= htmlspecialchars($dataLote) ?>
-                                </span>
-                            <?php endif; ?>
-                            <?php if ($feeAmount && (float)$feeAmount > 0): ?>
-                                <span class="text-gray-600 dark:text-gray-400">
-                                    <span class="font-semibold text-gray-500 dark:text-gray-500">Taxa:</span> 
-                                    R$ <?= number_format((float)$feeAmount, 2, ',', '.') ?>
-                                </span>
-                            <?php endif; ?>
-                            <?php if ($netAmount && (float)$netAmount > 0): ?>
-                                <span class="text-gray-600 dark:text-gray-400">
-                                    <span class="font-semibold text-gray-500 dark:text-gray-500">Líquido:</span> 
-                                    R$ <?= number_format((float)$netAmount, 2, ',', '.') ?>
-                                </span>
-                            <?php endif; ?>
+                            <?php endforeach; ?>
                         </div>
                         <?php endif; ?>
                         
