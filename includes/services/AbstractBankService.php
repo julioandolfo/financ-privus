@@ -63,8 +63,20 @@ abstract class AbstractBankService implements BankApiInterface
         }
 
         // mTLS - Certificado digital (Sicoob, Sicredi, Itaú, Bradesco)
-        if (!empty($conexao['cert_pem']) && !empty($conexao['key_pem'])) {
-            // Salvar certificados em arquivo temporário se vier como string
+        // Suporta PFX (PKCS#12) ou PEM (cert+key separados)
+        if (!empty($conexao['cert_pfx'])) {
+            // Certificado PFX (PKCS#12) - formato mais comum em bancos brasileiros
+            $pfxPath = $this->resolvePfxPath($conexao['cert_pfx']);
+            if ($pfxPath) {
+                // Extrair PEM do PFX para uso com cURL
+                $pemPaths = $this->extractPemFromPfx($pfxPath, $conexao['cert_password'] ?? '');
+                if ($pemPaths) {
+                    curl_setopt($ch, CURLOPT_SSLCERT, $pemPaths['cert']);
+                    curl_setopt($ch, CURLOPT_SSLKEY, $pemPaths['key']);
+                }
+            }
+        } elseif (!empty($conexao['cert_pem']) && !empty($conexao['key_pem'])) {
+            // Certificado PEM (cert + key separados)
             $certPath = $this->resolveCertPath($conexao['cert_pem'], 'cert');
             $keyPath = $this->resolveCertPath($conexao['key_pem'], 'key');
 
@@ -136,6 +148,77 @@ abstract class AbstractBankService implements BankApiInterface
         }
 
         return null;
+    }
+
+    /**
+     * Resolve path de arquivo PFX - se for conteúdo Base64, salva em temp.
+     */
+    protected function resolvePfxPath(string $pfxContent): ?string
+    {
+        if (empty($pfxContent)) {
+            return null;
+        }
+
+        // Se já é um path de arquivo existente
+        if (file_exists($pfxContent)) {
+            return $pfxContent;
+        }
+
+        // Se é conteúdo Base64 do PFX, decodificar e salvar
+        $decoded = base64_decode($pfxContent, true);
+        if ($decoded !== false) {
+            $tempDir = sys_get_temp_dir();
+            $hash = md5($pfxContent);
+            $tempFile = $tempDir . "/bank_api_pfx_{$hash}.pfx";
+            
+            if (!file_exists($tempFile)) {
+                file_put_contents($tempFile, $decoded);
+                chmod($tempFile, 0600);
+            }
+            
+            return $tempFile;
+        }
+
+        return null;
+    }
+
+    /**
+     * Extrai certificado PEM e chave privada PEM de um arquivo PFX.
+     * 
+     * @param string $pfxPath Caminho do arquivo PFX
+     * @param string $password Senha do PFX
+     * @return array|null ['cert' => path, 'key' => path] ou null se falhar
+     */
+    protected function extractPemFromPfx(string $pfxPath, string $password = ''): ?array
+    {
+        $pfxContent = file_get_contents($pfxPath);
+        if ($pfxContent === false) {
+            return null;
+        }
+
+        $certs = [];
+        if (!openssl_pkcs12_read($pfxContent, $certs, $password)) {
+            $this->logError('Falha ao ler PFX', ['erro' => openssl_error_string()]);
+            return null;
+        }
+
+        $hash = md5($pfxPath);
+        $tempDir = sys_get_temp_dir();
+        
+        $certFile = $tempDir . "/bank_api_pfx_cert_{$hash}.pem";
+        $keyFile = $tempDir . "/bank_api_pfx_key_{$hash}.pem";
+
+        if (!file_exists($certFile)) {
+            file_put_contents($certFile, $certs['cert']);
+            chmod($certFile, 0600);
+        }
+        
+        if (!file_exists($keyFile)) {
+            file_put_contents($keyFile, $certs['pkey']);
+            chmod($keyFile, 0600);
+        }
+
+        return ['cert' => $certFile, 'key' => $keyFile];
     }
 
     /**

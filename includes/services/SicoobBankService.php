@@ -2,28 +2,27 @@
 namespace Includes\Services;
 
 /**
- * Integração com a API do Sicoob (API nativa para cooperados).
+ * Integração com a API do Sicoob (Conta Corrente V4).
  * 
- * Autenticação: mTLS (certificado digital) + OAuth client_credentials
+ * Autenticação: mTLS (certificado digital PFX/PEM) + OAuth2 client_credentials
+ * O Sicoob NÃO utiliza client_secret — a autenticação é feita via certificado mTLS.
  * 
- * Documentação: https://developers.sicoob.com.br
+ * Documentação oficial: https://developers.sicoob.com.br
  * 
  * Endpoints:
- *   POST /oauth2/token                              -> autenticação
- *   GET  /conta-corrente/v2/contas/{conta}/saldo     -> saldo
- *   GET  /conta-corrente/v2/contas/{conta}/extrato   -> extrato
+ *   POST  auth.sicoob.com.br/auth/realms/cooperado/protocol/openid-connect/token  -> token OAuth2
+ *   GET   api.sicoob.com.br/conta-corrente/v4/saldo?numeroContaCorrente=XXX       -> saldo
+ *   GET   api.sicoob.com.br/conta-corrente/v4/extrato/{mes}/{ano}?numConta=XXX    -> extrato
+ * 
+ * Scopes:
+ *   cco_consulta           -> consulta saldo e extrato
+ *   cco_transferencias     -> transferências (não usado aqui)
  */
 class SicoobBankService extends AbstractBankService
 {
-    private $baseUrls = [
-        'sandbox' => 'https://sandbox.sicoob.com.br',
-        'producao' => 'https://api.sicoob.com.br'
-    ];
-
-    private $authUrls = [
-        'sandbox' => 'https://sandbox.sicoob.com.br/oauth2/token',
-        'producao' => 'https://auth.sicoob.com.br/auth/realms/cooperado/protocol/openid-connect/token'
-    ];
+    private $baseUrl = 'https://api.sicoob.com.br';
+    
+    private $authUrl = 'https://auth.sicoob.com.br/auth/realms/cooperado/protocol/openid-connect/token';
 
     public function getBancoNome(): string
     {
@@ -36,93 +35,82 @@ class SicoobBankService extends AbstractBankService
     }
 
     /**
-     * Autenticação via client_credentials com mTLS.
+     * Autenticação via client_credentials com mTLS (certificado digital).
+     * O Sicoob NÃO usa client_secret.
      */
     public function autenticar(array $conexao): array
     {
-        $ambiente = $conexao['ambiente'] ?? 'sandbox';
-        $authUrl = $this->authUrls[$ambiente] ?? $this->authUrls['sandbox'];
-
         $clientId = $conexao['client_id'] ?? '';
-        $clientSecret = $conexao['client_secret'] ?? '';
 
         if (empty($clientId)) {
-            throw new \Exception('Client ID do Sicoob não configurado.');
+            throw new \Exception('Client ID do Sicoob não configurado. Obtenha em developers.sicoob.com.br');
         }
 
-        // Verificar se tem certificados configurados
-        $hasCerts = !empty($conexao['cert_pem']) && !empty($conexao['key_pem']);
+        $hasCerts = $this->temCertificado($conexao);
 
-        // Em sandbox sem certificados, retornar mock
-        if ($ambiente === 'sandbox' && !$hasCerts) {
-            return [
-                'access_token' => 'sandbox-mock-token-sicoob-' . time(),
-                'expires_in' => 300,
-                'token_type' => 'Bearer',
-                'scope' => 'cco_extrato cco_saldo'
-            ];
+        if (!$hasCerts) {
+            throw new \Exception(
+                'Certificado digital não configurado. O Sicoob exige certificado mTLS (PFX ou PEM) para autenticação.'
+            );
         }
 
         $body = [
             'grant_type' => 'client_credentials',
             'client_id' => $clientId,
-            'scope' => 'cco_extrato cco_saldo conta_corrente_boletos_consultar'
+            'scope' => 'cco_consulta'
         ];
-
-        // Se tiver client_secret, adicionar
-        if (!empty($clientSecret)) {
-            $body['client_secret'] = $clientSecret;
-        }
 
         $headers = [
-            'Content-Type: application/x-www-form-urlencoded'
+            'Content-Type: application/x-www-form-urlencoded',
+            'Accept: application/json'
         ];
 
-        $response = $this->httpRequest($authUrl, 'POST', $headers, $body, $conexao, true);
+        $response = $this->httpRequest(
+            $this->authUrl,
+            'POST',
+            $headers,
+            $body,
+            $conexao,
+            true
+        );
 
         if (empty($response['access_token'])) {
-            throw new \Exception('Falha na autenticação Sicoob: token não retornado.');
+            $erro = $response['error_description'] ?? $response['error'] ?? 'Token não retornado';
+            throw new \Exception("Falha na autenticação Sicoob: {$erro}");
         }
 
         return [
             'access_token' => $response['access_token'],
             'expires_in' => $response['expires_in'] ?? 300,
             'token_type' => $response['token_type'] ?? 'Bearer',
-            'scope' => $response['scope'] ?? ''
+            'scope' => $response['scope'] ?? 'cco_consulta'
         ];
     }
 
     /**
      * Obtém saldo da conta corrente.
+     * 
+     * Endpoint: GET /conta-corrente/v4/saldo?numeroContaCorrente={numero}
      */
     public function getSaldo(array $conexao): array
     {
-        $ambiente = $conexao['ambiente'] ?? 'sandbox';
-        $baseUrl = $this->baseUrls[$ambiente] ?? $this->baseUrls['sandbox'];
-        $numeroConta = $conexao['banco_conta_id'] ?? $conexao['identificacao'] ?? '';
+        $numeroConta = $this->getNumeroContaLimpo($conexao);
 
-        // Mock para sandbox
-        if ($ambiente === 'sandbox' && (empty($conexao['cert_pem']) || empty($conexao['key_pem']))) {
-            return [
-                'saldo' => 15750.42,
-                'saldo_bloqueado' => 0,
-                'atualizado_em' => date('Y-m-d\TH:i:s'),
-                'moeda' => 'BRL'
-            ];
+        if (empty($numeroConta)) {
+            throw new \Exception('Número da conta corrente não configurado para consulta de saldo.');
         }
 
         $token = $this->getAccessToken($conexao);
+        $clientId = $conexao['client_id'] ?? '';
 
-        $url = $baseUrl . '/conta-corrente/v2/contas/saldo';
-        if (!empty($numeroConta)) {
-            $url = $baseUrl . "/conta-corrente/v2/contas/{$numeroConta}/saldo";
-        }
+        $url = $this->baseUrl . '/conta-corrente/v4/saldo';
+        $params = ['numeroContaCorrente' => $numeroConta];
 
         $response = $this->httpRequest(
             $url,
             'GET',
-            $this->authHeaders($token),
-            null,
+            $this->sicoobHeaders($token, $clientId),
+            $params,
             $conexao
         );
 
@@ -136,66 +124,74 @@ class SicoobBankService extends AbstractBankService
 
     /**
      * Obtém extrato da conta corrente.
+     * 
+     * Endpoint: GET /conta-corrente/v4/extrato/{mes}/{ano}?numeroContaCorrente={numero}&diaInicial=X&diaFinal=Y
      */
     public function getTransacoes(array $conexao, string $dataInicio, string $dataFim): array
     {
-        $ambiente = $conexao['ambiente'] ?? 'sandbox';
-        $baseUrl = $this->baseUrls[$ambiente] ?? $this->baseUrls['sandbox'];
-        $numeroConta = $conexao['banco_conta_id'] ?? $conexao['identificacao'] ?? '';
+        $numeroConta = $this->getNumeroContaLimpo($conexao);
 
-        // Mock para sandbox
-        if ($ambiente === 'sandbox' && (empty($conexao['cert_pem']) || empty($conexao['key_pem']))) {
-            return $this->getMockTransacoes();
+        if (empty($numeroConta)) {
+            throw new \Exception('Número da conta corrente não configurado para consulta de extrato.');
         }
 
         $token = $this->getAccessToken($conexao);
+        $clientId = $conexao['client_id'] ?? '';
 
-        $url = $baseUrl . '/conta-corrente/v2/contas/extrato';
-        if (!empty($numeroConta)) {
-            $url = $baseUrl . "/conta-corrente/v2/contas/{$numeroConta}/extrato";
-        }
+        // A API do Sicoob usa mês/ano na URL + diaInicial/diaFinal como query params
+        $mesInicio = (int) date('m', strtotime($dataInicio));
+        $anoInicio = (int) date('Y', strtotime($dataInicio));
+        $diaInicio = (int) date('d', strtotime($dataInicio));
+        $diaFim = (int) date('d', strtotime($dataFim));
+        $mesFim = (int) date('m', strtotime($dataFim));
+        $anoFim = (int) date('Y', strtotime($dataFim));
 
-        $params = [
-            'dataInicio' => $dataInicio,
-            'dataFim' => $dataFim
-        ];
-
-        $response = $this->httpRequest(
-            $url,
-            'GET',
-            $this->authHeaders($token),
-            $params,
-            $conexao
-        );
-
-        // Normalizar transações
         $transacoes = [];
-        $items = $response['transacoes'] ?? $response['resultado'] ?? $response['data'] ?? $response;
-        
-        if (!is_array($items)) {
-            return [];
-        }
 
-        foreach ($items as $txn) {
-            if (!is_array($txn)) continue;
+        // Se o período cruza meses, faz múltiplas chamadas
+        $currentYear = $anoInicio;
+        $currentMonth = $mesInicio;
 
-            $valor = (float) ($txn['valor'] ?? $txn['vlrLancamento'] ?? $txn['amount'] ?? 0);
-            $descricao = $txn['descricao'] ?? $txn['descLancamento'] ?? $txn['description'] ?? 'Transação Sicoob';
-
-            $transacoes[] = [
-                'banco_transacao_id' => 'SCB-' . ($txn['idTransacao'] ?? $txn['numDocumento'] ?? $txn['transactionId'] ?? uniqid()),
-                'data_transacao' => $txn['data'] ?? $txn['dtLancamento'] ?? $txn['bookingDate'] ?? $dataInicio,
-                'descricao_original' => $descricao,
-                'valor' => abs($valor),
-                'tipo' => $valor < 0 ? 'debito' : 'credito',
-                'metodo_pagamento' => $this->identificarMetodoPagamento($descricao),
-                'saldo_apos' => isset($txn['saldo']) ? (float) $txn['saldo'] : null,
-                'origem' => 'sicoob',
-                'dados_extras' => [
-                    'tipo_lancamento' => $txn['tipoLancamento'] ?? $txn['codTipoLanc'] ?? '',
-                    'numero_documento' => $txn['numDocumento'] ?? ''
-                ]
+        while ($currentYear < $anoFim || ($currentYear === $anoFim && $currentMonth <= $mesFim)) {
+            $params = [
+                'numeroContaCorrente' => $numeroConta
             ];
+
+            // Define dia inicial e final do mês consultado
+            if ($currentYear === $anoInicio && $currentMonth === $mesInicio) {
+                $params['diaInicial'] = $diaInicio;
+            }
+            if ($currentYear === $anoFim && $currentMonth === $mesFim) {
+                $params['diaFinal'] = $diaFim;
+            }
+
+            $url = $this->baseUrl . "/conta-corrente/v4/extrato/{$currentMonth}/{$currentYear}";
+
+            try {
+                $response = $this->httpRequest(
+                    $url,
+                    'GET',
+                    $this->sicoobHeaders($token, $clientId),
+                    $params,
+                    $conexao
+                );
+
+                $items = $response['resultado'] ?? $response['transacoes'] ?? $response['data'] ?? [];
+                if (is_array($items)) {
+                    $transacoes = array_merge($transacoes, $this->normalizarTransacoes($items));
+                }
+            } catch (\Exception $e) {
+                $this->logError("Erro ao buscar extrato {$currentMonth}/{$currentYear}", [
+                    'erro' => $e->getMessage()
+                ]);
+            }
+
+            // Próximo mês
+            $currentMonth++;
+            if ($currentMonth > 12) {
+                $currentMonth = 1;
+                $currentYear++;
+            }
         }
 
         return $transacoes;
@@ -215,66 +211,147 @@ class SicoobBankService extends AbstractBankService
     public function getCamposConfiguracao(): array
     {
         return [
-            ['name' => 'client_id', 'label' => 'Client ID', 'type' => 'text', 'required' => true,
-             'placeholder' => 'Client ID do portal developers.sicoob.com.br',
-             'help' => 'Obtenha em: developers.sicoob.com.br > Suas aplicações'],
-            ['name' => 'client_secret', 'label' => 'Client Secret', 'type' => 'password', 'required' => false,
-             'placeholder' => 'Client Secret (se aplicável)'],
-            ['name' => 'cert_pem', 'label' => 'Certificado (PEM)', 'type' => 'textarea', 'required' => true,
-             'placeholder' => '-----BEGIN CERTIFICATE-----\n...',
-             'help' => 'Certificado digital no formato PEM para autenticação mTLS'],
-            ['name' => 'key_pem', 'label' => 'Chave Privada (PEM)', 'type' => 'textarea', 'required' => true,
-             'placeholder' => '-----BEGIN PRIVATE KEY-----\n...'],
-            ['name' => 'cert_password', 'label' => 'Senha do Certificado', 'type' => 'password', 'required' => false,
-             'placeholder' => 'Senha (se o certificado tiver)'],
-            ['name' => 'banco_conta_id', 'label' => 'Número da Conta', 'type' => 'text', 'required' => false,
-             'placeholder' => 'Ex: 12345-6',
-             'help' => 'Número da conta corrente no Sicoob'],
-            ['name' => 'ambiente', 'label' => 'Ambiente', 'type' => 'select', 'required' => true,
-             'options' => ['sandbox' => 'Sandbox (testes)', 'producao' => 'Produção'],
-             'default' => 'sandbox']
+            [
+                'name' => 'client_id',
+                'label' => 'Client ID',
+                'type' => 'text',
+                'required' => true,
+                'placeholder' => 'Ex: 5193d273-ceed-4889-b34a-57e599d4ba94',
+                'help' => 'Obtenha em: developers.sicoob.com.br > Suas aplicações > Dados Gerais'
+            ],
+            [
+                'name' => 'cooperativa',
+                'label' => 'Número da Cooperativa',
+                'type' => 'text',
+                'required' => false,
+                'placeholder' => 'Ex: 3125',
+                'help' => 'Número da sua cooperativa Sicoob'
+            ],
+            [
+                'name' => 'banco_conta_id',
+                'label' => 'Número da Conta Corrente',
+                'type' => 'text',
+                'required' => true,
+                'placeholder' => 'Ex: 230088-5 (somente números e hífen)',
+                'help' => 'Conta corrente conforme exibida no portal do Sicoob'
+            ],
+            [
+                'name' => 'cert_pfx',
+                'label' => 'Certificado PFX (Base64)',
+                'type' => 'textarea',
+                'required' => false,
+                'placeholder' => 'Cole aqui o conteúdo Base64 do arquivo .pfx',
+                'help' => 'Se usar PFX: converta com base64 e cole aqui. Se preferir PEM, use os campos abaixo.'
+            ],
+            [
+                'name' => 'cert_password',
+                'label' => 'Senha do Certificado PFX',
+                'type' => 'password',
+                'required' => false,
+                'placeholder' => 'Senha do arquivo .pfx'
+            ],
+            [
+                'name' => 'cert_pem',
+                'label' => 'Certificado PEM (alternativa ao PFX)',
+                'type' => 'textarea',
+                'required' => false,
+                'placeholder' => '-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----',
+                'help' => 'Certificado digital no formato PEM. Alternativa ao PFX.'
+            ],
+            [
+                'name' => 'key_pem',
+                'label' => 'Chave Privada PEM (alternativa ao PFX)',
+                'type' => 'textarea',
+                'required' => false,
+                'placeholder' => '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----',
+                'help' => 'Chave privada correspondente ao certificado PEM.'
+            ],
+            [
+                'name' => 'ambiente',
+                'label' => 'Ambiente',
+                'type' => 'select',
+                'required' => true,
+                'options' => ['producao' => 'Produção', 'sandbox' => 'Sandbox (testes)'],
+                'default' => 'producao'
+            ]
+        ];
+    }
+
+    // =========================================================================
+    // Métodos auxiliares privados
+    // =========================================================================
+
+    /**
+     * Monta headers padrão para requisições à API do Sicoob.
+     * O Sicoob exige o header client_id em todas as requisições.
+     */
+    private function sicoobHeaders(string $token, string $clientId): array
+    {
+        return [
+            'Authorization: Bearer ' . $token,
+            'client_id: ' . $clientId,
+            'Accept: application/json',
+            'Content-Type: application/json'
         ];
     }
 
     /**
-     * Transações mock para ambiente sandbox.
+     * Obtém número da conta limpo (sem pontos, somente números e hífen).
      */
-    private function getMockTransacoes(): array
+    private function getNumeroContaLimpo(array $conexao): string
     {
-        return [
-            [
-                'banco_transacao_id' => 'SCB-MOCK-' . uniqid(),
-                'data_transacao' => date('Y-m-d', strtotime('-1 day')),
-                'descricao_original' => 'PIX RECEBIDO - CLIENTE EXEMPLO LTDA',
-                'valor' => 2500.00,
-                'tipo' => 'credito',
-                'metodo_pagamento' => 'PIX',
-                'saldo_apos' => 18250.42,
+        $conta = $conexao['banco_conta_id'] ?? $conexao['identificacao'] ?? '';
+        // Remove pontos e espaços, mantém números e hífen
+        return preg_replace('/[^0-9\-]/', '', $conta);
+    }
+
+    /**
+     * Verifica se a conexão possui certificado configurado (PFX ou PEM).
+     */
+    private function temCertificado(array $conexao): bool
+    {
+        // Tem PFX?
+        if (!empty($conexao['cert_pfx'])) {
+            return true;
+        }
+        // Tem PEM (cert + key)?
+        if (!empty($conexao['cert_pem']) && !empty($conexao['key_pem'])) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Normaliza array de transações do Sicoob para o formato padrão do sistema.
+     */
+    private function normalizarTransacoes(array $items): array
+    {
+        $transacoes = [];
+
+        foreach ($items as $txn) {
+            if (!is_array($txn)) continue;
+
+            $valor = (float) ($txn['valor'] ?? $txn['vlrLancamento'] ?? $txn['amount'] ?? 0);
+            $descricao = $txn['descricao'] ?? $txn['descLancamento'] ?? $txn['description'] ?? 'Transação Sicoob';
+            $data = $txn['data'] ?? $txn['dtLancamento'] ?? $txn['bookingDate'] ?? date('Y-m-d');
+
+            $transacoes[] = [
+                'banco_transacao_id' => 'SCB-' . ($txn['idTransacao'] ?? $txn['numDocumento'] ?? $txn['transactionId'] ?? uniqid()),
+                'data_transacao' => $data,
+                'descricao_original' => $descricao,
+                'valor' => abs($valor),
+                'tipo' => $valor < 0 ? 'debito' : 'credito',
+                'metodo_pagamento' => $this->identificarMetodoPagamento($descricao),
+                'saldo_apos' => isset($txn['saldo']) ? (float) $txn['saldo'] : null,
                 'origem' => 'sicoob',
-                'dados_extras' => []
-            ],
-            [
-                'banco_transacao_id' => 'SCB-MOCK-' . uniqid(),
-                'data_transacao' => date('Y-m-d', strtotime('-2 days')),
-                'descricao_original' => 'TED ENVIADO - FORNECEDOR ABC LTDA',
-                'valor' => 1200.00,
-                'tipo' => 'debito',
-                'metodo_pagamento' => 'TED',
-                'saldo_apos' => 15750.42,
-                'origem' => 'sicoob',
-                'dados_extras' => []
-            ],
-            [
-                'banco_transacao_id' => 'SCB-MOCK-' . uniqid(),
-                'data_transacao' => date('Y-m-d', strtotime('-3 days')),
-                'descricao_original' => 'BOLETO PAGO - ENERGIA ELÉTRICA',
-                'valor' => 450.00,
-                'tipo' => 'debito',
-                'metodo_pagamento' => 'Boleto',
-                'saldo_apos' => 16950.42,
-                'origem' => 'sicoob',
-                'dados_extras' => []
-            ]
-        ];
+                'dados_extras' => [
+                    'tipo_lancamento' => $txn['tipoLancamento'] ?? $txn['codTipoLanc'] ?? '',
+                    'numero_documento' => $txn['numDocumento'] ?? '',
+                    'cooperativa' => $txn['numCooperativa'] ?? ''
+                ]
+            ];
+        }
+
+        return $transacoes;
     }
 }

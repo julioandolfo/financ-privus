@@ -66,7 +66,8 @@ class ConexaoBancaria extends Model
                  access_token, refresh_token, token_expira_em, consent_id,
                  auto_sync, frequencia_sync, categoria_padrao_id, 
                  centro_custo_padrao_id, aprovacao_automatica,
-                 ambiente, client_id, client_secret, cert_pem, key_pem, cert_password, 
+                 ambiente, client_id, client_secret, cert_pem, key_pem, cert_password,
+                 cert_pfx, cooperativa,
                  ativo, ultima_sincronizacao,
                  conta_bancaria_id, saldo_banco, saldo_atualizado_em, status_conexao, banco_conta_id) 
                 VALUES 
@@ -74,7 +75,8 @@ class ConexaoBancaria extends Model
                  :access_token, :refresh_token, :token_expira_em, :consent_id,
                  :auto_sync, :frequencia_sync, :categoria_padrao_id,
                  :centro_custo_padrao_id, :aprovacao_automatica,
-                 :ambiente, :client_id, :client_secret, :cert_pem, :key_pem, :cert_password, 
+                 :ambiente, :client_id, :client_secret, :cert_pem, :key_pem, :cert_password,
+                 :cert_pfx, :cooperativa,
                  :ativo, :ultima_sincronizacao,
                  :conta_bancaria_id, :saldo_banco, :saldo_atualizado_em, :status_conexao, :banco_conta_id)";
         
@@ -102,6 +104,8 @@ class ConexaoBancaria extends Model
             'cert_pem' => $data['cert_pem'] ?? null,
             'key_pem' => $data['key_pem'] ?? null,
             'cert_password' => $data['cert_password'] ?? null,
+            'cert_pfx' => $data['cert_pfx'] ?? null,
+            'cooperativa' => $data['cooperativa'] ?? null,
             'ativo' => $data['ativo'] ?? 1,
             'ultima_sincronizacao' => $data['ultima_sincronizacao'] ?? null,
             'conta_bancaria_id' => $data['conta_bancaria_id'] ?? null,
@@ -123,7 +127,9 @@ class ConexaoBancaria extends Model
         $allowed = ['identificacao', 'auto_sync', 'frequencia_sync', 
                    'categoria_padrao_id', 'centro_custo_padrao_id', 'aprovacao_automatica',
                    'access_token', 'refresh_token', 'token_expira_em', 'ultima_sincronizacao',
-                   'ambiente', 'client_id', 'client_secret', 'cert_pem', 'key_pem', 'cert_password', 'ativo', 'tipo_integracao',
+                   'ambiente', 'client_id', 'client_secret', 'cert_pem', 'key_pem', 'cert_password',
+                   'cert_pfx', 'cooperativa',
+                   'ativo', 'tipo_integracao',
                    'conta_bancaria_id', 'saldo_banco', 'saldo_atualizado_em', 'status_conexao', 'ultimo_erro', 'banco_conta_id'];
         
         foreach ($allowed as $field) {

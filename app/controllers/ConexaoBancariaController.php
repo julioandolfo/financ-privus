@@ -160,7 +160,9 @@ class ConexaoBancariaController extends Controller
             'access_token' => $data['access_token'] ?? null,
             'cert_pem' => $data['cert_pem'] ?? null,
             'key_pem' => $data['key_pem'] ?? null,
+            'cert_pfx' => $data['cert_pfx'] ?? null,
             'cert_password' => $data['cert_password'] ?? null,
+            'cooperativa' => $data['cooperativa'] ?? null,
             'status_conexao' => 'ativa'
         ];
         
