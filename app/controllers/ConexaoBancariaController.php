@@ -138,6 +138,25 @@ class ConexaoBancariaController extends Controller
             return $response->redirect('/conexoes-bancarias/create');
         }
         
+        // Processar upload de certificado PFX se enviado
+        $certPfxBase64 = null;
+        if (!empty($_FILES['cert_pfx']) && $_FILES['cert_pfx']['error'] === UPLOAD_ERR_OK) {
+            $tmpFile = $_FILES['cert_pfx']['tmp_name'];
+            $originalName = $_FILES['cert_pfx']['name'];
+            $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+            
+            if (!in_array($extension, ['pfx', 'p12'])) {
+                $_SESSION['errors'] = ['cert_pfx' => 'Formato inválido. Envie um arquivo .pfx ou .p12'];
+                $_SESSION['old'] = $data;
+                return $response->redirect('/conexoes-bancarias/create');
+            }
+            
+            $pfxContent = file_get_contents($tmpFile);
+            if ($pfxContent !== false) {
+                $certPfxBase64 = base64_encode($pfxContent);
+            }
+        }
+        
         // Montar dados da conexão
         $conexaoData = [
             'empresa_id' => $empresaId,
@@ -154,13 +173,13 @@ class ConexaoBancariaController extends Controller
             'conta_bancaria_id' => !empty($data['conta_bancaria_id']) ? $data['conta_bancaria_id'] : null,
             'banco_conta_id' => $data['banco_conta_id'] ?? null,
             // Credenciais (variam por banco)
-            'ambiente' => $data['ambiente'] ?? 'sandbox',
+            'ambiente' => $data['ambiente'] ?? 'producao',
             'client_id' => $data['client_id'] ?? null,
             'client_secret' => $data['client_secret'] ?? null,
             'access_token' => $data['access_token'] ?? null,
             'cert_pem' => $data['cert_pem'] ?? null,
             'key_pem' => $data['key_pem'] ?? null,
-            'cert_pfx' => $data['cert_pfx'] ?? null,
+            'cert_pfx' => $certPfxBase64,
             'cert_password' => $data['cert_password'] ?? null,
             'cooperativa' => $data['cooperativa'] ?? null,
             'status_conexao' => 'ativa'

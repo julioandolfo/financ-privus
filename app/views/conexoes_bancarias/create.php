@@ -27,7 +27,7 @@ $camposJson = json_encode($campos_por_banco ?? [], JSON_UNESCAPED_UNICODE);
             </div>
         <?php endif; ?>
 
-        <form action="/conexoes-bancarias/store" method="POST">
+        <form action="/conexoes-bancarias/store" method="POST" enctype="multipart/form-data">
             <!-- Empresa -->
             <div class="mb-6">
                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -134,6 +134,32 @@ $camposJson = json_encode($campos_por_banco ?? [], JSON_UNESCAPED_UNICODE);
                                 <textarea :name="campo.name" rows="4" :placeholder="campo.placeholder || ''"
                                           :required="campo.required"
                                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-xs"></textarea>
+                            </div>
+                        </template>
+                        
+                        <!-- File upload (certificados PFX) -->
+                        <template x-if="campo.type === 'file'">
+                            <div x-data="{ fileName: '', hasFile: false }">
+                                <label class="flex flex-col items-center justify-center w-full px-4 py-6 rounded-xl border-2 border-dashed cursor-pointer transition-all"
+                                       :class="hasFile ? 'border-green-400 bg-green-50 dark:border-green-500 dark:bg-green-900/20' : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'">
+                                    <div class="flex flex-col items-center" x-show="!hasFile">
+                                        <svg class="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                        </svg>
+                                        <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Clique para selecionar o certificado</span>
+                                        <span class="text-xs text-gray-400 dark:text-gray-500 mt-1" x-text="campo.accept || '.pfx, .p12'"></span>
+                                    </div>
+                                    <div class="flex items-center gap-3" x-show="hasFile">
+                                        <svg class="w-6 h-6 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <span class="text-sm font-medium text-green-700 dark:text-green-400" x-text="fileName"></span>
+                                        <span class="text-xs text-gray-400">(clique para trocar)</span>
+                                    </div>
+                                    <input type="file" :name="campo.name" :accept="campo.accept || '.pfx,.p12'"
+                                           :required="campo.required" class="hidden"
+                                           @change="if($event.target.files.length){ fileName = $event.target.files[0].name; hasFile = true; } else { hasFile = false; }">
+                                </label>
                             </div>
                         </template>
                         

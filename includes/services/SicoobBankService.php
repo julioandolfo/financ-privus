@@ -237,11 +237,11 @@ class SicoobBankService extends AbstractBankService
             ],
             [
                 'name' => 'cert_pfx',
-                'label' => 'Certificado PFX (Base64)',
-                'type' => 'textarea',
+                'label' => 'Certificado Digital (.pfx)',
+                'type' => 'file',
                 'required' => false,
-                'placeholder' => 'Cole aqui o conteúdo Base64 do arquivo .pfx',
-                'help' => 'Se usar PFX: converta com base64 e cole aqui. Se preferir PEM, use os campos abaixo.'
+                'accept' => '.pfx,.p12',
+                'help' => 'Faça upload do arquivo .pfx ou .p12 do certificado digital. Se preferir PEM, use os campos abaixo.'
             ],
             [
                 'name' => 'cert_password',

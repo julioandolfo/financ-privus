@@ -207,7 +207,9 @@ class WooCommerceService
                 
             foreach ($pedidos as $pedWoo) {
                     $resultado = $this->processarPedidoWoo($pedWoo, $empresaId, $config, $mapeamentoStatus, $acoesFormasPagamento, $statusPagamentoConfirmado, $contaReceberModel);
-                    if ($resultado['sucesso']) {
+                    if (!empty($resultado['pulado'])) {
+                        $totalPulados++;
+                    } elseif ($resultado['sucesso']) {
                         $total++;
                         if ($resultado['novo']) $totalNovos++;
                         else $totalAtualizados++;
@@ -263,7 +265,9 @@ class WooCommerceService
                         
                         // Pedido novo: processar
                         $resultado = $this->processarPedidoWoo($pedWoo, $empresaId, $config, $mapeamentoStatus, $acoesFormasPagamento, $statusPagamentoConfirmado, $contaReceberModel);
-                        if ($resultado['sucesso']) {
+                        if (!empty($resultado['pulado'])) {
+                            $totalPulados++;
+                        } elseif ($resultado['sucesso']) {
                             $total++;
                             $totalNovos++;
                             
@@ -340,7 +344,7 @@ class WooCommerceService
             if ($statusSistema === 'nao_sincronizar') {
                 \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
                     "Pedido #{$numeroPedido}: ignorado - status '{$statusWoo}' configurado para não sincronizar");
-                continue;
+                return ['sucesso' => true, 'novo' => false, 'pulado' => true, 'erro' => null];
             }
             
             // =============================================
