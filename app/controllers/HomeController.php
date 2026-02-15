@@ -658,7 +658,9 @@ class HomeController extends Controller
             $totalContasVencidas = 0;
             $valorContasVencidas = 0;
             foreach ($contasReceber as $conta) {
-                if ($conta['status'] === 'pendente' && $conta['data_vencimento'] < date('Y-m-d')) {
+                // Status 'vencido' = conta pendente que passou do vencimento (definido no SQL do model)
+                if ($conta['status'] === 'vencido' || 
+                    ($conta['status'] === 'pendente' && isset($conta['data_vencimento']) && $conta['data_vencimento'] < date('Y-m-d'))) {
                     $totalContasVencidas++;
                     $valorContasVencidas += $conta['valor_total'] ?? 0;
                 }
