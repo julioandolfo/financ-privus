@@ -136,18 +136,99 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
     <!-- ========================================
          MÉTRICAS FINANCEIRAS AVANÇADAS
          ======================================== -->
-    <div class="mb-8">
-        <div class="flex items-center justify-between mb-6">
+    <?php $periodoAtual = $metricas_financeiras['periodo_selecionado'] ?? 'este_mes'; ?>
+    <div class="mb-8" x-data="{ showPeriodoCustom: <?= $periodoAtual === 'personalizado' ? 'true' : 'false' ?> }">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
             <div>
                 <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Indicadores Financeiros</h2>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Últimos <?= $metricas_financeiras['periodo'] ?></p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <?= $metricas_financeiras['periodo'] ?>
+                    <?php if (isset($metricas_financeiras['data_inicio']) && isset($metricas_financeiras['data_fim'])): ?>
+                        <span class="text-gray-400 dark:text-gray-500">(<?= date('d/m/Y', strtotime($metricas_financeiras['data_inicio'])) ?> — <?= date('d/m/Y', strtotime($metricas_financeiras['data_fim'])) ?>)</span>
+                    <?php endif; ?>
+                </p>
             </div>
-            <a href="/relatorios" class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                </svg>
-                Ver Relatórios Detalhados
-            </a>
+            <div class="flex items-center gap-2">
+                <a href="/relatorios" class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg text-sm">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    Relatórios
+                </a>
+            </div>
+        </div>
+
+        <!-- Seletor de Período -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
+            <div class="flex flex-col lg:flex-row lg:items-center gap-3">
+                <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap flex items-center">
+                    <svg class="w-4 h-4 mr-1.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Período:
+                </span>
+                <div class="flex flex-wrap gap-2">
+                    <?php
+                    $periodos = [
+                        'hoje' => 'Hoje',
+                        'ontem' => 'Ontem',
+                        'esta_semana' => 'Esta semana',
+                        'semana_passada' => 'Sem. passada',
+                        'este_mes' => 'Este mês',
+                        'mes_passado' => 'Mês passado',
+                        'ultimos_30_dias' => 'Últimos 30 dias',
+                    ];
+                    foreach ($periodos as $key => $label): ?>
+                        <form method="POST" action="/dashboard/filtrar-periodo" class="inline">
+                            <input type="hidden" name="periodo" value="<?= $key ?>">
+                            <button type="submit" class="px-3 py-1.5 text-sm rounded-lg transition-all cursor-pointer <?= $periodoAtual === $key ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600' ?>">
+                                <?= $label ?>
+                            </button>
+                        </form>
+                    <?php endforeach; ?>
+                    
+                    <!-- Botão Personalizado -->
+                    <button 
+                        type="button"
+                        @click="showPeriodoCustom = !showPeriodoCustom"
+                        class="px-3 py-1.5 text-sm rounded-lg transition-all cursor-pointer <?= $periodoAtual === 'personalizado' ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600' ?>"
+                    >
+                        <svg class="w-4 h-4 inline mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        Personalizado
+                    </button>
+                </div>
+            </div>
+
+            <!-- Período Personalizado (expandível) -->
+            <div x-show="showPeriodoCustom" 
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 -translate-y-2"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <form method="POST" action="/dashboard/filtrar-periodo" class="flex flex-wrap items-end gap-4">
+                    <input type="hidden" name="periodo" value="personalizado">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Data Início</label>
+                        <input type="date" name="data_inicio" 
+                               value="<?= $metricas_financeiras['data_inicio'] ?? date('Y-m-01') ?>"
+                               class="px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Data Fim</label>
+                        <input type="date" name="data_fim" 
+                               value="<?= $metricas_financeiras['data_fim'] ?? date('Y-m-d') ?>"
+                               class="px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <button type="submit" class="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg text-sm cursor-pointer">
+                        Aplicar
+                    </button>
+                </form>
+            </div>
         </div>
 
         <!-- Métricas Principais -->

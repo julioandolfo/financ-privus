@@ -165,9 +165,13 @@ class HomeController extends Controller
             // MÉTRICAS FINANCEIRAS AVANÇADAS
             // ========================================
             
-            // Período dos últimos 30 dias para cálculos
-            $dataInicio = date('Y-m-d', strtotime('-30 days'));
-            $dataFim = date('Y-m-d');
+            // Período dinâmico (padrão: este mês)
+            $periodoSelecionado = $_SESSION['dashboard_periodo'] ?? 'este_mes';
+            $periodoPersonalizado = $_SESSION['dashboard_periodo_personalizado'] ?? null;
+            $periodoDatas = $this->calcularPeriodo($periodoSelecionado, $periodoPersonalizado);
+            $dataInicio = $periodoDatas['inicio'];
+            $dataFim = $periodoDatas['fim'];
+            $periodoLabel = $periodoDatas['label'];
             
             // LOG: Início do cálculo das métricas financeiras
             LogSistema::debug('Dashboard', 'metricas_financeiras', 'Iniciando cálculo de métricas financeiras', [
@@ -467,9 +471,12 @@ class HomeController extends Controller
                     'conciliadas' => $movimentacoesConciliadas,
                     'pendentes' => $movimentacoesPendentes
                 ],
-                // Métricas Financeiras Avançadas (últimos 30 dias)
+                // Métricas Financeiras Avançadas
                 'metricas_financeiras' => [
-                    'periodo' => '30 dias',
+                    'periodo' => $periodoLabel,
+                    'periodo_selecionado' => $periodoSelecionado,
+                    'data_inicio' => $dataInicio,
+                    'data_fim' => $dataFim,
                     'receitas' => $receitasUltimos30Dias,
                     'despesas' => $despesasUltimos30Dias,
                     'lucro_bruto' => $lucroBruto,
@@ -554,6 +561,92 @@ class HomeController extends Controller
         unset($_SESSION['dashboard_empresas_filtro']);
         $_SESSION['success'] = 'Filtro removido. Mostrando todas as empresas';
         return $response->redirect('/');
+    }
+    
+    /**
+     * Filtrar período do dashboard
+     */
+    public function filtrarPeriodo(Request $request, Response $response)
+    {
+        $periodo = $request->post('periodo', 'este_mes');
+        $periodosValidos = ['hoje', 'ontem', 'esta_semana', 'semana_passada', 'este_mes', 'mes_passado', 'ultimos_30_dias', 'personalizado'];
+        
+        if (!in_array($periodo, $periodosValidos)) {
+            $periodo = 'este_mes';
+        }
+        
+        $_SESSION['dashboard_periodo'] = $periodo;
+        
+        if ($periodo === 'personalizado') {
+            $dataInicio = $request->post('data_inicio', '');
+            $dataFim = $request->post('data_fim', '');
+            if ($dataInicio && $dataFim) {
+                $_SESSION['dashboard_periodo_personalizado'] = [
+                    'inicio' => $dataInicio,
+                    'fim' => $dataFim
+                ];
+            }
+        } else {
+            unset($_SESSION['dashboard_periodo_personalizado']);
+        }
+        
+        return $response->redirect('/');
+    }
+    
+    /**
+     * Calcular datas de início e fim com base no período selecionado
+     */
+    private function calcularPeriodo($periodo, $personalizado = null)
+    {
+        $hoje = date('Y-m-d');
+        
+        switch ($periodo) {
+            case 'hoje':
+                return ['inicio' => $hoje, 'fim' => $hoje, 'label' => 'Hoje'];
+                
+            case 'ontem':
+                $ontem = date('Y-m-d', strtotime('-1 day'));
+                return ['inicio' => $ontem, 'fim' => $ontem, 'label' => 'Ontem'];
+                
+            case 'esta_semana':
+                // Segunda-feira desta semana até hoje
+                $inicioSemana = date('Y-m-d', strtotime('monday this week'));
+                return ['inicio' => $inicioSemana, 'fim' => $hoje, 'label' => 'Esta semana'];
+                
+            case 'semana_passada':
+                $inicioSemanaPassada = date('Y-m-d', strtotime('monday last week'));
+                $fimSemanaPassada = date('Y-m-d', strtotime('sunday last week'));
+                return ['inicio' => $inicioSemanaPassada, 'fim' => $fimSemanaPassada, 'label' => 'Semana passada'];
+                
+            case 'este_mes':
+                $inicioMes = date('Y-m-01');
+                return ['inicio' => $inicioMes, 'fim' => $hoje, 'label' => 'Este mês'];
+                
+            case 'mes_passado':
+                $inicioMesPassado = date('Y-m-01', strtotime('first day of last month'));
+                $fimMesPassado = date('Y-m-t', strtotime('last month'));
+                return ['inicio' => $inicioMesPassado, 'fim' => $fimMesPassado, 'label' => 'Mês passado'];
+                
+            case 'ultimos_30_dias':
+                $inicio30 = date('Y-m-d', strtotime('-30 days'));
+                return ['inicio' => $inicio30, 'fim' => $hoje, 'label' => 'Últimos 30 dias'];
+                
+            case 'personalizado':
+                if ($personalizado && !empty($personalizado['inicio']) && !empty($personalizado['fim'])) {
+                    $di = $personalizado['inicio'];
+                    $df = $personalizado['fim'];
+                    return [
+                        'inicio' => $di,
+                        'fim' => $df,
+                        'label' => date('d/m', strtotime($di)) . ' a ' . date('d/m/Y', strtotime($df))
+                    ];
+                }
+                // Fallback para este mês
+                return ['inicio' => date('Y-m-01'), 'fim' => $hoje, 'label' => 'Este mês'];
+                
+            default:
+                return ['inicio' => date('Y-m-01'), 'fim' => $hoje, 'label' => 'Este mês'];
+        }
     }
     
     /**
