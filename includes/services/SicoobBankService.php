@@ -163,18 +163,72 @@ class SicoobBankService extends AbstractBankService
         // Resposta oficial: { "resultado": { "saldo": 0, "saldoLimite": 0 } }
         $resultado = $response['resultado'] ?? $response;
         
-        $saldoFinal = (float) ($resultado['saldo'] ?? 0);
+        $saldoEndpoint = (float) ($resultado['saldo'] ?? 0);
         $saldoBloqueado = (float) ($resultado['saldoBloqueado'] ?? $response['saldoBloqueado'] ?? 0);
         $saldoLimite = (float) ($resultado['saldoLimite'] ?? $response['saldoLimite'] ?? 0);
         
+        // Cruzar com extrato do mês atual para pegar saldoAtual mais preciso
+        $saldoExtrato = null;
+        $saldoAnterior = null;
+        $saldoBloqueadoExtrato = null;
+        $saldoLimiteExtrato = null;
         try {
-            \App\Models\LogSistema::info('SicoobAPI', 'getSaldo_resultado', 'Saldo parseado final', [
+            $mesAtual = date('m');
+            $anoAtual = date('Y');
+            $diaAtual = date('d');
+            $urlExtrato = $this->baseUrl . "/extrato/{$mesAtual}/{$anoAtual}";
+            $paramsExtrato = [
+                'numeroContaCorrente' => $numeroConta,
+                'diaInicial' => $diaAtual,
+                'diaFinal' => $diaAtual,
+            ];
+            
+            $responseExtrato = $this->httpRequest(
+                $urlExtrato,
+                'GET',
+                $this->sicoobHeaders($token, $clientId),
+                $paramsExtrato,
+                $conexao
+            );
+            
+            if (is_array($responseExtrato)) {
+                $saldoExtrato = isset($responseExtrato['saldoAtual']) ? (float)$responseExtrato['saldoAtual'] : null;
+                $saldoAnterior = isset($responseExtrato['saldoAnterior']) ? (float)$responseExtrato['saldoAnterior'] : null;
+                $saldoBloqueadoExtrato = isset($responseExtrato['saldoBloqueado']) ? (float)$responseExtrato['saldoBloqueado'] : null;
+                $saldoLimiteExtrato = isset($responseExtrato['saldoLimite']) ? (float)$responseExtrato['saldoLimite'] : null;
+            }
+            
+            \App\Models\LogSistema::info('SicoobAPI', 'getSaldo_extrato_cruzamento', 'Cruzamento saldo endpoint vs extrato', [
                 'numeroConta' => $numeroConta,
                 'identificacao' => $conexao['identificacao'] ?? '',
-                'saldo' => $saldoFinal,
+                'endpoint_saldo' => $saldoEndpoint,
+                'endpoint_saldo_limite' => $saldoLimite,
+                'extrato_saldoAtual' => $saldoExtrato,
+                'extrato_saldoAnterior' => $saldoAnterior,
+                'extrato_saldoBloqueado' => $saldoBloqueadoExtrato,
+                'extrato_saldoLimite' => $saldoLimiteExtrato,
+                'extrato_http_code' => $this->lastHttpCode ?? null,
+                'extrato_response_keys' => is_array($responseExtrato) ? array_keys($responseExtrato) : 'not_array',
+            ]);
+        } catch (\Exception $e) {
+            \App\Models\LogSistema::warning('SicoobAPI', 'getSaldo_extrato_erro', 'Erro ao cruzar saldo com extrato', [
+                'erro' => $e->getMessage(),
+            ]);
+        }
+        
+        // Usar saldo do extrato se disponível e diferente de null (mais preciso)
+        $saldoFinal = ($saldoExtrato !== null) ? $saldoExtrato : $saldoEndpoint;
+        
+        try {
+            \App\Models\LogSistema::info('SicoobAPI', 'getSaldo_resultado', 'Saldo final escolhido', [
+                'numeroConta' => $numeroConta,
+                'identificacao' => $conexao['identificacao'] ?? '',
+                'saldo_endpoint' => $saldoEndpoint,
+                'saldo_extrato' => $saldoExtrato,
+                'saldo_final_usado' => $saldoFinal,
+                'fonte' => ($saldoExtrato !== null) ? 'EXTRATO (saldoAtual)' : 'ENDPOINT (/saldo)',
                 'saldo_bloqueado' => $saldoBloqueado,
                 'saldo_limite' => $saldoLimite,
-                'saldo_disponivel_calculado' => $saldoFinal + $saldoLimite - $saldoBloqueado,
             ]);
         } catch (\Exception $e) {}
         
