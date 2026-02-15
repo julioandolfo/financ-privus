@@ -535,6 +535,16 @@ class ConexaoBancariaController extends Controller
                         $detalhes[] = $info;
                     }
                     
+                    // Mostrar primeira transação bruta para debug do formato
+                    if ($mesCount > 0 && !empty($mesDebug['primeira_transacao_raw'])) {
+                        $raw1 = $mesDebug['primeira_transacao_raw'];
+                        $rawKeys = is_array($raw1) ? implode(', ', array_keys($raw1)) : 'n/a';
+                        $rawTipo = $raw1['tipo'] ?? $raw1['tipoTransacao'] ?? $raw1['tipoLancamento'] ?? 'n/a';
+                        $rawValor = $raw1['valor'] ?? 'n/a';
+                        $detalhes[] = "  Campos da transação: [{$rawKeys}]";
+                        $detalhes[] = "  tipo={$rawTipo}, valor={$rawValor}";
+                    }
+                    
                     // Se 0 transações, mostrar URL completa e preview da resposta
                     if ($mesCount === 0 && empty($mesErro)) {
                         $detalhes[] = "  URL: " . ($mesDebug['url_completa'] ?? $mesDebug['url'] ?? 'n/a');
@@ -554,12 +564,36 @@ class ConexaoBancariaController extends Controller
             
             if ($totalBanco === 0) {
                 $detalhes[] = "A API retornou 0 transações no período.";
+            } else {
+                // Contar tipos para debug
+                $countDebitos = 0;
+                $countCreditos = 0;
+                $countOutros = 0;
+                $tiposEncontrados = [];
+                foreach ($transacoes as $t) {
+                    $tp = $t['tipo'] ?? 'vazio';
+                    $tiposEncontrados[$tp] = ($tiposEncontrados[$tp] ?? 0) + 1;
+                    if ($tp === 'debito') $countDebitos++;
+                    elseif ($tp === 'credito') $countCreditos++;
+                    else $countOutros++;
+                }
+                $detalhes[] = "Tipos: {$countDebitos} débitos, {$countCreditos} créditos" . ($countOutros > 0 ? ", {$countOutros} outros" : "");
+                if ($countOutros > 0 || ($countDebitos === 0 && $countCreditos === 0)) {
+                    $detalhes[] = "Distribuição de tipos: " . json_encode($tiposEncontrados, JSON_UNESCAPED_UNICODE);
+                }
+                
+                // Amostra da primeira transação
+                if (!empty($transacoes[0])) {
+                    $amostra = $transacoes[0];
+                    $detalhes[] = "Amostra 1ª transação: tipo={$amostra['tipo']}, valor={$amostra['valor']}, data={$amostra['data_transacao']}, desc=" . substr($amostra['descricao_original'] ?? '', 0, 50);
+                }
             }
             
             // Filtrar transações conforme tipo_sync configurado
             $tipoSync = $conexao['tipo_sync'] ?? 'ambos';
             $totalFiltradas = 0;
             if ($tipoSync !== 'ambos') {
+                $totalAntes = count($transacoes);
                 $transacoes = array_filter($transacoes, function($t) use ($tipoSync) {
                     if ($tipoSync === 'apenas_despesas') {
                         return ($t['tipo'] ?? '') === 'debito';
@@ -570,9 +604,13 @@ class ConexaoBancariaController extends Controller
                     return true;
                 });
                 $transacoes = array_values($transacoes);
-                $totalFiltradas = $totalBanco - count($transacoes);
-                $tipoLabel = $tipoSync === 'apenas_despesas' ? 'Apenas despesas' : 'Apenas receitas';
-                $detalhes[] = "Filtro aplicado: {$tipoLabel} ({$totalFiltradas} ignoradas pelo filtro)";
+                $totalFiltradas = $totalAntes - count($transacoes);
+                $tipoLabel = $tipoSync === 'apenas_despesas' ? 'Apenas despesas (débitos)' : 'Apenas receitas (créditos)';
+                $detalhes[] = "Filtro tipo_sync: {$tipoLabel} → mantidas " . count($transacoes) . " de {$totalAntes} ({$totalFiltradas} removidas)";
+                
+                if (count($transacoes) === 0 && $totalAntes > 0) {
+                    $detalhes[] = "⚠ TODAS as transações foram filtradas! Verifique se o filtro está correto ou altere para 'Ambos'";
+                }
             }
             
             // Processar e salvar transações
@@ -611,12 +649,19 @@ class ConexaoBancariaController extends Controller
             $this->conexaoModel->update($id, ['status_conexao' => 'ativa', 'ultimo_erro' => null]);
             
             // Montar mensagem resumida
+            $totalAposFiltro = count($transacoes) + $resultado['novas'] + $resultado['duplicadas'] + $resultado['ja_lancadas'] + $resultado['erros'];
             if ($totalBanco === 0) {
                 $mensagem = "API retornou 0 transações no período " . date('d/m', strtotime($dataInicio)) . " a " . date('d/m', strtotime($dataFim)) . ".";
+            } elseif ($totalFiltradas > 0 && $totalFiltradas === $totalBanco) {
+                $mensagem = "{$totalBanco} transações do banco, mas todas foram removidas pelo filtro de tipo.";
+            } elseif ($totalFiltradas > 0 && $resultado['novas'] > 0) {
+                $mensagem = "{$resultado['novas']} nova(s) importada(s) de {$totalBanco} do banco ({$totalFiltradas} removidas pelo filtro).";
             } elseif ($resultado['novas'] > 0) {
                 $mensagem = "{$resultado['novas']} nova(s) transação(ões) importada(s) de {$totalBanco} do banco.";
+            } elseif ($resultado['duplicadas'] > 0 || $resultado['ja_lancadas'] > 0) {
+                $mensagem = "Todas as transações do período já foram importadas ou lançadas.";
             } else {
-                $mensagem = "Todas as {$totalBanco} transações do período já foram importadas.";
+                $mensagem = "{$totalBanco} transações encontradas no banco.";
             }
             
             if ($saldoInfo) {
