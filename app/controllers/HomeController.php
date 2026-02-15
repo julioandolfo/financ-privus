@@ -399,6 +399,422 @@ class HomeController extends Controller
             }));
             $metricasPorEmpresa = $this->calcularMetricasPorEmpresa($empresasParaMetricas, $contaReceberModel, $contaPagarModel, $contaBancariaModel, $dataInicio, $dataFim);
             
+            // ========================================
+            // COMPARATIVO MÊS ATUAL VS MÊS ANTERIOR
+            // ========================================
+            $mesAnteriorInicio = date('Y-m-01', strtotime('-1 month'));
+            $mesAnteriorFim = date('Y-m-t', strtotime('-1 month'));
+            
+            $receitasMesAnterior = 0;
+            $despesasMesAnterior = 0;
+            foreach ($contasRecebidas as $conta) {
+                if (($conta['status'] === 'recebido' || $conta['status'] === 'parcial') && 
+                    !empty($conta['data_recebimento']) &&
+                    $conta['data_recebimento'] >= $mesAnteriorInicio && 
+                    $conta['data_recebimento'] <= $mesAnteriorFim) {
+                    $receitasMesAnterior += $conta['status'] === 'parcial' 
+                        ? floatval($conta['valor_recebido'] ?? 0) 
+                        : floatval($conta['valor_total'] ?? 0);
+                }
+            }
+            foreach ($contasPagas as $conta) {
+                if ($conta['status'] === 'pago' && 
+                    $conta['data_pagamento'] >= $mesAnteriorInicio && 
+                    $conta['data_pagamento'] <= $mesAnteriorFim) {
+                    $despesasMesAnterior += $conta['valor_total'] ?? 0;
+                }
+            }
+            $lucroMesAnterior = $receitasMesAnterior - $despesasMesAnterior;
+            $ebitdaMesAnterior = $receitasMesAnterior - ($despesasMesAnterior * 0.60) - ($despesasMesAnterior * 0.20);
+            
+            $varReceitas = $receitasMesAnterior > 0 ? (($receitasUltimos30Dias - $receitasMesAnterior) / $receitasMesAnterior) * 100 : ($receitasUltimos30Dias > 0 ? 100 : 0);
+            $varDespesas = $despesasMesAnterior > 0 ? (($despesasUltimos30Dias - $despesasMesAnterior) / $despesasMesAnterior) * 100 : ($despesasUltimos30Dias > 0 ? 100 : 0);
+            $varLucro = $lucroMesAnterior != 0 ? (($lucroLiquido - $lucroMesAnterior) / abs($lucroMesAnterior)) * 100 : ($lucroLiquido != 0 ? 100 : 0);
+            $varEbitda = $ebitdaMesAnterior != 0 ? (($ebitda - $ebitdaMesAnterior) / abs($ebitdaMesAnterior)) * 100 : ($ebitda != 0 ? 100 : 0);
+            
+            // ========================================
+            // AGING DE RECEBÍVEIS
+            // ========================================
+            $aging = ['0_30' => 0, '31_60' => 0, '61_90' => 0, '90_plus' => 0];
+            $agingQtd = ['0_30' => 0, '31_60' => 0, '61_90' => 0, '90_plus' => 0];
+            $hoje = date('Y-m-d');
+            foreach ($contasRecebidas as $conta) {
+                if ($conta['status'] === 'vencido' || 
+                    ($conta['status'] === 'pendente' && isset($conta['data_vencimento']) && $conta['data_vencimento'] < $hoje)) {
+                    $diasAtraso = (strtotime($hoje) - strtotime($conta['data_vencimento'])) / 86400;
+                    $valor = floatval($conta['valor_total'] ?? 0);
+                    if ($diasAtraso <= 30) {
+                        $aging['0_30'] += $valor;
+                        $agingQtd['0_30']++;
+                    } elseif ($diasAtraso <= 60) {
+                        $aging['31_60'] += $valor;
+                        $agingQtd['31_60']++;
+                    } elseif ($diasAtraso <= 90) {
+                        $aging['61_90'] += $valor;
+                        $agingQtd['61_90']++;
+                    } else {
+                        $aging['90_plus'] += $valor;
+                        $agingQtd['90_plus']++;
+                    }
+                }
+            }
+            
+            // ========================================
+            // TOP 5 CLIENTES DEVEDORES
+            // ========================================
+            $devedoresPorCliente = [];
+            foreach ($contasRecebidas as $conta) {
+                if ($conta['status'] === 'vencido' || 
+                    ($conta['status'] === 'pendente' && isset($conta['data_vencimento']) && $conta['data_vencimento'] < $hoje)) {
+                    $clienteNome = $conta['cliente_nome'] ?? $conta['empresa_nome'] ?? 'Sem cliente';
+                    if (!isset($devedoresPorCliente[$clienteNome])) {
+                        $devedoresPorCliente[$clienteNome] = ['valor' => 0, 'qtd' => 0];
+                    }
+                    $devedoresPorCliente[$clienteNome]['valor'] += floatval($conta['valor_total'] ?? 0);
+                    $devedoresPorCliente[$clienteNome]['qtd']++;
+                }
+            }
+            arsort($devedoresPorCliente);
+            $topDevedores = array_slice($devedoresPorCliente, 0, 5, true);
+            
+            // ========================================
+            // TOP 5 MAIORES DESPESAS E RECEITAS DO PERÍODO
+            // ========================================
+            $topDespesas = [];
+            foreach ($contasPagas as $conta) {
+                if ($conta['status'] === 'pago' && 
+                    $conta['data_pagamento'] >= $dataInicio && 
+                    $conta['data_pagamento'] <= $dataFim) {
+                    $topDespesas[] = [
+                        'descricao' => $conta['descricao'] ?? 'Sem descrição',
+                        'fornecedor' => $conta['fornecedor_nome'] ?? 'N/A',
+                        'valor' => floatval($conta['valor_total'] ?? 0),
+                        'data' => $conta['data_pagamento'],
+                        'categoria' => $conta['categoria_nome'] ?? 'N/A'
+                    ];
+                }
+            }
+            usort($topDespesas, fn($a, $b) => $b['valor'] <=> $a['valor']);
+            $topDespesas = array_slice($topDespesas, 0, 5);
+            
+            $topReceitas = [];
+            foreach ($contasRecebidas as $conta) {
+                if (($conta['status'] === 'recebido' || $conta['status'] === 'parcial') && 
+                    !empty($conta['data_recebimento']) &&
+                    $conta['data_recebimento'] >= $dataInicio && 
+                    $conta['data_recebimento'] <= $dataFim) {
+                    $topReceitas[] = [
+                        'descricao' => $conta['descricao'] ?? 'Sem descrição',
+                        'cliente' => $conta['cliente_nome'] ?? 'N/A',
+                        'valor' => floatval($conta['valor_total'] ?? 0),
+                        'data' => $conta['data_recebimento'],
+                        'categoria' => $conta['categoria_nome'] ?? 'N/A'
+                    ];
+                }
+            }
+            usort($topReceitas, fn($a, $b) => $b['valor'] <=> $a['valor']);
+            $topReceitas = array_slice($topReceitas, 0, 5);
+            
+            // ========================================
+            // RECEITAS E DESPESAS POR CATEGORIA
+            // ========================================
+            $receitasPorCategoria = [];
+            foreach ($contasRecebidas as $conta) {
+                if (($conta['status'] === 'recebido' || $conta['status'] === 'parcial') && 
+                    !empty($conta['data_recebimento']) &&
+                    $conta['data_recebimento'] >= $dataInicio && 
+                    $conta['data_recebimento'] <= $dataFim) {
+                    $cat = $conta['categoria_nome'] ?? 'Sem categoria';
+                    $receitasPorCategoria[$cat] = ($receitasPorCategoria[$cat] ?? 0) + floatval($conta['valor_total'] ?? 0);
+                }
+            }
+            arsort($receitasPorCategoria);
+            
+            $despesasPorCategoria = [];
+            foreach ($contasPagas as $conta) {
+                if ($conta['status'] === 'pago' && 
+                    $conta['data_pagamento'] >= $dataInicio && 
+                    $conta['data_pagamento'] <= $dataFim) {
+                    $cat = $conta['categoria_nome'] ?? 'Sem categoria';
+                    $despesasPorCategoria[$cat] = ($despesasPorCategoria[$cat] ?? 0) + floatval($conta['valor_total'] ?? 0);
+                }
+            }
+            arsort($despesasPorCategoria);
+            
+            // ========================================
+            // EVOLUÇÃO MENSAL (ÚLTIMOS 12 MESES)
+            // ========================================
+            $evolucaoMensal = [];
+            for ($i = 11; $i >= 0; $i--) {
+                $mesInicio = date('Y-m-01', strtotime("-{$i} months"));
+                $mesFim = date('Y-m-t', strtotime("-{$i} months"));
+                $mesLabel = strftime('%b/%y', strtotime($mesInicio));
+                // fallback
+                $mesLabel = date('M/y', strtotime($mesInicio));
+                
+                $rec = 0;
+                $desp = 0;
+                foreach ($contasRecebidas as $conta) {
+                    if (($conta['status'] === 'recebido' || $conta['status'] === 'parcial') && 
+                        !empty($conta['data_recebimento']) &&
+                        $conta['data_recebimento'] >= $mesInicio && 
+                        $conta['data_recebimento'] <= $mesFim) {
+                        $rec += $conta['status'] === 'parcial' 
+                            ? floatval($conta['valor_recebido'] ?? 0) 
+                            : floatval($conta['valor_total'] ?? 0);
+                    }
+                }
+                foreach ($contasPagas as $conta) {
+                    if ($conta['status'] === 'pago' && 
+                        $conta['data_pagamento'] >= $mesInicio && 
+                        $conta['data_pagamento'] <= $mesFim) {
+                        $desp += floatval($conta['valor_total'] ?? 0);
+                    }
+                }
+                
+                $evolucaoMensal[] = [
+                    'mes' => $mesLabel,
+                    'receitas' => $rec,
+                    'despesas' => $desp,
+                    'lucro' => $rec - $desp
+                ];
+            }
+            
+            // ========================================
+            // TIMELINE DE VENCIMENTOS (PRÓXIMOS 7 DIAS)
+            // ========================================
+            $vencimentosProximos = [];
+            $dataLimite = date('Y-m-d', strtotime('+7 days'));
+            
+            foreach ($contasRecebidas as $conta) {
+                if (in_array($conta['status'], ['pendente', 'vencido', 'parcial']) && 
+                    !empty($conta['data_vencimento']) &&
+                    $conta['data_vencimento'] >= $hoje && 
+                    $conta['data_vencimento'] <= $dataLimite) {
+                    $vencimentosProximos[] = [
+                        'tipo' => 'receber',
+                        'descricao' => $conta['descricao'] ?? 'Sem descrição',
+                        'valor' => floatval($conta['valor_total'] ?? 0),
+                        'vencimento' => $conta['data_vencimento'],
+                        'cliente' => $conta['cliente_nome'] ?? 'N/A',
+                        'id' => $conta['id']
+                    ];
+                }
+            }
+            foreach ($contasPagas as $conta) {
+                if (in_array($conta['status'], ['pendente', 'vencido', 'parcial']) && 
+                    !empty($conta['data_vencimento']) &&
+                    $conta['data_vencimento'] >= $hoje && 
+                    $conta['data_vencimento'] <= $dataLimite) {
+                    $vencimentosProximos[] = [
+                        'tipo' => 'pagar',
+                        'descricao' => $conta['descricao'] ?? 'Sem descrição',
+                        'valor' => floatval($conta['valor_total'] ?? 0),
+                        'vencimento' => $conta['data_vencimento'],
+                        'fornecedor' => $conta['fornecedor_nome'] ?? 'N/A',
+                        'id' => $conta['id']
+                    ];
+                }
+            }
+            usort($vencimentosProximos, fn($a, $b) => $a['vencimento'] <=> $b['vencimento']);
+            
+            // ========================================
+            // MINI FLUXO DE CAIXA PROJETADO (30 DIAS)
+            // ========================================
+            $fluxoProjetado = [];
+            $saldoAcumulado = $saldoTotal;
+            for ($i = 0; $i < 30; $i++) {
+                $dia = date('Y-m-d', strtotime("+{$i} days"));
+                $entradasDia = 0;
+                $saidasDia = 0;
+                
+                foreach ($contasRecebidas as $conta) {
+                    if (in_array($conta['status'], ['pendente', 'vencido', 'parcial']) && 
+                        !empty($conta['data_vencimento']) &&
+                        $conta['data_vencimento'] === $dia) {
+                        $entradasDia += floatval($conta['valor_total'] ?? 0);
+                    }
+                }
+                foreach ($contasPagas as $conta) {
+                    if (in_array($conta['status'], ['pendente', 'vencido', 'parcial']) && 
+                        !empty($conta['data_vencimento']) &&
+                        $conta['data_vencimento'] === $dia) {
+                        $saidasDia += floatval($conta['valor_total'] ?? 0);
+                    }
+                }
+                
+                $saldoAcumulado += $entradasDia - $saidasDia;
+                $fluxoProjetado[] = [
+                    'dia' => $dia,
+                    'entradas' => $entradasDia,
+                    'saidas' => $saidasDia,
+                    'saldo' => $saldoAcumulado
+                ];
+            }
+            
+            // ========================================
+            // MINI DRE DO PERÍODO
+            // ========================================
+            $receitaBruta = $receitasUltimos30Dias;
+            $deducoes = $receitaBruta * 0.0925; // PIS/COFINS/ISS estimado
+            $receitaLiquida = $receitaBruta - $deducoes;
+            $custoServicos = $despesasUltimos30Dias * 0.60;
+            $lucroBrutoDRE = $receitaLiquida - $custoServicos;
+            $despAdministrativas = $despesasOperacionais * 0.60;
+            $despComerciais = $despesasOperacionais * 0.40;
+            $resultadoOperacional = $lucroBrutoDRE - $despAdministrativas - $despComerciais;
+            $resultadoFinanceiro = 0; // simplificado
+            $resultadoAntesTributos = $resultadoOperacional + $resultadoFinanceiro;
+            $impostoEstimado = $resultadoAntesTributos > 0 ? $resultadoAntesTributos * 0.15 : 0;
+            $resultadoLiquido = $resultadoAntesTributos - $impostoEstimado;
+            
+            // ========================================
+            // INDICADOR DE SAÚDE FINANCEIRA (SCORE 0-100)
+            // ========================================
+            $scoreComponents = [];
+            
+            // 1. Liquidez (runway > 6 meses = ótimo) - peso 25
+            $scoreLiquidez = min(25, ($runway / 6) * 25);
+            $scoreComponents['liquidez'] = ['score' => round($scoreLiquidez), 'max' => 25, 'label' => 'Liquidez'];
+            
+            // 2. Inadimplência (0% = ótimo, >10% = péssimo) - peso 25
+            $scoreInadimplencia = max(0, 25 - ($taxaInadimplencia * 2.5));
+            $scoreComponents['inadimplencia'] = ['score' => round($scoreInadimplencia), 'max' => 25, 'label' => 'Inadimplência'];
+            
+            // 3. Margem (margem líquida >20% = ótimo) - peso 25
+            $scoreMargem = $margemLiquida > 0 ? min(25, ($margemLiquida / 20) * 25) : 0;
+            $scoreComponents['margem'] = ['score' => round($scoreMargem), 'max' => 25, 'label' => 'Rentabilidade'];
+            
+            // 4. Tendência (receitas crescendo = bom) - peso 25
+            $scoreTendencia = $varReceitas > 0 ? min(25, 12.5 + ($varReceitas / 20) * 12.5) : max(0, 12.5 + ($varReceitas / 20) * 12.5);
+            $scoreComponents['tendencia'] = ['score' => round(max(0, min(25, $scoreTendencia))), 'max' => 25, 'label' => 'Tendência'];
+            
+            $saudeFinanceira = round(array_sum(array_column($scoreComponents, 'score')));
+            $saudeFinanceira = max(0, min(100, $saudeFinanceira));
+            
+            if ($saudeFinanceira >= 80) $saudeLabel = 'Excelente';
+            elseif ($saudeFinanceira >= 60) $saudeLabel = 'Bom';
+            elseif ($saudeFinanceira >= 40) $saudeLabel = 'Regular';
+            elseif ($saudeFinanceira >= 20) $saudeLabel = 'Atenção';
+            else $saudeLabel = 'Crítico';
+            
+            // ========================================
+            // ALERTAS INTELIGENTES
+            // ========================================
+            $alertas = [];
+            
+            // Conta bancária com saldo baixo
+            foreach ($contasBancarias as $cb) {
+                if (floatval($cb['saldo_atual']) < 1000 && floatval($cb['saldo_atual']) >= 0) {
+                    $alertas[] = [
+                        'tipo' => 'warning',
+                        'icone' => 'bank',
+                        'titulo' => 'Saldo Baixo',
+                        'mensagem' => $cb['banco_nome'] . ' - Ag: ' . ($cb['agencia'] ?? '') . ' - Saldo: R$ ' . number_format($cb['saldo_atual'], 2, ',', '.'),
+                        'link' => '/contas-bancarias'
+                    ];
+                }
+                if (floatval($cb['saldo_atual']) < 0) {
+                    $alertas[] = [
+                        'tipo' => 'danger',
+                        'icone' => 'bank',
+                        'titulo' => 'Saldo Negativo',
+                        'mensagem' => $cb['banco_nome'] . ' está com saldo negativo: R$ ' . number_format($cb['saldo_atual'], 2, ',', '.'),
+                        'link' => '/contas-bancarias'
+                    ];
+                }
+            }
+            
+            // Inadimplência alta
+            if ($taxaInadimplencia > 5) {
+                $alertas[] = [
+                    'tipo' => 'danger',
+                    'icone' => 'alert',
+                    'titulo' => 'Inadimplência Alta',
+                    'mensagem' => 'Taxa de inadimplência em ' . number_format($taxaInadimplencia, 1, ',', '.') . '% - ' . $totalContasVencidas . ' contas vencidas totalizando R$ ' . number_format($valorContasVencidas, 2, ',', '.'),
+                    'link' => '/contas-receber?status=vencido'
+                ];
+            } elseif ($taxaInadimplencia > 2) {
+                $alertas[] = [
+                    'tipo' => 'warning',
+                    'icone' => 'alert',
+                    'titulo' => 'Inadimplência Moderada',
+                    'mensagem' => 'Taxa de inadimplência em ' . number_format($taxaInadimplencia, 1, ',', '.') . '% - Atenção necessária',
+                    'link' => '/contas-receber?status=vencido'
+                ];
+            }
+            
+            // Runway baixo
+            if ($runway < 3 && $runway > 0) {
+                $alertas[] = [
+                    'tipo' => 'danger',
+                    'icone' => 'clock',
+                    'titulo' => 'Runway Crítico',
+                    'mensagem' => 'Apenas ' . number_format($runway, 1, ',', '.') . ' meses de sobrevivência no ritmo atual',
+                    'link' => null
+                ];
+            }
+            
+            // Despesas crescendo acima de 15%
+            if ($varDespesas > 15) {
+                $alertas[] = [
+                    'tipo' => 'warning',
+                    'icone' => 'trending-up',
+                    'titulo' => 'Despesas em Alta',
+                    'mensagem' => 'Despesas cresceram ' . number_format($varDespesas, 1, ',', '.') . '% comparado ao mês anterior',
+                    'link' => '/contas-pagar'
+                ];
+            }
+            
+            // Receitas caindo
+            if ($varReceitas < -10) {
+                $alertas[] = [
+                    'tipo' => 'warning',
+                    'icone' => 'trending-down',
+                    'titulo' => 'Receitas em Queda',
+                    'mensagem' => 'Receitas caíram ' . number_format(abs($varReceitas), 1, ',', '.') . '% comparado ao mês anterior',
+                    'link' => '/contas-receber'
+                ];
+            }
+            
+            // Movimentações pendentes
+            if ($movimentacoesPendentes > 10) {
+                $alertas[] = [
+                    'tipo' => 'info',
+                    'icone' => 'list',
+                    'titulo' => 'Movimentações Pendentes',
+                    'mensagem' => $movimentacoesPendentes . ' movimentações aguardando conciliação',
+                    'link' => '/movimentacoes-caixa'
+                ];
+            }
+            
+            // Contas a pagar vencidas
+            $contasPagarVencidasQtd = $contasPagarResumo['vencidas']['quantidade'] ?? 0;
+            if ($contasPagarVencidasQtd > 0) {
+                $alertas[] = [
+                    'tipo' => 'danger',
+                    'icone' => 'alert',
+                    'titulo' => 'Contas a Pagar Vencidas',
+                    'mensagem' => $contasPagarVencidasQtd . ' conta(s) a pagar vencida(s) - R$ ' . number_format($contasPagarResumo['vencidas']['valor_total'] ?? 0, 2, ',', '.'),
+                    'link' => '/contas-pagar?status=vencido'
+                ];
+            }
+            
+            // Fluxo de caixa vai ficar negativo
+            $fluxoNegativo = false;
+            foreach ($fluxoProjetado as $fp) {
+                if ($fp['saldo'] < 0 && !$fluxoNegativo) {
+                    $fluxoNegativo = true;
+                    $alertas[] = [
+                        'tipo' => 'danger',
+                        'icone' => 'trending-down',
+                        'titulo' => 'Caixa Negativo Projetado',
+                        'mensagem' => 'Saldo projetado ficará negativo em ' . date('d/m/Y', strtotime($fp['dia'])),
+                        'link' => '/fluxo-caixa'
+                    ];
+                }
+            }
+            
             // MÉTRICAS DE SINCRONIZAÇÃO BANCÁRIA (TODAS AS EMPRESAS DO USUÁRIO)
             $conexaoBancariaModel = new ConexaoBancaria();
             $transacaoPendenteModel = new TransacaoPendente();
@@ -535,7 +951,56 @@ class HomeController extends Controller
                     'ultima_sincronizacao' => $ultimaSincronizacao
                 ],
                 // Métricas por Empresa (separadas visualmente)
-                'metricas_por_empresa' => $metricasPorEmpresa
+                'metricas_por_empresa' => $metricasPorEmpresa,
+                // Comparativo vs Mês Anterior
+                'comparativo' => [
+                    'receitas_anterior' => $receitasMesAnterior,
+                    'despesas_anterior' => $despesasMesAnterior,
+                    'lucro_anterior' => $lucroMesAnterior,
+                    'ebitda_anterior' => $ebitdaMesAnterior,
+                    'var_receitas' => $varReceitas,
+                    'var_despesas' => $varDespesas,
+                    'var_lucro' => $varLucro,
+                    'var_ebitda' => $varEbitda
+                ],
+                // Aging de Recebíveis
+                'aging' => ['valores' => $aging, 'quantidade' => $agingQtd],
+                // Top 5
+                'top_devedores' => $topDevedores,
+                'top_despesas' => $topDespesas,
+                'top_receitas' => $topReceitas,
+                // Por Categoria
+                'receitas_por_categoria' => $receitasPorCategoria,
+                'despesas_por_categoria' => $despesasPorCategoria,
+                // Evolução Mensal
+                'evolucao_mensal' => $evolucaoMensal,
+                // Vencimentos Próximos
+                'vencimentos_proximos' => $vencimentosProximos,
+                // Fluxo Projetado
+                'fluxo_projetado' => $fluxoProjetado,
+                // Mini DRE
+                'mini_dre' => [
+                    'receita_bruta' => $receitaBruta,
+                    'deducoes' => $deducoes,
+                    'receita_liquida' => $receitaLiquida,
+                    'custo_servicos' => $custoServicos,
+                    'lucro_bruto' => $lucroBrutoDRE,
+                    'desp_administrativas' => $despAdministrativas,
+                    'desp_comerciais' => $despComerciais,
+                    'resultado_operacional' => $resultadoOperacional,
+                    'resultado_financeiro' => $resultadoFinanceiro,
+                    'resultado_antes_tributos' => $resultadoAntesTributos,
+                    'imposto_estimado' => $impostoEstimado,
+                    'resultado_liquido' => $resultadoLiquido
+                ],
+                // Saúde Financeira
+                'saude_financeira' => [
+                    'score' => $saudeFinanceira,
+                    'label' => $saudeLabel,
+                    'componentes' => $scoreComponents
+                ],
+                // Alertas Inteligentes
+                'alertas' => $alertas
             ]);
             
         } catch (\Exception $e) {
@@ -543,24 +1008,47 @@ class HomeController extends Controller
             return $this->render('home/index', [
                 'title' => 'Dashboard - Sistema Financeiro',
                 'metricas_por_empresa' => [],
+                'filtro' => ['ativo' => false, 'empresas_ids' => [], 'total_empresas' => 0, 'empresas_filtradas' => 0],
+                'todas_empresas' => [],
                 'totais' => [
-                    'empresas' => 0,
-                    'usuarios' => 0,
-                    'fornecedores' => 0,
-                    'clientes' => 0,
-                    'categorias' => 0,
-                    'centros_custo' => 0,
-                    'formas_pagamento' => 0,
-                    'contas_bancarias' => 0,
-                    'produtos' => 0
+                    'empresas' => 0, 'usuarios' => 0, 'fornecedores' => 0, 'clientes' => 0,
+                    'categorias' => 0, 'centros_custo' => 0, 'formas_pagamento' => 0,
+                    'contas_bancarias' => 0, 'produtos' => 0, 'pedidos' => 0
                 ],
-                'produtos' => [
-                    'total' => 0,
-                    'custo_total' => 0,
-                    'valor_venda_total' => 0,
-                    'margem_media' => 0,
-                    'lucro_potencial' => 0
-                ]
+                'produtos' => ['total' => 0, 'custo_total' => 0, 'valor_venda_total' => 0, 'margem_media' => 0, 'lucro_potencial' => 0],
+                'pedidos' => ['total_pedidos' => 0, 'valor_total' => 0, 'ticket_medio' => 0, 'lucro_total' => 0, 'margem_lucro' => 0, 'pendentes' => 0, 'processando' => 0, 'concluidos' => 0, 'cancelados' => 0],
+                'pedidosPorOrigem' => [],
+                'bonificados' => ['total_pedidos' => 0, 'valor_total' => 0],
+                'bonificadosPorEmpresa' => [],
+                'empresasData' => [],
+                'usuarios' => ['ativos' => 0, 'inativos' => 0],
+                'fornecedores' => ['pf' => 0, 'pj' => 0],
+                'clientes' => ['pf' => 0, 'pj' => 0],
+                'categorias' => ['receita' => 0, 'despesa' => 0],
+                'formas_pagamento' => ['pagamento' => 0, 'recebimento' => 0, 'ambos' => 0],
+                'contas_bancarias' => ['corrente' => 0, 'poupanca' => 0, 'investimento' => 0, 'saldo_total' => 0, 'por_banco' => []],
+                'contas_pagar' => ['total' => 0, 'valor_a_pagar' => 0, 'valor_pago' => 0, 'vencidas' => ['quantidade' => 0, 'valor_total' => 0], 'a_vencer_7d' => ['quantidade' => 0, 'valor_total' => 0], 'a_vencer_30d' => ['quantidade' => 0, 'valor_total' => 0], 'por_status' => ['pendente' => 0, 'vencido' => 0, 'parcial' => 0, 'pago' => 0]],
+                'contas_receber' => ['total' => 0, 'valor_a_receber' => 0, 'valor_recebido' => 0, 'vencidas' => ['quantidade' => 0, 'valor_total' => 0], 'a_vencer_7d' => ['quantidade' => 0, 'valor_total' => 0], 'a_vencer_30d' => ['quantidade' => 0, 'valor_total' => 0], 'por_status' => ['pendente' => 0, 'vencido' => 0, 'parcial' => 0, 'recebido' => 0]],
+                'movimentacoes_caixa' => ['total' => 0, 'entradas' => 0, 'saidas' => 0, 'saldo' => 0, 'conciliadas' => 0, 'pendentes' => 0],
+                'metricas_financeiras' => [
+                    'periodo' => 'Este mês', 'periodo_selecionado' => 'este_mes',
+                    'data_inicio' => date('Y-m-01'), 'data_fim' => date('Y-m-d'),
+                    'receitas' => 0, 'despesas' => 0, 'lucro_bruto' => 0, 'margem_bruta' => 0,
+                    'despesas_operacionais' => 0, 'ebitda' => 0, 'margem_ebitda' => 0,
+                    'lucro_liquido' => 0, 'margem_liquida' => 0, 'roi' => 0,
+                    'ponto_equilibrio' => 0, 'margem_contribuicao' => 0,
+                    'burn_rate' => 0, 'runway' => 0, 'ticket_medio' => 0,
+                    'inadimplencia_valor' => 0, 'inadimplencia_taxa' => 0, 'contas_vencidas' => 0
+                ],
+                'sincronizacao_bancaria' => ['conexoes_ativas' => 0, 'transacoes_pendentes' => 0, 'transacoes_aprovadas' => 0, 'transacoes_ignoradas' => 0, 'ultima_sincronizacao' => null],
+                'comparativo' => ['var_receitas' => 0, 'var_despesas' => 0, 'var_lucro' => 0, 'var_ebitda' => 0],
+                'aging' => ['valores' => ['0_30' => 0, '31_60' => 0, '61_90' => 0, '90_plus' => 0], 'quantidade' => ['0_30' => 0, '31_60' => 0, '61_90' => 0, '90_plus' => 0]],
+                'top_devedores' => [], 'top_despesas' => [], 'top_receitas' => [],
+                'receitas_por_categoria' => [], 'despesas_por_categoria' => [],
+                'evolucao_mensal' => [], 'vencimentos_proximos' => [], 'fluxo_projetado' => [],
+                'mini_dre' => [],
+                'saude_financeira' => ['score' => 0, 'label' => 'N/A', 'componentes' => []],
+                'alertas' => []
             ]);
         }
     }

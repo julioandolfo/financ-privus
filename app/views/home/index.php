@@ -242,7 +242,15 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                     </svg>
                 </div>
                 <p class="text-3xl font-bold mb-1">R$ <?= number_format($metricas_financeiras['receitas'], 2, ',', '.') ?></p>
-                <p class="text-sm opacity-75">Valores recebidos</p>
+                <div class="flex items-center justify-between">
+                    <span class="text-sm opacity-75">Valores recebidos</span>
+                    <?php $vR = $comparativo['var_receitas'] ?? 0; if ($vR != 0): ?>
+                    <span class="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full <?= $vR > 0 ? 'bg-white/25' : 'bg-red-900/30' ?>">
+                        <svg class="w-3 h-3 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="<?= $vR > 0 ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7' ?>"/></svg>
+                        <?= number_format(abs($vR), 1, ',', '.') ?>%
+                    </span>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <!-- Despesas -->
@@ -254,7 +262,15 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                     </svg>
                 </div>
                 <p class="text-3xl font-bold mb-1">R$ <?= number_format($metricas_financeiras['despesas'], 2, ',', '.') ?></p>
-                <p class="text-sm opacity-75">Valores pagos</p>
+                <div class="flex items-center justify-between">
+                    <span class="text-sm opacity-75">Valores pagos</span>
+                    <?php $vD = $comparativo['var_despesas'] ?? 0; if ($vD != 0): ?>
+                    <span class="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full <?= $vD < 0 ? 'bg-white/25' : 'bg-red-900/30' ?>">
+                        <svg class="w-3 h-3 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="<?= $vD > 0 ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7' ?>"/></svg>
+                        <?= number_format(abs($vD), 1, ',', '.') ?>%
+                    </span>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <!-- Lucro Líquido -->
@@ -266,7 +282,15 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                     </svg>
                 </div>
                 <p class="text-3xl font-bold mb-1">R$ <?= number_format($metricas_financeiras['lucro_liquido'], 2, ',', '.') ?></p>
-                <p class="text-sm opacity-75">Margem: <?= number_format($metricas_financeiras['margem_liquida'], 1) ?>%</p>
+                <div class="flex items-center justify-between">
+                    <span class="text-sm opacity-75">Margem: <?= number_format($metricas_financeiras['margem_liquida'], 1) ?>%</span>
+                    <?php $vL = $comparativo['var_lucro'] ?? 0; if ($vL != 0): ?>
+                    <span class="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full <?= $vL > 0 ? 'bg-white/25' : 'bg-red-900/30' ?>">
+                        <svg class="w-3 h-3 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="<?= $vL > 0 ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7' ?>"/></svg>
+                        <?= number_format(abs($vL), 1, ',', '.') ?>%
+                    </span>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <!-- EBITDA -->
@@ -278,7 +302,15 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                     </svg>
                 </div>
                 <p class="text-3xl font-bold mb-1">R$ <?= number_format($metricas_financeiras['ebitda'], 2, ',', '.') ?></p>
-                <p class="text-sm opacity-75">Margem: <?= number_format($metricas_financeiras['margem_ebitda'], 1) ?>%</p>
+                <div class="flex items-center justify-between">
+                    <span class="text-sm opacity-75">Margem: <?= number_format($metricas_financeiras['margem_ebitda'], 1) ?>%</span>
+                    <?php $vE = $comparativo['var_ebitda'] ?? 0; if ($vE != 0): ?>
+                    <span class="inline-flex items-center text-xs font-bold px-2 py-0.5 rounded-full <?= $vE > 0 ? 'bg-white/25' : 'bg-red-900/30' ?>">
+                        <svg class="w-3 h-3 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="<?= $vE > 0 ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7' ?>"/></svg>
+                        <?= number_format(abs($vE), 1, ',', '.') ?>%
+                    </span>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
 
@@ -570,6 +602,11 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             </div>
         </div>
     </div>
+
+    <!-- ========================================
+         SEÇÕES EXTRAS: Saúde, Alertas, Gráficos, Aging, Tops, Timeline, DRE
+         ======================================== -->
+    <?php include __DIR__ . '/_dashboard_extras.php'; ?>
 
     <!-- Cards de Totais -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
