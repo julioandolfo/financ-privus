@@ -457,20 +457,45 @@ class ConexaoBancariaController extends Controller
             // Atualizar saldo na conexão bancária
             $this->conexaoModel->atualizarSaldo($id, $saldoData['saldo']);
             
-            // Se tiver conta bancária vinculada, propagar saldo real para ela
+            $contaBancariaModel = new ContaBancaria();
+            $contaCriada = false;
+            
+            // Se não tem conta bancária vinculada, criar automaticamente
+            if (empty($conexao['conta_bancaria_id'])) {
+                $novaConta = $this->criarContaBancariaAutomatica($conexao, $saldoData['saldo'], $contaBancariaModel);
+                if ($novaConta) {
+                    $conexao['conta_bancaria_id'] = $novaConta;
+                    $contaCriada = true;
+                    \App\Models\LogSistema::info('ConexaoBancaria', 'auto_criar_conta', 'Conta bancária criada automaticamente ao atualizar saldo', [
+                        'conexao_id' => $id,
+                        'conta_bancaria_id' => $novaConta,
+                        'banco' => $conexao['banco'],
+                        'saldo' => $saldoData['saldo'],
+                    ]);
+                }
+            }
+            
+            // Propagar saldo real para a conta bancária do sistema
             if (!empty($conexao['conta_bancaria_id'])) {
-                $contaBancariaModel = new ContaBancaria();
                 $contaBancariaModel->setSaldoReal($conexao['conta_bancaria_id'], $saldoData['saldo']);
             }
             
-            return $response->json([
+            $responseData = [
                 'success' => true,
                 'saldo' => $saldoData['saldo'],
                 'saldo_formatado' => 'R$ ' . number_format($saldoData['saldo'], 2, ',', '.'),
                 'saldo_bloqueado' => $saldoData['saldo_bloqueado'] ?? 0,
                 'atualizado_em' => $saldoData['atualizado_em'],
                 'moeda' => $saldoData['moeda'] ?? 'BRL'
-            ]);
+            ];
+            
+            if ($contaCriada) {
+                $responseData['conta_criada'] = true;
+                $responseData['conta_bancaria_id'] = $conexao['conta_bancaria_id'];
+                $responseData['message'] = 'Saldo atualizado e conta bancária criada automaticamente';
+            }
+            
+            return $response->json($responseData);
         } catch (\Exception $e) {
             $this->conexaoModel->registrarErro($id, $e->getMessage());
             return $response->json([

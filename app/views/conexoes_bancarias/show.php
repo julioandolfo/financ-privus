@@ -69,7 +69,7 @@ $statusLabels = ['ativa' => 'Ativa', 'erro' => 'Erro', 'expirada' => 'Expirada',
                     <?php endif; ?>
                 </div>
                 <div class="flex gap-3">
-                    <button @click="carregando = true; fetch('/api/conexoes-bancarias/<?= $conexao['id'] ?>/saldo').then(r => r.json()).then(d => { if(d.saldo_formatado) saldo = d.saldo_formatado.replace('R$ ',''); else if(d.error) alert(d.error); }).catch(e => alert('Erro ao atualizar saldo')).finally(() => carregando = false)"
+                    <button @click="carregando = true; fetch('/api/conexoes-bancarias/<?= $conexao['id'] ?>/saldo').then(r => r.json()).then(d => { if(d.saldo_formatado) { saldo = d.saldo_formatado.replace('R$ ',''); if(d.conta_criada) { alert(d.message || 'Conta bancária criada e vinculada!'); location.reload(); } } else if(d.error) alert(d.error); }).catch(e => alert('Erro ao atualizar saldo')).finally(() => carregando = false)"
                             :disabled="carregando"
                             class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition flex items-center gap-2">
                         <svg class="w-4 h-4" :class="carregando && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
