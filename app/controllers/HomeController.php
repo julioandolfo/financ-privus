@@ -357,11 +357,12 @@ class HomeController extends Controller
             
             // ========================================
             // MÉTRICAS POR EMPRESA
+            // Usar a mesma lista de empresas que o dashboard (todasEmpresas filtrada por empresasIds)
             // ========================================
-            $empresasParaMetricas = $empresaModel->findByIds($empresasIds);
-            if (empty($empresasParaMetricas)) {
-                $empresasParaMetricas = array_values(array_filter($todasEmpresas, fn($e) => in_array($e['id'], $empresasIds)));
-            }
+            $empresasIdsNorm = array_map('intval', (array)$empresasIds);
+            $empresasParaMetricas = array_values(array_filter($todasEmpresas, function($e) use ($empresasIdsNorm) {
+                return in_array((int)($e['id'] ?? 0), $empresasIdsNorm, true);
+            }));
             $metricasPorEmpresa = $this->calcularMetricasPorEmpresa($empresasParaMetricas, $contaReceberModel, $contaPagarModel, $contaBancariaModel, $dataInicio, $dataFim);
             
             // MÉTRICAS DE SINCRONIZAÇÃO BANCÁRIA (TODAS AS EMPRESAS DO USUÁRIO)
