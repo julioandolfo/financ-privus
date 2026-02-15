@@ -478,16 +478,24 @@ class SicoobBankService extends AbstractBankService
             $valor = (float) ($txn['valor'] ?? 0);
             $descricao = $txn['descricao'] ?? 'Transação Sicoob';
             $data = $txn['data'] ?? date('Y-m-d');
-            $tipo = $txn['tipo'] ?? '';
+            $tipo = strtoupper(trim($txn['tipo'] ?? ''));
 
-            // No Sicoob, o campo "tipo" indica D (débito) ou C (crédito)
+            // Sicoob retorna tipo como: DEBITO, CREDITO, D, C
             $tipoTransacao = 'credito';
-            if (strtoupper($tipo) === 'D' || $valor < 0) {
+            if ($tipo === 'D' || $tipo === 'DEBITO' || $tipo === 'DÉBITO' || $valor < 0) {
                 $tipoTransacao = 'debito';
             }
 
+            // Normalizar data (remover horário T00:00 se presente)
+            if (strlen($data) > 10) {
+                $data = substr($data, 0, 10);
+            }
+
+            // Gerar ID único usando transactionId se disponível
+            $transacaoId = $txn['transactionId'] ?? $txn['numeroDocumento'] ?? uniqid();
+
             $transacoes[] = [
-                'banco_transacao_id' => 'SCB-' . ($txn['numeroDocumento'] ?? uniqid()),
+                'banco_transacao_id' => 'SCB-' . $transacaoId,
                 'data_transacao' => $data,
                 'descricao_original' => $descricao,
                 'valor' => abs($valor),
@@ -496,7 +504,8 @@ class SicoobBankService extends AbstractBankService
                 'saldo_apos' => null,
                 'origem' => 'sicoob',
                 'dados_extras' => [
-                    'tipo_lancamento' => $tipo,
+                    'tipo_lancamento' => $txn['tipo'] ?? '',
+                    'transaction_id' => $txn['transactionId'] ?? '',
                     'numero_documento' => $txn['numeroDocumento'] ?? '',
                     'cpf_cnpj' => $txn['cpfCnpj'] ?? '',
                     'data_lote' => $txn['dataLote'] ?? '',
