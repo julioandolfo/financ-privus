@@ -130,11 +130,17 @@ class SicoobBankService extends AbstractBankService
         $url = $this->baseUrl . '/saldo';
         $params = ['numeroContaCorrente' => $numeroConta];
 
-        $this->logError('Sicoob getSaldo - Request', [
-            'url' => $url,
-            'numeroConta' => $numeroConta,
-            'client_id' => substr($clientId, 0, 8) . '...'
-        ]);
+        $urlCompleta = $url . '?numeroContaCorrente=' . $numeroConta;
+        
+        try {
+            \App\Models\LogSistema::info('SicoobAPI', 'getSaldo_request', 'Requisição de saldo enviada', [
+                'url_completa' => $urlCompleta,
+                'numeroConta_enviado' => $numeroConta,
+                'banco_conta_id_original' => $conexao['banco_conta_id'] ?? 'VAZIO',
+                'client_id' => substr($clientId, 0, 10) . '...',
+                'identificacao' => $conexao['identificacao'] ?? '',
+            ]);
+        } catch (\Exception $e) {}
 
         $response = $this->httpRequest(
             $url,
@@ -144,18 +150,13 @@ class SicoobBankService extends AbstractBankService
             $conexao
         );
 
-        $this->logError('Sicoob getSaldo - Response', [
-            'response_keys' => is_array($response) ? array_keys($response) : 'not_array'
-        ]);
-
-        // Log detalhado da resposta para debug
+        // Log COMPLETO da resposta
         try {
-            \App\Models\LogSistema::debug('SicoobAPI', 'getSaldo_resposta', 'Resposta completa do getSaldo', [
+            $responseJson = is_array($response) ? json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : substr((string)$response, 0, 1000);
+            \App\Models\LogSistema::info('SicoobAPI', 'getSaldo_response', 'Resposta completa da API de saldo', [
                 'numeroConta' => $numeroConta,
                 'http_code' => $this->lastHttpCode ?? null,
-                'response_raw' => is_array($response) ? json_encode($response, JSON_UNESCAPED_UNICODE) : substr((string)$response, 0, 500),
-                'response_keys' => is_array($response) ? array_keys($response) : 'not_array',
-                'resultado_keys' => isset($response['resultado']) && is_array($response['resultado']) ? array_keys($response['resultado']) : 'sem_resultado',
+                'response_completa' => $responseJson,
             ]);
         } catch (\Exception $e) {}
 
@@ -163,21 +164,24 @@ class SicoobBankService extends AbstractBankService
         $resultado = $response['resultado'] ?? $response;
         
         $saldoFinal = (float) ($resultado['saldo'] ?? 0);
+        $saldoBloqueado = (float) ($resultado['saldoBloqueado'] ?? $response['saldoBloqueado'] ?? 0);
+        $saldoLimite = (float) ($resultado['saldoLimite'] ?? $response['saldoLimite'] ?? 0);
         
         try {
-            \App\Models\LogSistema::debug('SicoobAPI', 'getSaldo_parsed', 'Saldo parseado', [
+            \App\Models\LogSistema::info('SicoobAPI', 'getSaldo_resultado', 'Saldo parseado final', [
                 'numeroConta' => $numeroConta,
-                'saldo_final' => $saldoFinal,
-                'saldo_raw' => $resultado['saldo'] ?? 'CAMPO_AUSENTE',
-                'saldo_bloqueado' => $resultado['saldoBloqueado'] ?? $response['saldoBloqueado'] ?? 'AUSENTE',
-                'saldo_limite' => $resultado['saldoLimite'] ?? $response['saldoLimite'] ?? 'AUSENTE',
+                'identificacao' => $conexao['identificacao'] ?? '',
+                'saldo' => $saldoFinal,
+                'saldo_bloqueado' => $saldoBloqueado,
+                'saldo_limite' => $saldoLimite,
+                'saldo_disponivel_calculado' => $saldoFinal + $saldoLimite - $saldoBloqueado,
             ]);
         } catch (\Exception $e) {}
         
         return [
             'saldo' => $saldoFinal,
-            'saldo_bloqueado' => (float) ($resultado['saldoBloqueado'] ?? $response['saldoBloqueado'] ?? 0),
-            'saldo_limite' => (float) ($resultado['saldoLimite'] ?? $response['saldoLimite'] ?? 0),
+            'saldo_bloqueado' => $saldoBloqueado,
+            'saldo_limite' => $saldoLimite,
             'atualizado_em' => date('Y-m-d\TH:i:s'),
             'moeda' => 'BRL'
         ];
