@@ -39,6 +39,7 @@ class PedidoVinculadoController extends Controller
         $filters = [
             'origem' => $request->get('origem'),
             'status' => $request->get('status'),
+            'status_origem' => $request->get('status_origem'),
             'cliente_id' => $request->get('cliente_id'),
             'data_inicio' => $request->get('data_inicio'),
             'data_fim' => $request->get('data_fim'),
@@ -74,6 +75,9 @@ class PedidoVinculadoController extends Controller
         $pedidos = $this->pedidoModel->findAll($empresaId, $filters);
         $clientes = $this->clienteModel->findAll($empresaId);
         
+        // Busca status do WooCommerce disponíveis para filtro
+        $statusOrigemDisponiveis = $this->pedidoModel->getStatusOrigemDisponiveis($empresaId);
+        
         // Filtros aplicados para a view
         $filtersApplied = $request->all();
         
@@ -81,6 +85,7 @@ class PedidoVinculadoController extends Controller
             'title' => 'Pedidos Vinculados',
             'pedidos' => $pedidos,
             'clientes' => $clientes,
+            'statusOrigemDisponiveis' => $statusOrigemDisponiveis,
             'filters' => $filtersApplied,
             'paginacao' => [
                 'total_registros' => $totalRegistros,

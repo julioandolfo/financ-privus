@@ -467,5 +467,26 @@ return [
     'POST /receitas-recorrentes/{id}/delete' => ['handler' => 'ReceitaRecorrenteController@delete', 'middleware' => ['AuthMiddleware']],
     'POST /receitas-recorrentes/{id}/gerar' => ['handler' => 'ReceitaRecorrenteController@gerarManual', 'middleware' => ['AuthMiddleware']],
     'POST /receitas-recorrentes/{id}/reajuste' => ['handler' => 'ReceitaRecorrenteController@aplicarReajuste', 'middleware' => ['AuthMiddleware']],
+    
+    // ========================================
+    // BOLETOS BANCÁRIOS (Cobrança)
+    // ========================================
+    'GET /boletos' => ['handler' => 'BoletoController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /boletos/create' => ['handler' => 'BoletoController@create', 'middleware' => ['AuthMiddleware']],
+    'POST /boletos' => ['handler' => 'BoletoController@store', 'middleware' => ['AuthMiddleware']],
+    'GET /boletos/analytics' => ['handler' => 'BoletoAnalyticsController@index', 'middleware' => ['AuthMiddleware']],
+    'GET /boletos/analytics/api' => ['handler' => 'BoletoAnalyticsController@apiDados', 'middleware' => ['AuthMiddleware']],
+    'POST /boletos/sincronizar' => ['handler' => 'BoletoController@sincronizar', 'middleware' => ['AuthMiddleware']],
+    'GET /boletos/{id}' => ['handler' => 'BoletoController@show', 'middleware' => ['AuthMiddleware']],
+    'POST /boletos/{id}/segunda-via' => ['handler' => 'BoletoController@segundaVia', 'middleware' => ['AuthMiddleware']],
+    'POST /boletos/{id}/baixar' => ['handler' => 'BoletoController@baixar', 'middleware' => ['AuthMiddleware']],
+    'POST /boletos/{id}/protestar' => ['handler' => 'BoletoController@protestar', 'middleware' => ['AuthMiddleware']],
+    'POST /boletos/{id}/cancelar-protesto' => ['handler' => 'BoletoController@cancelarProtesto', 'middleware' => ['AuthMiddleware']],
+    'POST /boletos/{id}/negativar' => ['handler' => 'BoletoController@negativar', 'middleware' => ['AuthMiddleware']],
+    'POST /boletos/{id}/cancelar-negativacao' => ['handler' => 'BoletoController@cancelarNegativacao', 'middleware' => ['AuthMiddleware']],
+    
+    // Webhook de boletos (público - banco envia notificações aqui)
+    // DEVE responder HTTP 200, 201 ou 204 (202 ou 302 causam falha na validação)
+    'POST /webhook/boletos/{conexaoId}' => ['handler' => 'BoletoWebhookController@receber'],
 ];
 

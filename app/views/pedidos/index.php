@@ -23,7 +23,7 @@
 
     <!-- Filtros -->
     <form method="GET" action="/pedidos" class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 mb-8">
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Número do Pedido</label>
                 <input type="text" name="numero_pedido" value="<?= htmlspecialchars($filters['numero_pedido'] ?? '') ?>" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" placeholder="Buscar...">
@@ -40,13 +40,35 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status Sistema</label>
                 <select name="status" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                     <option value="">Todos</option>
                     <option value="pendente" <?= ($filters['status'] ?? '') === 'pendente' ? 'selected' : '' ?>>Pendente</option>
                     <option value="processando" <?= ($filters['status'] ?? '') === 'processando' ? 'selected' : '' ?>>Processando</option>
                     <option value="concluido" <?= ($filters['status'] ?? '') === 'concluido' ? 'selected' : '' ?>>Concluído</option>
                     <option value="cancelado" <?= ($filters['status'] ?? '') === 'cancelado' ? 'selected' : '' ?>>Cancelado</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 24 24"><path d="M20.28 3.37c-.69-.51-1.65-.27-2.09.45l-2.98 4.81-2.6-4.2c-.28-.45-.98-.45-1.26 0l-2.6 4.2-2.98-4.81c-.44-.72-1.4-.96-2.09-.45-.69.51-.88 1.49-.42 2.16l4.5 7.26c.28.45.98.45 1.26 0L12 8.56l2.98 4.43c.28.45.98.45 1.26 0l4.5-7.26c.46-.67.27-1.65-.46-2.36zM3.5 19.5h17c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5h-17c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5z"/></svg>
+                        Status WooCommerce
+                    </span>
+                </label>
+                <select name="status_origem" class="w-full px-4 py-2 rounded-lg border border-purple-300 dark:border-purple-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    <option value="">Todos</option>
+                    <?php if (!empty($statusOrigemDisponiveis)): ?>
+                        <?php foreach ($statusOrigemDisponiveis as $statusOrigem): ?>
+                            <?php 
+                                $statusLabel = ucfirst(str_replace(['wc-', '-', '_'], ['', ' ', ' '], $statusOrigem));
+                            ?>
+                            <option value="<?= htmlspecialchars($statusOrigem) ?>" <?= ($filters['status_origem'] ?? '') === $statusOrigem ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($statusLabel) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </select>
             </div>
 
@@ -61,10 +83,47 @@
             </div>
 
             <div class="flex items-end">
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">Filtrar</button>
+                <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg transition-all shadow-lg">
+                    <span class="flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                        </svg>
+                        Filtrar
+                    </span>
+                </button>
             </div>
         </div>
     </form>
+
+    <!-- Filtros Ativos -->
+    <?php 
+    $filtrosAtivos = [];
+    if (!empty($filters['origem'])) $filtrosAtivos[] = 'Origem: ' . ucfirst($filters['origem']);
+    if (!empty($filters['status'])) $filtrosAtivos[] = 'Status: ' . ucfirst($filters['status']);
+    if (!empty($filters['status_origem'])) {
+        $statusLabel = ucfirst(str_replace(['wc-', '-', '_'], ['', ' ', ' '], $filters['status_origem']));
+        $filtrosAtivos[] = 'Status WooCommerce: ' . $statusLabel;
+    }
+    if (!empty($filters['numero_pedido'])) $filtrosAtivos[] = 'Pedido: ' . $filters['numero_pedido'];
+    ?>
+    
+    <?php if (!empty($filtrosAtivos)): ?>
+    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-sm font-semibold text-blue-700 dark:text-blue-300">Filtros ativos:</span>
+                <?php foreach ($filtrosAtivos as $filtro): ?>
+                    <span class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 text-sm rounded-full">
+                        <?= htmlspecialchars($filtro) ?>
+                    </span>
+                <?php endforeach; ?>
+            </div>
+            <a href="/pedidos" class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium">
+                Limpar filtros
+            </a>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Tabela -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">

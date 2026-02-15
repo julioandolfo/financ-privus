@@ -410,7 +410,43 @@ class SicoobBankService extends AbstractBankService
                 'required' => true,
                 'options' => ['producao' => 'Produção', 'sandbox' => 'Sandbox (testes)'],
                 'default' => 'producao'
-            ]
+            ],
+            // === Campos de Cobrança Bancária (Boletos) ===
+            [
+                'name' => 'numero_cliente_banco',
+                'label' => 'Número do Cliente (Cobrança)',
+                'type' => 'text',
+                'required' => false,
+                'placeholder' => 'Ex: 25546454',
+                'help' => 'Número que identifica o beneficiário na plataforma de cobrança da cooperativa. Necessário para emitir boletos.',
+                'section' => 'cobranca'
+            ],
+            [
+                'name' => 'codigo_modalidade_cobranca',
+                'label' => 'Modalidade de Cobrança',
+                'type' => 'select',
+                'required' => false,
+                'options' => [
+                    '1' => '1 - Simples com Registro',
+                    '3' => '3 - Caucionada',
+                    '4' => '4 - Vinculada',
+                    '5' => '5 - Carnê de Pagamentos',
+                    '6' => '6 - Indexada',
+                    '8' => '8 - Cobrança Conta Capital',
+                ],
+                'default' => '1',
+                'help' => 'Modalidade do boleto. Padrão: Simples com Registro.',
+                'section' => 'cobranca'
+            ],
+            [
+                'name' => 'conta_corrente_cobranca',
+                'label' => 'Conta Corrente (Cobrança)',
+                'type' => 'text',
+                'required' => false,
+                'placeholder' => 'Ex: 2300885 (se diferente da conta do extrato)',
+                'help' => 'Conta para crédito da liquidação de boletos. Se vazio, usa a conta do extrato.',
+                'section' => 'cobranca'
+            ],
         ];
     }
 

@@ -212,7 +212,11 @@ class ConexaoBancariaController extends Controller
             'cert_password' => $data['cert_password'] ?? null,
             'cooperativa' => $data['cooperativa'] ?? null,
             'tipo_sync' => $data['tipo_sync'] ?? 'ambos',
-            'status_conexao' => 'ativa'
+            'status_conexao' => 'ativa',
+            // Campos de cobrança bancária (boletos)
+            'numero_cliente_banco' => !empty($data['numero_cliente_banco']) ? $data['numero_cliente_banco'] : null,
+            'codigo_modalidade_cobranca' => !empty($data['codigo_modalidade_cobranca']) ? (int)$data['codigo_modalidade_cobranca'] : 1,
+            'conta_corrente_cobranca' => !empty($data['conta_corrente_cobranca']) ? $data['conta_corrente_cobranca'] : null,
         ];
         
         $conexaoId = $this->conexaoModel->create($conexaoData);
@@ -355,6 +359,17 @@ class ConexaoBancariaController extends Controller
         if (!empty($data['ambiente'])) $updateData['ambiente'] = $data['ambiente'];
         if (!empty($data['cooperativa'])) $updateData['cooperativa'] = $data['cooperativa'];
         
+        // Campos de cobrança bancária (boletos)
+        if (array_key_exists('numero_cliente_banco', $data)) {
+            $updateData['numero_cliente_banco'] = !empty($data['numero_cliente_banco']) ? $data['numero_cliente_banco'] : null;
+        }
+        if (array_key_exists('codigo_modalidade_cobranca', $data)) {
+            $updateData['codigo_modalidade_cobranca'] = (int)($data['codigo_modalidade_cobranca'] ?: 1);
+        }
+        if (array_key_exists('conta_corrente_cobranca', $data)) {
+            $updateData['conta_corrente_cobranca'] = !empty($data['conta_corrente_cobranca']) ? $data['conta_corrente_cobranca'] : null;
+        }
+
         // Certificado PEM (só atualiza se o conteúdo parecer válido, não o placeholder)
         if (!empty($data['cert_pem']) && strpos($data['cert_pem'], '-----BEGIN') !== false) {
             $updateData['cert_pem'] = $data['cert_pem'];

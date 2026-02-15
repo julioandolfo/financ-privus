@@ -170,6 +170,40 @@ $bancoInfo = ConexaoBancaria::getBancoInfo($conexao['banco']);
                 </details>
             </div>
 
+            <!-- Cobrança Bancária (Boletos) -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mb-6">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Cobranca Bancaria (Boletos)
+                </h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Preencha para habilitar a emissao de boletos por esta conexao</p>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Numero do Cliente (Cobranca)</label>
+                    <input type="text" name="numero_cliente_banco" value="<?= htmlspecialchars($conexao['numero_cliente_banco'] ?? '') ?>"
+                           placeholder="Ex: 25546454"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    <p class="mt-1 text-xs text-gray-500">Numero que identifica o beneficiario na plataforma de cobranca da cooperativa.</p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Modalidade de Cobranca</label>
+                    <select name="codigo_modalidade_cobranca" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        <option value="1" <?= ($conexao['codigo_modalidade_cobranca'] ?? 1) == 1 ? 'selected' : '' ?>>1 - Simples com Registro</option>
+                        <option value="3" <?= ($conexao['codigo_modalidade_cobranca'] ?? '') == 3 ? 'selected' : '' ?>>3 - Caucionada</option>
+                        <option value="4" <?= ($conexao['codigo_modalidade_cobranca'] ?? '') == 4 ? 'selected' : '' ?>>4 - Vinculada</option>
+                        <option value="5" <?= ($conexao['codigo_modalidade_cobranca'] ?? '') == 5 ? 'selected' : '' ?>>5 - Carne de Pagamentos</option>
+                        <option value="6" <?= ($conexao['codigo_modalidade_cobranca'] ?? '') == 6 ? 'selected' : '' ?>>6 - Indexada</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Conta Corrente (Cobranca)</label>
+                    <input type="text" name="conta_corrente_cobranca" value="<?= htmlspecialchars($conexao['conta_corrente_cobranca'] ?? '') ?>"
+                           placeholder="Se diferente da conta do extrato"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    <p class="mt-1 text-xs text-gray-500">Conta para credito da liquidacao de boletos. Se vazio, usa a conta do extrato.</p>
+                </div>
+            </div>
+
             <!-- Configurações de Sincronização -->
             <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mb-6">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Configurações de Sincronização</h3>

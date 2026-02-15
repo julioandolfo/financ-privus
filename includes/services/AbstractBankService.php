@@ -63,7 +63,7 @@ abstract class AbstractBankService implements BankApiInterface
         }
 
         // Body
-        if ($body !== null && in_array($method, ['POST', 'PUT', 'PATCH'])) {
+        if ($body !== null && in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'])) {
             if ($isForm) {
                 curl_setopt($ch, CURLOPT_POSTFIELDS, is_array($body) ? http_build_query($body) : $body);
             } else {

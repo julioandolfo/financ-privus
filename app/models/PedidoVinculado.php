@@ -90,6 +90,12 @@ class PedidoVinculado extends Model
             $params['numero_pedido'] = '%' . $filters['numero_pedido'] . '%';
         }
         
+        // Filtro por status do WooCommerce (status_origem)
+        if (!empty($filters['status_origem'])) {
+            $sql .= " AND p.status_origem = :status_origem";
+            $params['status_origem'] = $filters['status_origem'];
+        }
+        
         $sql .= " ORDER BY p.id DESC";
         
         // Paginação
@@ -202,6 +208,12 @@ class PedidoVinculado extends Model
         if (!empty($filters['numero_pedido'])) {
             $sql .= " AND p.numero_pedido LIKE :numero_pedido";
             $params['numero_pedido'] = '%' . $filters['numero_pedido'] . '%';
+        }
+        
+        // Filtro por status do WooCommerce (status_origem)
+        if (!empty($filters['status_origem'])) {
+            $sql .= " AND p.status_origem = :status_origem";
+            $params['status_origem'] = $filters['status_origem'];
         }
         
         $stmt = $this->db->prepare($sql);
@@ -516,5 +528,36 @@ class PedidoVinculado extends Model
         $stmt->execute($empresasIds);
         
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: ['total_pedidos' => 0, 'valor_total' => 0];
+    }
+    
+    /**
+     * Busca todos os status_origem distintos do WooCommerce
+     * 
+     * @param int $empresaId ID da empresa
+     * @return array Lista de status_origem únicos
+     */
+    public function getStatusOrigemDisponiveis($empresaId = null)
+    {
+        $sql = "SELECT DISTINCT status_origem
+                FROM {$this->table}
+                WHERE status_origem IS NOT NULL
+                AND status_origem != ''
+                AND origem = 'woocommerce'";
+        
+        $params = [];
+        
+        if ($empresaId) {
+            $sql .= " AND empresa_id = :empresa_id";
+            $params['empresa_id'] = $empresaId;
+        }
+        
+        $sql .= " ORDER BY status_origem ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        
+        $resultados = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        return $resultados ?: [];
     }
 }

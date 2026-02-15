@@ -971,6 +971,8 @@ class HomeController extends Controller
                     'transacoes_ignoradas' => $transacoesIgnoradas,
                     'ultima_sincronizacao' => $ultimaSincronizacao
                 ],
+                // Boletos Bancários
+                'boletos' => $this->getBoletosResumo($empresasIds),
                 // Métricas por Empresa (separadas visualmente)
                 'metricas_por_empresa' => $metricasPorEmpresa,
                 // Comparativo vs Mês Anterior
@@ -1407,5 +1409,39 @@ class HomeController extends Controller
             'produto_mais_barato' => $produtoMaisBarato,
             'lucro_potencial' => $valorVendaTotal - $custoTotal
         ];
+    }
+
+    /**
+     * Resumo de boletos para o dashboard principal.
+     */
+    private function getBoletosResumo(array $empresasIds): array
+    {
+        try {
+            $boletoModel = new \App\Models\Boleto();
+            $resumo = [
+                'em_aberto' => 0,
+                'valor_em_aberto' => 0,
+                'vencidos' => 0,
+                'valor_vencido' => 0,
+                'liquidados_mes' => 0,
+                'valor_liquidado_mes' => 0,
+            ];
+            foreach ($empresasIds as $empId) {
+                $est = $boletoModel->getEstatisticas($empId);
+                $resumo['em_aberto'] += $est['em_aberto'] ?? 0;
+                $resumo['valor_em_aberto'] += $est['valor_em_aberto'] ?? 0;
+                $resumo['vencidos'] += $est['vencidos'] ?? 0;
+                $resumo['valor_vencido'] += $est['valor_vencido'] ?? 0;
+                $resumo['liquidados_mes'] += $est['liquidados'] ?? 0;
+                $resumo['valor_liquidado_mes'] += $est['valor_liquidado'] ?? 0;
+            }
+            return $resumo;
+        } catch (\Exception $e) {
+            return [
+                'em_aberto' => 0, 'valor_em_aberto' => 0,
+                'vencidos' => 0, 'valor_vencido' => 0,
+                'liquidados_mes' => 0, 'valor_liquidado_mes' => 0,
+            ];
+        }
     }
 }
