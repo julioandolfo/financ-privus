@@ -651,8 +651,24 @@ class ConexaoBancariaController extends Controller
                 $this->conexaoModel->atualizarSaldo($id, $saldoData['saldo']);
                 $saldoInfo = 'R$ ' . number_format($saldoData['saldo'], 2, ',', '.');
                 
+                $contaBancariaModel = new \App\Models\ContaBancaria();
+                
+                // Se não tem conta bancária vinculada, criar automaticamente
+                if (empty($conexao['conta_bancaria_id'])) {
+                    $novaConta = $this->criarContaBancariaAutomatica($conexao, $saldoData['saldo'], $contaBancariaModel);
+                    if ($novaConta) {
+                        $conexao['conta_bancaria_id'] = $novaConta;
+                        $detalhes[] = "Conta bancária #" . $novaConta . " criada e vinculada automaticamente";
+                        \App\Models\LogSistema::info('ConexaoBancaria', 'auto_criar_conta', 'Conta bancária criada automaticamente na sincronização', [
+                            'conexao_id' => $id,
+                            'conta_bancaria_id' => $novaConta,
+                            'banco' => $conexao['banco'],
+                            'saldo' => $saldoData['saldo'],
+                        ]);
+                    }
+                }
+                
                 if (!empty($conexao['conta_bancaria_id'])) {
-                    $contaBancariaModel = new \App\Models\ContaBancaria();
                     $contaBancariaModel->setSaldoReal($conexao['conta_bancaria_id'], $saldoData['saldo']);
                 }
                 $detalhes[] = "Saldo atualizado: {$saldoInfo}";
@@ -1057,5 +1073,85 @@ class ConexaoBancariaController extends Controller
         }
         
         return $errors;
+    }
+
+    /**
+     * Cria automaticamente uma conta bancária no sistema a partir dos dados da conexão API.
+     * Vincula a conta criada à conexão para sincronizar saldos futuramente.
+     *
+     * @param array $conexao Dados da conexão bancária
+     * @param float $saldo Saldo atual retornado pela API
+     * @param \App\Models\ContaBancaria $contaBancariaModel Instância do model
+     * @return int|false ID da conta criada, ou false se falhar
+     */
+    private function criarContaBancariaAutomatica(array $conexao, float $saldo, $contaBancariaModel)
+    {
+        try {
+            $bancoInfo = ConexaoBancaria::getBancoInfo($conexao['banco'] ?? '');
+            
+            // Mapeamento de código COMPE dos bancos
+            $codigosBanco = [
+                'sicoob'     => '756',
+                'sicredi'    => '748',
+                'itau'       => '341',
+                'bradesco'   => '237',
+                'mercadopago'=> '323',
+            ];
+            
+            $bancoSlug = $conexao['banco'] ?? '';
+            $bancoCodigo = $codigosBanco[$bancoSlug] ?? $bancoSlug;
+            $bancoNome = $bancoInfo['nome'] ?? ucfirst($bancoSlug);
+            
+            // Extrair agência (da cooperativa ou configuração)
+            $agencia = $conexao['cooperativa'] ?? $conexao['agencia'] ?? '0001';
+            
+            // Extrair conta corrente
+            $conta = $conexao['banco_conta_id'] ?? $conexao['conta_corrente_cobranca'] ?? '';
+            
+            // Verificar se já existe uma conta com mesma agência/conta para esta empresa
+            $existente = null;
+            if (!empty($agencia) && !empty($conta)) {
+                $existente = $contaBancariaModel->findByAgenciaConta($agencia, $conta, $conexao['empresa_id']);
+            }
+            if ($existente) {
+                // Já existe — apenas vincular a conexão a esta conta
+                $this->conexaoModel->update($conexao['id'], ['conta_bancaria_id' => $existente['id']]);
+                $contaBancariaModel->setSaldoReal($existente['id'], $saldo);
+                return (int)$existente['id'];
+            }
+            
+            // Tipo de conta
+            $tipoConta = 'corrente';
+            if (($conexao['tipo'] ?? '') === 'conta_poupanca') {
+                $tipoConta = 'poupanca';
+            }
+            
+            // Criar conta bancária
+            $identificacao = $conexao['identificacao'] ?? ($bancoNome . ' - API');
+            $contaId = $contaBancariaModel->create([
+                'empresa_id'   => $conexao['empresa_id'],
+                'banco_codigo' => $bancoCodigo,
+                'banco_nome'   => $bancoNome . ' (' . $identificacao . ')',
+                'agencia'      => $agencia,
+                'conta'        => $conta,
+                'tipo_conta'   => $tipoConta,
+                'saldo_inicial'=> $saldo,
+                'ativo'        => 1,
+            ]);
+            
+            if ($contaId) {
+                // Vincular a conta à conexão
+                $this->conexaoModel->update($conexao['id'], ['conta_bancaria_id' => $contaId]);
+                return (int)$contaId;
+            }
+            
+            return false;
+        } catch (\Exception $e) {
+            \App\Models\LogSistema::error('ConexaoBancaria', 'auto_criar_conta_erro', 'Erro ao criar conta bancária automática', [
+                'conexao_id' => $conexao['id'] ?? null,
+                'erro' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 }

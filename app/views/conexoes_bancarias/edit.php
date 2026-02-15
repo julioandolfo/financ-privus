@@ -63,15 +63,28 @@ $bancoInfo = ConexaoBancaria::getBancoInfo($conexao['banco']);
                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Vincular a Conta do Sistema (Opcional)
                 </label>
+                <?php if (!empty($contas_bancarias)): ?>
                 <select name="conta_bancaria_id" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     <option value="">Nenhuma (não vincular)</option>
                     <?php foreach ($contas_bancarias as $cb): ?>
                         <option value="<?= $cb['id'] ?>" <?= ($conexao['conta_bancaria_id'] ?? '') == $cb['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($cb['banco_nome'] . ' - Ag: ' . $cb['agencia'] . ' Cc: ' . $cb['conta']) ?>
+                            <?= htmlspecialchars(($cb['banco_nome'] ?? 'Banco') . ' - Ag: ' . ($cb['agencia'] ?? '') . ' Cc: ' . ($cb['conta'] ?? '')) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Vincula o saldo real da API ao saldo da conta no sistema</p>
+                <?php else: ?>
+                <div class="bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl p-4">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        Nenhuma conta bancária cadastrada para esta empresa.
+                    </p>
+                    <a href="/contas-bancarias/create" class="inline-flex items-center gap-1 mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Criar conta bancária primeiro
+                    </a>
+                </div>
+                <input type="hidden" name="conta_bancaria_id" value="">
+                <?php endif; ?>
             </div>
 
             <!-- Credenciais -->
