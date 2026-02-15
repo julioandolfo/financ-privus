@@ -192,11 +192,19 @@ class SicoobBankService extends AbstractBankService
             );
             
             if (is_array($responseExtrato)) {
-                $saldoExtrato = isset($responseExtrato['saldoAtual']) ? (float)$responseExtrato['saldoAtual'] : null;
-                $saldoAnterior = isset($responseExtrato['saldoAnterior']) ? (float)$responseExtrato['saldoAnterior'] : null;
-                $saldoBloqueadoExtrato = isset($responseExtrato['saldoBloqueado']) ? (float)$responseExtrato['saldoBloqueado'] : null;
-                $saldoLimiteExtrato = isset($responseExtrato['saldoLimite']) ? (float)$responseExtrato['saldoLimite'] : null;
+                // Campos podem estar no root ou dentro de resultado
+                $extData = $responseExtrato;
+                if (isset($responseExtrato['resultado']) && is_array($responseExtrato['resultado'])) {
+                    $extData = $responseExtrato['resultado'];
+                }
+                
+                $saldoExtrato = isset($extData['saldoAtual']) ? (float)$extData['saldoAtual'] : null;
+                $saldoAnterior = isset($extData['saldoAnterior']) ? (float)$extData['saldoAnterior'] : null;
+                $saldoBloqueadoExtrato = isset($extData['saldoBloqueado']) ? (float)$extData['saldoBloqueado'] : null;
+                $saldoLimiteExtrato = isset($extData['saldoLimite']) ? (float)$extData['saldoLimite'] : null;
             }
+            
+            $extratoResponseJson = is_array($responseExtrato) ? json_encode($responseExtrato, JSON_UNESCAPED_UNICODE) : 'not_array';
             
             \App\Models\LogSistema::info('SicoobAPI', 'getSaldo_extrato_cruzamento', 'Cruzamento saldo endpoint vs extrato', [
                 'numeroConta' => $numeroConta,
@@ -208,7 +216,7 @@ class SicoobBankService extends AbstractBankService
                 'extrato_saldoBloqueado' => $saldoBloqueadoExtrato,
                 'extrato_saldoLimite' => $saldoLimiteExtrato,
                 'extrato_http_code' => $this->lastHttpCode ?? null,
-                'extrato_response_keys' => is_array($responseExtrato) ? array_keys($responseExtrato) : 'not_array',
+                'extrato_response_raw' => substr($extratoResponseJson, 0, 1000),
             ]);
         } catch (\Exception $e) {
             \App\Models\LogSistema::warning('SicoobAPI', 'getSaldo_extrato_erro', 'Erro ao cruzar saldo com extrato', [
