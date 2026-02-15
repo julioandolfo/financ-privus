@@ -355,6 +355,11 @@ class HomeController extends Controller
                 'runway_meses' => $runway
             ]);
             
+            // ========================================
+            // MÉTRICAS POR EMPRESA
+            // ========================================
+            $metricasPorEmpresa = $this->calcularMetricasPorEmpresa($empresasIds, $contaReceberModel, $contaPagarModel, $contaBancariaModel, $dataInicio, $dataFim);
+            
             // MÉTRICAS DE SINCRONIZAÇÃO BANCÁRIA (TODAS AS EMPRESAS DO USUÁRIO)
             $conexaoBancariaModel = new ConexaoBancaria();
             $transacaoPendenteModel = new TransacaoPendente();
@@ -493,6 +498,7 @@ class HomeController extends Controller
             $_SESSION['error'] = 'Erro ao carregar dashboard: ' . $e->getMessage();
             return $this->render('home/index', [
                 'title' => 'Dashboard - Sistema Financeiro',
+                'metricas_por_empresa' => [],
                 'totais' => [
                     'empresas' => 0,
                     'usuarios' => 0,
@@ -590,6 +596,121 @@ class HomeController extends Controller
     private function contarPorEmpresas($model, $method, $empresasIds)
     {
         return count($this->buscarPorEmpresas($model, $method, $empresasIds));
+    }
+    
+    /**
+     * Calcular métricas financeiras por empresa individual
+     */
+    private function calcularMetricasPorEmpresa($empresasIds, $contaReceberModel, $contaPagarModel, $contaBancariaModel, $dataInicio, $dataFim)
+    {
+        $metricasPorEmpresa = [];
+        
+        foreach ($empresasIds as $empresaId) {
+            // Buscar dados da empresa
+            $empresaModel = new Empresa();
+            $empresa = $empresaModel->findById($empresaId);
+            
+            if (!$empresa) continue;
+            
+            // Contas a Receber e Pagar da empresa específica
+            $contasReceber = $contaReceberModel->findAll(['empresa_id' => $empresaId]);
+            $contasPagar = $contaPagarModel->findAll(['empresa_id' => $empresaId]);
+            
+            // Calcular receitas e despesas da empresa (últimos 30 dias)
+            $receitas = 0;
+            $despesas = 0;
+            
+            foreach ($contasReceber as $conta) {
+                if (($conta['status'] === 'recebido' || $conta['status'] === 'parcial') && 
+                    !empty($conta['data_recebimento']) &&
+                    $conta['data_recebimento'] >= $dataInicio && 
+                    $conta['data_recebimento'] <= $dataFim) {
+                    
+                    $valorRecebido = $conta['status'] === 'parcial' 
+                        ? floatval($conta['valor_recebido'] ?? 0) 
+                        : floatval($conta['valor_total'] ?? 0);
+                    
+                    $receitas += $valorRecebido;
+                }
+            }
+            
+            foreach ($contasPagar as $conta) {
+                if ($conta['status'] === 'pago' && 
+                    $conta['data_pagamento'] >= $dataInicio && 
+                    $conta['data_pagamento'] <= $dataFim) {
+                    $despesas += $conta['valor_total'] ?? 0;
+                }
+            }
+            
+            // Calcular lucro líquido
+            $lucroLiquido = $receitas - $despesas;
+            
+            // Margem líquida
+            $margemLiquida = $receitas > 0 ? ($lucroLiquido / $receitas) * 100 : 0;
+            
+            // EBITDA simplificado
+            $despesasOperacionais = $despesas * 0.20; // 20% estimado
+            $custosVariaveis = $despesas * 0.60; // 60% estimado
+            $ebitda = $receitas - $custosVariaveis - $despesasOperacionais;
+            $margemEbitda = $receitas > 0 ? ($ebitda / $receitas) * 100 : 0;
+            
+            // Inadimplência da empresa
+            $totalContasVencidas = 0;
+            $valorContasVencidas = 0;
+            foreach ($contasReceber as $conta) {
+                if ($conta['status'] === 'pendente' && $conta['data_vencimento'] < date('Y-m-d')) {
+                    $totalContasVencidas++;
+                    $valorContasVencidas += $conta['valor_total'] ?? 0;
+                }
+            }
+            
+            $valorTotalReceber = array_sum(array_column($contasReceber, 'valor_total'));
+            $taxaInadimplencia = $valorTotalReceber > 0 ? ($valorContasVencidas / $valorTotalReceber) * 100 : 0;
+            
+            // Saldo em bancos da empresa
+            $contasBancarias = $contaBancariaModel->findAll($empresaId);
+            $saldoBancos = array_sum(array_column($contasBancarias, 'saldo_atual'));
+            
+            // Ticket médio
+            $contasRecebidasNoPeriodo = 0;
+            foreach ($contasReceber as $conta) {
+                if (($conta['status'] === 'recebido' || $conta['status'] === 'parcial') && 
+                    !empty($conta['data_recebimento']) &&
+                    $conta['data_recebimento'] >= $dataInicio && 
+                    $conta['data_recebimento'] <= $dataFim) {
+                    $contasRecebidasNoPeriodo++;
+                }
+            }
+            $ticketMedio = $contasRecebidasNoPeriodo > 0 ? ($receitas / $contasRecebidasNoPeriodo) : 0;
+            
+            // Burn Rate e Runway
+            $burnRate = abs($despesas - $receitas);
+            $runway = $burnRate > 0 ? ($saldoBancos / $burnRate) : 999;
+            
+            $metricasPorEmpresa[$empresaId] = [
+                'empresa' => [
+                    'id' => $empresaId,
+                    'nome' => $empresa['nome_fantasia'],
+                    'razao_social' => $empresa['razao_social'],
+                    'cnpj' => $empresa['cnpj']
+                ],
+                'receitas' => $receitas,
+                'despesas' => $despesas,
+                'lucro_liquido' => $lucroLiquido,
+                'margem_liquida' => $margemLiquida,
+                'ebitda' => $ebitda,
+                'margem_ebitda' => $margemEbitda,
+                'saldo_bancos' => $saldoBancos,
+                'taxa_inadimplencia' => $taxaInadimplencia,
+                'ticket_medio' => $ticketMedio,
+                'burn_rate' => $burnRate,
+                'runway' => $runway,
+                'contas_vencidas' => $totalContasVencidas,
+                'valor_vencido' => $valorContasVencidas
+            ];
+        }
+        
+        return $metricasPorEmpresa;
     }
     
     /**

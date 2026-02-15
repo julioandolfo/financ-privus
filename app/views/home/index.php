@@ -371,6 +371,91 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                 </div>
             </div>
         </div>
+
+        <!-- ========================================
+             MÉTRICAS POR EMPRESA
+             ======================================== -->
+        <?php if (!empty($metricas_por_empresa)): ?>
+        <div class="mt-10 pt-10 border-t-2 border-gray-200 dark:border-gray-700">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center">
+                <svg class="w-7 h-7 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+                Métricas por Empresa
+            </h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Indicadores financeiros separados visualmente por empresa (últimos <?= isset($metricas_financeiras['periodo']) ? $metricas_financeiras['periodo'] : '30 dias' ?>)</p>
+
+            <div class="space-y-8">
+                <?php foreach ($metricas_por_empresa as $empresaId => $dados): ?>
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border-2 border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <!-- Cabeçalho da Empresa -->
+                    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+                        <h3 class="text-xl font-bold text-white"><?= htmlspecialchars($dados['empresa']['nome']) ?></h3>
+                        <?php if (!empty($dados['empresa']['cnpj'])): ?>
+                        <p class="text-indigo-100 text-sm">CNPJ: <?= htmlspecialchars($dados['empresa']['cnpj']) ?></p>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Métricas da Empresa -->
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <!-- Receitas -->
+                            <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white">
+                                <h4 class="text-xs font-semibold opacity-90 mb-1">Receitas</h4>
+                                <p class="text-2xl font-bold">R$ <?= number_format($dados['receitas'], 2, ',', '.') ?></p>
+                            </div>
+                            <!-- Despesas -->
+                            <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-4 text-white">
+                                <h4 class="text-xs font-semibold opacity-90 mb-1">Despesas</h4>
+                                <p class="text-2xl font-bold">R$ <?= number_format($dados['despesas'], 2, ',', '.') ?></p>
+                            </div>
+                            <!-- Lucro Líquido -->
+                            <div class="bg-gradient-to-br from-<?= $dados['lucro_liquido'] >= 0 ? 'blue' : 'amber' ?>-500 to-<?= $dados['lucro_liquido'] >= 0 ? 'blue' : 'amber' ?>-600 rounded-xl p-4 text-white">
+                                <h4 class="text-xs font-semibold opacity-90 mb-1">Lucro Líquido</h4>
+                                <p class="text-2xl font-bold">R$ <?= number_format($dados['lucro_liquido'], 2, ',', '.') ?></p>
+                                <p class="text-xs opacity-90">Margem: <?= number_format($dados['margem_liquida'], 1) ?>%</p>
+                            </div>
+                            <!-- EBITDA -->
+                            <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white">
+                                <h4 class="text-xs font-semibold opacity-90 mb-1">EBITDA</h4>
+                                <p class="text-2xl font-bold">R$ <?= number_format($dados['ebitda'], 2, ',', '.') ?></p>
+                                <p class="text-xs opacity-90">Margem: <?= number_format($dados['margem_ebitda'], 1) ?>%</p>
+                            </div>
+                        </div>
+
+                        <!-- Indicadores secundários da empresa -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <span class="text-xs text-gray-600 dark:text-gray-400 block">Saldo Bancos</span>
+                                <span class="font-bold text-gray-900 dark:text-gray-100">R$ <?= number_format($dados['saldo_bancos'], 2, ',', '.') ?></span>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <span class="text-xs text-gray-600 dark:text-gray-400 block">Ticket Médio</span>
+                                <span class="font-bold text-gray-900 dark:text-gray-100">R$ <?= number_format($dados['ticket_medio'], 0, ',', '.') ?></span>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <span class="text-xs text-gray-600 dark:text-gray-400 block">Inadimplência</span>
+                                <span class="font-bold text-amber-600 dark:text-amber-400"><?= number_format($dados['taxa_inadimplencia'], 1) ?>%</span>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <span class="text-xs text-gray-600 dark:text-gray-400 block">Burn Rate</span>
+                                <span class="font-bold text-gray-900 dark:text-gray-100">R$ <?= number_format($dados['burn_rate'], 2, ',', '.') ?></span>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <span class="text-xs text-gray-600 dark:text-gray-400 block">Runway</span>
+                                <span class="font-bold text-gray-900 dark:text-gray-100"><?= $dados['runway'] > 24 ? '24+' : number_format($dados['runway'], 0) ?> meses</span>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                                <span class="text-xs text-gray-600 dark:text-gray-400 block">Contas Vencidas</span>
+                                <span class="font-bold text-red-600 dark:text-red-400"><?= $dados['contas_vencidas'] ?> (R$ <?= number_format($dados['valor_vencido'], 2, ',', '.') ?>)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 
     <!-- Cards de Totais -->
