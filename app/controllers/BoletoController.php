@@ -10,6 +10,7 @@ use App\Models\ConexaoBancaria;
 use App\Models\Cliente;
 use App\Models\ContaReceber;
 use App\Models\Usuario;
+use App\Models\LogSistema;
 use Includes\Services\CobrancaServiceFactory;
 
 class BoletoController extends Controller
@@ -68,13 +69,35 @@ class BoletoController extends Controller
         $perPage = 30;
         $offset = ($page - 1) * $perPage;
 
-        $boletos = $this->boletoModel->findByEmpresa($empresaId, $filtros, $perPage, $offset);
-        $total = $this->boletoModel->countByEmpresa($empresaId, $filtros);
-        $estatisticas = $this->boletoModel->getEstatisticas($empresaId);
-        $conexoes = $this->conexaoModel->findByEmpresa($empresaId);
-        $clientes = $this->clienteModel->findByEmpresa($empresaId);
+        $boletos = [];
+        $total = 0;
+        $estatisticas = [];
+        $totalPages = 0;
+        $migrationPendente = false;
 
-        $totalPages = ceil($total / $perPage);
+        try {
+            $boletos = $this->boletoModel->findByEmpresa($empresaId, $filtros, $perPage, $offset);
+            $total = $this->boletoModel->countByEmpresa($empresaId, $filtros);
+            $estatisticas = $this->boletoModel->getEstatisticas($empresaId);
+            $totalPages = $perPage > 0 ? ceil($total / $perPage) : 0;
+        } catch (\Exception $e) {
+            // Tabela boletos provavelmente não existe ainda (migration pendente)
+            $migrationPendente = true;
+            LogSistema::error('Boletos', 'index', 'Erro ao carregar boletos (migration pendente?)', [
+                'erro' => $e->getMessage(),
+                'empresa_id' => $empresaId
+            ]);
+        }
+
+        $conexoes = [];
+        try {
+            $conexoes = $this->conexaoModel->findByEmpresa($empresaId);
+        } catch (\Exception $e) {}
+
+        $clientes = [];
+        try {
+            $clientes = $this->clienteModel->findAll($empresaId);
+        } catch (\Exception $e) {}
 
         $this->render('boletos/index', [
             'title' => 'Boletos Bancários',
@@ -88,6 +111,7 @@ class BoletoController extends Controller
             'page' => $page,
             'totalPages' => $totalPages,
             'total' => $total,
+            'migrationPendente' => $migrationPendente,
         ]);
     }
 
@@ -105,12 +129,19 @@ class BoletoController extends Controller
             $empresaId = $empresasUsuario[0]['id'];
         }
 
-        $conexoes = $this->conexaoModel->findByEmpresa($empresaId);
-        $conexoesCobranca = array_filter($conexoes, function($c) {
-            return CobrancaServiceFactory::isSuportado($c['banco']) && !empty($c['numero_cliente_banco']);
-        });
+        $conexoes = [];
+        $conexoesCobranca = [];
+        try {
+            $conexoes = $this->conexaoModel->findByEmpresa($empresaId);
+            $conexoesCobranca = array_values(array_filter($conexoes, function($c) {
+                return CobrancaServiceFactory::isSuportado($c['banco'] ?? '') && !empty($c['numero_cliente_banco']);
+            }));
+        } catch (\Exception $e) {}
 
-        $clientes = $this->clienteModel->findByEmpresa($empresaId);
+        $clientes = [];
+        try {
+            $clientes = $this->clienteModel->findAll($empresaId);
+        } catch (\Exception $e) {}
 
         // Buscar pedidos disponíveis
         $pedidos = [];
@@ -247,6 +278,14 @@ class BoletoController extends Controller
             if (!empty($instrucoes)) $boletoApi['mensagensInstrucao'] = $instrucoes;
 
             // Chamar API
+            LogSistema::info('Boletos', 'emitir', 'Emitindo boleto via API', [
+                'conexao_id' => $conexaoId,
+                'banco' => $conexao['banco'],
+                'valor' => $data['valor'] ?? 0,
+                'pagador' => $data['pagador_nome'] ?? '',
+                'vencimento' => $data['data_vencimento'] ?? '',
+            ]);
+
             $resultado = $service->incluirBoleto($conexao, $boletoApi);
 
             // Salvar boleto localmente
@@ -330,9 +369,19 @@ class BoletoController extends Controller
                         $this->boletoModel->atualizar($boletoId, ['conta_receber_id' => $contaReceberId]);
                     }
                 } catch (\Exception $e) {
-                    error_log("Erro ao criar conta a receber vinculada ao boleto #{$boletoId}: " . $e->getMessage());
+                    LogSistema::error('Boletos', 'conta_receber_erro', 'Erro ao criar conta a receber vinculada', [
+                        'boleto_id' => $boletoId, 'erro' => $e->getMessage(),
+                    ]);
                 }
             }
+
+            LogSistema::info('Boletos', 'emitido', 'Boleto emitido com sucesso', [
+                'boleto_id' => $boletoId,
+                'nosso_numero' => $resultado['nosso_numero'],
+                'valor' => $data['valor'] ?? 0,
+                'pagador' => $data['pagador_nome'] ?? '',
+                'empresa_id' => $empresaId,
+            ]);
 
             return $response->json([
                 'success' => true,
@@ -344,6 +393,13 @@ class BoletoController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            LogSistema::error('Boletos', 'emitir_erro', 'Erro ao emitir boleto', [
+                'erro' => $e->getMessage(),
+                'conexao_id' => $conexaoId,
+                'banco' => $conexao['banco'] ?? '',
+                'valor' => $data['valor'] ?? 0,
+                'pagador' => $data['pagador_nome'] ?? '',
+            ]);
             return $response->json([
                 'success' => false,
                 'error' => $e->getMessage()
@@ -400,12 +456,19 @@ class BoletoController extends Controller
 
             $this->historicoModel->registrar((int)$id, 'alteracao', 'Segunda via solicitada', [], $_SESSION['usuario_id'] ?? null);
 
+            LogSistema::info('Boletos', 'segunda_via', '2ª via gerada', [
+                'boleto_id' => $id, 'nosso_numero' => $boleto['nosso_numero'] ?? '',
+            ]);
+
             return $response->json([
                 'success' => true,
                 'pdf_boleto' => $resultado['pdf_boleto'] ?? null,
                 'qr_code' => $resultado['qr_code'] ?? null,
             ]);
         } catch (\Exception $e) {
+            LogSistema::error('Boletos', 'segunda_via_erro', 'Erro ao gerar 2ª via', [
+                'boleto_id' => $id, 'erro' => $e->getMessage(),
+            ]);
             return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -429,8 +492,16 @@ class BoletoController extends Controller
             $this->boletoModel->atualizar((int)$id, ['situacao' => 'baixado']);
             $this->historicoModel->registrar((int)$id, 'baixa', 'Boleto baixado via sistema', [], $_SESSION['usuario_id'] ?? null);
 
+            LogSistema::info('Boletos', 'baixa', 'Boleto baixado', [
+                'boleto_id' => $id, 'nosso_numero' => $boleto['nosso_numero'] ?? '',
+                'valor' => $boleto['valor'] ?? 0,
+            ]);
+
             return $response->json(['success' => true, 'message' => 'Boleto baixado com sucesso']);
         } catch (\Exception $e) {
+            LogSistema::error('Boletos', 'baixa_erro', 'Erro ao baixar boleto', [
+                'boleto_id' => $id, 'erro' => $e->getMessage(),
+            ]);
             return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -454,8 +525,16 @@ class BoletoController extends Controller
             $this->boletoModel->atualizar((int)$id, ['situacao' => 'protestado']);
             $this->historicoModel->registrar((int)$id, 'protesto', 'Boleto enviado para protesto', [], $_SESSION['usuario_id'] ?? null);
 
+            LogSistema::warning('Boletos', 'protesto', 'Boleto enviado para protesto', [
+                'boleto_id' => $id, 'nosso_numero' => $boleto['nosso_numero'] ?? '',
+                'pagador' => $boleto['pagador_nome'] ?? '', 'valor' => $boleto['valor'] ?? 0,
+            ]);
+
             return $response->json(['success' => true, 'message' => 'Boleto enviado para protesto']);
         } catch (\Exception $e) {
+            LogSistema::error('Boletos', 'protesto_erro', 'Erro ao protestar boleto', [
+                'boleto_id' => $id, 'erro' => $e->getMessage(),
+            ]);
             return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -480,8 +559,15 @@ class BoletoController extends Controller
             $this->boletoModel->atualizar((int)$id, ['situacao' => $novaSituacao]);
             $this->historicoModel->registrar((int)$id, 'cancelamento', 'Protesto cancelado', [], $_SESSION['usuario_id'] ?? null);
 
+            LogSistema::info('Boletos', 'cancelar_protesto', 'Protesto cancelado', [
+                'boleto_id' => $id, 'nosso_numero' => $boleto['nosso_numero'] ?? '',
+            ]);
+
             return $response->json(['success' => true, 'message' => 'Protesto cancelado']);
         } catch (\Exception $e) {
+            LogSistema::error('Boletos', 'cancelar_protesto_erro', 'Erro ao cancelar protesto', [
+                'boleto_id' => $id, 'erro' => $e->getMessage(),
+            ]);
             return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -505,8 +591,17 @@ class BoletoController extends Controller
             $this->boletoModel->atualizar((int)$id, ['situacao' => 'negativado']);
             $this->historicoModel->registrar((int)$id, 'negativacao', 'Boleto enviado para negativação SERASA', [], $_SESSION['usuario_id'] ?? null);
 
+            LogSistema::warning('Boletos', 'negativacao', 'Boleto enviado para negativação SERASA', [
+                'boleto_id' => $id, 'nosso_numero' => $boleto['nosso_numero'] ?? '',
+                'pagador' => $boleto['pagador_nome'] ?? '', 'cpf_cnpj' => $boleto['pagador_cpf_cnpj'] ?? '',
+                'valor' => $boleto['valor'] ?? 0,
+            ]);
+
             return $response->json(['success' => true, 'message' => 'Boleto enviado para negativação']);
         } catch (\Exception $e) {
+            LogSistema::error('Boletos', 'negativacao_erro', 'Erro ao negativar boleto', [
+                'boleto_id' => $id, 'erro' => $e->getMessage(),
+            ]);
             return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -531,8 +626,15 @@ class BoletoController extends Controller
             $this->boletoModel->atualizar((int)$id, ['situacao' => $novaSituacao]);
             $this->historicoModel->registrar((int)$id, 'cancelamento', 'Negativação cancelada', [], $_SESSION['usuario_id'] ?? null);
 
+            LogSistema::info('Boletos', 'cancelar_negativacao', 'Negativação cancelada', [
+                'boleto_id' => $id, 'nosso_numero' => $boleto['nosso_numero'] ?? '',
+            ]);
+
             return $response->json(['success' => true, 'message' => 'Negativação cancelada']);
         } catch (\Exception $e) {
+            LogSistema::error('Boletos', 'cancelar_negativacao_erro', 'Erro ao cancelar negativação', [
+                'boleto_id' => $id, 'erro' => $e->getMessage(),
+            ]);
             return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -616,9 +718,16 @@ class BoletoController extends Controller
                     }
                 } catch (\Exception $e) {
                     $erros++;
-                    error_log("Erro ao sincronizar boleto: " . $e->getMessage());
+                    LogSistema::error('Boletos', 'sincronizar_item_erro', 'Erro ao sincronizar boleto individual', [
+                        'nosso_numero' => $nn ?? '', 'erro' => $e->getMessage(),
+                    ]);
                 }
             }
+
+            LogSistema::info('Boletos', 'sincronizar', "Sincronização concluída", [
+                'conexao_id' => $conexaoId, 'banco' => $conexao['banco'] ?? '',
+                'importados' => $importados, 'atualizados' => $atualizados, 'erros' => $erros,
+            ]);
 
             return $response->json([
                 'success' => true,
@@ -628,6 +737,9 @@ class BoletoController extends Controller
                 'message' => "Sincronização concluída: {$importados} importados, {$atualizados} atualizados, {$erros} erros"
             ]);
         } catch (\Exception $e) {
+            LogSistema::error('Boletos', 'sincronizar_erro', 'Erro geral na sincronização de boletos', [
+                'conexao_id' => $conexaoId, 'erro' => $e->getMessage(),
+            ]);
             return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }

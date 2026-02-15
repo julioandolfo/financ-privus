@@ -8,6 +8,7 @@ use App\Models\Boleto;
 use App\Models\BoletoHistorico;
 use App\Models\ConexaoBancaria;
 use App\Models\Usuario;
+use App\Models\LogSistema;
 
 class BoletoAnalyticsController extends Controller
 {
@@ -39,13 +40,28 @@ class BoletoAnalyticsController extends Controller
         $periodoFim = $request->get('periodo_fim');
         $conexaoId = $request->get('conexao_bancaria_id') ? (int)$request->get('conexao_bancaria_id') : null;
 
-        $analytics = $this->boletoModel->getAnalytics($empresaId, $periodoInicio, $periodoFim, $conexaoId);
-        $estatisticas = $this->boletoModel->getEstatisticas($empresaId);
-        $inadimplentes = $this->boletoModel->getInadimplentes($empresaId, 10);
-        $conexoes = $this->conexaoModel->findByEmpresa($empresaId);
+        $analytics = ['kpis' => [], 'evolucao_mensal' => [], 'distribuicao_situacao' => [], 'top_inadimplentes' => []];
+        $estatisticas = [];
+        $inadimplentes = [];
+        $ultimosEventos = [];
+        $conexoes = [];
 
-        $historicoModel = new BoletoHistorico();
-        $ultimosEventos = $historicoModel->ultimosEventos($empresaId, 10);
+        try {
+            $analytics = $this->boletoModel->getAnalytics($empresaId, $periodoInicio, $periodoFim, $conexaoId);
+            $estatisticas = $this->boletoModel->getEstatisticas($empresaId);
+            $inadimplentes = $this->boletoModel->getInadimplentes($empresaId, 10);
+
+            $historicoModel = new BoletoHistorico();
+            $ultimosEventos = $historicoModel->ultimosEventos($empresaId, 10);
+        } catch (\Exception $e) {
+            LogSistema::error('BoletosAnalytics', 'index', 'Erro ao carregar analytics (migration pendente?)', [
+                'erro' => $e->getMessage(), 'empresa_id' => $empresaId,
+            ]);
+        }
+
+        try {
+            $conexoes = $this->conexaoModel->findByEmpresa($empresaId);
+        } catch (\Exception $e) {}
 
         $this->render('boletos/analytics', [
             'title' => 'Analytics de Boletos',

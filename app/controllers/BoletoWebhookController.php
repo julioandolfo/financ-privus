@@ -8,6 +8,7 @@ use App\Core\Database;
 use App\Models\Boleto;
 use App\Models\BoletoHistorico;
 use App\Models\ConexaoBancaria;
+use App\Models\LogSistema;
 
 /**
  * Controller para receber webhooks de boletos do banco.
@@ -57,6 +58,9 @@ class BoletoWebhookController extends Controller
             // Verificar se a conexão existe
             $conexao = $this->conexaoModel->findById((int)$conexaoId);
             if (!$conexao) {
+                LogSistema::warning('BoletoWebhook', 'receber', 'Webhook recebido para conexão inexistente', [
+                    'conexao_id' => $conexaoId, 'id_webhook_banco' => $idWebhookBanco,
+                ]);
                 $this->logWebhook($db, null, $idWebhookBanco, $payload, 'Conexão não encontrada: ' . $conexaoId, true);
                 return $response->json(['status' => 'ok'], 200);
             }
@@ -68,11 +72,24 @@ class BoletoWebhookController extends Controller
             if (!empty($payload['validacaoWebhook'])) {
                 $this->processarValidacao($db, $webhookLocal, $idWebhookBanco, (int)$conexaoId, $conexao['empresa_id']);
                 $this->logWebhook($db, $webhookLocal['id'] ?? null, $idWebhookBanco, $payload, null, true);
+                LogSistema::info('BoletoWebhook', 'validacao_url', 'Validação de URL de webhook recebida', [
+                    'conexao_id' => $conexaoId, 'id_webhook_banco' => $idWebhookBanco,
+                    'banco' => $conexao['banco'] ?? '',
+                ]);
                 return $response->json(['status' => 'ok'], 200);
             }
 
             // 2. Notificação de PAGAMENTO (tipoMovimento = 7)
             if (isset($payload['tipoMovimento']) && (int)$payload['tipoMovimento'] === 7 && isset($payload['dados'])) {
+                $dados = $payload['dados'];
+                LogSistema::info('BoletoWebhook', 'pagamento', 'Notificação de pagamento (baixa operacional) recebida', [
+                    'conexao_id' => $conexaoId, 'banco' => $conexao['banco'] ?? '',
+                    'nosso_numero' => $dados['nossoNumero'] ?? '',
+                    'valor_boleto' => $dados['valorBoleto'] ?? 0,
+                    'valor_pagamento' => $dados['valorPagamento'] ?? 0,
+                    'pagador' => $dados['nomePagador'] ?? '',
+                    'cancelamento' => $dados['cancelamentoBaixa'] ?? false,
+                ]);
                 $this->processarPagamento($db, $webhookLocal, $conexao, $payload);
                 return $response->json(['status' => 'ok'], 200);
             }
@@ -83,7 +100,11 @@ class BoletoWebhookController extends Controller
 
         } catch (\Exception $e) {
             // Mesmo com erro, responder 200 para evitar que o banco desative o webhook
-            error_log("[BoletoWebhook] Erro: " . $e->getMessage() . " | Payload: " . substr($rawBody, 0, 1000));
+            LogSistema::error('BoletoWebhook', 'erro_geral', 'Erro ao processar webhook de boleto', [
+                'conexao_id' => $conexaoId,
+                'erro' => $e->getMessage(),
+                'payload_resumo' => substr($rawBody, 0, 500),
+            ]);
             return $response->json(['status' => 'error'], 200);
         }
     }

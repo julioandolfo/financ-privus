@@ -1,6 +1,8 @@
 <?php
 namespace Includes\Services;
 
+use App\Models\LogSistema;
+
 /**
  * Integração com a API de Cobrança Bancária Sicoob V3.
  * 
@@ -24,6 +26,7 @@ namespace Includes\Services;
  *   Movimentações: 10/s
  *   Demais endpoints: 20/s
  */
+
 class SicoobCobrancaService extends AbstractBankService implements CobrancaApiInterface
 {
     private $baseUrl = 'https://api.sicoob.com.br/cobranca-bancaria/v3';
@@ -114,6 +117,11 @@ class SicoobCobrancaService extends AbstractBankService implements CobrancaApiIn
 
         if (empty($response['access_token'])) {
             $erro = $response['error_description'] ?? $response['error'] ?? 'Token não retornado';
+            try {
+                LogSistema::error('SicoobAPI', 'auth_erro', 'Falha na autenticação Sicoob Cobrança', [
+                    'erro' => $erro, 'client_id' => substr($clientId, 0, 8) . '***',
+                ]);
+            } catch (\Exception $e) {}
             throw new \Exception("Falha na autenticação Sicoob Cobrança: {$erro}");
         }
 
@@ -194,6 +202,14 @@ class SicoobCobrancaService extends AbstractBankService implements CobrancaApiIn
         // Remover numeroContratoCobranca se não for explicitamente necessário
         unset($boletoLimpo['numeroContratoCobranca']);
 
+        try {
+            LogSistema::debug('SicoobAPI', 'incluir_boleto', 'Enviando boleto para API Sicoob', [
+                'valor' => $boletoLimpo['valor'] ?? 0,
+                'pagador' => $boletoLimpo['pagador']['nome'] ?? '',
+                'vencimento' => $boletoLimpo['dataVencimento'] ?? '',
+            ]);
+        } catch (\Exception $e) {}
+
         $response = $this->httpRequest(
             $this->baseUrl . '/boletos', 'POST',
             $headers, $boletoLimpo, $conexao
@@ -205,6 +221,13 @@ class SicoobCobrancaService extends AbstractBankService implements CobrancaApiIn
         if (isset($resultado[0]) && is_array($resultado[0])) {
             $resultado = $resultado[0]['resultado'] ?? $resultado[0];
         }
+
+        try {
+            LogSistema::info('SicoobAPI', 'boleto_incluido', 'Boleto incluído com sucesso na API Sicoob', [
+                'nosso_numero' => $resultado['nossoNumero'] ?? null,
+                'codigo_barras' => $resultado['codigoBarras'] ?? null,
+            ]);
+        } catch (\Exception $e) {}
 
         return [
             'nosso_numero' => $resultado['nossoNumero'] ?? null,
@@ -296,6 +319,12 @@ class SicoobCobrancaService extends AbstractBankService implements CobrancaApiIn
             'codigoModalidade' => (int)($dados['codigo_modalidade'] ?? $conexao['codigo_modalidade_cobranca'] ?? 1),
         ];
 
+        try {
+            LogSistema::info('SicoobAPI', 'baixar_boleto', 'Comandando baixa de boleto', [
+                'nosso_numero' => $nossoNumero,
+            ]);
+        } catch (\Exception $e) {}
+
         $this->httpRequest(
             $this->baseUrl . "/boletos/{$nossoNumero}/baixar", 'POST',
             $headers, $body, $conexao
@@ -359,6 +388,13 @@ class SicoobCobrancaService extends AbstractBankService implements CobrancaApiIn
             'numeroCliente' => (int)($dados['numero_cliente'] ?? $conexao['numero_cliente_banco'] ?? 0),
             'codigoModalidade' => (int)($dados['codigo_modalidade'] ?? $conexao['codigo_modalidade_cobranca'] ?? 1),
         ]);
+
+        try {
+            LogSistema::warning('SicoobAPI', 'protestar_boleto', 'Enviando boleto para protesto', [
+                'nosso_numero' => $nossoNumero,
+            ]);
+        } catch (\Exception $e) {}
+
         $this->httpRequest(
             $this->baseUrl . "/boletos/{$nossoNumero}/protestos", 'POST',
             $headers, $body, $conexao
@@ -404,6 +440,13 @@ class SicoobCobrancaService extends AbstractBankService implements CobrancaApiIn
             'numeroCliente' => (int)($dados['numero_cliente'] ?? $conexao['numero_cliente_banco'] ?? 0),
             'codigoModalidade' => (int)($dados['codigo_modalidade'] ?? $conexao['codigo_modalidade_cobranca'] ?? 1),
         ]);
+
+        try {
+            LogSistema::warning('SicoobAPI', 'negativar_boleto', 'Enviando boleto para negativação SERASA', [
+                'nosso_numero' => $nossoNumero,
+            ]);
+        } catch (\Exception $e) {}
+
         $this->httpRequest(
             $this->baseUrl . "/boletos/{$nossoNumero}/negativacoes", 'POST',
             $headers, $body, $conexao
@@ -516,10 +559,23 @@ class SicoobCobrancaService extends AbstractBankService implements CobrancaApiIn
             'codigoPeriodoMovimento' => $periodoMovimento,
         ];
 
+        try {
+            LogSistema::info('SicoobAPI', 'cadastrar_webhook', 'Cadastrando webhook no Sicoob', [
+                'url' => $url, 'email' => $email,
+                'tipo_movimento' => $tipoMovimento, 'periodo' => $periodoMovimento,
+            ]);
+        } catch (\Exception $e) {}
+
         $response = $this->httpRequest(
             $this->baseUrl . '/webhooks', 'POST',
             $headers, $body, $conexao
         );
+
+        try {
+            LogSistema::info('SicoobAPI', 'webhook_cadastrado', 'Webhook cadastrado com sucesso', [
+                'id_webhook' => $response['idWebhook'] ?? null,
+            ]);
+        } catch (\Exception $e) {}
 
         return $response;
     }

@@ -11,6 +11,17 @@ $est = $estatisticas ?? [];
 ?>
 
 <div class="max-w-7xl mx-auto" x-data="{ mostrarFiltros: true }">
+    <!-- Alerta Migration Pendente -->
+    <?php if (!empty($migrationPendente)): ?>
+    <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl p-4 mb-6 flex items-center gap-3">
+        <svg class="w-6 h-6 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>
+        <div>
+            <p class="font-semibold text-amber-800 dark:text-amber-200">Migration pendente</p>
+            <p class="text-sm text-amber-700 dark:text-amber-300">As tabelas de boletos ainda não foram criadas no banco de dados. Execute a migration <code class="bg-amber-100 dark:bg-amber-800 px-1 rounded">2026_02_15_boletos.sql</code> para habilitar o módulo de cobrança.</p>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Seletor de Empresa -->
     <?php if (!empty($empresasUsuario) && count($empresasUsuario) > 1): ?>
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
