@@ -36,6 +36,7 @@ class ContaReceber extends Model
                        pv.origem as pedido_origem,
                        pv.origem_id as pedido_origem_id,
                        pv.numero_pedido as pedido_numero,
+                       pv.status_origem as pedido_status_woo,
                        CASE 
                            WHEN cr.status IN ('pendente', 'parcial') AND cr.data_vencimento < CURDATE() THEN 'vencido'
                            ELSE cr.status
@@ -110,6 +111,12 @@ class ContaReceber extends Model
         if (isset($filters['data_vencimento_fim'])) {
             $sql .= " AND cr.data_vencimento <= ?";
             $params[] = $filters['data_vencimento_fim'];
+        }
+        
+        // Filtro por status WooCommerce (status_origem do pedido vinculado)
+        if (isset($filters['status_woo']) && $filters['status_woo'] !== '') {
+            $sql .= " AND pv.status_origem = ?";
+            $params[] = $filters['status_woo'];
         }
         
         // Busca por descrição, número de documento, cliente, código do cliente ou ID do pedido
@@ -718,6 +725,7 @@ class ContaReceber extends Model
                 LEFT JOIN clientes c ON cr.cliente_id = c.id
                 JOIN categorias_financeiras cat ON cr.categoria_id = cat.id
                 LEFT JOIN centros_custo cc ON cr.centro_custo_id = cc.id
+                LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
                 WHERE cr.deleted_at IS NULL";
         $params = [];
         
@@ -771,6 +779,12 @@ class ContaReceber extends Model
         if (isset($filters['data_vencimento_fim'])) {
             $sql .= " AND cr.data_vencimento <= ?";
             $params[] = $filters['data_vencimento_fim'];
+        }
+        
+        // Filtro por status WooCommerce
+        if (isset($filters['status_woo']) && $filters['status_woo'] !== '') {
+            $sql .= " AND pv.status_origem = ?";
+            $params[] = $filters['status_woo'];
         }
         
         if (isset($filters['search']) && $filters['search'] !== '') {
@@ -1175,5 +1189,31 @@ class ContaReceber extends Model
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Retorna os status WooCommerce distintos dos pedidos vinculados às contas a receber
+     */
+    public function getStatusWooDistintos($empresasIds = [])
+    {
+        $sql = "SELECT DISTINCT pv.status_origem 
+                FROM {$this->table} cr
+                LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
+                WHERE pv.status_origem IS NOT NULL 
+                  AND pv.status_origem != ''
+                  AND cr.deleted_at IS NULL";
+        
+        $params = [];
+        if (!empty($empresasIds)) {
+            $placeholders = implode(',', array_fill(0, count($empresasIds), '?'));
+            $sql .= " AND cr.empresa_id IN ({$placeholders})";
+            $params = $empresasIds;
+        }
+        
+        $sql .= " ORDER BY pv.status_origem ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'status_origem');
     }
 }

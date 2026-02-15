@@ -105,7 +105,8 @@ class IntegracaoWooConfigController extends Controller
                 'em_processamento' => 'Em Processamento',
                 'concluido' => 'Concluído',
                 'cancelado' => 'Cancelado',
-                'parcial' => 'Parcial'
+                'parcial' => 'Parcial',
+                'nao_sincronizar' => '🚫 Não sincronizar'
             ];
             
             LogSistema::debug('WooConfig', 'configurarStatus', 'Renderizando view...');

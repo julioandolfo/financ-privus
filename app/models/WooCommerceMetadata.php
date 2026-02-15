@@ -122,4 +122,25 @@ class WooCommerceMetadata extends Model
             'tipo' => $tipo
         ]);
     }
+    
+    /**
+     * Retorna mapa de chave => nome para todos os status WooCommerce de todas as integrações
+     * Útil para exibir nomes legíveis dos status nas views
+     */
+    public function getMapaStatusNomes()
+    {
+        $sql = "SELECT DISTINCT chave, nome FROM {$this->table} 
+                WHERE tipo = :tipo AND ativo = 1 
+                ORDER BY nome ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['tipo' => self::TIPO_STATUS]);
+        
+        $mapa = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $mapa[$row['chave']] = $row['nome'];
+        }
+        
+        return $mapa;
+    }
 }

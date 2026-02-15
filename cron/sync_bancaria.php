@@ -1,7 +1,11 @@
 <?php
 /**
- * CRON: Sincronização Automática Bancária
- * Frequência: A cada hora (ou conforme configurado em cada conexão)
+ * CRON: Sincronização Automática Bancária (APIs Diretas)
+ * 
+ * Suporta: Sicoob, Sicredi, Itaú, Bradesco e Mercado Pago
+ * Usa BankServiceFactory para instanciar o service correto de cada banco.
+ * 
+ * Frequência recomendada: A cada 10 minutos (filtro interno respeita frequencia_sync)
  * Comando: php /caminho/para/projeto/cron/sync_bancaria.php
  */
 
@@ -14,34 +18,44 @@ require_once APP_ROOT . '/app/core/Database.php';
 require_once APP_ROOT . '/app/core/Model.php';
 require_once APP_ROOT . '/app/models/ConexaoBancaria.php';
 require_once APP_ROOT . '/app/models/TransacaoPendente.php';
-require_once APP_ROOT . '/includes/services/OpenBankingService.php';
-require_once APP_ROOT . '/includes/services/SicoobApiService.php';
+require_once APP_ROOT . '/app/models/RegraClassificacao.php';
+require_once APP_ROOT . '/app/models/ContaBancaria.php';
+require_once APP_ROOT . '/includes/services/BankApiInterface.php';
+require_once APP_ROOT . '/includes/services/AbstractBankService.php';
+require_once APP_ROOT . '/includes/services/BankServiceFactory.php';
+require_once APP_ROOT . '/includes/services/SicoobBankService.php';
+require_once APP_ROOT . '/includes/services/SicrediBankService.php';
+require_once APP_ROOT . '/includes/services/ItauBankService.php';
+require_once APP_ROOT . '/includes/services/BradescoBankService.php';
+require_once APP_ROOT . '/includes/services/MercadoPagoBankService.php';
 require_once APP_ROOT . '/includes/services/ClassificadorIAService.php';
+
+// Manter compatibilidade com serviços antigos (se existirem)
+if (file_exists(APP_ROOT . '/includes/services/OpenBankingService.php')) {
+    require_once APP_ROOT . '/includes/services/OpenBankingService.php';
+}
 
 use App\Core\Database;
 use App\Models\ConexaoBancaria;
 use App\Models\TransacaoPendente;
-use includes\services\OpenBankingService;
-use includes\services\SicoobApiService;
-use includes\services\ClassificadorIAService;
+use Includes\Services\BankServiceFactory;
+use Includes\Services\ClassificadorIAService;
 
 echo "[" . date('Y-m-d H:i:s') . "] Iniciando sincronização bancária automática...\n";
 
 try {
     $conexaoModel = new ConexaoBancaria();
     $transacaoModel = new TransacaoPendente();
-    $openBankingService = new OpenBankingService();
-    $sicoobService = new SicoobApiService();
     
-    // Buscar todas as conexões ativas com auto_sync habilitado
     $db = Database::getInstance()->getConnection();
     
-    // Determinar quais frequências devem ser sincronizadas agora
-    $horaAtual = date('i'); // Minuto atual
+    // Determinar dia da semana para sync semanal
     $diaSemana = date('N'); // 1 (segunda) a 7 (domingo)
     
+    // Buscar todas as conexões ativas com auto_sync habilitado
     $sql = "SELECT * FROM conexoes_bancarias 
             WHERE ativo = 1 AND auto_sync = 1 
+            AND status_conexao != 'desconectada'
             AND (
                 frequencia_sync = '10min'
                 OR frequencia_sync = '30min'
@@ -51,7 +65,7 @@ try {
             )";
     
     $stmt = $db->query($sql);
-    $todasConexoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $todasConexoes = $stmt->fetchAll(\PDO::FETCH_ASSOC);
     
     // Filtrar conexões baseado na frequência e última sincronização
     $conexoes = [];
@@ -62,24 +76,19 @@ try {
         
         switch ($conexao['frequencia_sync']) {
             case '10min':
-                // Sincronizar se passaram mais de 10 minutos
-                $deveSincronizar = $tempoDecorrido >= 600; // 10 * 60
+                $deveSincronizar = $tempoDecorrido >= 600;
                 break;
             case '30min':
-                // Sincronizar se passaram mais de 30 minutos
-                $deveSincronizar = $tempoDecorrido >= 1800; // 30 * 60
+                $deveSincronizar = $tempoDecorrido >= 1800;
                 break;
             case 'horaria':
-                // Sincronizar se passaram mais de 1 hora
-                $deveSincronizar = $tempoDecorrido >= 3600; // 60 * 60
+                $deveSincronizar = $tempoDecorrido >= 3600;
                 break;
             case 'diaria':
-                // Sincronizar se passaram mais de 24 horas
-                $deveSincronizar = $tempoDecorrido >= 86400; // 24 * 60 * 60
+                $deveSincronizar = $tempoDecorrido >= 86400;
                 break;
             case 'semanal':
-                // Sincronizar se passaram mais de 7 dias E é segunda-feira
-                $deveSincronizar = $tempoDecorrido >= 604800 && $diaSemana == 1; // 7 * 24 * 60 * 60
+                $deveSincronizar = $tempoDecorrido >= 604800 && $diaSemana == 1;
                 break;
         }
         
@@ -88,64 +97,78 @@ try {
         }
     }
     
-    echo "Encontradas " . count($conexoes) . " conexões para sincronizar\n";
+    echo "Encontradas " . count($conexoes) . " conexões para sincronizar (de " . count($todasConexoes) . " ativas)\n";
+    
+    $totalNovas = 0;
+    $totalErros = 0;
     
     foreach ($conexoes as $conexao) {
-        echo "\n[Conexão #{$conexao['id']}] Banco: {$conexao['banco']} - {$conexao['identificacao']}\n";
+        $bancoNome = ucfirst($conexao['banco']);
+        $identificacao = $conexao['identificacao'] ?: ('Conta ' . $conexao['id']);
+        echo "\n[Conexão #{$conexao['id']}] {$bancoNome} - {$identificacao}\n";
         
         try {
-            // Escolhe fluxo conforme tipo_integracao
-            if (($conexao['tipo_integracao'] ?? 'of') === 'nativo') {
-                echo "  Usando integração nativa Sicoob...\n";
-                $tokenData = $sicoobService->obterToken($conexao);
-                $transacoes = $sicoobService->listarTransacoes(
-                    $conexao,
-                    $tokenData['access_token'],
-                    date('Y-m-d', strtotime('-30 days')),
-                    date('Y-m-d')
-                );
-            } else {
-                // Verificar se token expirou
-                if (!empty($conexao['token_expira_em']) && strtotime($conexao['token_expira_em']) < time()) {
-                    echo "  Token expirado, renovando...\n";
-                    $newTokens = $openBankingService->renovarAccessToken($conexao);
-                    
-                    $conexao['access_token'] = OpenBankingService::encrypt($newTokens['access_token']);
-                    $conexao['refresh_token'] = OpenBankingService::encrypt($newTokens['refresh_token']);
-                    $conexao['token_expira_em'] = date('Y-m-d H:i:s', time() + $newTokens['expires_in']);
-                    
-                    $conexaoModel->update($conexao['id'], $conexao);
-                    echo "  Token renovado com sucesso\n";
-                }
-                
-                // Sincronizar transações
-                if ($conexao['tipo'] === 'cartao_credito') {
-                    $transacoes = $openBankingService->sincronizarCartao($conexao);
-                } else {
-                    $transacoes = $openBankingService->sincronizarExtrato($conexao);
-                }
+            // Verificar se o banco é suportado pelo novo sistema
+            if (!BankServiceFactory::isSuportado($conexao['banco'])) {
+                echo "  ! Banco '{$conexao['banco']}' não suportado pela nova arquitetura. Pulando.\n";
+                continue;
             }
             
-            echo "  Encontradas " . count($transacoes) . " transações\n";
+            // Instanciar service via factory
+            $service = BankServiceFactory::create($conexao['banco']);
             
-            // Processar transações
+            // Descriptografar tokens/credenciais
+            $conexaoCredenciais = $conexaoModel->getConexaoComCredenciais($conexao['id']);
+            
+            // === 1. Autenticar ===
+            echo "  Autenticando com {$bancoNome}...\n";
+            $tokenData = $service->autenticar($conexaoCredenciais);
+            
+            // Salvar token atualizado
+            if (!empty($tokenData['access_token'])) {
+                $conexaoModel->update($conexao['id'], [
+                    'access_token' => $tokenData['access_token'],
+                    'token_expira_em' => date('Y-m-d H:i:s', time() + ($tokenData['expires_in'] ?? 3600))
+                ]);
+                // Atualizar para uso nas próximas chamadas
+                $conexaoCredenciais['access_token'] = $tokenData['access_token'];
+            }
+            
+            // === 2. Buscar Saldo ===
+            echo "  Buscando saldo...\n";
+            try {
+                $saldoData = $service->getSaldo($conexaoCredenciais);
+                $conexaoModel->atualizarSaldo($conexao['id'], $saldoData['saldo']);
+                echo "  Saldo: R$ " . number_format($saldoData['saldo'], 2, ',', '.') . "\n";
+                
+                // Propagar saldo real para conta bancária vinculada
+                if (!empty($conexao['conta_bancaria_id'])) {
+                    $contaBancariaModel = new \App\Models\ContaBancaria();
+                    $contaBancariaModel->setSaldoReal($conexao['conta_bancaria_id'], $saldoData['saldo']);
+                    echo "  Saldo propagado para conta bancária #{$conexao['conta_bancaria_id']}\n";
+                }
+            } catch (\Exception $e) {
+                echo "  ! Erro ao buscar saldo: " . $e->getMessage() . "\n";
+            }
+            
+            // === 3. Buscar Transações (últimos 30 dias) ===
+            echo "  Buscando transações...\n";
+            $dataInicio = date('Y-m-d', strtotime('-30 days'));
+            $dataFim = date('Y-m-d');
+            
+            $transacoes = $service->getTransacoes($conexaoCredenciais, $dataInicio, $dataFim);
+            echo "  Encontradas " . count($transacoes) . " transações no período\n";
+            
+            // === 4. Processar e Classificar ===
             $classificadorService = new ClassificadorIAService($conexao['empresa_id']);
             $novas = 0;
+            $duplicadas = 0;
             
             foreach ($transacoes as $transacao) {
-                // Gerar hash único
-                $hash = hash('sha256', $conexao['id'] . $transacao['transacao_id_banco'] . $transacao['data_transacao'] . $transacao['valor']);
-                
-                // Verificar duplicata
-                $existente = $transacaoModel->findByHash($hash);
-                if ($existente) {
-                    continue;
-                }
-                
-                // Classificar com IA
+                // Classificar (regras fixas -> histórico -> IA -> fallback)
                 $classificacao = $classificadorService->analisar($transacao);
                 
-                // Salvar
+                // Preparar dados para salvar
                 $transacaoData = [
                     'empresa_id' => $conexao['empresa_id'],
                     'conexao_bancaria_id' => $conexao['id'],
@@ -154,8 +177,10 @@ try {
                     'valor' => $transacao['valor'],
                     'tipo' => $transacao['tipo'],
                     'origem' => $transacao['origem'],
-                    'referencia_externa' => $transacao['transacao_id_banco'],
-                    'transacao_hash' => $hash,
+                    'banco_transacao_id' => $transacao['banco_transacao_id'] ?? null,
+                    'metodo_pagamento' => $transacao['metodo_pagamento'] ?? null,
+                    'saldo_apos' => $transacao['saldo_apos'] ?? null,
+                    'referencia_externa' => $transacao['banco_transacao_id'] ?? null,
                     'categoria_sugerida_id' => $classificacao['categoria_id'] ?? $conexao['categoria_padrao_id'],
                     'centro_custo_sugerido_id' => $classificacao['centro_custo_id'] ?? $conexao['centro_custo_padrao_id'],
                     'fornecedor_sugerido_id' => $classificacao['fornecedor_id'] ?? null,
@@ -164,26 +189,40 @@ try {
                     'justificativa_ia' => $classificacao['justificativa'] ?? null
                 ];
                 
-                if ($transacaoModel->create($transacaoData)) {
+                $resultado = $transacaoModel->create($transacaoData);
+                if ($resultado) {
                     $novas++;
+                } else {
+                    $duplicadas++;
                 }
             }
             
-            echo "  ✓ {$novas} novas transações importadas\n";
+            echo "  + {$novas} novas transações importadas ({$duplicadas} duplicadas ignoradas)\n";
+            $totalNovas += $novas;
             
-            // Atualizar última sincronização
-            $conexaoModel->update($conexao['id'], array_merge($conexao, [
-                'ultima_sincronizacao' => date('Y-m-d H:i:s')
-            ]));
+            // === 5. Atualizar status da conexão ===
+            $conexaoModel->atualizarUltimaSync($conexao['id']);
+            $conexaoModel->update($conexao['id'], [
+                'status_conexao' => 'ativa',
+                'ultimo_erro' => null
+            ]);
             
-        } catch (Exception $e) {
-            echo "  ✗ Erro: " . $e->getMessage() . "\n";
+        } catch (\Exception $e) {
+            $totalErros++;
+            echo "  ! ERRO: " . $e->getMessage() . "\n";
+            
+            // Registrar erro na conexão
+            $conexaoModel->registrarErro($conexao['id'], $e->getMessage());
         }
     }
     
-    echo "\n[" . date('Y-m-d H:i:s') . "] Sincronização concluída com sucesso!\n";
+    echo "\n========================================\n";
+    echo "[" . date('Y-m-d H:i:s') . "] Sincronização concluída!\n";
+    echo "  Total de novas transações: {$totalNovas}\n";
+    echo "  Total de erros: {$totalErros}\n";
+    echo "========================================\n";
     
-} catch (Exception $e) {
-    echo "[ERRO] " . $e->getMessage() . "\n";
+} catch (\Exception $e) {
+    echo "[ERRO FATAL] " . $e->getMessage() . "\n";
     exit(1);
 }

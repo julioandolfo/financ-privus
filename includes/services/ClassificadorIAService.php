@@ -5,9 +5,16 @@ use App\Models\CategoriaFinanceira;
 use App\Models\CentroCusto;
 use App\Models\Fornecedor;
 use App\Models\Cliente;
+use App\Models\RegraClassificacao;
 
 /**
  * Serviço de classificação automática usando OpenAI
+ * 
+ * Ordem de classificação:
+ * 1. Regras fixas do usuário (grátis, instantâneo)
+ * 2. Histórico de aprovações anteriores (pattern matching)
+ * 3. OpenAI (se configurado e nenhuma regra casar)
+ * 4. Classificação básica por palavras-chave (fallback)
  */
 class ClassificadorIAService
 {
@@ -27,29 +34,107 @@ class ClassificadorIAService
     }
     
     /**
-     * Analisar e classificar transação
+     * Analisar e classificar transação.
+     * Tenta regras fixas primeiro, depois IA, depois fallback básico.
      */
     public function analisar($transacao)
     {
-        // Se não tiver chave OpenAI, usar classificação básica
-        if (!$this->openaiKey) {
-            return $this->classificacaoBasica($transacao);
-        }
-        
-        // Buscar contexto da empresa
-        $contexto = $this->obterContextoEmpresa();
-        
-        // Montar prompt para a IA
-        $prompt = $this->montarPrompt($transacao, $contexto);
-        
+        $descricao = $transacao['descricao_original'] ?? '';
+        $tipo = $transacao['tipo'] ?? 'debito';
+
+        // 1. Tentar regras fixas do usuário (grátis, instantâneo)
         try {
-            $response = $this->chamarOpenAI($prompt);
-            return $this->processarResposta($response, $transacao);
+            $regraModel = new RegraClassificacao();
+            $classificacaoRegra = $regraModel->classificar($descricao, $tipo, $this->empresaId);
+            
+            if ($classificacaoRegra !== null) {
+                return $classificacaoRegra;
+            }
         } catch (\Exception $e) {
-            // Em caso de erro, usar classificação básica
-            error_log("Erro ao classificar com IA: " . $e->getMessage());
-            return $this->classificacaoBasica($transacao);
+            error_log("Erro ao aplicar regras de classificação: " . $e->getMessage());
         }
+
+        // 2. Tentar histórico de aprovações anteriores
+        try {
+            $classificacaoHistorico = $this->classificarPorHistorico($descricao, $tipo);
+            if ($classificacaoHistorico !== null) {
+                return $classificacaoHistorico;
+            }
+        } catch (\Exception $e) {
+            error_log("Erro ao classificar por histórico: " . $e->getMessage());
+        }
+
+        // 3. Tentar OpenAI (se configurado)
+        if ($this->openaiKey) {
+            $contexto = $this->obterContextoEmpresa();
+            $prompt = $this->montarPrompt($transacao, $contexto);
+            
+            try {
+                $response = $this->chamarOpenAI($prompt);
+                return $this->processarResposta($response, $transacao);
+            } catch (\Exception $e) {
+                error_log("Erro ao classificar com IA: " . $e->getMessage());
+            }
+        }
+
+        // 4. Fallback: classificação básica por palavras-chave
+        return $this->classificacaoBasica($transacao);
+    }
+
+    /**
+     * Classifica transação baseado no histórico de aprovações anteriores.
+     * Procura transações aprovadas com descrição similar.
+     */
+    private function classificarPorHistorico(string $descricao, string $tipo): ?array
+    {
+        $db = \App\Core\Database::getInstance()->getConnection();
+        
+        // Buscar transações aprovadas com descrição similar (últimos 6 meses)
+        $sql = "SELECT tp.categoria_sugerida_id, tp.centro_custo_sugerido_id,
+                       tp.fornecedor_sugerido_id, tp.cliente_sugerido_id,
+                       tp.descricao_original,
+                       COUNT(*) as vezes
+                FROM transacoes_pendentes tp
+                WHERE tp.empresa_id = :empresa_id
+                  AND tp.status = 'aprovada'
+                  AND tp.categoria_sugerida_id IS NOT NULL
+                  AND tp.created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+                  AND tp.tipo = :tipo
+                GROUP BY tp.categoria_sugerida_id, tp.centro_custo_sugerido_id,
+                         tp.fornecedor_sugerido_id, tp.cliente_sugerido_id,
+                         tp.descricao_original
+                HAVING vezes >= 1
+                ORDER BY vezes DESC
+                LIMIT 50";
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute([
+            'empresa_id' => $this->empresaId,
+            'tipo' => $tipo
+        ]);
+        $historico = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        $descricaoUpper = mb_strtoupper($descricao);
+
+        foreach ($historico as $item) {
+            $itemDescUpper = mb_strtoupper($item['descricao_original']);
+            
+            // Verificar similaridade (mesmas palavras-chave)
+            $similarity = similar_text($descricaoUpper, $itemDescUpper, $percent);
+            
+            if ($percent >= 70) {
+                return [
+                    'categoria_id' => $item['categoria_sugerida_id'],
+                    'centro_custo_id' => $item['centro_custo_sugerido_id'],
+                    'fornecedor_id' => $item['fornecedor_sugerido_id'],
+                    'cliente_id' => $item['cliente_sugerido_id'],
+                    'confianca' => min(90, 60 + ($item['vezes'] * 5)),
+                    'justificativa' => "Baseado em {$item['vezes']} transação(ões) anterior(es) similar(es) ({$percent}% similar)"
+                ];
+            }
+        }
+
+        return null;
     }
     
     /**

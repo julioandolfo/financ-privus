@@ -20,23 +20,55 @@ class ContaBancaria extends Model
     }
     
     /**
-     * Retorna todas as contas bancárias
+     * Retorna todas as contas bancárias com dados da conexão API (se houver).
+     * 
+     * O saldo_atual agora é substituído pelo saldo real da API quando 
+     * a conta tem uma conexão bancária vinculada e o saldo foi atualizado.
      */
     public function findAll($empresaId = null)
     {
-        $sql = "SELECT * FROM {$this->table} WHERE ativo = 1";
+        $sql = "SELECT cb.*,
+                       cx.id as conexao_id,
+                       cx.banco as conexao_banco,
+                       cx.saldo_banco as saldo_api,
+                       cx.saldo_atualizado_em as saldo_api_atualizado_em,
+                       cx.status_conexao,
+                       cx.ultima_sincronizacao,
+                       cx.identificacao as conexao_identificacao
+                FROM {$this->table} cb
+                LEFT JOIN conexoes_bancarias cx ON cx.conta_bancaria_id = cb.id AND cx.ativo = 1
+                WHERE cb.ativo = 1";
         $params = [];
         
         if ($empresaId) {
-            $sql .= " AND empresa_id = :empresa_id";
+            $sql .= " AND cb.empresa_id = :empresa_id";
             $params['empresa_id'] = $empresaId;
         }
         
-        $sql .= " ORDER BY banco_nome ASC, agencia ASC, conta ASC";
+        $sql .= " ORDER BY cb.banco_nome ASC, cb.agencia ASC, cb.conta ASC";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $contas = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        // Substituir saldo_atual pelo saldo da API quando disponível
+        foreach ($contas as &$conta) {
+            $conta['saldo_calculado'] = (float) $conta['saldo_atual']; // Saldo baseado em movimentações
+            $conta['tem_conexao_api'] = !empty($conta['conexao_id']);
+            
+            if ($conta['tem_conexao_api'] && $conta['saldo_api'] !== null) {
+                $conta['saldo_atual'] = (float) $conta['saldo_api'];
+                $conta['fonte_saldo'] = 'api';
+            } else {
+                $conta['fonte_saldo'] = 'calculado';
+            }
+            
+            // Diferença entre saldo API e calculado
+            $conta['diferenca_saldo'] = $conta['saldo_atual'] - $conta['saldo_calculado'];
+        }
+        unset($conta);
+
+        return $contas;
     }
     
     /**
@@ -166,18 +198,131 @@ class ContaBancaria extends Model
     }
     
     /**
-     * Retorna o saldo total de todas as contas de uma empresa
+     * Retorna o saldo total de todas as contas de uma empresa.
+     * Prioriza saldo real da API quando disponível.
      */
     public function getSaldoTotalEmpresa($empresaId)
     {
-        $sql = "SELECT SUM(saldo_atual) as saldo_total 
-                FROM {$this->table} 
-                WHERE empresa_id = :empresa_id AND ativo = 1";
+        // Saldo real: prioriza saldo_banco da conexão, senão usa saldo_atual calculado
+        $sql = "SELECT 
+                    SUM(
+                        CASE 
+                            WHEN cx.saldo_banco IS NOT NULL AND cx.ativo = 1 
+                            THEN cx.saldo_banco 
+                            ELSE cb.saldo_atual 
+                        END
+                    ) as saldo_total,
+                    SUM(cb.saldo_atual) as saldo_calculado,
+                    SUM(CASE WHEN cx.saldo_banco IS NOT NULL AND cx.ativo = 1 THEN cx.saldo_banco ELSE 0 END) as saldo_api,
+                    COUNT(cb.id) as total_contas,
+                    COUNT(cx.id) as contas_com_api
+                FROM {$this->table} cb
+                LEFT JOIN conexoes_bancarias cx ON cx.conta_bancaria_id = cb.id AND cx.ativo = 1
+                WHERE cb.empresa_id = :empresa_id AND cb.ativo = 1";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['empresa_id' => $empresaId]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
         return $result['saldo_total'] ?? 0;
+    }
+
+    /**
+     * Retorna resumo completo de saldos com comparativo API vs calculado.
+     */
+    public function getResumoSaldos($empresaId)
+    {
+        $sql = "SELECT 
+                    SUM(cb.saldo_atual) as saldo_calculado_total,
+                    SUM(CASE WHEN cx.saldo_banco IS NOT NULL AND cx.ativo = 1 THEN cx.saldo_banco ELSE 0 END) as saldo_api_total,
+                    SUM(
+                        CASE 
+                            WHEN cx.saldo_banco IS NOT NULL AND cx.ativo = 1 
+                            THEN cx.saldo_banco 
+                            ELSE cb.saldo_atual 
+                        END
+                    ) as saldo_real_total,
+                    COUNT(cb.id) as total_contas,
+                    SUM(CASE WHEN cx.id IS NOT NULL AND cx.ativo = 1 THEN 1 ELSE 0 END) as contas_conectadas,
+                    MIN(cx.saldo_atualizado_em) as saldo_mais_antigo
+                FROM {$this->table} cb
+                LEFT JOIN conexoes_bancarias cx ON cx.conta_bancaria_id = cb.id AND cx.ativo = 1
+                WHERE cb.empresa_id = :empresa_id AND cb.ativo = 1";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['empresa_id' => $empresaId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [
+            'saldo_calculado_total' => 0,
+            'saldo_api_total' => 0,
+            'saldo_real_total' => 0,
+            'total_contas' => 0,
+            'contas_conectadas' => 0,
+            'saldo_mais_antigo' => null
+        ];
+    }
+
+    /**
+     * Seta o saldo_atual diretamente (chamado pela sincronização da API bancária).
+     * Usado para sincronizar o saldo real do banco com a conta interna.
+     */
+    public function setSaldoReal($id, $saldo)
+    {
+        $sql = "UPDATE {$this->table} SET saldo_atual = :saldo WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute(['id' => $id, 'saldo' => $saldo]);
+    }
+
+    /**
+     * Atualiza saldo adicionando ou subtraindo um valor ao saldo atual.
+     * Compatibilidade com MovimentacaoService.
+     */
+    public function updateSaldoAtual($id, $valor)
+    {
+        if ($valor >= 0) {
+            $sql = "UPDATE {$this->table} SET saldo_atual = saldo_atual + :valor WHERE id = :id";
+        } else {
+            $sql = "UPDATE {$this->table} SET saldo_atual = saldo_atual - :valor WHERE id = :id";
+            $valor = abs($valor);
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute(['id' => $id, 'valor' => $valor]);
+    }
+
+    /**
+     * Retorna conta bancária por ID com dados da conexão API.
+     */
+    public function findByIdComConexao($id)
+    {
+        $sql = "SELECT cb.*,
+                       cx.id as conexao_id,
+                       cx.banco as conexao_banco,
+                       cx.saldo_banco as saldo_api,
+                       cx.saldo_atualizado_em as saldo_api_atualizado_em,
+                       cx.status_conexao,
+                       cx.ultima_sincronizacao,
+                       cx.identificacao as conexao_identificacao
+                FROM {$this->table} cb
+                LEFT JOIN conexoes_bancarias cx ON cx.conta_bancaria_id = cb.id AND cx.ativo = 1
+                WHERE cb.id = :id LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['id' => $id]);
+        $conta = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($conta) {
+            $conta['saldo_calculado'] = (float) $conta['saldo_atual'];
+            $conta['tem_conexao_api'] = !empty($conta['conexao_id']);
+            
+            if ($conta['tem_conexao_api'] && $conta['saldo_api'] !== null) {
+                $conta['saldo_atual'] = (float) $conta['saldo_api'];
+                $conta['fonte_saldo'] = 'api';
+            } else {
+                $conta['fonte_saldo'] = 'calculado';
+            }
+            
+            $conta['diferenca_saldo'] = $conta['saldo_atual'] - $conta['saldo_calculado'];
+        }
+        
+        return $conta;
     }
 }

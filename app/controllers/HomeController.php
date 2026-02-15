@@ -125,10 +125,17 @@ class HomeController extends Controller
             $contasInvestimento = count(array_filter($contasBancarias, fn($c) => $c['tipo_conta'] == 'investimento'));
             
             // Saldo total das contas bancárias
+            // saldo_atual já vem com prioridade para API quando disponível (via findAll)
             $saldoTotal = 0;
+            $saldoCalculadoTotal = 0;
+            $contasComApi = 0;
             $contasPorBanco = [];
             foreach ($contasBancarias as $conta) {
                 $saldoTotal += (float)$conta['saldo_atual'];
+                $saldoCalculadoTotal += (float)($conta['saldo_calculado'] ?? $conta['saldo_atual']);
+                if (!empty($conta['tem_conexao_api'])) {
+                    $contasComApi++;
+                }
                 
                 $banco = $conta['banco_nome'];
                 if (!isset($contasPorBanco[$banco])) {
@@ -905,6 +912,9 @@ class HomeController extends Controller
                     'poupanca' => $contasPoupanca,
                     'investimento' => $contasInvestimento,
                     'saldo_total' => $saldoTotal,
+                    'saldo_calculado' => $saldoCalculadoTotal,
+                    'contas_com_api' => $contasComApi,
+                    'diferenca' => $saldoTotal - $saldoCalculadoTotal,
                     'por_banco' => $contasPorBanco
                 ],
                 'contas_pagar' => $contasPagarResumo,

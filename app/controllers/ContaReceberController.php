@@ -102,6 +102,11 @@ class ContaReceberController extends Controller
                 $filters['origem'] = $request->get('origem');
             }
             
+            // Filtro por status WooCommerce
+            if ($request->get('status_woo')) {
+                $filters['status_woo'] = $request->get('status_woo');
+            }
+            
             // Busca
             if ($request->get('search')) {
                 $filters['search'] = $request->get('search');
@@ -144,6 +149,9 @@ class ContaReceberController extends Controller
             $categorias = $this->categoriaModel->findAll($empresaAtual, 'receita');
             $centrosCusto = $this->centroCustoModel->findAll($empresaAtual);
             
+            // Buscar status WooCommerce distintos para o filtro
+            $statusWooList = $this->contaReceberModel->getStatusWooDistintos();
+            
             // Retorna os filtros aplicados para a view
             $filtersApplied = $request->all();
             
@@ -154,6 +162,7 @@ class ContaReceberController extends Controller
                 'clientes' => $clientes,
                 'categorias' => $categorias,
                 'centrosCusto' => $centrosCusto,
+                'statusWooList' => $statusWooList,
                 'filters' => $filtersApplied,
                 'paginacao' => [
                     'total_registros' => $totalRegistros,

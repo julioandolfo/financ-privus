@@ -131,6 +131,14 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="px-3 py-1 text-xs font-semibold rounded-full <?= $statusColor ?>"><?= ucfirst($pedido['status']) ?></span>
+                                <?php if (!empty($pedido['status_origem'])): ?>
+                                    <div class="mt-1">
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" title="Status WooCommerce: <?= htmlspecialchars($pedido['status_origem']) ?>">
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M20.28 3.37c-.69-.51-1.65-.27-2.09.45l-2.98 4.81-2.6-4.2c-.28-.45-.98-.45-1.26 0l-2.6 4.2-2.98-4.81c-.44-.72-1.4-.96-2.09-.45-.69.51-.88 1.49-.42 2.16l4.5 7.26c.28.45.98.45 1.26 0L12 8.56l2.98 4.43c.28.45.98.45 1.26 0l4.5-7.26c.46-.67.27-1.65-.46-2.36zM3.5 19.5h17c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5h-17c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5z"/></svg>
+                                            <?= htmlspecialchars(ucfirst(str_replace(['wc-', '-', '_'], ['', ' ', ' '], $pedido['status_origem']))) ?>
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center text-gray-700 dark:text-gray-300">
                                 <?= $pedido['total_itens'] ?>

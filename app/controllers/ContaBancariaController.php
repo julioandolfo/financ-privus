@@ -91,7 +91,8 @@ class ContaBancariaController extends Controller
     {
         try {
             $this->contaBancariaModel = new ContaBancaria();
-            $contaBancaria = $this->contaBancariaModel->findById($id);
+            // Usa findByIdComConexao para trazer dados da API junto
+            $contaBancaria = $this->contaBancariaModel->findByIdComConexao($id);
             
             if (!$contaBancaria) {
                 $_SESSION['error'] = 'Conta bancária não encontrada!';

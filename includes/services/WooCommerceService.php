@@ -336,6 +336,13 @@ class WooCommerceService
                 ?? $mapeamentoStatus[$statusWoo] 
                 ?? $this->mapearStatus($statusWoo);
             
+            // Se o status está mapeado como "nao_sincronizar", pular este pedido
+            if ($statusSistema === 'nao_sincronizar') {
+                \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidos', 
+                    "Pedido #{$numeroPedido}: ignorado - status '{$statusWoo}' configurado para não sincronizar");
+                continue;
+            }
+            
             // =============================================
             // PASSO 3: IDENTIFICAR FORMA DE PAGAMENTO
             // =============================================
@@ -354,6 +361,7 @@ class WooCommerceService
                 'numero_pedido' => $numeroPedido,
                 'data_pedido' => date('Y-m-d H:i:s', strtotime($pedWoo['date_created'])),
                 'status' => $statusSistema,
+                'status_origem' => $statusWoo,
                         'valor_total' => $pedWoo['total'],
                 'frete' => $pedWoo['shipping_total'] ?? 0,
                 'desconto' => $pedWoo['discount_total'] ?? 0,
@@ -2308,6 +2316,13 @@ class WooCommerceService
                 ?? $mapeamentoStatus[$statusWoo] 
                 ?? $this->mapearStatus($statusWoo);
             
+            // Se o status está mapeado como "nao_sincronizar", pular este pedido
+            if ($statusSistema === 'nao_sincronizar') {
+                \App\Models\LogSistema::info('WooCommerce', 'webhookPedido', 
+                    "Pedido #{$numeroPedido}: ignorado via webhook - status '{$statusWoo}' configurado para não sincronizar");
+                return ['sucesso' => true, 'mensagem' => "Pedido #{$numeroPedido} ignorado - status não sincronizável"];
+            }
+            
             // PASSO 3: FORMA DE PAGAMENTO
             $formaPagamentoWoo = $pedWoo['payment_method'] ?? '';
             $formaPagamentoTitulo = $pedWoo['payment_method_title'] ?? $formaPagamentoWoo;
@@ -2322,6 +2337,7 @@ class WooCommerceService
                 'numero_pedido' => $numeroPedido,
                 'data_pedido' => date('Y-m-d H:i:s', strtotime($pedWoo['date_created'] ?? 'now')),
                 'status' => $statusSistema,
+                'status_origem' => $statusWoo,
                 'valor_total' => $pedWoo['total'] ?? 0,
                 'frete' => $pedWoo['shipping_total'] ?? 0,
                 'desconto' => $pedWoo['discount_total'] ?? 0,

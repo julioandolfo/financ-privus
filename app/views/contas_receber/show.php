@@ -488,7 +488,7 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                 </div>
                 
                 <!-- Info do Pedido -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                <div class="grid grid-cols-2 md:grid-cols-<?= (!empty($pedidoVinculado['status_origem'])) ? '5' : '4' ?> gap-4 mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
                     <div class="text-center">
                         <p class="text-sm text-gray-500 dark:text-gray-400">Número</p>
                         <p class="text-lg font-bold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($pedidoVinculado['numero_pedido'] ?? $pedidoVinculado['id']) ?></p>
@@ -505,6 +505,15 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                         <p class="text-sm text-gray-500 dark:text-gray-400">Margem</p>
                         <p class="text-lg font-bold text-blue-600"><?= number_format($pedidoVinculado['margem_lucro'] ?? 0, 2, ',', '.') ?>%</p>
                     </div>
+                    <?php if (!empty($pedidoVinculado['status_origem'])): ?>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Status WooCommerce</p>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-sm font-semibold rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 mt-1">
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.28 3.37c-.69-.51-1.65-.27-2.09.45l-2.98 4.81-2.6-4.2c-.28-.45-.98-.45-1.26 0l-2.6 4.2-2.98-4.81c-.44-.72-1.4-.96-2.09-.45-.69.51-.88 1.49-.42 2.16l4.5 7.26c.28.45.98.45 1.26 0L12 8.56l2.98 4.43c.28.45.98.45 1.26 0l4.5-7.26c.46-.67.27-1.65-.46-2.36zM3.5 19.5h17c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5h-17c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5z"/></svg>
+                            <?= htmlspecialchars(ucfirst(str_replace(['wc-', '-', '_'], ['', ' ', ' '], $pedidoVinculado['status_origem']))) ?>
+                        </span>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 
                 <!-- Frete e Desconto (Resumo) -->

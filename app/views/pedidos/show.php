@@ -63,6 +63,12 @@
                         ?>
                         <p>
                             <span class="inline-block px-3 py-1 text-sm font-semibold rounded-full <?= $statusColor ?>"><?= ucfirst($pedido['status']) ?></span>
+                            <?php if (!empty($pedido['status_origem'])): ?>
+                                <span class="inline-flex items-center gap-1 ml-2 px-2.5 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" title="Status WooCommerce: <?= htmlspecialchars($pedido['status_origem']) ?>">
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M20.28 3.37c-.69-.51-1.65-.27-2.09.45l-2.98 4.81-2.6-4.2c-.28-.45-.98-.45-1.26 0l-2.6 4.2-2.98-4.81c-.44-.72-1.4-.96-2.09-.45-.69.51-.88 1.49-.42 2.16l4.5 7.26c.28.45.98.45 1.26 0L12 8.56l2.98 4.43c.28.45.98.45 1.26 0l4.5-7.26c.46-.67.27-1.65-.46-2.36zM3.5 19.5h17c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5h-17c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5z"/></svg>
+                                    Woo: <?= htmlspecialchars(ucfirst(str_replace(['wc-', '-', '_'], ['', ' ', ' '], $pedido['status_origem']))) ?>
+                                </span>
+                            <?php endif; ?>
                             <?php if (!empty($pedido['bonificado'])): ?>
                                 <span class="inline-block ml-2 px-3 py-1 text-sm font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
                                     <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -388,18 +388,21 @@ return [
     'POST /api/v1/parcelas-receber/{id}/baixar' => ['handler' => 'ApiRestController@parcelasReceberBaixar', 'middleware' => ['ApiAuthMiddleware']],
     
     // ========================================
-    // SINCRONIZAÇÃO BANCÁRIA (Open Banking)
+    // SINCRONIZAÇÃO BANCÁRIA (APIs Diretas)
     // ========================================
     
     // Conexões Bancárias (protegido)
     'GET /conexoes-bancarias' => ['handler' => 'ConexaoBancariaController@index', 'middleware' => ['AuthMiddleware']],
     'GET /conexoes-bancarias/create' => ['handler' => 'ConexaoBancariaController@create', 'middleware' => ['AuthMiddleware']],
+    'POST /conexoes-bancarias/store' => ['handler' => 'ConexaoBancariaController@store', 'middleware' => ['AuthMiddleware']],
     'POST /conexoes-bancarias/iniciar-consentimento' => ['handler' => 'ConexaoBancariaController@iniciarConsentimento', 'middleware' => ['AuthMiddleware']],
     'GET /conexoes-bancarias/callback' => ['handler' => 'ConexaoBancariaController@callback', 'middleware' => ['AuthMiddleware']],
     'GET /conexoes-bancarias/{id}' => ['handler' => 'ConexaoBancariaController@show', 'middleware' => ['AuthMiddleware']],
     'GET /conexoes-bancarias/{id}/edit' => ['handler' => 'ConexaoBancariaController@edit', 'middleware' => ['AuthMiddleware']],
     'POST /conexoes-bancarias/{id}' => ['handler' => 'ConexaoBancariaController@update', 'middleware' => ['AuthMiddleware']],
     'POST /conexoes-bancarias/{id}/sincronizar' => ['handler' => 'ConexaoBancariaController@sincronizar', 'middleware' => ['AuthMiddleware']],
+    'POST /conexoes-bancarias/{id}/testar' => ['handler' => 'ConexaoBancariaController@testarConexao', 'middleware' => ['AuthMiddleware']],
+    'GET /api/conexoes-bancarias/{id}/saldo' => ['handler' => 'ConexaoBancariaController@saldo', 'middleware' => ['AuthMiddleware']],
     'POST /conexoes-bancarias/{id}/delete' => ['handler' => 'ConexaoBancariaController@destroy', 'middleware' => ['AuthMiddleware']],
     
     // Transações Pendentes (protegido)

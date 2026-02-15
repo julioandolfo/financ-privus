@@ -1,375 +1,266 @@
 <?php
-$old = $this->session->get('old') ?? [];
-$errors = $this->session->get('errors') ?? [];
+use App\Models\ConexaoBancaria;
 ?>
 
-<div class="max-w-7xl mx-auto" x-data="{ showModalExplicacao: false }">
-    <!-- Seletor de Empresa -->
-    <?php if (!empty($empresas_usuario) && count($empresas_usuario) > 0): ?>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
-            <form method="GET" action="/conexoes-bancarias" class="flex items-center gap-4">
-                <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Empresa:</label>
-                <select name="empresa_id" onchange="this.form.submit()" class="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                    <?php foreach ($empresas_usuario as $emp): ?>
-                        <option value="<?= $emp['id'] ?>" <?= ($empresa_id_selecionada == $emp['id']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($emp['nome_fantasia']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </form>
-        </div>
-    <?php endif; ?>
-    
-    <!-- Header com botão de ajuda -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-            <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent inline-flex items-center">
-                🏦 Sincronização Bancária Inteligente
-                <button @click="showModalExplicacao = true" class="ml-3 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 cursor-pointer transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </button>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                Conexões Bancárias
             </h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-2">
-                Conecte suas contas bancárias e cartões de crédito para importação automática de transações
-            </p>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">Gerencie suas conexões com APIs bancárias diretas</p>
         </div>
-        <a href="/conexoes-bancarias/create" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <a href="/conexoes-bancarias/create<?= !empty($empresa_id_selecionada) ? '?empresa_id=' . $empresa_id_selecionada : '' ?>"
+           class="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 inline-flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
             </svg>
             Nova Conexão
         </a>
     </div>
 
-    <!-- Modal Explicativo -->
-    <div x-show="showModalExplicacao" 
-         x-cloak
-         class="fixed inset-0 z-50 overflow-y-auto" 
-         aria-labelledby="modal-title" 
-         role="dialog" 
-         aria-modal="true"
-         style="display: none;">
-        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <!-- Overlay -->
-            <div x-show="showModalExplicacao" 
-                 x-transition:enter="ease-out duration-300"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 x-transition:leave="ease-in duration-200"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" 
-                 @click="showModalExplicacao = false"></div>
+    <!-- Seleção de Empresa -->
+    <?php if (count($empresas_usuario ?? []) > 1): ?>
+    <div class="mb-6">
+        <form method="GET" class="flex items-center gap-3">
+            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Empresa:</label>
+            <select name="empresa_id" onchange="this.form.submit()"
+                    class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                <?php foreach ($empresas_usuario as $emp): ?>
+                    <option value="<?= $emp['id'] ?>" <?= ($empresa_id_selecionada == $emp['id']) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($emp['nome_fantasia']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </form>
+    </div>
+    <?php endif; ?>
 
-            <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-
-            <!-- Modal Content -->
-            <div x-show="showModalExplicacao"
-                 x-transition:enter="ease-out duration-300"
-                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-                 x-transition:leave="ease-in duration-200"
-                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                 class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-                
-                <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-2xl font-bold text-white flex items-center">
-                            <svg class="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            Como Funciona a Sincronização Bancária?
-                        </h3>
-                        <button @click="showModalExplicacao = false" class="text-white hover:text-gray-200 transition-colors">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
-                    </div>
+    <!-- Cards de Resumo -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Saldo Total -->
+        <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-xl p-6 text-white">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-green-100 text-sm font-medium">Saldo Total (API)</p>
+                    <p class="text-3xl font-bold mt-2">
+                        R$ <?= number_format(($saldo_total['saldo_total'] ?? 0), 2, ',', '.') ?>
+                    </p>
                 </div>
-
-                <div class="px-6 py-6 max-h-[70vh] overflow-y-auto">
-                    <!-- Como Funciona -->
-                    <div class="mb-8">
-                        <h4 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                            <span class="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm font-bold">1</span>
-                            O que é?
-                        </h4>
-                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-                            A <strong>Sincronização Bancária Inteligente</strong> conecta diretamente às APIs dos bancos brasileiros usando o <strong>Open Banking</strong>, permitindo que você:
-                        </p>
-                        <ul class="space-y-2 ml-6">
-                            <li class="flex items-start text-gray-700 dark:text-gray-300">
-                                <svg class="w-5 h-5 text-green-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                Importe automaticamente extratos bancários e transações de cartão de crédito
-                            </li>
-                            <li class="flex items-start text-gray-700 dark:text-gray-300">
-                                <svg class="w-5 h-5 text-green-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                Classifique transações automaticamente usando <strong>Inteligência Artificial</strong>
-                            </li>
-                            <li class="flex items-start text-gray-700 dark:text-gray-300">
-                                <svg class="w-5 h-5 text-green-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                Aprove, edite ou rejeite transações antes de lançá-las como contas a pagar/receber
-                            </li>
-                            <li class="flex items-start text-gray-700 dark:text-gray-300">
-                                <svg class="w-5 h-5 text-green-500 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                Evite lançamentos duplicados e erros manuais
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Fluxo de Funcionamento -->
-                    <div class="mb-8">
-                        <h4 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                            <span class="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm font-bold">2</span>
-                            Fluxo de Funcionamento
-                        </h4>
-                        <div class="space-y-4">
-                            <div class="flex items-start">
-                                <div class="bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 rounded-full w-8 h-8 flex items-center justify-center mr-3 mt-1 flex-shrink-0 font-bold">A</div>
-                                <div>
-                                    <h5 class="font-semibold text-gray-900 dark:text-gray-100">Autorização Segura (OAuth 2.0)</h5>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">Você será redirecionado ao site oficial do seu banco para autorizar o acesso. Suas credenciais bancárias <strong>nunca</strong> passam pelo nosso sistema.</p>
-                                </div>
-                            </div>
-                            <div class="flex items-start">
-                                <div class="bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 rounded-full w-8 h-8 flex items-center justify-center mr-3 mt-1 flex-shrink-0 font-bold">B</div>
-                                <div>
-                                    <h5 class="font-semibold text-gray-900 dark:text-gray-100">Sincronização Automática</h5>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">Conforme a frequência escolhida (diária/semanal), o sistema busca novas transações automaticamente.</p>
-                                </div>
-                            </div>
-                            <div class="flex items-start">
-                                <div class="bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 rounded-full w-8 h-8 flex items-center justify-center mr-3 mt-1 flex-shrink-0 font-bold">C</div>
-                                <div>
-                                    <h5 class="font-semibold text-gray-900 dark:text-gray-100">Classificação Inteligente</h5>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">A IA analisa a descrição da transação e sugere categoria, centro de custo e fornecedor/cliente.</p>
-                                </div>
-                            </div>
-                            <div class="flex items-start">
-                                <div class="bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 rounded-full w-8 h-8 flex items-center justify-center mr-3 mt-1 flex-shrink-0 font-bold">D</div>
-                                <div>
-                                    <h5 class="font-semibold text-gray-900 dark:text-gray-100">Revisão e Aprovação</h5>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">Você revisa as transações pendentes, edita se necessário e aprova para lançamento no sistema.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Passo a Passo para Obter Credenciais -->
-                    <div class="mb-6">
-                        <h4 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                            <span class="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm font-bold">3</span>
-                            Passo a Passo por Banco
-                        </h4>
-
-                        <!-- Sicredi -->
-                        <div class="mb-6 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
-                            <h5 class="font-bold text-lg text-gray-900 dark:text-gray-100 mb-3 flex items-center">
-                                <svg class="w-6 h-6 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                Sicredi
-                            </h5>
-                            <ol class="space-y-2 text-sm text-gray-700 dark:text-gray-300 list-decimal list-inside">
-                                <li>Acesse <a href="https://developers.sicredi.com.br" target="_blank" class="text-blue-600 dark:text-blue-400 underline">developers.sicredi.com.br</a></li>
-                                <li>Faça login com suas credenciais da cooperativa</li>
-                                <li>Vá em <strong>Meus Apps</strong> → <strong>Criar Novo App</strong></li>
-                                <li>Preencha o nome da aplicação (ex: "Sistema Financeiro")</li>
-                                <li>Em <strong>Redirect URI</strong>, insira: <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded"><?= $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] ?>/conexoes-bancarias/callback</code></li>
-                                <li>Selecione os escopos: <strong>accounts</strong> e <strong>transactions</strong></li>
-                                <li>Após criar, copie o <strong>Client ID</strong> e <strong>Client Secret</strong></li>
-                                <li>Volte aqui e clique em <strong>Nova Conexão</strong></li>
-                            </ol>
-                        </div>
-
-                        <!-- Sicoob -->
-                        <div class="mb-6 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
-                            <h5 class="font-bold text-lg text-gray-900 dark:text-gray-100 mb-3 flex items-center">
-                                <svg class="w-6 h-6 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                Sicoob
-                            </h5>
-                            <ol class="space-y-2 text-sm text-gray-700 dark:text-gray-300 list-decimal list-inside">
-                                <li>Acesse <a href="https://developers.sicoob.com.br" target="_blank" class="text-blue-600 dark:text-blue-400 underline">developers.sicoob.com.br</a></li>
-                                <li>Crie uma conta de desenvolvedor (se não tiver)</li>
-                                <li>No painel, clique em <strong>Criar Aplicação</strong></li>
-                                <li>Escolha <strong>Open Banking</strong> como tipo</li>
-                                <li>Defina a <strong>URL de Callback</strong>: <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded"><?= $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] ?>/conexoes-bancarias/callback</code></li>
-                                <li>Ative os produtos: <strong>Contas</strong> e <strong>Transações</strong></li>
-                                <li>Anote o <strong>Client ID</strong> e <strong>Client Secret</strong></li>
-                                <li>Clique em <strong>Nova Conexão</strong> neste sistema</li>
-                            </ol>
-                        </div>
-
-                        <!-- Bradesco -->
-                        <div class="mb-6 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
-                            <h5 class="font-bold text-lg text-gray-900 dark:text-gray-100 mb-3 flex items-center">
-                                <svg class="w-6 h-6 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                Bradesco
-                            </h5>
-                            <ol class="space-y-2 text-sm text-gray-700 dark:text-gray-300 list-decimal list-inside">
-                                <li>Acesse <a href="https://developer.bradesco.com" target="_blank" class="text-blue-600 dark:text-blue-400 underline">developer.bradesco.com</a></li>
-                                <li>Faça login com Internet Banking (PF ou PJ)</li>
-                                <li>No menu, vá em <strong>APIs</strong> → <strong>Open Banking</strong></li>
-                                <li>Clique em <strong>Subscrever</strong> nas APIs de Contas e Transações</li>
-                                <li>Em <strong>Minhas Aplicações</strong>, crie uma nova</li>
-                                <li>Informe a <strong>Redirect URI</strong>: <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded"><?= $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] ?>/conexoes-bancarias/callback</code></li>
-                                <li>Obtenha as credenciais <strong>Consumer Key</strong> e <strong>Consumer Secret</strong></li>
-                                <li>Inicie a conexão aqui no sistema</li>
-                            </ol>
-                        </div>
-
-                        <!-- Itaú -->
-                        <div class="mb-6 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
-                            <h5 class="font-bold text-lg text-gray-900 dark:text-gray-100 mb-3 flex items-center">
-                                <svg class="w-6 h-6 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                Itaú
-                            </h5>
-                            <ol class="space-y-2 text-sm text-gray-700 dark:text-gray-300 list-decimal list-inside">
-                                <li>Acesse <a href="https://developers.itau.com.br" target="_blank" class="text-blue-600 dark:text-blue-400 underline">developers.itau.com.br</a></li>
-                                <li>Cadastre-se como desenvolvedor (gratuito)</li>
-                                <li>No portal, vá em <strong>Meus Apps</strong> → <strong>Novo App</strong></li>
-                                <li>Escolha a categoria <strong>Open Banking</strong></li>
-                                <li>Configure a <strong>URL de Redirecionamento</strong>: <code class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded"><?= $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] ?>/conexoes-bancarias/callback</code></li>
-                                <li>Solicite acesso às APIs: <strong>Accounts</strong> e <strong>Transactions</strong></li>
-                                <li>Aguarde aprovação (geralmente instantânea)</li>
-                                <li>Copie o <strong>Client ID</strong> e <strong>Secret</strong></li>
-                                <li>Volte aqui e configure a conexão</li>
-                            </ol>
-                        </div>
-                    </div>
-
-                    <!-- Segurança -->
-                    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl p-4">
-                        <h5 class="font-bold text-green-800 dark:text-green-300 mb-2 flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                            100% Seguro
-                        </h5>
-                        <ul class="text-sm text-green-700 dark:text-green-300 space-y-1">
-                            <li>✓ Seus tokens são <strong>criptografados</strong> no banco de dados</li>
-                            <li>✓ Usamos <strong>OAuth 2.0</strong> padrão do Open Banking Brasil</li>
-                            <li>✓ Suas credenciais bancárias <strong>nunca</strong> são armazenadas</li>
-                            <li>✓ Você pode revogar o acesso a qualquer momento</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="bg-gray-50 dark:bg-gray-900 px-6 py-4 flex justify-end">
-                    <button @click="showModalExplicacao = false" class="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200">
-                        Entendi, vamos começar!
-                    </button>
+                <div class="p-3 bg-white/20 rounded-xl">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
                 </div>
             </div>
+            <p class="text-green-100 text-xs mt-3">
+                <?= ($saldo_total['total_contas'] ?? 0) ?> conta(s) com saldo |
+                <?php if (!empty($saldo_total['saldo_mais_antigo'])): ?>
+                    Desde <?= date('d/m H:i', strtotime($saldo_total['saldo_mais_antigo'])) ?>
+                <?php else: ?>
+                    Sem saldo atualizado
+                <?php endif; ?>
+            </p>
+        </div>
+
+        <!-- Conexões Ativas -->
+        <div class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-xl p-6 text-white">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-blue-100 text-sm font-medium">Conexões Ativas</p>
+                    <p class="text-3xl font-bold mt-2"><?= count($conexoes ?? []) ?></p>
+                </div>
+                <div class="p-3 bg-white/20 rounded-xl">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-blue-100 text-xs mt-3">
+                <?php
+                $statusCounts = ['ativa' => 0, 'erro' => 0, 'expirada' => 0];
+                foreach ($conexoes as $c) {
+                    $status = $c['status_conexao'] ?? 'ativa';
+                    if (isset($statusCounts[$status])) $statusCounts[$status]++;
+                }
+                ?>
+                <?= $statusCounts['ativa'] ?> ativa(s) |
+                <?php if ($statusCounts['erro'] > 0): ?>
+                    <span class="text-yellow-200"><?= $statusCounts['erro'] ?> com erro</span>
+                <?php endif; ?>
+            </p>
+        </div>
+
+        <!-- Transações Pendentes -->
+        <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl shadow-xl p-6 text-white">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-amber-100 text-sm font-medium">Transações Pendentes</p>
+                    <p class="text-3xl font-bold mt-2"><?= $transacoes_pendentes ?? 0 ?></p>
+                </div>
+                <div class="p-3 bg-white/20 rounded-xl">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                </div>
+            </div>
+            <?php if (($transacoes_pendentes ?? 0) > 0): ?>
+                <a href="/transacoes-pendentes" class="inline-block mt-3 text-amber-100 text-xs hover:text-white underline">
+                    Revisar transações &rarr;
+                </a>
+            <?php else: ?>
+                <p class="text-amber-100 text-xs mt-3">Nenhuma pendência</p>
+            <?php endif; ?>
         </div>
     </div>
 
+    <!-- Mensagens -->
+    <?php if (!empty($this->session->get('success'))): ?>
+        <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl p-4 mb-6">
+            <p class="text-sm text-green-800 dark:text-green-200"><?= $this->session->get('success') ?></p>
+        </div>
+    <?php endif; ?>
+    <?php if (!empty($this->session->get('error'))): ?>
+        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl p-4 mb-6">
+            <p class="text-sm text-red-800 dark:text-red-200"><?= $this->session->get('error') ?></p>
+        </div>
+    <?php endif; ?>
+
     <!-- Lista de Conexões -->
     <?php if (empty($conexoes)): ?>
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
-            <svg class="w-24 h-24 mx-auto text-gray-400 dark:text-gray-600 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-            </svg>
-            <h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Nenhuma Conexão Bancária</h3>
-            <p class="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                Conecte suas contas bancárias e cartões de crédito para começar a importar transações automaticamente.
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-12 text-center">
+            <div class="text-6xl mb-4">🏦</div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Nenhuma conexão bancária</h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-6">
+                Conecte suas contas bancárias para sincronizar saldos e extratos automaticamente.
             </p>
-            <a href="/conexoes-bancarias/create" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <a href="/conexoes-bancarias/create<?= !empty($empresa_id_selecionada) ? '?empresa_id=' . $empresa_id_selecionada : '' ?>"
+               class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                 </svg>
-                Conectar Banco
+                Criar Primeira Conexão
             </a>
         </div>
     <?php else: ?>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <?php foreach ($conexoes as $conexao): 
-                $bancoNomes = [
-                    'sicredi' => 'Sicredi',
-                    'sicoob' => 'Sicoob',
-                    'bradesco' => 'Bradesco',
-                    'itau' => 'Itaú'
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <?php foreach ($conexoes as $conexao):
+                $bancoInfo = ConexaoBancaria::getBancoInfo($conexao['banco']);
+                $statusConexao = $conexao['status_conexao'] ?? 'ativa';
+                $statusColors = [
+                    'ativa' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+                    'erro' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+                    'expirada' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+                    'desconectada' => 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
                 ];
-                
-                $tipoNomes = [
-                    'conta_corrente' => 'Conta Corrente',
-                    'conta_poupanca' => 'Conta Poupança',
-                    'cartao_credito' => 'Cartão de Crédito'
-                ];
-                
-                $statusClass = $conexao['ativo'] ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+                $statusColor = $statusColors[$statusConexao] ?? $statusColors['ativa'];
+                $statusLabels = ['ativa' => 'Ativa', 'erro' => 'Erro', 'expirada' => 'Expirada', 'desconectada' => 'Desconectada'];
             ?>
-                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl transition-shadow duration-200">
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($bancoNomes[$conexao['banco']] ?? $conexao['banco']) ?></h3>
-                            <p class="text-sm text-gray-600 dark:text-gray-400"><?= htmlspecialchars($tipoNomes[$conexao['tipo']] ?? $conexao['tipo']) ?></p>
-                            <?php if ($conexao['identificacao']): ?>
-                                <p class="text-xs text-gray-500 dark:text-gray-500 mt-1"><?= htmlspecialchars($conexao['identificacao']) ?></p>
-                            <?php endif; ?>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-shadow"
+                 x-data="{ saldo: '<?= $conexao['saldo_banco'] !== null ? number_format($conexao['saldo_banco'], 2, ',', '.') : '---' ?>', carregando: false, sincronizando: false }">
+                
+                <!-- Header do Card -->
+                <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center gap-4">
+                            <div class="text-3xl"><?= $bancoInfo['logo'] ?></div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                    <?= htmlspecialchars($bancoInfo['nome']) ?>
+                                </h3>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    <?= htmlspecialchars($conexao['identificacao'] ?: ($conexao['banco_conta_id'] ?: 'Conta ' . $conexao['id'])) ?>
+                                </p>
+                            </div>
                         </div>
-                        <span class="<?= $statusClass ?> text-xs font-semibold px-3 py-1 rounded-full">
-                            <?= $conexao['ativo'] ? 'Ativa' : 'Inativa' ?>
+                        <span class="px-3 py-1 text-xs font-semibold rounded-full <?= $statusColor ?>">
+                            <?= $statusLabels[$statusConexao] ?? ucfirst($statusConexao) ?>
                         </span>
                     </div>
+                </div>
 
-                    <?php if ($conexao['ultima_sincronizacao']): ?>
-                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-4">
-                            Última sinc: <?= date('d/m/Y H:i', strtotime($conexao['ultima_sincronizacao'])) ?>
-                        </p>
-                    <?php else: ?>
-                        <p class="text-xs text-yellow-600 dark:text-yellow-400 mb-4">Nunca sincronizada</p>
-                    <?php endif; ?>
-
-                    <div class="flex gap-2">
-                        <a href="/conexoes-bancarias/<?= $conexao['id'] ?>" class="flex-1 text-center px-4 py-2 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors text-sm font-medium">
-                            Ver Detalhes
-                        </a>
-                        <button onclick="sincronizar(<?= $conexao['id'] ?>)" class="px-4 py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-colors text-sm font-medium">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <!-- Saldo -->
+                <div class="px-6 py-4">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Saldo Atual</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+                                R$ <span x-text="saldo"></span>
+                            </p>
+                            <?php if (!empty($conexao['saldo_atualizado_em'])): ?>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                    Atualizado em <?= date('d/m/Y H:i', strtotime($conexao['saldo_atualizado_em'])) ?>
+                                </p>
+                            <?php endif; ?>
+                        </div>
+                        <button @click="carregando = true; fetch('/api/conexoes-bancarias/<?= $conexao['id'] ?>/saldo').then(r => r.json()).then(d => { if(d.saldo_formatado) saldo = d.saldo_formatado.replace('R$ ',''); else if(d.error) alert(d.error); }).catch(e => alert('Erro ao atualizar saldo')).finally(() => carregando = false)"
+                                :disabled="carregando"
+                                class="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition"
+                                title="Atualizar saldo">
+                            <svg class="w-5 h-5" :class="carregando && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                             </svg>
                         </button>
                     </div>
+
+                    <?php if (!empty($conexao['ultimo_erro'])): ?>
+                        <div class="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                            <p class="text-xs text-red-600 dark:text-red-400 truncate" title="<?= htmlspecialchars($conexao['ultimo_erro']) ?>">
+                                <?= htmlspecialchars(mb_substr($conexao['ultimo_erro'], 0, 80)) ?>...
+                            </p>
+                        </div>
+                    <?php endif; ?>
                 </div>
+
+                <!-- Info -->
+                <div class="px-6 py-3 bg-gray-50 dark:bg-gray-900/30 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                        <span class="text-gray-500 dark:text-gray-400">Tipo:</span>
+                        <span class="text-gray-900 dark:text-gray-100 ml-1"><?= ucfirst(str_replace('_', ' ', $conexao['tipo'] ?? 'Conta Corrente')) ?></span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 dark:text-gray-400">Sync:</span>
+                        <span class="text-gray-900 dark:text-gray-100 ml-1"><?= ucfirst($conexao['frequencia_sync'] ?? 'manual') ?></span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 dark:text-gray-400">Ambiente:</span>
+                        <span class="text-gray-900 dark:text-gray-100 ml-1"><?= ucfirst($conexao['ambiente'] ?? 'sandbox') ?></span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 dark:text-gray-400">Última Sync:</span>
+                        <span class="text-gray-900 dark:text-gray-100 ml-1">
+                            <?= !empty($conexao['ultima_sincronizacao']) ? date('d/m H:i', strtotime($conexao['ultima_sincronizacao'])) : 'Nunca' ?>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Ações -->
+                <div class="px-6 py-4 flex gap-2 flex-wrap">
+                    <button @click="sincronizando = true; fetch('/conexoes-bancarias/<?= $conexao['id'] ?>/sincronizar', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r => r.json()).then(d => { if(d.success) { alert(d.message); location.reload(); } else alert(d.error || 'Erro'); }).catch(e => alert('Erro')).finally(() => sincronizando = false)"
+                            :disabled="sincronizando"
+                            class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" :class="sincronizando && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        <span x-text="sincronizando ? 'Sincronizando...' : 'Sincronizar'"></span>
+                    </button>
+                    <a href="/conexoes-bancarias/<?= $conexao['id'] ?>" 
+                       class="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-xl transition">
+                        Detalhes
+                    </a>
+                    <button @click="fetch('/conexoes-bancarias/<?= $conexao['id'] ?>/testar', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r => r.json()).then(d => alert(d.message || d.error)).catch(e => alert('Erro ao testar'))"
+                            class="px-4 py-2.5 bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-sm font-semibold rounded-xl transition">
+                        Testar
+                    </button>
+                </div>
+            </div>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
 </div>
 
-<script>
-function sincronizar(id) {
-    if (!confirm('Deseja sincronizar esta conexão agora?')) return;
-    
-    const btn = event.target.closest('button');
-    const originalContent = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
-    
-    fetch(`/conexoes-bancarias/${id}/sincronizar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-            location.reload();
-        } else {
-            alert('Erro: ' + (data.error || 'Erro desconhecido'));
-        }
-    })
-    .catch(err => {
-        alert('Erro ao sincronizar: ' + err.message);
-    })
-    .finally(() => {
-        btn.disabled = false;
-        btn.innerHTML = originalContent;
-    });
-}
-</script>
-
 <?php
-$this->session->delete('old');
-$this->session->delete('errors');
+$this->session->delete('success');
+$this->session->delete('error');
 ?>

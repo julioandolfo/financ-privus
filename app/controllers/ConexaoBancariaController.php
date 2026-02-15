@@ -5,12 +5,14 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
 use App\Models\ConexaoBancaria;
+use App\Models\ContaBancaria;
 use App\Models\CategoriaFinanceira;
 use App\Models\CentroCusto;
 use App\Models\Empresa;
 use App\Models\Usuario;
-use includes\services\OpenBankingService;
-use includes\services\SicoobApiService;
+use App\Models\TransacaoPendente;
+use Includes\Services\BankServiceFactory;
+use Includes\Services\ClassificadorIAService;
 
 class ConexaoBancariaController extends Controller
 {
@@ -29,17 +31,15 @@ class ConexaoBancariaController extends Controller
     }
     
     /**
-     * Lista todas as conexões bancárias
+     * Lista todas as conexões bancárias com saldos
      */
     public function index(Request $request, Response $response)
     {
         $usuarioId = $_SESSION['usuario_id'] ?? null;
         $usuarioModel = new Usuario();
         
-        // Buscar empresas do usuário
         $empresasUsuario = $usuarioModel->getEmpresas($usuarioId);
         
-        // Pegar empresa da URL ou primeira empresa
         $empresaId = $request->get('empresa_id');
         if (!$empresaId && !empty($empresasUsuario)) {
             $empresaId = $empresasUsuario[0]['id'];
@@ -47,17 +47,29 @@ class ConexaoBancariaController extends Controller
         
         $conexoes = [];
         $empresa = null;
+        $saldoTotal = null;
+        $transacoesPendentes = 0;
         
         if ($empresaId) {
             $conexoes = $this->conexaoModel->findByEmpresa($empresaId);
             $empresa = $this->empresaModel->findById($empresaId);
+            $saldoTotal = $this->conexaoModel->getSaldoTotalEmpresa($empresaId);
+            
+            $transacaoModel = new TransacaoPendente();
+            $transacoesPendentes = $transacaoModel->countByEmpresa($empresaId, 'pendente');
         }
+        
+        // Bancos disponíveis para o template
+        $bancosDisponiveis = BankServiceFactory::getBancosDisponiveis();
         
         return $this->render('conexoes_bancarias/index', [
             'conexoes' => $conexoes,
             'empresa' => $empresa,
             'empresas_usuario' => $empresasUsuario,
-            'empresa_id_selecionada' => $empresaId
+            'empresa_id_selecionada' => $empresaId,
+            'saldo_total' => $saldoTotal,
+            'transacoes_pendentes' => $transacoesPendentes,
+            'bancos_disponiveis' => $bancosDisponiveis
         ]);
     }
     
@@ -69,10 +81,8 @@ class ConexaoBancariaController extends Controller
         $usuarioId = $_SESSION['usuario_id'] ?? null;
         $usuarioModel = new Usuario();
         
-        // Buscar empresas do usuário
         $empresasUsuario = $usuarioModel->getEmpresas($usuarioId);
         
-        // Pegar empresa da URL ou primeira empresa
         $empresaId = $request->get('empresa_id');
         if (!$empresaId && !empty($empresasUsuario)) {
             $empresaId = $empresasUsuario[0]['id'];
@@ -80,30 +90,37 @@ class ConexaoBancariaController extends Controller
         
         $categorias = [];
         $centrosCusto = [];
-        $empresa = null;
+        $contasBancarias = [];
         
         if ($empresaId) {
             $categorias = $this->categoriaModel->findAll($empresaId);
             $centrosCusto = $this->centroCustoModel->findAll($empresaId);
-            $empresa = $this->empresaModel->findById($empresaId);
+            
+            $contaBancariaModel = new ContaBancaria();
+            $contasBancarias = $contaBancariaModel->findAll($empresaId);
         }
+        
+        // Bancos e seus campos de configuração
+        $bancosDisponiveis = BankServiceFactory::getBancosDisponiveis();
+        $camposPorBanco = BankServiceFactory::getTodosCampos();
         
         return $this->render('conexoes_bancarias/create', [
             'categorias' => $categorias,
             'centros_custo' => $centrosCusto,
-            'empresa' => $empresa,
+            'contas_bancarias' => $contasBancarias,
             'empresas_usuario' => $empresasUsuario,
-            'empresa_id_selecionada' => $empresaId
+            'empresa_id_selecionada' => $empresaId,
+            'bancos_disponiveis' => $bancosDisponiveis,
+            'campos_por_banco' => $camposPorBanco
         ]);
     }
     
     /**
-     * Iniciar fluxo de consentimento OAuth 2.0
+     * Salvar nova conexão bancária (API direta)
      */
-    public function iniciarConsentimento(Request $request, Response $response)
+    public function store(Request $request, Response $response)
     {
         $data = $request->all();
-        // Captura empresa_id do POST (form), ou querystring, ou sessão
         $empresaId = $data['empresa_id'] ?? $request->get('empresa_id') ?? ($_SESSION['usuario_empresa_id'] ?? null);
         $usuarioId = $_SESSION['usuario_id'] ?? null;
         
@@ -113,7 +130,7 @@ class ConexaoBancariaController extends Controller
             return $response->redirect('/conexoes-bancarias/create');
         }
         
-        // Validar dados básicos
+        // Validar
         $errors = $this->validate($data);
         if (!empty($errors)) {
             $_SESSION['errors'] = $errors;
@@ -121,119 +138,57 @@ class ConexaoBancariaController extends Controller
             return $response->redirect('/conexoes-bancarias/create');
         }
         
-        // Salvar configurações temporariamente na sessão
-        $_SESSION['conexao_temp'] = [
+        // Montar dados da conexão
+        $conexaoData = [
+            'empresa_id' => $empresaId,
+            'usuario_id' => $usuarioId,
             'banco' => $data['banco'],
-            'tipo_integracao' => $data['tipo_integracao'] ?? 'of',
-            'tipo' => $data['tipo'],
+            'tipo_integracao' => 'api_direta',
+            'tipo' => $data['tipo'] ?? 'conta_corrente',
             'identificacao' => $data['identificacao'] ?? null,
-            'auto_sync' => $data['auto_sync'] ?? 1,
+            'auto_sync' => isset($data['auto_sync']) ? 1 : 0,
             'frequencia_sync' => $data['frequencia_sync'] ?? 'diaria',
             'categoria_padrao_id' => !empty($data['categoria_padrao_id']) ? $data['categoria_padrao_id'] : null,
             'centro_custo_padrao_id' => !empty($data['centro_custo_padrao_id']) ? $data['centro_custo_padrao_id'] : null,
-            'aprovacao_automatica' => $data['aprovacao_automatica'] ?? 0,
-            // Credenciais Sicoob / Open Finance
+            'aprovacao_automatica' => isset($data['aprovacao_automatica']) ? 1 : 0,
+            'conta_bancaria_id' => !empty($data['conta_bancaria_id']) ? $data['conta_bancaria_id'] : null,
+            'banco_conta_id' => $data['banco_conta_id'] ?? null,
+            // Credenciais (variam por banco)
             'ambiente' => $data['ambiente'] ?? 'sandbox',
             'client_id' => $data['client_id'] ?? null,
             'client_secret' => $data['client_secret'] ?? null,
+            'access_token' => $data['access_token'] ?? null,
             'cert_pem' => $data['cert_pem'] ?? null,
             'key_pem' => $data['key_pem'] ?? null,
-            'cert_password' => $data['cert_password'] ?? null
+            'cert_password' => $data['cert_password'] ?? null,
+            'status_conexao' => 'ativa'
         ];
         
-        // Iniciar fluxo OAuth
-        // Se integração for nativa (ex: Sicoob API própria), não usar fluxo OF; salvar direto
-        if (($data['tipo_integracao'] ?? 'of') === 'nativo') {
-            $conexaoTemp = $_SESSION['conexao_temp'] ?? [];
-            unset($_SESSION['conexao_temp']);
-            $conexaoData = array_merge($conexaoTemp, [
-                'empresa_id' => $empresaId,
-                'usuario_id' => $usuarioId,
-                'access_token' => null,
-                'refresh_token' => null,
-                'token_expira_em' => null,
-                'consent_id' => null,
-                'ativo' => 1,
-                'tipo_integracao' => 'nativo'
-            ]);
-            $conexaoId = $this->conexaoModel->create($conexaoData);
-            if ($conexaoId) {
-                $_SESSION['success'] = 'Integração Sicoob (API nativa) configurada. Sincronize usando o CRON ou botão manual.';
-            } else {
-                $_SESSION['error'] = 'Erro ao salvar integração nativa Sicoob.';
-            }
-            return $response->redirect('/conexoes-bancarias');
+        $conexaoId = $this->conexaoModel->create($conexaoData);
+        
+        if ($conexaoId) {
+            $_SESSION['success'] = 'Conexão bancária criada com sucesso! Use o botão "Testar" para validar as credenciais.';
         } else {
-            $openBankingService = new OpenBankingService();
-            $scheme = $_SERVER['REQUEST_SCHEME'] ?? ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http');
-            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-            $redirectUri = $scheme . '://' . $host . '/conexoes-bancarias/callback';
-            // Usar método iniciarAutenticacao (mock) para obter URL de autorização
-            $authUrl = $openBankingService->iniciarAutenticacao($data['banco'], $data['tipo'], $redirectUri);
-            
-            return $response->redirect($authUrl);
+            $_SESSION['error'] = 'Erro ao criar conexão bancária.';
         }
+        
+        return $response->redirect('/conexoes-bancarias');
     }
-    
+
     /**
-     * Callback do OAuth 2.0
+     * Manter compatibilidade com fluxo antigo
+     */
+    public function iniciarConsentimento(Request $request, Response $response)
+    {
+        return $this->store($request, $response);
+    }
+
+    /**
+     * Callback OAuth (mantido para compatibilidade)
      */
     public function callback(Request $request, Response $response)
     {
-        $code = $request->get('code');
-        $state = $request->get('state');
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        $usuarioId = $_SESSION['usuario_id'] ?? null;
-        
-        if (!$code || !$empresaId || !$usuarioId) {
-            $_SESSION['error'] = 'Erro ao autorizar acesso ao banco';
-            return $response->redirect('/conexoes-bancarias');
-        }
-        
-        try {
-            // Trocar código por access_token
-            $openBankingService = new OpenBankingService();
-            $scheme = $_SERVER['REQUEST_SCHEME'] ?? ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http');
-            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-            $redirectUri = $scheme . '://' . $host . '/conexoes-bancarias/callback';
-            $tokens = $openBankingService->obterAccessToken($code, $redirectUri, $state);
-            
-            // Recuperar dados temporários
-            $conexaoTemp = $_SESSION['conexao_temp'] ?? [];
-            unset($_SESSION['conexao_temp']);
-            
-            // Criptografar tokens
-            $encryptionKey = getenv('ENCRYPTION_KEY') ?: 'default_key_change_in_production';
-            $accessTokenEncrypted = OpenBankingService::encrypt($tokens['access_token'], $encryptionKey);
-            $refreshTokenEncrypted = OpenBankingService::encrypt($tokens['refresh_token'], $encryptionKey);
-            
-            // Calcular expiração
-            $expiresIn = $tokens['expires_in'] ?? 3600;
-            $tokenExpiraEm = date('Y-m-d H:i:s', time() + $expiresIn);
-            
-            // Salvar conexão no banco
-            $conexaoData = array_merge($conexaoTemp, [
-                'empresa_id' => $empresaId,
-                'usuario_id' => $usuarioId,
-                'access_token' => $accessTokenEncrypted,
-                'refresh_token' => $refreshTokenEncrypted,
-                'token_expira_em' => $tokenExpiraEm,
-                'consent_id' => $tokens['consent_id'] ?? null,
-                'ativo' => 1
-            ]);
-            
-            $conexaoId = $this->conexaoModel->create($conexaoData);
-            
-            if ($conexaoId) {
-                $_SESSION['success'] = 'Conexão bancária autorizada com sucesso!';
-            } else {
-                $_SESSION['error'] = 'Erro ao salvar conexão bancária';
-            }
-            
-        } catch (\Exception $e) {
-            $_SESSION['error'] = 'Erro ao processar autorização: ' . $e->getMessage();
-        }
-        
+        $_SESSION['error'] = 'O fluxo OAuth foi substituído por integração direta. Crie uma nova conexão.';
         return $response->redirect('/conexoes-bancarias');
     }
     
@@ -249,30 +204,36 @@ class ConexaoBancariaController extends Controller
             return $response->redirect('/conexoes-bancarias');
         }
         
-        // Verificar se pertence à empresa do usuário
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        if ($conexao['empresa_id'] != $empresaId) {
+        // Verificar permissão
+        $usuarioId = $_SESSION['usuario_id'] ?? null;
+        $usuarioModel = new Usuario();
+        $empresasUsuario = $usuarioModel->getEmpresas($usuarioId);
+        $empresaIds = array_column($empresasUsuario, 'id');
+        
+        if (!in_array($conexao['empresa_id'], $empresaIds)) {
             $_SESSION['error'] = 'Acesso negado';
             return $response->redirect('/conexoes-bancarias');
         }
         
         $empresa = $this->empresaModel->findById($conexao['empresa_id']);
-        $categoria = null;
-        $centroCusto = null;
         
-        if ($conexao['categoria_padrao_id']) {
-            $categoria = $this->categoriaModel->findById($conexao['categoria_padrao_id']);
-        }
+        // Buscar últimas transações importadas desta conexão
+        $transacaoModel = new TransacaoPendente();
+        $db = \App\Core\Database::getInstance()->getConnection();
+        $sqlTxn = "SELECT * FROM transacoes_pendentes 
+                   WHERE conexao_bancaria_id = :conexao_id 
+                   ORDER BY data_transacao DESC, created_at DESC LIMIT 20";
+        $stmtTxn = $db->prepare($sqlTxn);
+        $stmtTxn->execute(['conexao_id' => $conexao['id']]);
+        $ultimasTransacoes = $stmtTxn->fetchAll(\PDO::FETCH_ASSOC) ?: [];
         
-        if ($conexao['centro_custo_padrao_id']) {
-            $centroCusto = $this->centroCustoModel->findById($conexao['centro_custo_padrao_id']);
-        }
+        $bancoInfo = ConexaoBancaria::getBancoInfo($conexao['banco']);
         
         return $this->render('conexoes_bancarias/show', [
             'conexao' => $conexao,
             'empresa' => $empresa,
-            'categoria' => $categoria,
-            'centroCusto' => $centroCusto
+            'banco_info' => $bancoInfo,
+            'ultimas_transacoes' => $ultimasTransacoes
         ]);
     }
     
@@ -288,21 +249,18 @@ class ConexaoBancariaController extends Controller
             return $response->redirect('/conexoes-bancarias');
         }
         
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        if ($conexao['empresa_id'] != $empresaId) {
-            $_SESSION['error'] = 'Acesso negado';
-            return $response->redirect('/conexoes-bancarias');
-        }
-        
+        $empresaId = $conexao['empresa_id'];
         $categorias = $this->categoriaModel->findAll($empresaId);
         $centrosCusto = $this->centroCustoModel->findAll($empresaId);
-        $empresa = $this->empresaModel->findById($empresaId);
+        
+        $contaBancariaModel = new ContaBancaria();
+        $contasBancarias = $contaBancariaModel->findAll($empresaId);
         
         return $this->render('conexoes_bancarias/edit', [
             'conexao' => $conexao,
             'categorias' => $categorias,
             'centros_custo' => $centrosCusto,
-            'empresa' => $empresa
+            'contas_bancarias' => $contasBancarias
         ]);
     }
     
@@ -319,39 +277,26 @@ class ConexaoBancariaController extends Controller
             return $response->redirect('/conexoes-bancarias');
         }
         
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        if ($conexao['empresa_id'] != $empresaId) {
-            $_SESSION['error'] = 'Acesso negado';
-            return $response->redirect('/conexoes-bancarias');
-        }
-        
-        // Validar apenas campos editáveis
-        $errors = $this->validateUpdate($data);
-        if (!empty($errors)) {
-            $_SESSION['errors'] = $errors;
-            $_SESSION['old'] = $data;
-            return $response->redirect("/conexoes-bancarias/{$id}/edit");
-        }
-        
-        // Atualizar apenas campos permitidos
         $updateData = [
-            'empresa_id' => $conexao['empresa_id'],
-            'usuario_id' => $conexao['usuario_id'],
-            'banco' => $conexao['banco'],
-            'tipo' => $conexao['tipo'],
             'identificacao' => $data['identificacao'] ?? $conexao['identificacao'],
-            'access_token' => $conexao['access_token'],
-            'refresh_token' => $conexao['refresh_token'],
-            'token_expira_em' => $conexao['token_expira_em'],
-            'consent_id' => $conexao['consent_id'],
-            'auto_sync' => $data['auto_sync'] ?? 1,
-            'frequencia_sync' => $data['frequencia_sync'] ?? 'diaria',
+            'auto_sync' => isset($data['auto_sync']) ? 1 : 0,
+            'frequencia_sync' => $data['frequencia_sync'] ?? $conexao['frequencia_sync'],
             'categoria_padrao_id' => !empty($data['categoria_padrao_id']) ? $data['categoria_padrao_id'] : null,
             'centro_custo_padrao_id' => !empty($data['centro_custo_padrao_id']) ? $data['centro_custo_padrao_id'] : null,
-            'aprovacao_automatica' => $data['aprovacao_automatica'] ?? 0,
-            'ativo' => $data['ativo'] ?? 1,
-            'ultima_sincronizacao' => $conexao['ultima_sincronizacao']
+            'aprovacao_automatica' => isset($data['aprovacao_automatica']) ? 1 : 0,
+            'conta_bancaria_id' => !empty($data['conta_bancaria_id']) ? $data['conta_bancaria_id'] : null,
+            'banco_conta_id' => $data['banco_conta_id'] ?? $conexao['banco_conta_id'],
+            'ativo' => isset($data['ativo']) ? 1 : ($conexao['ativo'] ?? 1)
         ];
+        
+        // Atualizar credenciais se fornecidas
+        if (!empty($data['client_id'])) $updateData['client_id'] = $data['client_id'];
+        if (!empty($data['client_secret'])) $updateData['client_secret'] = $data['client_secret'];
+        if (!empty($data['access_token'])) $updateData['access_token'] = $data['access_token'];
+        if (!empty($data['cert_pem'])) $updateData['cert_pem'] = $data['cert_pem'];
+        if (!empty($data['key_pem'])) $updateData['key_pem'] = $data['key_pem'];
+        if (!empty($data['cert_password'])) $updateData['cert_password'] = $data['cert_password'];
+        if (!empty($data['ambiente'])) $updateData['ambiente'] = $data['ambiente'];
         
         if ($this->conexaoModel->update($id, $updateData)) {
             $_SESSION['success'] = 'Conexão atualizada com sucesso!';
@@ -363,61 +308,119 @@ class ConexaoBancariaController extends Controller
     }
     
     /**
-     * Sincronizar manualmente
+     * Testar conexão com o banco
      */
-    public function sincronizar(Request $request, Response $response, $id)
+    public function testarConexao(Request $request, Response $response, $id)
     {
-        $conexao = $this->conexaoModel->findById($id);
+        $conexao = $this->conexaoModel->getConexaoComCredenciais($id);
         
         if (!$conexao) {
             return $response->json(['error' => 'Conexão não encontrada'], 404);
         }
         
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        if ($conexao['empresa_id'] != $empresaId) {
-            return $response->json(['error' => 'Acesso negado'], 403);
+        try {
+            $service = BankServiceFactory::create($conexao['banco']);
+            $ok = $service->testarConexao($conexao);
+            
+            if ($ok) {
+                $this->conexaoModel->update($id, [
+                    'status_conexao' => 'ativa',
+                    'ultimo_erro' => null
+                ]);
+                
+                return $response->json([
+                    'success' => true,
+                    'message' => 'Conexão com ' . $service->getBancoLabel() . ' testada com sucesso!'
+                ]);
+            } else {
+                $this->conexaoModel->registrarErro($id, 'Teste de conexão falhou');
+                return $response->json([
+                    'success' => false,
+                    'message' => 'Falha ao conectar. Verifique as credenciais.'
+                ]);
+            }
+        } catch (\Exception $e) {
+            $this->conexaoModel->registrarErro($id, $e->getMessage());
+            return $response->json([
+                'error' => 'Erro ao testar: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Obter saldo em tempo real (AJAX)
+     */
+    public function saldo(Request $request, Response $response, $id)
+    {
+        $conexao = $this->conexaoModel->getConexaoComCredenciais($id);
+        
+        if (!$conexao) {
+            return $response->json(['error' => 'Conexão não encontrada'], 404);
         }
         
         try {
-            // Integração nativa Sicoob
-            if (($conexao['tipo_integracao'] ?? 'of') === 'nativo') {
-                $sicoobService = new SicoobApiService();
-                $tokenData = $sicoobService->obterToken($conexao);
-                $transacoes = $sicoobService->listarTransacoes(
-                    $conexao,
-                    $tokenData['access_token'],
-                    date('Y-m-d', strtotime('-30 days')),
-                    date('Y-m-d')
-                );
-            } else {
-                $openBankingService = new OpenBankingService();
-                
-                // Verificar se token expirou
-                if (!empty($conexao['token_expira_em']) && strtotime($conexao['token_expira_em']) < time()) {
-                    $newTokens = $openBankingService->renovarAccessToken($conexao);
-                    
-                    $conexao['access_token'] = OpenBankingService::encrypt($newTokens['access_token']);
-                    $conexao['refresh_token'] = OpenBankingService::encrypt($newTokens['refresh_token']);
-                    $conexao['token_expira_em'] = date('Y-m-d H:i:s', time() + $newTokens['expires_in']);
-                    
-                    $this->conexaoModel->update($id, $conexao);
-                }
-                
-                // Sincronizar transações
-                if ($conexao['tipo'] === 'cartao_credito') {
-                    $transacoes = $openBankingService->sincronizarCartao($conexao);
-                } else {
-                    $transacoes = $openBankingService->sincronizarExtrato($conexao);
-                }
+            $service = BankServiceFactory::create($conexao['banco']);
+            $saldoData = $service->getSaldo($conexao);
+            
+            // Atualizar saldo na conexão bancária
+            $this->conexaoModel->atualizarSaldo($id, $saldoData['saldo']);
+            
+            // Se tiver conta bancária vinculada, propagar saldo real para ela
+            if (!empty($conexao['conta_bancaria_id'])) {
+                $contaBancariaModel = new ContaBancaria();
+                $contaBancariaModel->setSaldoReal($conexao['conta_bancaria_id'], $saldoData['saldo']);
             }
+            
+            return $response->json([
+                'success' => true,
+                'saldo' => $saldoData['saldo'],
+                'saldo_formatado' => 'R$ ' . number_format($saldoData['saldo'], 2, ',', '.'),
+                'saldo_bloqueado' => $saldoData['saldo_bloqueado'] ?? 0,
+                'atualizado_em' => $saldoData['atualizado_em'],
+                'moeda' => $saldoData['moeda'] ?? 'BRL'
+            ]);
+        } catch (\Exception $e) {
+            $this->conexaoModel->registrarErro($id, $e->getMessage());
+            return $response->json([
+                'error' => 'Erro ao obter saldo: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Sincronizar extrato manualmente
+     */
+    public function sincronizar(Request $request, Response $response, $id)
+    {
+        $conexao = $this->conexaoModel->getConexaoComCredenciais($id);
+        
+        if (!$conexao) {
+            return $response->json(['error' => 'Conexão não encontrada'], 404);
+        }
+        
+        try {
+            $service = BankServiceFactory::create($conexao['banco']);
+            
+            // Buscar transações dos últimos 30 dias
+            $dataInicio = date('Y-m-d', strtotime('-30 days'));
+            $dataFim = date('Y-m-d');
+            
+            $transacoes = $service->getTransacoes($conexao, $dataInicio, $dataFim);
             
             // Processar e salvar transações
             $novasTransacoes = $this->processarTransacoes($transacoes, $conexao);
             
+            // Atualizar saldo
+            try {
+                $saldoData = $service->getSaldo($conexao);
+                $this->conexaoModel->atualizarSaldo($id, $saldoData['saldo']);
+            } catch (\Exception $e) {
+                // Se falhar obter saldo, não é fatal
+            }
+            
             // Atualizar data de sincronização
-            $this->conexaoModel->update($id, array_merge($conexao, [
-                'ultima_sincronizacao' => date('Y-m-d H:i:s')
-            ]));
+            $this->conexaoModel->atualizarUltimaSync($id);
+            $this->conexaoModel->update($id, ['status_conexao' => 'ativa', 'ultimo_erro' => null]);
             
             return $response->json([
                 'success' => true,
@@ -426,6 +429,7 @@ class ConexaoBancariaController extends Controller
             ]);
             
         } catch (\Exception $e) {
+            $this->conexaoModel->registrarErro($id, $e->getMessage());
             return $response->json([
                 'error' => 'Erro ao sincronizar: ' . $e->getMessage()
             ], 500);
@@ -437,22 +441,13 @@ class ConexaoBancariaController extends Controller
      */
     private function processarTransacoes($transacoes, $conexao)
     {
-        $transacaoPendenteModel = new \App\Models\TransacaoPendente();
-        $classificadorService = new \includes\services\ClassificadorIAService($conexao['empresa_id']);
+        $transacaoPendenteModel = new TransacaoPendente();
+        $classificadorService = new ClassificadorIAService($conexao['empresa_id']);
         
         $novas = [];
         
         foreach ($transacoes as $transacao) {
-            // Gerar hash único para evitar duplicatas
-            $hash = hash('sha256', $conexao['id'] . $transacao['transacao_id_banco'] . $transacao['data_transacao'] . $transacao['valor']);
-            
-            // Verificar se já existe
-            $existente = $transacaoPendenteModel->findByHash($hash);
-            if ($existente) {
-                continue;
-            }
-            
-            // Classificar com IA
+            // Classificar (regras fixas -> histórico -> IA -> fallback)
             $classificacao = $classificadorService->analisar($transacao);
             
             // Salvar transação pendente
@@ -464,12 +459,16 @@ class ConexaoBancariaController extends Controller
                 'valor' => $transacao['valor'],
                 'tipo' => $transacao['tipo'],
                 'origem' => $transacao['origem'],
-                'transacao_hash' => $hash,
+                'banco_transacao_id' => $transacao['banco_transacao_id'] ?? null,
+                'metodo_pagamento' => $transacao['metodo_pagamento'] ?? null,
+                'saldo_apos' => $transacao['saldo_apos'] ?? null,
+                'referencia_externa' => $transacao['banco_transacao_id'] ?? null,
                 'categoria_sugerida_id' => $classificacao['categoria_id'] ?? $conexao['categoria_padrao_id'],
                 'centro_custo_sugerido_id' => $classificacao['centro_custo_id'] ?? $conexao['centro_custo_padrao_id'],
                 'fornecedor_sugerido_id' => $classificacao['fornecedor_id'] ?? null,
                 'cliente_sugerido_id' => $classificacao['cliente_id'] ?? null,
                 'confianca_ia' => $classificacao['confianca'] ?? null,
+                'justificativa_ia' => $classificacao['justificativa'] ?? null,
                 'status' => 'pendente'
             ];
             
@@ -494,14 +493,7 @@ class ConexaoBancariaController extends Controller
             return $response->redirect('/conexoes-bancarias');
         }
         
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        if ($conexao['empresa_id'] != $empresaId) {
-            $_SESSION['error'] = 'Acesso negado';
-            return $response->redirect('/conexoes-bancarias');
-        }
-        
-        // Soft delete
-        if ($this->conexaoModel->update($id, array_merge($conexao, ['ativo' => 0]))) {
+        if ($this->conexaoModel->update($id, ['ativo' => 0, 'status_conexao' => 'desconectada'])) {
             $_SESSION['success'] = 'Conexão desativada com sucesso!';
         } else {
             $_SESSION['error'] = 'Erro ao desativar conexão';
@@ -517,33 +509,10 @@ class ConexaoBancariaController extends Controller
     {
         $errors = [];
         
-        // Banco
         if (empty($data['banco'])) {
             $errors['banco'] = 'O banco é obrigatório';
-        } elseif (!in_array($data['banco'], ['sicredi', 'sicoob', 'bradesco', 'itau'])) {
-            $errors['banco'] = 'Banco inválido';
-        }
-        
-        // Tipo
-        if (empty($data['tipo'])) {
-            $errors['tipo'] = 'O tipo de conta é obrigatório';
-        } elseif (!in_array($data['tipo'], ['conta_corrente', 'conta_poupanca', 'cartao_credito'])) {
-            $errors['tipo'] = 'Tipo de conta inválido';
-        }
-        
-        return $errors;
-    }
-    
-    /**
-     * Validar dados de atualização
-     */
-    protected function validateUpdate($data)
-    {
-        $errors = [];
-        
-        // Frequência de sync
-        if (isset($data['frequencia_sync']) && !in_array($data['frequencia_sync'], ['manual', '10min', '30min', 'horaria', 'diaria', 'semanal'])) {
-            $errors['frequencia_sync'] = 'Frequência de sincronização inválida';
+        } elseif (!BankServiceFactory::isSuportado($data['banco'])) {
+            $errors['banco'] = 'Banco não suportado: ' . $data['banco'];
         }
         
         return $errors;

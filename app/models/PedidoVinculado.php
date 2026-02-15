@@ -217,9 +217,9 @@ class PedidoVinculado extends Model
     public function create($data)
     {
         $sql = "INSERT INTO {$this->table} 
-                (empresa_id, origem, origem_id, numero_pedido, cliente_id, data_pedido, data_atualizacao, status, valor_total, valor_custo_total, frete, desconto, bonificado, pedido_pai_id, observacoes, dados_origem) 
+                (empresa_id, origem, origem_id, numero_pedido, cliente_id, data_pedido, data_atualizacao, status, status_origem, valor_total, valor_custo_total, frete, desconto, bonificado, pedido_pai_id, observacoes, dados_origem) 
                 VALUES 
-                (:empresa_id, :origem, :origem_id, :numero_pedido, :cliente_id, :data_pedido, :data_atualizacao, :status, :valor_total, :valor_custo_total, :frete, :desconto, :bonificado, :pedido_pai_id, :observacoes, :dados_origem)";
+                (:empresa_id, :origem, :origem_id, :numero_pedido, :cliente_id, :data_pedido, :data_atualizacao, :status, :status_origem, :valor_total, :valor_custo_total, :frete, :desconto, :bonificado, :pedido_pai_id, :observacoes, :dados_origem)";
         
         $stmt = $this->db->prepare($sql);
         
@@ -232,6 +232,7 @@ class PedidoVinculado extends Model
             'data_pedido' => $data['data_pedido'],
             'data_atualizacao' => $data['data_atualizacao'] ?? date('Y-m-d H:i:s'),
             'status' => $data['status'] ?? self::STATUS_PENDENTE,
+            'status_origem' => $data['status_origem'] ?? null,
             'valor_total' => $data['valor_total'],
             'valor_custo_total' => $data['valor_custo_total'] ?? 0,
             'frete' => $data['frete'] ?? 0,
@@ -256,6 +257,7 @@ class PedidoVinculado extends Model
                 data_pedido = :data_pedido,
                 data_atualizacao = :data_atualizacao,
                 status = :status,
+                status_origem = :status_origem,
                 valor_total = :valor_total,
                 valor_custo_total = :valor_custo_total,
                 dados_origem = :dados_origem
@@ -270,6 +272,7 @@ class PedidoVinculado extends Model
             'data_pedido' => $data['data_pedido'],
             'data_atualizacao' => $data['data_atualizacao'] ?? date('Y-m-d H:i:s'),
             'status' => $data['status'],
+            'status_origem' => $data['status_origem'] ?? null,
             'valor_total' => $data['valor_total'],
             'valor_custo_total' => $data['valor_custo_total'] ?? 0,
             'dados_origem' => isset($data['dados_origem']) ? json_encode($data['dados_origem']) : null
@@ -324,7 +327,7 @@ class PedidoVinculado extends Model
     public function updateParcial($id, $data)
     {
         $allowedFields = [
-            'frete', 'desconto', 'bonificado', 'pedido_pai_id', 'status', 'observacoes',
+            'frete', 'desconto', 'bonificado', 'pedido_pai_id', 'status', 'status_origem', 'observacoes',
             'numero_pedido', 'cliente_id', 'data_pedido', 
             'valor_total', 'valor_custo_total'
         ];

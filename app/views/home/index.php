@@ -553,7 +553,12 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                 </h3>
                 <div class="space-y-3">
                     <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
-                        <span class="text-sm text-gray-600 dark:text-gray-400">Saldo em Bancos</span>
+                        <span class="text-sm text-gray-600 dark:text-gray-400">
+                            Saldo em Bancos
+                            <?php if (($contas_bancarias['contas_com_api'] ?? 0) > 0): ?>
+                                <span class="inline-flex items-center ml-1 px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" title="Saldo atualizado via API bancária">API</span>
+                            <?php endif; ?>
+                        </span>
                         <span class="font-bold text-gray-900 dark:text-gray-100">R$ <?= number_format($contas_bancarias['saldo_total'], 2, ',', '.') ?></span>
                     </div>
                     <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
@@ -778,16 +783,44 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
 
     <!-- Saldo Total das Contas -->
     <div class="bg-gradient-to-r from-emerald-500 to-green-600 dark:from-emerald-700 dark:to-green-800 rounded-2xl p-8 shadow-xl mb-8">
-            <div class="flex items-center justify-between">
-                <div>
-                <h3 class="text-white text-lg font-semibold mb-2">Saldo Total em Contas Bancárias</h3>
-                <p class="text-white/80 text-sm">Soma de todas as contas ativas</p>
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-white text-lg font-semibold mb-2">Saldo Real em Contas Bancárias</h3>
+                <p class="text-white/80 text-sm">
+                    <?php if (($contas_bancarias['contas_com_api'] ?? 0) > 0): ?>
+                        <?= $contas_bancarias['contas_com_api'] ?> conta(s) com saldo via API bancária
+                    <?php else: ?>
+                        Soma de todas as contas ativas
+                    <?php endif; ?>
+                </p>
             </div>
             <div class="text-right">
                 <p class="text-4xl font-bold text-white">R$ <?= number_format($contas_bancarias['saldo_total'], 2, ',', '.') ?></p>
                 <p class="text-white/80 text-sm mt-1"><?= $totais['contas_bancarias'] ?> conta(s)</p>
             </div>
         </div>
+        <?php 
+        $diferenca = $contas_bancarias['diferenca'] ?? 0;
+        $saldoCalc = $contas_bancarias['saldo_calculado'] ?? $contas_bancarias['saldo_total'];
+        if (($contas_bancarias['contas_com_api'] ?? 0) > 0 && abs($diferenca) > 0.01): 
+        ?>
+        <div class="mt-4 pt-4 border-t border-white/20 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+            <div>
+                <p class="text-white/70">Saldo Real (API)</p>
+                <p class="text-white font-bold text-lg">R$ <?= number_format($contas_bancarias['saldo_total'], 2, ',', '.') ?></p>
+            </div>
+            <div>
+                <p class="text-white/70">Saldo Calculado (Sistema)</p>
+                <p class="text-white font-bold text-lg">R$ <?= number_format($saldoCalc, 2, ',', '.') ?></p>
+            </div>
+            <div>
+                <p class="text-white/70">Diferença</p>
+                <p class="font-bold text-lg <?= $diferenca >= 0 ? 'text-green-200' : 'text-red-200' ?>">
+                    <?= $diferenca >= 0 ? '+' : '' ?>R$ <?= number_format($diferenca, 2, ',', '.') ?>
+                </p>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 
     <!-- Métricas de Produtos -->

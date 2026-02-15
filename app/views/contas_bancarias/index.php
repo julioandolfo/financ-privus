@@ -62,30 +62,38 @@
                 <thead class="bg-gradient-to-r from-blue-600 to-indigo-600">
                     <tr>
                         <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Banco</th>
-                        <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Agência</th>
-                        <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Conta</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Agência / Conta</th>
                         <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Tipo</th>
-                        <th class="px-6 py-4 text-right text-xs font-bold text-white uppercase tracking-wider">Saldo Atual</th>
-                        <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-4 text-right text-xs font-bold text-white uppercase tracking-wider">Saldo Real</th>
+                        <th class="px-6 py-4 text-right text-xs font-bold text-white uppercase tracking-wider">Saldo Calculado</th>
+                        <th class="px-6 py-4 text-right text-xs font-bold text-white uppercase tracking-wider">Diferença</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Fonte</th>
                         <th class="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-wider">Ações</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    <?php foreach ($contasBancarias as $conta): ?>
+                    <?php foreach ($contasBancarias as $conta): 
+                        $saldoReal = (float) $conta['saldo_atual'];
+                        $saldoCalc = (float) ($conta['saldo_calculado'] ?? $conta['saldo_atual']);
+                        $diferenca = $saldoReal - $saldoCalc;
+                        $temApi = !empty($conta['tem_conexao_api']);
+                    ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
                                     <?= htmlspecialchars($conta['banco_nome']) ?>
                                 </div>
-                                <div class="text-sm text-gray-500 dark:text-gray-400">
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
                                     Cód. <?= htmlspecialchars($conta['banco_codigo']) ?>
+                                    <?php if ($temApi): ?>
+                                        <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                            API
+                                        </span>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                <?= htmlspecialchars($conta['agencia']) ?>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                <?= htmlspecialchars($conta['conta']) ?>
+                                <?= htmlspecialchars($conta['agencia']) ?> / <?= htmlspecialchars($conta['conta']) ?>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 <?php 
@@ -94,11 +102,7 @@
                                     'poupanca' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
                                     'investimento' => 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
                                 ];
-                                $tipoLabels = [
-                                    'corrente' => 'Corrente',
-                                    'poupanca' => 'Poupança',
-                                    'investimento' => 'Investimento'
-                                ];
+                                $tipoLabels = ['corrente' => 'Corrente', 'poupanca' => 'Poupança', 'investimento' => 'Investimento'];
                                 $colorClass = $tipoColors[$conta['tipo_conta']] ?? $tipoColors['corrente'];
                                 $label = $tipoLabels[$conta['tipo_conta']] ?? 'Corrente';
                                 ?>
@@ -106,13 +110,40 @@
                                     <?= $label ?>
                                 </span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold <?= $conta['saldo_atual'] >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' ?>">
-                                R$ <?= number_format($conta['saldo_atual'], 2, ',', '.') ?>
+                            <!-- Saldo Real (API ou calculado, o que estiver disponível) -->
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-bold <?= $saldoReal >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' ?>">
+                                R$ <?= number_format($saldoReal, 2, ',', '.') ?>
+                                <?php if ($temApi && !empty($conta['saldo_api_atualizado_em'])): ?>
+                                    <div class="text-xs font-normal text-gray-400 dark:text-gray-500">
+                                        <?= date('d/m H:i', strtotime($conta['saldo_api_atualizado_em'])) ?>
+                                    </div>
+                                <?php endif; ?>
                             </td>
+                            <!-- Saldo Calculado (receitas - despesas) -->
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 dark:text-gray-400">
+                                R$ <?= number_format($saldoCalc, 2, ',', '.') ?>
+                            </td>
+                            <!-- Diferença -->
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                                <?php if (abs($diferenca) < 0.01): ?>
+                                    <span class="text-gray-400">-</span>
+                                <?php else: ?>
+                                    <span class="<?= $diferenca >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' ?>">
+                                        <?= $diferenca >= 0 ? '+' : '' ?>R$ <?= number_format($diferenca, 2, ',', '.') ?>
+                                    </span>
+                                <?php endif; ?>
+                            </td>
+                            <!-- Fonte do saldo -->
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full <?= $conta['ativo'] ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' ?>">
-                                    <?= $conta['ativo'] ? 'Ativa' : 'Inativa' ?>
-                                </span>
+                                <?php if ($temApi): ?>
+                                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                        API Banco
+                                    </span>
+                                <?php else: ?>
+                                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                                        Calculado
+                                    </span>
+                                <?php endif; ?>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                 <div class="flex items-center justify-center space-x-3">
@@ -131,6 +162,15 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                         </svg>
                                     </a>
+                                    <?php if ($temApi): ?>
+                                        <a href="<?= $this->baseUrl('/conexoes-bancarias/' . $conta['conexao_id']) ?>" 
+                                           class="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 transition-colors" 
+                                           title="Ver Conexão API">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                            </svg>
+                                        </a>
+                                    <?php endif; ?>
                                     <form method="POST" action="<?= $this->baseUrl('/contas-bancarias/' . $conta['id'] . '/delete') ?>" class="inline" onsubmit="return confirm('Tem certeza que deseja excluir esta conta bancária?');">
                                         <button type="submit" 
                                                 class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 transition-colors" 

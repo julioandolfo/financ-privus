@@ -68,15 +68,16 @@
                                                 class="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
                                                 name="mapeamento[<?= htmlspecialchars($status['chave']) ?>]"
                                             >
-                                                <option value="">-- Não mapear --</option>
-                                                <?php foreach ($statusSistema as $key => $nome): ?>
-                                                    <option 
-                                                        value="<?= $key ?>"
-                                                        <?= (isset($mapeamento[$status['chave']]) && $mapeamento[$status['chave']] === $key) ? 'selected' : '' ?>
-                                                    >
-                                                        <?= htmlspecialchars($nome) ?>
-                                                    </option>
-                                                <?php endforeach; ?>
+                                <option value="">-- Não mapear (usar padrão) --</option>
+                                <?php foreach ($statusSistema as $key => $nome): ?>
+                                    <option 
+                                        value="<?= $key ?>"
+                                        <?= (isset($mapeamento[$status['chave']]) && $mapeamento[$status['chave']] === $key) ? 'selected' : '' ?>
+                                        <?= $key === 'nao_sincronizar' ? 'class="text-red-600 font-bold"' : '' ?>
+                                    >
+                                        <?= htmlspecialchars($nome) ?>
+                                    </option>
+                                <?php endforeach; ?>
                                             </select>
                                         </td>
                                     </tr>
@@ -85,10 +86,22 @@
                         </table>
                     </div>
 
-                    <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
-                        <p class="text-sm text-blue-700 dark:text-blue-300">
-                            💡 <strong>Dica:</strong> Status customizados de plugins como "Woo Status Order" aparecem automaticamente aqui após clicar em "Atualizar Status".
-                        </p>
+                    <div class="mt-6 space-y-3">
+                        <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                            <p class="text-sm text-blue-700 dark:text-blue-300">
+                                💡 <strong>Dica:</strong> Status customizados de plugins como "Woo Status Order" aparecem automaticamente aqui após clicar em "Atualizar Status".
+                            </p>
+                        </div>
+                        <div class="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                            <p class="text-sm text-amber-700 dark:text-amber-300">
+                                🚫 <strong>"Não sincronizar":</strong> Pedidos com este status serão <strong>ignorados</strong> durante a sincronização. Útil para status como "Rascunho", "Lixeira" ou qualquer status que você não deseja importar para o sistema financeiro.
+                            </p>
+                        </div>
+                        <div class="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                            <p class="text-sm text-purple-700 dark:text-purple-300">
+                                🏷️ <strong>"-- Não mapear --":</strong> Status sem mapeamento usarão o mapeamento padrão automático (ex: processing → Em Processamento).
+                            </p>
+                        </div>
                     </div>
                 <?php endif; ?>
             </div>

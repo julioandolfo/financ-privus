@@ -1,6 +1,7 @@
 <?php
 $old = $this->session->get('old') ?? [];
 $errors = $this->session->get('errors') ?? [];
+$camposJson = json_encode($campos_por_banco ?? [], JSON_UNESCAPED_UNICODE);
 ?>
 
 <div class="max-w-3xl mx-auto">
@@ -11,30 +12,28 @@ $errors = $this->session->get('errors') ?? [];
             </svg>
             Voltar
         </a>
-        <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
-            🏦 Nova Conexão Bancária
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            Nova Conexão Bancária
         </h1>
         <p class="text-gray-600 dark:text-gray-400 mt-2">
-            Configure uma nova conexão com seu banco ou cartão de crédito
+            Conecte sua conta bancária via API direta para sincronizar saldos e extratos automaticamente.
         </p>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8" x-data="conexaoForm()">
         <?php if (empty($empresas_usuario)): ?>
             <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl p-4 mb-4">
-                <p class="text-sm text-yellow-800 dark:text-yellow-200 font-semibold">Nenhuma empresa encontrada para este usuário.</p>
-                <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">Cadastre uma empresa ou peça acesso a uma existente para criar conexões bancárias.</p>
+                <p class="text-sm text-yellow-800 dark:text-yellow-200 font-semibold">Nenhuma empresa encontrada.</p>
             </div>
         <?php endif; ?>
 
-        <form action="/conexoes-bancarias/iniciar-consentimento" method="POST" x-data="conexaoForm()">
+        <form action="/conexoes-bancarias/store" method="POST">
             <!-- Empresa -->
             <div class="mb-6">
                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Empresa <span class="text-red-500">*</span>
                 </label>
-                <select name="empresa_id" required
-                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($errors['empresa_id']) ? 'border-red-500' : '' ?>">
+                <select name="empresa_id" required class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     <option value="">Selecione...</option>
                     <?php foreach ($empresas_usuario as $emp): ?>
                         <option value="<?= $emp['id'] ?>" <?= ($empresa_id_selecionada == $emp['id']) ? 'selected' : '' ?>>
@@ -42,195 +41,187 @@ $errors = $this->session->get('errors') ?? [];
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <?php if (isset($errors['empresa_id'])): ?>
-                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $errors['empresa_id'] ?></p>
-                <?php endif; ?>
             </div>
             
             <!-- Banco -->
             <div class="mb-6">
-                <label for="banco" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Banco <span class="text-red-500">*</span>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Banco / Instituição <span class="text-red-500">*</span>
                 </label>
-                <select name="banco" id="banco" required 
-                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($errors['banco']) ? 'border-red-500' : '' ?>">
-                    <option value="">Selecione o banco...</option>
-                    <option value="sicredi" <?= ($old['banco'] ?? '') == 'sicredi' ? 'selected' : '' ?>>Sicredi</option>
-                    <option value="sicoob" <?= ($old['banco'] ?? '') == 'sicoob' ? 'selected' : '' ?>>Sicoob</option>
-                    <option value="bradesco" <?= ($old['banco'] ?? '') == 'bradesco' ? 'selected' : '' ?>>Bradesco</option>
-                    <option value="itau" <?= ($old['banco'] ?? '') == 'itau' ? 'selected' : '' ?>>Itaú</option>
-                </select>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <?php foreach ($bancos_disponiveis as $key => $banco): ?>
+                    <label class="relative cursor-pointer" :class="bancoSelecionado === '<?= $key ?>' ? 'ring-2 ring-blue-500' : ''">
+                        <input type="radio" name="banco" value="<?= $key ?>" class="sr-only" 
+                               x-model="bancoSelecionado" @change="onBancoChange('<?= $key ?>')"
+                               <?= ($old['banco'] ?? '') === $key ? 'checked' : '' ?>>
+                        <div class="p-4 rounded-xl border-2 transition-all text-center hover:border-blue-400 dark:hover:border-blue-500"
+                             :class="bancoSelecionado === '<?= $key ?>' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700'">
+                            <div class="text-2xl mb-1"><?= $banco['icone'] === 'wallet' ? '💳' : '🏦' ?></div>
+                            <div class="font-semibold text-sm text-gray-900 dark:text-gray-100"><?= $banco['nome'] ?></div>
+                        </div>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
                 <?php if (isset($errors['banco'])): ?>
                     <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $errors['banco'] ?></p>
                 <?php endif; ?>
             </div>
 
-            <!-- Tipo -->
+            <!-- Tipo de Conta -->
             <div class="mb-6">
-                <label for="tipo" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Tipo de Conta <span class="text-red-500">*</span>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Tipo de Conta
                 </label>
-                <select name="tipo" id="tipo" required
-                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all <?= isset($errors['tipo']) ? 'border-red-500' : '' ?>">
-                    <option value="">Selecione o tipo...</option>
-                    <option value="conta_corrente" <?= ($old['tipo'] ?? '') == 'conta_corrente' ? 'selected' : '' ?>>Conta Corrente</option>
-                    <option value="conta_poupanca" <?= ($old['tipo'] ?? '') == 'conta_poupanca' ? 'selected' : '' ?>>Conta Poupança</option>
-                    <option value="cartao_credito" <?= ($old['tipo'] ?? '') == 'cartao_credito' ? 'selected' : '' ?>>Cartão de Crédito</option>
+                <select name="tipo" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    <option value="conta_corrente">Conta Corrente</option>
+                    <option value="conta_poupanca">Conta Poupança</option>
+                    <option value="cartao_credito">Cartão de Crédito</option>
                 </select>
-                <?php if (isset($errors['tipo'])): ?>
-                    <p class="mt-2 text-sm text-red-600 dark:text-red-400"><?= $errors['tipo'] ?></p>
-                <?php endif; ?>
             </div>
 
             <!-- Identificação -->
             <div class="mb-6">
-                <label for="identificacao" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Identificação (Opcional)
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Identificação (Apelido)
                 </label>
-                <input type="text" id="identificacao" name="identificacao" 
-                       value="<?= htmlspecialchars($old['identificacao'] ?? '') ?>"
-                       placeholder="Ex: Conta Principal, Cartão *1234"
-                       class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Apelido para identificar esta conexão</p>
+                <input type="text" name="identificacao" value="<?= htmlspecialchars($old['identificacao'] ?? '') ?>"
+                       placeholder="Ex: Conta Principal, Conta Fornecedores"
+                       class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+            </div>
+
+            <!-- Vincular a Conta Bancária do Sistema -->
+            <?php if (!empty($contas_bancarias)): ?>
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Vincular a Conta do Sistema (Opcional)
+                </label>
+                <select name="conta_bancaria_id" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    <option value="">Nenhuma (não vincular)</option>
+                    <?php foreach ($contas_bancarias as $cb): ?>
+                        <option value="<?= $cb['id'] ?>">
+                            <?= htmlspecialchars($cb['banco_nome'] . ' - Ag: ' . $cb['agencia'] . ' Cc: ' . $cb['conta']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Vincula o saldo real da API ao saldo da conta no sistema</p>
+            </div>
+            <?php endif; ?>
+
+            <!-- ============================================ -->
+            <!-- Campos Dinâmicos por Banco (via Alpine.js) -->
+            <!-- ============================================ -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mb-6" x-show="bancoSelecionado" x-transition>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                    Credenciais <span x-text="bancoLabel" class="text-blue-600 dark:text-blue-400"></span>
+                </h3>
+
+                <template x-for="campo in camposVisiveis" :key="campo.name">
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2" x-text="campo.label"></label>
+                        
+                        <!-- Text / Password -->
+                        <template x-if="campo.type === 'text' || campo.type === 'password'">
+                            <div>
+                                <input :type="campo.type" :name="campo.name" :placeholder="campo.placeholder || ''"
+                                       :required="campo.required"
+                                       class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                            </div>
+                        </template>
+                        
+                        <!-- Textarea (certificados) -->
+                        <template x-if="campo.type === 'textarea'">
+                            <div>
+                                <textarea :name="campo.name" rows="4" :placeholder="campo.placeholder || ''"
+                                          :required="campo.required"
+                                          class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono text-xs"></textarea>
+                            </div>
+                        </template>
+                        
+                        <!-- Select -->
+                        <template x-if="campo.type === 'select'">
+                            <div>
+                                <select :name="campo.name" :required="campo.required"
+                                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                    <template x-for="(label, val) in campo.options" :key="val">
+                                        <option :value="val" x-text="label" :selected="val === campo.default"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </template>
+                        
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-show="campo.help" x-text="campo.help"></p>
+                    </div>
+                </template>
             </div>
 
             <!-- Configurações de Sincronização -->
             <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mb-6">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Configurações de Sincronização</h3>
                 
-                <!-- Auto Sync -->
                 <div class="mb-4">
                     <label class="flex items-center cursor-pointer">
-                        <input type="checkbox" name="auto_sync" value="1" <?= ($old['auto_sync'] ?? '1') == '1' ? 'checked' : '' ?>
-                               class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                        <input type="checkbox" name="auto_sync" value="1" checked
+                               class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
                         <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-100">Sincronização Automática</span>
                     </label>
-                    <p class="ml-8 mt-1 text-xs text-gray-500 dark:text-gray-400">O sistema buscará novas transações automaticamente</p>
                 </div>
 
-                <!-- Frequência -->
                 <div class="mb-4">
-                    <label for="frequencia_sync" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        Frequência de Sincronização
-                    </label>
-                    <select name="frequencia_sync" id="frequencia_sync"
-                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                        <option value="manual" <?= ($old['frequencia_sync'] ?? 'diaria') == 'manual' ? 'selected' : '' ?>>Manual (Sob demanda)</option>
-                        <option value="10min" <?= ($old['frequencia_sync'] ?? 'diaria') == '10min' ? 'selected' : '' ?>>A cada 10 minutos</option>
-                        <option value="30min" <?= ($old['frequencia_sync'] ?? 'diaria') == '30min' ? 'selected' : '' ?>>A cada 30 minutos</option>
-                        <option value="horaria" <?= ($old['frequencia_sync'] ?? 'diaria') == 'horaria' ? 'selected' : '' ?>>A cada hora</option>
-                        <option value="diaria" <?= ($old['frequencia_sync'] ?? 'diaria') == 'diaria' ? 'selected' : '' ?>>Diária (1x por dia)</option>
-                        <option value="semanal" <?= ($old['frequencia_sync'] ?? 'diaria') == 'semanal' ? 'selected' : '' ?>>Semanal (1x por semana)</option>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Frequência</label>
+                    <select name="frequencia_sync" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        <option value="manual">Manual</option>
+                        <option value="horaria">A cada hora</option>
+                        <option value="diaria" selected>Diária</option>
+                        <option value="semanal">Semanal</option>
                     </select>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        ⚠️ Frequências menores que 1 hora podem gerar mais custos de API
-                    </p>
                 </div>
             </div>
 
-            <!-- Configurações Padrão -->
+            <!-- Classificação Padrão -->
             <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mb-6">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Classificação Padrão</h3>
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Estas configurações serão usadas caso a IA não consiga classificar uma transação</p>
-
-                <!-- Categoria Padrão -->
-                <div class="mb-4">
-                    <label for="categoria_padrao_id" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        Categoria Padrão (Opcional)
-                    </label>
-                    <select name="categoria_padrao_id" id="categoria_padrao_id"
-                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                        <option value="">Nenhuma</option>
-                        <?php foreach ($categorias as $categoria): ?>
-                            <option value="<?= $categoria['id'] ?>" <?= ($old['categoria_padrao_id'] ?? '') == $categoria['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($categoria['codigo'] . ' - ' . $categoria['nome'] . ' (' . ucfirst($categoria['tipo']) . ')') ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <!-- Centro de Custo Padrão -->
-                <div class="mb-4">
-                    <label for="centro_custo_padrao_id" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        Centro de Custo Padrão (Opcional)
-                    </label>
-                    <select name="centro_custo_padrao_id" id="centro_custo_padrao_id"
-                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                        <option value="">Nenhum</option>
-                        <?php foreach ($centros_custo as $centro): ?>
-                            <option value="<?= $centro['id'] ?>" <?= ($old['centro_custo_padrao_id'] ?? '') == $centro['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($centro['codigo'] . ' - ' . $centro['nome']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <!-- Aprovação Automática -->
-                <div class="mb-4">
-                    <label class="flex items-center cursor-pointer">
-                        <input type="checkbox" name="aprovacao_automatica" value="1" <?= ($old['aprovacao_automatica'] ?? '0') == '1' ? 'checked' : '' ?>
-                               class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                        <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-100">Aprovação Automática</span>
-                    </label>
-                    <p class="ml-8 mt-1 text-xs text-red-500 dark:text-red-400">⚠️ Atenção: transações classificadas com alta confiança serão aprovadas automaticamente</p>
-                </div>
-            </div>
-
-            <!-- Credenciais Sicoob / Open Finance -->
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mb-6">
-                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Credenciais Open Finance (Sicoob)</h3>
-
-                <div class="mb-4">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Tipo de Integração</label>
-                    <select name="tipo_integracao" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                        <option value="of" <?= ($old['tipo_integracao'] ?? 'of') == 'of' ? 'selected' : '' ?>>Open Finance (padrão)</option>
-                        <option value="nativo" <?= ($old['tipo_integracao'] ?? 'of') == 'nativo' ? 'selected' : '' ?>>Sicoob (API nativa)</option>
-                    </select>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Selecione Open Finance ou a API nativa do Sicoob.</p>
-                </div>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Usadas quando a IA não conseguir classificar</p>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Ambiente</label>
-                        <select name="ambiente" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                            <option value="sandbox" <?= ($old['ambiente'] ?? 'sandbox') == 'sandbox' ? 'selected' : '' ?>>Sandbox</option>
-                            <option value="producao" <?= ($old['ambiente'] ?? 'sandbox') == 'producao' ? 'selected' : '' ?>>Produção</option>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Categoria Padrão</label>
+                        <select name="categoria_padrao_id" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                            <option value="">Nenhuma</option>
+                            <?php foreach ($categorias as $cat): ?>
+                                <option value="<?= $cat['id'] ?>">
+                                    <?= htmlspecialchars($cat['codigo'] . ' - ' . $cat['nome'] . ' (' . ucfirst($cat['tipo']) . ')') ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Client ID</label>
-                        <input type="text" name="client_id" value="<?= htmlspecialchars($old['client_id'] ?? '') ?>" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="client_id fornecido pelo Sicoob">
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Centro de Custo Padrão</label>
+                        <select name="centro_custo_padrao_id" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                            <option value="">Nenhum</option>
+                            <?php foreach ($centros_custo as $cc): ?>
+                                <option value="<?= $cc['id'] ?>"><?= htmlspecialchars($cc['codigo'] . ' - ' . $cc['nome']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Client Secret</label>
-                        <input type="password" name="client_secret" value="<?= htmlspecialchars($old['client_secret'] ?? '') ?>" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="client_secret fornecido pelo Sicoob">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Certificado (PEM)</label>
-                        <textarea name="cert_pem" rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="-----BEGIN CERTIFICATE-----\n..."><?= htmlspecialchars($old['cert_pem'] ?? '') ?></textarea>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Cole aqui o certificado cliente em formato PEM. Não armazenamos em arquivo público.</p>
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Chave Privada (PEM)</label>
-                        <textarea name="key_pem" rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="-----BEGIN PRIVATE KEY-----\n..."><?= htmlspecialchars($old['key_pem'] ?? '') ?></textarea>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Cole aqui a chave privada correspondente. Use senha se necessário.</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Senha do Certificado (se houver)</label>
-                        <input type="password" name="cert_password" value="<?= htmlspecialchars($old['cert_password'] ?? '') ?>" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Senha do PFX/Pem (opcional)">
-                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" name="aprovacao_automatica" value="1"
+                               class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                        <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-100">Aprovação Automática (transações com alta confiança)</span>
+                    </label>
                 </div>
             </div>
 
             <!-- Botões -->
             <div class="flex gap-4">
-                <a href="/conexoes-bancarias" 
-                   class="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 text-center">
+                <a href="/conexoes-bancarias" class="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 text-center">
                     Cancelar
                 </a>
-                <button type="submit" 
-                        class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
-                    Conectar Banco
+                <button type="submit" :disabled="!bancoSelecionado"
+                        class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+                    Criar Conexão
                 </button>
             </div>
         </form>
@@ -239,8 +230,25 @@ $errors = $this->session->get('errors') ?? [];
 
 <script>
 function conexaoForm() {
+    const todosOsCampos = <?= $camposJson ?>;
+    const bancosLabels = <?= json_encode(array_map(fn($b) => $b['nome'], $bancos_disponiveis ?? []), JSON_UNESCAPED_UNICODE) ?>;
+    
     return {
-        // Futuras funcionalidades
+        bancoSelecionado: '<?= $old['banco'] ?? '' ?>',
+        camposVisiveis: [],
+        bancoLabel: '',
+        
+        onBancoChange(banco) {
+            this.bancoSelecionado = banco;
+            this.camposVisiveis = todosOsCampos[banco] || [];
+            this.bancoLabel = bancosLabels[banco] || banco;
+        },
+        
+        init() {
+            if (this.bancoSelecionado) {
+                this.onBancoChange(this.bancoSelecionado);
+            }
+        }
     }
 }
 </script>

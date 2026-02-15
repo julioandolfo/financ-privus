@@ -88,13 +88,15 @@ class TransacaoPendente extends Model
                  valor, tipo, origem, referencia_externa, transacao_hash,
                  categoria_sugerida_id, centro_custo_sugerido_id, 
                  fornecedor_sugerido_id, cliente_sugerido_id, 
-                 confianca_ia, justificativa_ia) 
+                 confianca_ia, justificativa_ia,
+                 banco_transacao_id, metodo_pagamento, saldo_apos) 
                 VALUES 
                 (:empresa_id, :conexao_bancaria_id, :data_transacao, :descricao_original,
                  :valor, :tipo, :origem, :referencia_externa, :transacao_hash,
                  :categoria_sugerida_id, :centro_custo_sugerido_id,
                  :fornecedor_sugerido_id, :cliente_sugerido_id,
-                 :confianca_ia, :justificativa_ia)";
+                 :confianca_ia, :justificativa_ia,
+                 :banco_transacao_id, :metodo_pagamento, :saldo_apos)";
         
         $stmt = $this->db->prepare($sql);
         
@@ -113,7 +115,10 @@ class TransacaoPendente extends Model
             'fornecedor_sugerido_id' => $data['fornecedor_sugerido_id'] ?? null,
             'cliente_sugerido_id' => $data['cliente_sugerido_id'] ?? null,
             'confianca_ia' => $data['confianca_ia'] ?? null,
-            'justificativa_ia' => $data['justificativa_ia'] ?? null
+            'justificativa_ia' => $data['justificativa_ia'] ?? null,
+            'banco_transacao_id' => $data['banco_transacao_id'] ?? null,
+            'metodo_pagamento' => $data['metodo_pagamento'] ?? null,
+            'saldo_apos' => $data['saldo_apos'] ?? null
         ]) ? $this->db->lastInsertId() : false;
     }
     
@@ -213,17 +218,28 @@ class TransacaoPendente extends Model
     }
     
     /**
-     * Gerar hash único para detectar duplicatas
+     * Gerar hash único para detectar duplicatas.
+     * Usa banco_transacao_id quando disponível (mais confiável).
      */
     private function gerarHash($data)
     {
-        $string = sprintf(
-            '%d|%s|%s|%s',
-            $data['empresa_id'],
-            $data['data_transacao'],
-            $data['valor'],
-            $data['descricao_original']
-        );
+        // Se temos o ID da transação no banco, usar como base (mais preciso)
+        if (!empty($data['banco_transacao_id'])) {
+            $string = sprintf(
+                '%d|%s|%s',
+                $data['empresa_id'],
+                $data['conexao_bancaria_id'] ?? '',
+                $data['banco_transacao_id']
+            );
+        } else {
+            $string = sprintf(
+                '%d|%s|%s|%s',
+                $data['empresa_id'],
+                $data['data_transacao'],
+                $data['valor'],
+                $data['descricao_original']
+            );
+        }
         
         return md5($string);
     }

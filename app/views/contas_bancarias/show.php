@@ -97,7 +97,15 @@
             <!-- Saldos -->
             <div class="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Saldos</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <?php 
+                $temApi = !empty($contaBancaria['tem_conexao_api']);
+                $saldoReal = (float) $contaBancaria['saldo_atual'];
+                $saldoCalc = (float) ($contaBancaria['saldo_calculado'] ?? $contaBancaria['saldo_atual']);
+                $diferenca = $saldoReal - $saldoCalc;
+                ?>
+
+                <div class="grid grid-cols-1 <?= $temApi ? 'md:grid-cols-4' : 'md:grid-cols-2' ?> gap-4">
                     <!-- Saldo Inicial -->
                     <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
                         <label class="block text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">Saldo Inicial</label>
@@ -106,14 +114,63 @@
                         </p>
                     </div>
 
-                    <!-- Saldo Atual -->
-                    <div class="<?= $contaBancaria['saldo_atual'] >= 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' ?> rounded-xl p-6 border">
-                        <label class="block text-sm font-semibold <?= $contaBancaria['saldo_atual'] >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300' ?> mb-2">Saldo Atual</label>
-                        <p class="text-2xl font-bold <?= $contaBancaria['saldo_atual'] >= 0 ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100' ?>">
-                            R$ <?= number_format($contaBancaria['saldo_atual'], 2, ',', '.') ?>
+                    <!-- Saldo Real (API ou calculado) -->
+                    <div class="<?= $saldoReal >= 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' ?> rounded-xl p-6 border">
+                        <label class="block text-sm font-semibold <?= $saldoReal >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300' ?> mb-2">
+                            Saldo Real
+                            <?php if ($temApi): ?>
+                                <span class="inline-flex items-center ml-1 px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200">API</span>
+                            <?php endif; ?>
+                        </label>
+                        <p class="text-2xl font-bold <?= $saldoReal >= 0 ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100' ?>">
+                            R$ <?= number_format($saldoReal, 2, ',', '.') ?>
                         </p>
+                        <?php if ($temApi && !empty($contaBancaria['saldo_api_atualizado_em'])): ?>
+                            <p class="text-xs mt-1 text-gray-500 dark:text-gray-400">
+                                Atualizado <?= date('d/m/Y H:i', strtotime($contaBancaria['saldo_api_atualizado_em'])) ?>
+                            </p>
+                        <?php endif; ?>
                     </div>
+
+                    <?php if ($temApi): ?>
+                    <!-- Saldo Calculado (Movimentações) -->
+                    <div class="bg-gray-50 dark:bg-gray-900/30 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                        <label class="block text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Saldo Calculado (Sistema)</label>
+                        <p class="text-2xl font-bold text-gray-700 dark:text-gray-300">
+                            R$ <?= number_format($saldoCalc, 2, ',', '.') ?>
+                        </p>
+                        <p class="text-xs mt-1 text-gray-400 dark:text-gray-500">Baseado em receitas e despesas</p>
+                    </div>
+
+                    <!-- Diferença -->
+                    <div class="<?= abs($diferenca) < 0.01 ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' ?> rounded-xl p-6 border">
+                        <label class="block text-sm font-semibold <?= abs($diferenca) < 0.01 ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300' ?> mb-2">Diferença</label>
+                        <?php if (abs($diferenca) < 0.01): ?>
+                            <p class="text-2xl font-bold text-green-700 dark:text-green-300">Conciliado</p>
+                            <p class="text-xs mt-1 text-green-600 dark:text-green-400">Saldo real = calculado</p>
+                        <?php else: ?>
+                            <p class="text-2xl font-bold text-amber-700 dark:text-amber-300">
+                                <?= $diferenca >= 0 ? '+' : '' ?>R$ <?= number_format($diferenca, 2, ',', '.') ?>
+                            </p>
+                            <p class="text-xs mt-1 text-amber-600 dark:text-amber-400">
+                                <?= $diferenca > 0 ? 'Banco tem mais que o sistema' : 'Sistema tem mais que o banco' ?>
+                            </p>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
                 </div>
+
+                <?php if ($temApi): ?>
+                <div class="mt-4 flex gap-3">
+                    <a href="<?= $this->baseUrl('/conexoes-bancarias/' . $contaBancaria['conexao_id']) ?>" 
+                       class="px-4 py-2 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300 text-sm font-semibold rounded-xl transition inline-flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                        </svg>
+                        Ver Conexão API
+                    </a>
+                </div>
+                <?php endif; ?>
             </div>
 
             <!-- Data de Cadastro -->

@@ -11,10 +11,11 @@ class ConexaoBancaria extends Model
     protected $db;
     
     const BANCOS_DISPONIVEIS = [
+        'sicoob' => ['nome' => 'Sicoob', 'logo' => '🏦', 'cor' => 'green'],
         'sicredi' => ['nome' => 'Sicredi', 'logo' => '🏦', 'cor' => 'green'],
-        'sicoob' => ['nome' => 'Sicoob', 'logo' => '🏦', 'cor' => 'blue'],
+        'itau' => ['nome' => 'Itaú', 'logo' => '🏦', 'cor' => 'orange'],
         'bradesco' => ['nome' => 'Bradesco', 'logo' => '🏦', 'cor' => 'red'],
-        'itau' => ['nome' => 'Itaú', 'logo' => '🏦', 'cor' => 'orange']
+        'mercadopago' => ['nome' => 'Mercado Pago', 'logo' => '💳', 'cor' => 'blue']
     ];
     
     public function __construct()
@@ -65,13 +66,17 @@ class ConexaoBancaria extends Model
                  access_token, refresh_token, token_expira_em, consent_id,
                  auto_sync, frequencia_sync, categoria_padrao_id, 
                  centro_custo_padrao_id, aprovacao_automatica,
-                 ambiente, client_id, client_secret, cert_pem, key_pem, cert_password, ativo, ultima_sincronizacao) 
+                 ambiente, client_id, client_secret, cert_pem, key_pem, cert_password, 
+                 ativo, ultima_sincronizacao,
+                 conta_bancaria_id, saldo_banco, saldo_atualizado_em, status_conexao, banco_conta_id) 
                 VALUES 
                 (:empresa_id, :usuario_id, :banco, :tipo_integracao, :tipo, :identificacao,
                  :access_token, :refresh_token, :token_expira_em, :consent_id,
                  :auto_sync, :frequencia_sync, :categoria_padrao_id,
                  :centro_custo_padrao_id, :aprovacao_automatica,
-                 :ambiente, :client_id, :client_secret, :cert_pem, :key_pem, :cert_password, :ativo, :ultima_sincronizacao)";
+                 :ambiente, :client_id, :client_secret, :cert_pem, :key_pem, :cert_password, 
+                 :ativo, :ultima_sincronizacao,
+                 :conta_bancaria_id, :saldo_banco, :saldo_atualizado_em, :status_conexao, :banco_conta_id)";
         
         $stmt = $this->db->prepare($sql);
         
@@ -79,8 +84,8 @@ class ConexaoBancaria extends Model
             'empresa_id' => $data['empresa_id'],
             'usuario_id' => $data['usuario_id'],
             'banco' => $data['banco'],
-            'tipo_integracao' => $data['tipo_integracao'] ?? 'of',
-            'tipo' => $data['tipo'],
+            'tipo_integracao' => $data['tipo_integracao'] ?? 'api_direta',
+            'tipo' => $data['tipo'] ?? 'conta_corrente',
             'identificacao' => $data['identificacao'] ?? null,
             'access_token' => $this->encryptToken($data['access_token'] ?? null),
             'refresh_token' => $this->encryptToken($data['refresh_token'] ?? null),
@@ -98,7 +103,12 @@ class ConexaoBancaria extends Model
             'key_pem' => $data['key_pem'] ?? null,
             'cert_password' => $data['cert_password'] ?? null,
             'ativo' => $data['ativo'] ?? 1,
-            'ultima_sincronizacao' => $data['ultima_sincronizacao'] ?? null
+            'ultima_sincronizacao' => $data['ultima_sincronizacao'] ?? null,
+            'conta_bancaria_id' => $data['conta_bancaria_id'] ?? null,
+            'saldo_banco' => $data['saldo_banco'] ?? null,
+            'saldo_atualizado_em' => $data['saldo_atualizado_em'] ?? null,
+            'status_conexao' => $data['status_conexao'] ?? 'ativa',
+            'banco_conta_id' => $data['banco_conta_id'] ?? null
         ]) ? $this->db->lastInsertId() : false;
     }
     
@@ -113,7 +123,8 @@ class ConexaoBancaria extends Model
         $allowed = ['identificacao', 'auto_sync', 'frequencia_sync', 
                    'categoria_padrao_id', 'centro_custo_padrao_id', 'aprovacao_automatica',
                    'access_token', 'refresh_token', 'token_expira_em', 'ultima_sincronizacao',
-                   'ambiente', 'client_id', 'client_secret', 'cert_pem', 'key_pem', 'cert_password', 'ativo', 'tipo_integracao'];
+                   'ambiente', 'client_id', 'client_secret', 'cert_pem', 'key_pem', 'cert_password', 'ativo', 'tipo_integracao',
+                   'conta_bancaria_id', 'saldo_banco', 'saldo_atualizado_em', 'status_conexao', 'ultimo_erro', 'banco_conta_id'];
         
         foreach ($allowed as $field) {
             if (isset($data[$field])) {
@@ -205,5 +216,103 @@ class ConexaoBancaria extends Model
     public static function getBancoInfo($banco)
     {
         return self::BANCOS_DISPONIVEIS[$banco] ?? ['nome' => ucfirst($banco), 'logo' => '🏦', 'cor' => 'gray'];
+    }
+
+    /**
+     * Busca conexões ativas por banco e empresa.
+     */
+    public function findByBancoEmpresa($banco, $empresaId)
+    {
+        $sql = "SELECT * FROM {$this->table} 
+                WHERE banco = :banco AND empresa_id = :empresa_id AND ativo = 1
+                ORDER BY created_at DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['banco' => $banco, 'empresa_id' => $empresaId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Retorna todas as conexões ativas que precisam ser sincronizadas.
+     */
+    public function findAtivasParaSync()
+    {
+        $sql = "SELECT * FROM {$this->table} 
+                WHERE ativo = 1 AND auto_sync = 1 AND status_conexao != 'desconectada'
+                ORDER BY ultima_sincronizacao ASC";
+        $stmt = $this->db->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Atualiza o saldo real reportado pelo banco.
+     */
+    public function atualizarSaldo($id, $saldo)
+    {
+        $sql = "UPDATE {$this->table} 
+                SET saldo_banco = :saldo, 
+                    saldo_atualizado_em = NOW(),
+                    status_conexao = 'ativa',
+                    ultimo_erro = NULL
+                WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute(['id' => $id, 'saldo' => $saldo]);
+    }
+
+    /**
+     * Registra erro na conexão.
+     */
+    public function registrarErro($id, $mensagemErro)
+    {
+        $sql = "UPDATE {$this->table} 
+                SET status_conexao = 'erro', 
+                    ultimo_erro = :erro 
+                WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute(['id' => $id, 'erro' => $mensagemErro]);
+    }
+
+    /**
+     * Retorna saldo total de todas as conexões ativas de uma empresa.
+     */
+    public function getSaldoTotalEmpresa($empresaId)
+    {
+        $sql = "SELECT 
+                    COALESCE(SUM(saldo_banco), 0) as saldo_total,
+                    COUNT(*) as total_contas,
+                    MIN(saldo_atualizado_em) as saldo_mais_antigo
+                FROM {$this->table} 
+                WHERE empresa_id = :empresa_id AND ativo = 1 AND saldo_banco IS NOT NULL";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['empresa_id' => $empresaId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Atualiza a data da última sincronização.
+     */
+    public function atualizarUltimaSync($id)
+    {
+        $sql = "UPDATE {$this->table} SET ultima_sincronizacao = NOW() WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute(['id' => $id]);
+    }
+
+    /**
+     * Retorna dados da conexão com tokens descriptografados (para uso nos services).
+     */
+    public function getConexaoComCredenciais($id)
+    {
+        $conexao = $this->findById($id);
+        if (!$conexao) return null;
+
+        // Descriptografar tokens
+        if (!empty($conexao['access_token'])) {
+            $conexao['access_token'] = $this->decryptToken($conexao['access_token']);
+        }
+        if (!empty($conexao['refresh_token'])) {
+            $conexao['refresh_token'] = $this->decryptToken($conexao['refresh_token']);
+        }
+
+        return $conexao;
     }
 }
