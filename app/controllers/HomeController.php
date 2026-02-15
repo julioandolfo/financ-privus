@@ -358,7 +358,11 @@ class HomeController extends Controller
             // ========================================
             // MÉTRICAS POR EMPRESA
             // ========================================
-            $metricasPorEmpresa = $this->calcularMetricasPorEmpresa($empresasIds, $contaReceberModel, $contaPagarModel, $contaBancariaModel, $dataInicio, $dataFim);
+            $empresasParaMetricas = $empresaModel->findByIds($empresasIds);
+            if (empty($empresasParaMetricas)) {
+                $empresasParaMetricas = array_values(array_filter($todasEmpresas, fn($e) => in_array($e['id'], $empresasIds)));
+            }
+            $metricasPorEmpresa = $this->calcularMetricasPorEmpresa($empresasParaMetricas, $contaReceberModel, $contaPagarModel, $contaBancariaModel, $dataInicio, $dataFim);
             
             // MÉTRICAS DE SINCRONIZAÇÃO BANCÁRIA (TODAS AS EMPRESAS DO USUÁRIO)
             $conexaoBancariaModel = new ConexaoBancaria();
@@ -600,17 +604,15 @@ class HomeController extends Controller
     
     /**
      * Calcular métricas financeiras por empresa individual
+     * @param array $empresas Array de registros de empresas (from findByIds)
      */
-    private function calcularMetricasPorEmpresa($empresasIds, $contaReceberModel, $contaPagarModel, $contaBancariaModel, $dataInicio, $dataFim)
+    private function calcularMetricasPorEmpresa($empresas, $contaReceberModel, $contaPagarModel, $contaBancariaModel, $dataInicio, $dataFim)
     {
         $metricasPorEmpresa = [];
         
-        foreach ($empresasIds as $empresaId) {
-            // Buscar dados da empresa
-            $empresaModel = new Empresa();
-            $empresa = $empresaModel->findById($empresaId);
-            
-            if (!$empresa) continue;
+        foreach ($empresas as $empresa) {
+            $empresaId = (int)($empresa['id'] ?? 0);
+            if (!$empresaId) continue;
             
             // Contas a Receber e Pagar da empresa específica
             $contasReceber = $contaReceberModel->findAll(['empresa_id' => $empresaId]);
