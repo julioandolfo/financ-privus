@@ -411,4 +411,136 @@ class IntegracaoWooDashboardController extends Controller
             return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
+    
+    /**
+     * API: Validar pedidos faltantes
+     * Compara pedidos do WooCommerce com pedidos importados no sistema
+     */
+    public function validarPedidos(Request $request, Response $response, $integracaoId)
+    {
+        try {
+            if (!$this->wooService) {
+                return $response->json([
+                    'success' => false,
+                    'error' => 'Serviço WooCommerce não disponível'
+                ], 500);
+            }
+            
+            $data = $request->isJson() ? $request->json() : $request->post();
+            
+            $opcoes = [];
+            
+            // Período
+            if (!empty($data['periodo'])) {
+                $opcoes['periodo'] = $data['periodo'];
+            }
+            
+            // Data customizada
+            if (!empty($data['data_inicio']) && !empty($data['data_fim'])) {
+                $opcoes['data_inicio'] = $data['data_inicio'];
+                $opcoes['data_fim'] = $data['data_fim'];
+            }
+            
+            LogSistema::info('WooDashboard', 'validarPedidos', 
+                'Iniciando validação de pedidos', 
+                ['integracao_id' => $integracaoId, 'opcoes' => $opcoes]);
+            
+            $resultado = $this->wooService->validarPedidosFaltantes($integracaoId, $opcoes);
+            
+            if (!$resultado['sucesso']) {
+                return $response->json([
+                    'success' => false,
+                    'error' => $resultado['erro'] ?? 'Erro ao validar pedidos'
+                ], 400);
+            }
+            
+            return $response->json([
+                'success' => true,
+                'message' => 'Validação concluída com sucesso',
+                'data' => [
+                    'total_woo' => $resultado['total_woo'],
+                    'total_local' => $resultado['total_local'],
+                    'total_faltantes' => $resultado['total_faltantes'],
+                    'pedidos_faltantes' => $resultado['pedidos_faltantes']
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            LogSistema::error('WooDashboard', 'validarPedidos', 
+                'Erro: ' . $e->getMessage());
+            
+            return $response->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * API: Sincronizar pedidos faltantes
+     * Importa pedidos específicos que estão faltando
+     */
+    public function sincronizarFaltantes(Request $request, Response $response, $integracaoId)
+    {
+        try {
+            if (!$this->wooService) {
+                return $response->json([
+                    'success' => false,
+                    'error' => 'Serviço WooCommerce não disponível'
+                ], 500);
+            }
+            
+            $data = $request->isJson() ? $request->json() : $request->post();
+            
+            if (empty($data['pedidos_ids']) || !is_array($data['pedidos_ids'])) {
+                return $response->json([
+                    'success' => false,
+                    'error' => 'IDs dos pedidos não informados'
+                ], 400);
+            }
+            
+            $idsWooCommerce = $data['pedidos_ids'];
+            
+            LogSistema::info('WooDashboard', 'sincronizarFaltantes', 
+                'Iniciando sincronização de pedidos faltantes', 
+                [
+                    'integracao_id' => $integracaoId, 
+                    'total_pedidos' => count($idsWooCommerce)
+                ]);
+            
+            $resultado = $this->wooService->sincronizarPedidosFaltantes($integracaoId, $idsWooCommerce);
+            
+            if (!$resultado['sucesso']) {
+                return $response->json([
+                    'success' => false,
+                    'error' => $resultado['erro'] ?? 'Erro ao sincronizar pedidos'
+                ], 400);
+            }
+            
+            $mensagem = "Sincronização concluída: {$resultado['total']} de {$resultado['total_tentativas']} pedidos importados";
+            
+            if (!empty($resultado['erros'])) {
+                $mensagem .= ". " . count($resultado['erros']) . " erros encontrados.";
+            }
+            
+            return $response->json([
+                'success' => true,
+                'message' => $mensagem,
+                'data' => [
+                    'total_importados' => $resultado['total'],
+                    'total_tentativas' => $resultado['total_tentativas'],
+                    'erros' => $resultado['erros']
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            LogSistema::error('WooDashboard', 'sincronizarFaltantes', 
+                'Erro: ' . $e->getMessage());
+            
+            return $response->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

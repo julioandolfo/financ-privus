@@ -520,12 +520,31 @@ class ConexaoBancariaController extends Controller
                     $mesLabel = $mesDebug['mes'] ?? '?';
                     $mesCount = $mesDebug['transacoes_count'] ?? 0;
                     $mesErro = $mesDebug['erro'] ?? null;
+                    $formato = $mesDebug['formato'] ?? 'n/a';
+                    $httpCode = $mesDebug['http_code'] ?? '?';
                     
                     if ($mesErro) {
-                        $detalhes[] = "Mês {$mesLabel}: ERRO - {$mesErro}";
+                        $detalhes[] = "Mês {$mesLabel}: ERRO (HTTP {$httpCode}) - {$mesErro}";
                     } else {
-                        $detalhes[] = "Mês {$mesLabel}: {$mesCount} transações encontradas" . 
-                            (!empty($mesDebug['saldoAtual']) ? " (saldo: {$mesDebug['saldoAtual']})" : '');
+                        $info = "Mês {$mesLabel}: HTTP {$httpCode}, {$mesCount} transações, formato: {$formato}";
+                        if (!empty($mesDebug['saldoAtual'])) $info .= ", saldo: {$mesDebug['saldoAtual']}";
+                        if (!empty($mesDebug['response_keys'])) {
+                            $keys = is_array($mesDebug['response_keys']) ? implode(', ', $mesDebug['response_keys']) : $mesDebug['response_keys'];
+                            $info .= ", keys: [{$keys}]";
+                        }
+                        $detalhes[] = $info;
+                    }
+                    
+                    // Se 0 transações, mostrar URL completa e preview da resposta
+                    if ($mesCount === 0 && empty($mesErro)) {
+                        $detalhes[] = "  URL: " . ($mesDebug['url_completa'] ?? $mesDebug['url'] ?? 'n/a');
+                        if (!empty($mesDebug['response_raw_preview'])) {
+                            $raw = substr($mesDebug['response_raw_preview'], 0, 500);
+                            $detalhes[] = "  Resposta API: " . $raw;
+                        }
+                        if (!empty($mesDebug['estrutura'])) {
+                            $detalhes[] = "  Estrutura: " . json_encode($mesDebug['estrutura'], JSON_UNESCAPED_UNICODE);
+                        }
                     }
                 }
                 $debugApi = $service->lastDebug;
@@ -534,11 +553,7 @@ class ConexaoBancariaController extends Controller
             $detalhes[] = "Total transações retornadas pela API: {$totalBanco}";
             
             if ($totalBanco === 0) {
-                $detalhes[] = "A API retornou 0 transações. Possíveis causas:";
-                $detalhes[] = "  - Não há movimentações no período selecionado";
-                $detalhes[] = "  - O número da conta pode estar incorreto";
-                $detalhes[] = "  - O certificado pode não ter permissão para esta conta";
-                $detalhes[] = "  - Tente ampliar o período de consulta";
+                $detalhes[] = "A API retornou 0 transações no período.";
             }
             
             // Filtrar transações conforme tipo_sync configurado

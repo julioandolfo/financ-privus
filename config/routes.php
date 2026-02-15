@@ -269,6 +269,8 @@ return [
     'GET /integracoes/{id}/woocommerce/dashboard/estatisticas-produtos' => ['handler' => 'IntegracaoWooDashboardController@estatisticasProdutos', 'middleware' => ['AuthMiddleware']],
     'GET /integracoes/{id}/woocommerce/dashboard/grafico-sincronizacoes' => ['handler' => 'IntegracaoWooDashboardController@graficoSincronizacoes', 'middleware' => ['AuthMiddleware']],
     'GET /integracoes/{id}/woocommerce/dashboard/grafico-taxa-sucesso' => ['handler' => 'IntegracaoWooDashboardController@graficoTaxaSucesso', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/woocommerce/dashboard/validar-pedidos' => ['handler' => 'IntegracaoWooDashboardController@validarPedidos', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/woocommerce/dashboard/sincronizar-faltantes' => ['handler' => 'IntegracaoWooDashboardController@sincronizarFaltantes', 'middleware' => ['AuthMiddleware']],
     
     'GET /integracoes/{id}' => ['handler' => 'IntegracaoController@show', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/{id}/sincronizar' => ['handler' => 'IntegracaoController@sincronizar', 'middleware' => ['AuthMiddleware']],

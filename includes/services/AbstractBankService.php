@@ -12,6 +12,15 @@ abstract class AbstractBankService implements BankApiInterface
     
     /** @var int Timestamp de expiração do token */
     protected $tokenExpiresAt = 0;
+    
+    /** @var string|null Última resposta bruta da API (para debug) */
+    public $lastRawResponse = null;
+    
+    /** @var int Último HTTP code */
+    public $lastHttpCode = 0;
+    
+    /** @var string|null Última URL requisitada */
+    public $lastRequestUrl = null;
 
     /**
      * Executa requisição HTTP via cURL.
@@ -104,6 +113,11 @@ abstract class AbstractBankService implements BankApiInterface
         }
 
         $decoded = json_decode($result, true);
+
+        // Log da resposta bruta para debug (truncada)
+        $this->lastRawResponse = $result;
+        $this->lastHttpCode = $httpCode;
+        $this->lastRequestUrl = $url;
 
         if ($httpCode >= 400) {
             $errorMsg = 'Erro desconhecido';

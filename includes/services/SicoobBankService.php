@@ -209,9 +209,11 @@ class SicoobBankService extends AbstractBankService
         $currentMonth = $mesInicio;
 
         while ($currentYear < $anoFim || ($currentYear === $anoFim && $currentMonth <= $mesFim)) {
+            // Mês com zero-padding conforme documentação Sicoob
+            $mesFormatado = str_pad($currentMonth, 2, '0', STR_PAD_LEFT);
+            
             $params = [
-                'numeroContaCorrente' => $numeroConta,
-                'agruparCNAB' => 'true'
+                'numeroContaCorrente' => $numeroConta
             ];
 
             if ($currentYear === $anoInicio && $currentMonth === $mesInicio) {
@@ -221,8 +223,13 @@ class SicoobBankService extends AbstractBankService
                 $params['diaFinal'] = str_pad($diaFim, 2, '0', STR_PAD_LEFT);
             }
 
-            $url = $this->baseUrl . "/extrato/{$currentMonth}/{$currentYear}";
-            $mesDebug = ['mes' => "{$currentMonth}/{$currentYear}", 'url' => $url, 'params' => $params];
+            $url = $this->baseUrl . "/extrato/{$mesFormatado}/{$currentYear}";
+            $mesDebug = [
+                'mes' => "{$mesFormatado}/{$currentYear}", 
+                'url' => $url, 
+                'params' => $params,
+                'url_completa' => $url . '?' . http_build_query($params)
+            ];
 
             try {
                 $response = $this->httpRequest(
@@ -233,27 +240,57 @@ class SicoobBankService extends AbstractBankService
                     $conexao
                 );
 
+                // Capturar resposta bruta para debug
+                $rawTruncado = $this->lastRawResponse ? substr($this->lastRawResponse, 0, 2000) : 'vazio';
+                $mesDebug['http_code'] = $this->lastHttpCode;
                 $mesDebug['response_keys'] = is_array($response) ? array_keys($response) : 'not_array';
+                $mesDebug['response_raw_preview'] = $rawTruncado;
                 $mesDebug['saldoAtual'] = $response['saldoAtual'] ?? null;
+                $mesDebug['saldoAnterior'] = $response['saldoAnterior'] ?? null;
 
-                $items = $response['transacoes'] ?? [];
-                $mesDebug['transacoes_count'] = is_array($items) ? count($items) : 0;
+                // Tentar encontrar transações em diferentes locais da resposta
+                $items = [];
+                
+                // Formato 1: transacoes no root
+                if (!empty($response['transacoes']) && is_array($response['transacoes'])) {
+                    $items = $response['transacoes'];
+                    $mesDebug['formato'] = 'root.transacoes';
+                }
+                // Formato 2: resultado.transacoes
+                elseif (!empty($response['resultado']['transacoes']) && is_array($response['resultado']['transacoes'])) {
+                    $items = $response['resultado']['transacoes'];
+                    $mesDebug['formato'] = 'resultado.transacoes';
+                }
+                // Formato 3: resultado é array direto de transações
+                elseif (!empty($response['resultado']) && is_array($response['resultado']) && isset($response['resultado'][0])) {
+                    $items = $response['resultado'];
+                    $mesDebug['formato'] = 'resultado[]';
+                }
+                // Formato 4: response é array direto
+                elseif (is_array($response) && isset($response[0]) && isset($response[0]['valor'])) {
+                    $items = $response;
+                    $mesDebug['formato'] = 'root[]';
+                }
+                else {
+                    $mesDebug['formato'] = 'nenhum_encontrado';
+                    // Listar todas as chaves em cada nível para debug
+                    $mesDebug['estrutura'] = $this->mapearEstrutura($response);
+                }
 
-                if (is_array($items) && count($items) > 0) {
-                    $mesDebug['primeira_transacao'] = [
-                        'data' => $items[0]['data'] ?? 'n/a',
-                        'descricao' => $items[0]['descricao'] ?? 'n/a',
-                        'valor' => $items[0]['valor'] ?? 'n/a',
-                        'tipo' => $items[0]['tipo'] ?? 'n/a'
-                    ];
+                $mesDebug['transacoes_count'] = count($items);
+
+                if (count($items) > 0) {
+                    $mesDebug['primeira_transacao_raw'] = $items[0];
                     $transacoes = array_merge($transacoes, $this->normalizarTransacoes($items));
                 }
 
-                $this->logError("Extrato {$currentMonth}/{$currentYear}", $mesDebug);
+                $this->logError("Extrato {$mesFormatado}/{$currentYear}", $mesDebug);
 
             } catch (\Exception $e) {
                 $mesDebug['erro'] = $e->getMessage();
-                $this->logError("Erro ao buscar extrato {$currentMonth}/{$currentYear}", $mesDebug);
+                $mesDebug['http_code'] = $this->lastHttpCode ?? null;
+                $mesDebug['response_raw_preview'] = $this->lastRawResponse ? substr($this->lastRawResponse, 0, 1000) : 'vazio';
+                $this->logError("Erro ao buscar extrato {$mesFormatado}/{$currentYear}", $mesDebug);
             }
 
             $debugMeses[] = $mesDebug;
@@ -270,7 +307,6 @@ class SicoobBankService extends AbstractBankService
             'meses_consultados' => count($debugMeses)
         ]);
 
-        // Armazenar debug para acesso pelo controller
         $this->lastDebug = $debugMeses;
 
         return $transacoes;
@@ -278,6 +314,25 @@ class SicoobBankService extends AbstractBankService
 
     /** @var array Debug da última consulta de transações */
     public $lastDebug = [];
+    
+    /**
+     * Mapeia estrutura de um array (para debug)
+     */
+    private function mapearEstrutura($data, $depth = 0): array
+    {
+        $result = [];
+        if (!is_array($data) || $depth > 2) {
+            return ['type' => gettype($data), 'value' => is_scalar($data) ? $data : '...'];
+        }
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $result[$key] = '[array:' . count($value) . '] keys=' . implode(',', array_slice(array_keys($value), 0, 5));
+            } else {
+                $result[$key] = gettype($value) . ':' . substr((string)$value, 0, 50);
+            }
+        }
+        return $result;
+    }
 
     public function testarConexao(array $conexao): bool
     {

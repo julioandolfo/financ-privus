@@ -3119,4 +3119,253 @@ class WooCommerceService
             'ultima_sync_pedidos' => $config['ultima_sync_pedidos'] ?? null
         ];
     }
+    
+    /**
+     * Valida se há pedidos faltantes entre WooCommerce e sistema local
+     * Compara os IDs de pedidos do WooCommerce com os pedidos importados
+     * 
+     * @param int $integracaoId ID da integração
+     * @param array $opcoes Opções de filtro (data_inicio, data_fim, periodo)
+     * @return array ['sucesso' => bool, 'pedidos_woo' => array, 'pedidos_local' => array, 'faltantes' => array, 'total_woo' => int, 'total_local' => int, 'total_faltantes' => int]
+     */
+    public function validarPedidosFaltantes($integracaoId, $opcoes = [])
+    {
+        try {
+            $integracao = $this->integracaoModel->findById($integracaoId);
+            
+            if (!$integracao || $integracao['tipo'] !== 'woocommerce') {
+                return ['sucesso' => false, 'erro' => 'Integração inválida'];
+            }
+            
+            $config = $this->woocommerceModel->findByIntegracaoId($integracaoId);
+            
+            if (!$config) {
+                return ['sucesso' => false, 'erro' => 'Configuração não encontrada'];
+            }
+            
+            $empresaId = $integracao['empresa_id'];
+            
+            \App\Models\LogSistema::info('WooCommerce', 'validarPedidosFaltantes', 
+                "Iniciando validação de pedidos faltantes", 
+                ['empresa_id' => $empresaId, 'opcoes' => $opcoes]);
+            
+            // Busca TODOS os pedidos do WooCommerce no período (sem limite de paginação)
+            $pedidosWoo = [];
+            $pagina = 1;
+            $porPagina = 100; // Busca em blocos maiores para ser mais eficiente
+            $maxPaginas = 100; // Limite de segurança
+            
+            while ($pagina <= $maxPaginas) {
+                $opcoesPage = $opcoes;
+                $opcoesPage['limite'] = $porPagina;
+                $opcoesPage['pagina'] = $pagina;
+                
+                $pedidosPagina = $this->buscarPedidosWooCommerce($config, $opcoesPage);
+                
+                if (empty($pedidosPagina)) {
+                    break;
+                }
+                
+                $pedidosWoo = array_merge($pedidosWoo, $pedidosPagina);
+                
+                // Se retornou menos que o solicitado, não há mais páginas
+                if (count($pedidosPagina) < $porPagina) {
+                    break;
+                }
+                
+                $pagina++;
+            }
+            
+            \App\Models\LogSistema::info('WooCommerce', 'validarPedidosFaltantes', 
+                "Total de pedidos no WooCommerce: " . count($pedidosWoo));
+            
+            // Extrai IDs e números dos pedidos WooCommerce
+            $idsWoo = [];
+            $numerosWoo = [];
+            $pedidosWooMap = [];
+            
+            foreach ($pedidosWoo as $pedWoo) {
+                $wooId = $pedWoo['id'];
+                $numero = $pedWoo['number'] ?? $wooId;
+                
+                $idsWoo[] = $wooId;
+                $numerosWoo[] = $numero;
+                $pedidosWooMap[$wooId] = [
+                    'id' => $wooId,
+                    'number' => $numero,
+                    'status' => $pedWoo['status'],
+                    'total' => $pedWoo['total'],
+                    'date_created' => $pedWoo['date_created'] ?? '',
+                    'customer_name' => ($pedWoo['billing']['first_name'] ?? '') . ' ' . ($pedWoo['billing']['last_name'] ?? ''),
+                    'payment_method_title' => $pedWoo['payment_method_title'] ?? 'N/A'
+                ];
+            }
+            
+            // Busca pedidos locais que foram sincronizados do WooCommerce
+            $db = \App\Core\Database::getInstance()->getConnection();
+            
+            $sql = "SELECT 
+                        pv.id,
+                        pv.numero_pedido,
+                        pv.woocommerce_id,
+                        pv.data_pedido,
+                        pv.status,
+                        pv.valor_total,
+                        c.nome as cliente_nome
+                    FROM pedidos_vinculados pv
+                    LEFT JOIN clientes c ON c.id = pv.cliente_id
+                    WHERE pv.empresa_id = :empresa_id
+                    AND pv.origem = 'woocommerce'";
+            
+            $params = ['empresa_id' => $empresaId];
+            
+            // Adiciona filtro de período se fornecido
+            if (isset($opcoes['data_inicio']) && isset($opcoes['data_fim'])) {
+                $sql .= " AND pv.data_pedido BETWEEN :data_inicio AND :data_fim";
+                $params['data_inicio'] = $opcoes['data_inicio'];
+                $params['data_fim'] = $opcoes['data_fim'];
+            } elseif (isset($opcoes['periodo'])) {
+                switch ($opcoes['periodo']) {
+                    case '7dias':
+                        $sql .= " AND pv.data_pedido >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+                        break;
+                    case '30dias':
+                        $sql .= " AND pv.data_pedido >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+                        break;
+                    case '90dias':
+                        $sql .= " AND pv.data_pedido >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)";
+                        break;
+                }
+            }
+            
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $pedidosLocal = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            
+            \App\Models\LogSistema::info('WooCommerce', 'validarPedidosFaltantes', 
+                "Total de pedidos no sistema local: " . count($pedidosLocal));
+            
+            // Extrai IDs WooCommerce dos pedidos locais
+            $idsLocalWoo = [];
+            $numerosLocal = [];
+            
+            foreach ($pedidosLocal as $pedLocal) {
+                if (!empty($pedLocal['woocommerce_id'])) {
+                    $idsLocalWoo[] = $pedLocal['woocommerce_id'];
+                }
+                if (!empty($pedLocal['numero_pedido'])) {
+                    $numerosLocal[] = $pedLocal['numero_pedido'];
+                }
+            }
+            
+            // Identifica pedidos faltantes (que existem no WooCommerce mas não no sistema local)
+            $pedidosFaltantes = [];
+            
+            foreach ($pedidosWooMap as $wooId => $pedWoo) {
+                $numero = $pedWoo['number'];
+                
+                // Verifica se o pedido existe no sistema local (por ID ou por número)
+                $existe = in_array($wooId, $idsLocalWoo) || in_array($numero, $numerosLocal);
+                
+                if (!$existe) {
+                    $pedidosFaltantes[] = $pedWoo;
+                }
+            }
+            
+            \App\Models\LogSistema::info('WooCommerce', 'validarPedidosFaltantes', 
+                "Validação concluída: " . count($pedidosFaltantes) . " pedidos faltantes encontrados");
+            
+            return [
+                'sucesso' => true,
+                'total_woo' => count($pedidosWoo),
+                'total_local' => count($pedidosLocal),
+                'total_faltantes' => count($pedidosFaltantes),
+                'pedidos_faltantes' => $pedidosFaltantes,
+                'ids_woo' => $idsWoo,
+                'ids_local_woo' => $idsLocalWoo
+            ];
+            
+        } catch (\Exception $e) {
+            \App\Models\LogSistema::error('WooCommerce', 'validarPedidosFaltantes', 
+                "Erro ao validar pedidos: " . $e->getMessage());
+            
+            return [
+                'sucesso' => false,
+                'erro' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Sincroniza pedidos faltantes específicos por seus IDs WooCommerce
+     * 
+     * @param int $integracaoId ID da integração
+     * @param array $idsWooCommerce Array de IDs WooCommerce para sincronizar
+     * @return array ['sucesso' => bool, 'total' => int, 'erros' => array]
+     */
+    public function sincronizarPedidosFaltantes($integracaoId, $idsWooCommerce)
+    {
+        try {
+            $integracao = $this->integracaoModel->findById($integracaoId);
+            
+            if (!$integracao || $integracao['tipo'] !== 'woocommerce') {
+                return ['sucesso' => false, 'erro' => 'Integração inválida'];
+            }
+            
+            $config = $this->woocommerceModel->findByIntegracaoId($integracaoId);
+            
+            if (!$config) {
+                return ['sucesso' => false, 'erro' => 'Configuração não encontrada'];
+            }
+            
+            \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidosFaltantes', 
+                "Sincronizando " . count($idsWooCommerce) . " pedidos faltantes");
+            
+            $total = 0;
+            $erros = [];
+            
+            // Sincroniza cada pedido individualmente
+            foreach ($idsWooCommerce as $wooId) {
+                try {
+                    $opcoes = [
+                        'pedido_unico_id' => $wooId,
+                        'sincronizar_produtos' => false,
+                        'sincronizar_pedidos' => true
+                    ];
+                    
+                    $resultado = $this->sincronizar($integracaoId, $opcoes);
+                    
+                    if ($resultado['sucesso'] !== false && $resultado['pedidos'] > 0) {
+                        $total++;
+                    } elseif (!empty($resultado['erros'])) {
+                        $erros[] = "Pedido WooCommerce #{$wooId}: " . implode(', ', $resultado['erros']);
+                    }
+                    
+                } catch (\Exception $e) {
+                    $erros[] = "Pedido WooCommerce #{$wooId}: " . $e->getMessage();
+                    \App\Models\LogSistema::error('WooCommerce', 'sincronizarPedidosFaltantes', 
+                        "Erro ao sincronizar pedido #{$wooId}: " . $e->getMessage());
+                }
+            }
+            
+            \App\Models\LogSistema::info('WooCommerce', 'sincronizarPedidosFaltantes', 
+                "Sincronização concluída: {$total} pedidos importados, " . count($erros) . " erros");
+            
+            return [
+                'sucesso' => true,
+                'total' => $total,
+                'total_tentativas' => count($idsWooCommerce),
+                'erros' => $erros
+            ];
+            
+        } catch (\Exception $e) {
+            \App\Models\LogSistema::error('WooCommerce', 'sincronizarPedidosFaltantes', 
+                "Erro geral: " . $e->getMessage());
+            
+            return [
+                'sucesso' => false,
+                'erro' => $e->getMessage()
+            ];
+        }
+    }
 }
