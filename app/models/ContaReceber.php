@@ -33,6 +33,9 @@ class ContaReceber extends Model
                        cb.banco_nome,
                        fp.nome as forma_recebimento_nome,
                        u.nome as usuario_cadastro_nome,
+                       pv.origem as pedido_origem,
+                       pv.origem_id as pedido_origem_id,
+                       pv.numero_pedido as pedido_numero,
                        CASE 
                            WHEN cr.status IN ('pendente', 'parcial') AND cr.data_vencimento < CURDATE() THEN 'vencido'
                            ELSE cr.status
@@ -48,6 +51,7 @@ class ContaReceber extends Model
                 LEFT JOIN contas_bancarias cb ON cr.conta_bancaria_id = cb.id
                 LEFT JOIN formas_pagamento fp ON cr.forma_recebimento_id = fp.id
                 JOIN usuarios u ON cr.usuario_cadastro_id = u.id
+                LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
                 WHERE cr.deleted_at IS NULL";
         $params = [];
         

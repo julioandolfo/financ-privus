@@ -457,12 +457,34 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                             Pedido Vinculado
                         </span>
                     </h2>
-                    <button @click="showPedidoModal = true" class="text-purple-600 hover:text-purple-800 text-sm font-semibold flex items-center space-x-1">
-                        <span>Ver detalhes completos</span>
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
-                    </button>
+                    <div class="flex items-center gap-3">
+                        <?php if ($pedidoVinculado['origem'] === 'woocommerce' && !empty($pedidoVinculado['origem_id'])): ?>
+                            <?php
+                            // Buscar URL da loja WooCommerce
+                            $integracaoWooModel = new \App\Models\IntegracaoWooCommerce();
+                            $integracaoWoo = $integracaoWooModel->findByEmpresaId($pedidoVinculado['empresa_id']);
+                            if ($integracaoWoo && !empty($integracaoWoo['url_site'])):
+                                $urlPedidoWoo = rtrim($integracaoWoo['url_site'], '/') . '/wp-admin/post.php?post=' . $pedidoVinculado['origem_id'] . '&action=edit';
+                            ?>
+                            <a href="<?= htmlspecialchars($urlPedidoWoo) ?>" 
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-sm font-semibold rounded-lg shadow transition-all"
+                               title="Ver pedido no WooCommerce">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                </svg>
+                                Ver no WooCommerce
+                            </a>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                        <button @click="showPedidoModal = true" class="text-purple-600 hover:text-purple-800 text-sm font-semibold flex items-center space-x-1">
+                            <span>Ver detalhes completos</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Info do Pedido -->

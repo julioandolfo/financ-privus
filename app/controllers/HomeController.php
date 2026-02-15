@@ -46,6 +46,14 @@ class HomeController extends Controller
             $todasEmpresas = $empresaModel->findAll(['ativo' => 1]);
             $empresasIds = $empresasFiltradas ?? array_column($todasEmpresas, 'id');
             
+            // LOG: Filtro de empresas
+            LogSistema::debug('Dashboard', 'filtro_empresas', 'Empresas selecionadas para dashboard', [
+                'tem_filtro' => !is_null($empresasFiltradas),
+                'empresas_ids' => $empresasIds,
+                'total_empresas_sistema' => count($todasEmpresas),
+                'total_empresas_selecionadas' => count($empresasIds)
+            ]);
+            
             // Totais gerais (com base nas empresas filtradas)
             $totalEmpresas = count($todasEmpresas);
             $empresasFiltro = $empresasFiltradas ? count($empresasFiltradas) : $totalEmpresas;
@@ -324,10 +332,21 @@ class HomeController extends Controller
             // Reutiliza $contasRecebidas já buscadas acima
             $totalContasVencidas = 0;
             $valorContasVencidas = 0;
+            $contasVencidasDetalhes = [];
+            
             foreach ($contasRecebidas as $conta) {
-                if ($conta['status'] === 'pendente' && $conta['data_vencimento'] < date('Y-m-d')) {
+                // Status 'vencido' = conta pendente que passou do vencimento (definido no SQL do model)
+                if ($conta['status'] === 'vencido' || 
+                    ($conta['status'] === 'pendente' && isset($conta['data_vencimento']) && $conta['data_vencimento'] < date('Y-m-d'))) {
                     $totalContasVencidas++;
                     $valorContasVencidas += $conta['valor_total'] ?? 0;
+                    $contasVencidasDetalhes[] = [
+                        'id' => $conta['id'],
+                        'empresa_id' => $conta['empresa_id'],
+                        'status' => $conta['status'],
+                        'valor' => $conta['valor_total'],
+                        'vencimento' => $conta['data_vencimento']
+                    ];
                 }
             }
             
@@ -337,6 +356,17 @@ class HomeController extends Controller
             
             $taxaInadimplencia = $valorTotalReceber > 0 ? 
                 ($valorContasVencidas / $valorTotalReceber) * 100 : 0;
+            
+            // LOG: Inadimplência detalhada
+            LogSistema::debug('Dashboard', 'inadimplencia_calculo', 'Cálculo de inadimplência consolidada', [
+                'total_contas_receber' => $totalContasReceber,
+                'valor_total_receber' => $valorTotalReceber,
+                'contas_vencidas_count' => $totalContasVencidas,
+                'contas_vencidas_valor' => $valorContasVencidas,
+                'taxa_inadimplencia' => $taxaInadimplencia,
+                'empresas_ids' => $empresasIds,
+                'amostra_vencidas' => array_slice($contasVencidasDetalhes, 0, 5) // Primeiras 5 para não logar demais
+            ]);
             
             // LOG: Resumo final das métricas financeiras
             LogSistema::debug('Dashboard', 'metricas_resumo', 'Métricas financeiras calculadas', [

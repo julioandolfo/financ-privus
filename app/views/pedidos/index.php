@@ -145,6 +145,32 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                                     </svg>
                                 </a>
+                                <?php if ($pedido['origem'] === 'woocommerce' && !empty($pedido['origem_id'])): ?>
+                                    <?php
+                                    // Buscar URL da loja WooCommerce (cachear para evitar múltiplas queries)
+                                    static $cacheIntegracoes = [];
+                                    $empresaId = $pedido['empresa_id'];
+                                    
+                                    if (!isset($cacheIntegracoes[$empresaId])) {
+                                        $integracaoWooModel = new \App\Models\IntegracaoWooCommerce();
+                                        $cacheIntegracoes[$empresaId] = $integracaoWooModel->findByEmpresaId($empresaId);
+                                    }
+                                    
+                                    $integracaoWoo = $cacheIntegracoes[$empresaId];
+                                    if ($integracaoWoo && !empty($integracaoWoo['url_site'])):
+                                        $urlPedidoWoo = rtrim($integracaoWoo['url_site'], '/') . '/wp-admin/post.php?post=' . $pedido['origem_id'] . '&action=edit';
+                                    ?>
+                                    <a href="<?= htmlspecialchars($urlPedidoWoo) ?>" 
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       class="inline-flex items-center text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300" 
+                                       title="Ver no WooCommerce">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                        </svg>
+                                    </a>
+                                    <?php endif; ?>
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>

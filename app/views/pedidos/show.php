@@ -2,7 +2,29 @@
     <!-- Header -->
     <div class="flex justify-between items-center mb-8">
         <div>
-            <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Pedido #<?= htmlspecialchars($pedido['numero_pedido']) ?></h2>
+            <div class="flex items-center gap-3">
+                <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Pedido #<?= htmlspecialchars($pedido['numero_pedido']) ?></h2>
+                <?php if ($pedido['origem'] === 'woocommerce' && !empty($pedido['origem_id'])): ?>
+                    <?php
+                    // Buscar URL da loja WooCommerce
+                    $integracaoWooModel = new \App\Models\IntegracaoWooCommerce();
+                    $integracaoWoo = $integracaoWooModel->findByEmpresaId($pedido['empresa_id']);
+                    if ($integracaoWoo && !empty($integracaoWoo['url_site'])):
+                        $urlPedidoWoo = rtrim($integracaoWoo['url_site'], '/') . '/wp-admin/post.php?post=' . $pedido['origem_id'] . '&action=edit';
+                    ?>
+                    <a href="<?= htmlspecialchars($urlPedidoWoo) ?>" 
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-sm font-semibold rounded-lg shadow-lg transition-all"
+                       title="Ver pedido no WooCommerce">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                        Ver no WooCommerce
+                    </a>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
             <p class="text-gray-600 dark:text-gray-400 mt-1"><?= $pedido['empresa_nome'] ?></p>
         </div>
         <div class="flex space-x-3">

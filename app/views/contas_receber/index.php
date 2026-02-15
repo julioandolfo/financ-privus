@@ -367,6 +367,32 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                                         </svg>
                                     </a>
+                                    <?php if (!empty($conta['pedido_origem']) && $conta['pedido_origem'] === 'woocommerce' && !empty($conta['pedido_origem_id'])): ?>
+                                        <?php
+                                        // Buscar URL da loja WooCommerce (cachear para evitar múltiplas queries)
+                                        static $cacheIntegracoes = [];
+                                        $empresaIdConta = $conta['empresa_id'];
+                                        
+                                        if (!isset($cacheIntegracoes[$empresaIdConta])) {
+                                            $integracaoWooModel = new \App\Models\IntegracaoWooCommerce();
+                                            $cacheIntegracoes[$empresaIdConta] = $integracaoWooModel->findByEmpresaId($empresaIdConta);
+                                        }
+                                        
+                                        $integracaoWoo = $cacheIntegracoes[$empresaIdConta];
+                                        if ($integracaoWoo && !empty($integracaoWoo['url_site'])):
+                                            $urlPedidoWoo = rtrim($integracaoWoo['url_site'], '/') . '/wp-admin/post.php?post=' . $conta['pedido_origem_id'] . '&action=edit';
+                                        ?>
+                                        <a href="<?= htmlspecialchars($urlPedidoWoo) ?>" 
+                                           target="_blank"
+                                           rel="noopener noreferrer"
+                                           class="text-purple-600 hover:text-purple-900 dark:hover:text-purple-400" 
+                                           title="Ver pedido no WooCommerce">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                            </svg>
+                                        </a>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
                                     <?php if ($conta['status'] != 'recebido' && $conta['status'] != 'cancelado'): ?>
                                         <?php if (!empty($conta['total_parcelas_tabela']) && $conta['total_parcelas_tabela'] > 0): ?>
                                             <a href="/contas-receber/<?= $conta['id'] ?>" class="text-blue-600 hover:text-blue-900 dark:hover:text-blue-400" title="Ver parcelas para baixar">

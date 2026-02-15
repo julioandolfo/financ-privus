@@ -41,6 +41,18 @@ class IntegracaoWooCommerce extends Model
     }
     
     /**
+     * Busca configuração WooCommerce por empresa_vinculada_id
+     */
+    public function findByEmpresaId($empresaId)
+    {
+        $sql = "SELECT * FROM {$this->table} WHERE empresa_vinculada_id = :empresa_id AND ativo = 1 LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['empresa_id' => $empresaId]);
+        
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+    
+    /**
      * Cria configuração WooCommerce
      */
     public function create($data)
