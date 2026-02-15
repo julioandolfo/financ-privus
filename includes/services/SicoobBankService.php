@@ -148,11 +148,34 @@ class SicoobBankService extends AbstractBankService
             'response_keys' => is_array($response) ? array_keys($response) : 'not_array'
         ]);
 
+        // Log detalhado da resposta para debug
+        try {
+            \App\Models\LogSistema::debug('SicoobAPI', 'getSaldo_resposta', 'Resposta completa do getSaldo', [
+                'numeroConta' => $numeroConta,
+                'http_code' => $this->lastHttpCode ?? null,
+                'response_raw' => is_array($response) ? json_encode($response, JSON_UNESCAPED_UNICODE) : substr((string)$response, 0, 500),
+                'response_keys' => is_array($response) ? array_keys($response) : 'not_array',
+                'resultado_keys' => isset($response['resultado']) && is_array($response['resultado']) ? array_keys($response['resultado']) : 'sem_resultado',
+            ]);
+        } catch (\Exception $e) {}
+
         // Resposta oficial: { "resultado": { "saldo": 0, "saldoLimite": 0 } }
         $resultado = $response['resultado'] ?? $response;
         
+        $saldoFinal = (float) ($resultado['saldo'] ?? 0);
+        
+        try {
+            \App\Models\LogSistema::debug('SicoobAPI', 'getSaldo_parsed', 'Saldo parseado', [
+                'numeroConta' => $numeroConta,
+                'saldo_final' => $saldoFinal,
+                'saldo_raw' => $resultado['saldo'] ?? 'CAMPO_AUSENTE',
+                'saldo_bloqueado' => $resultado['saldoBloqueado'] ?? $response['saldoBloqueado'] ?? 'AUSENTE',
+                'saldo_limite' => $resultado['saldoLimite'] ?? $response['saldoLimite'] ?? 'AUSENTE',
+            ]);
+        } catch (\Exception $e) {}
+        
         return [
-            'saldo' => (float) ($resultado['saldo'] ?? 0),
+            'saldo' => $saldoFinal,
             'saldo_bloqueado' => (float) ($resultado['saldoBloqueado'] ?? $response['saldoBloqueado'] ?? 0),
             'saldo_limite' => (float) ($resultado['saldoLimite'] ?? $response['saldoLimite'] ?? 0),
             'atualizado_em' => date('Y-m-d\TH:i:s'),
