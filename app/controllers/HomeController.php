@@ -496,7 +496,9 @@ class HomeController extends Controller
                     'transacoes_aprovadas' => $transacoesAprovadas,
                     'transacoes_ignoradas' => $transacoesIgnoradas,
                     'ultima_sincronizacao' => $ultimaSincronizacao
-                ]
+                ],
+                // Métricas por Empresa (separadas visualmente)
+                'metricas_por_empresa' => $metricasPorEmpresa
             ]);
             
         } catch (\Exception $e) {
