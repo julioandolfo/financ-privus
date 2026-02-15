@@ -162,7 +162,7 @@ class TransacaoPendenteController extends Controller
             return $response->json(['error' => 'Acesso negado'], 403);
         }
         
-        $data = $request->all();
+        $data = $request->isJson() ? ($request->json() ?? []) : $request->all();
         
         try {
             $dataVencimento = !empty($data['data_vencimento']) ? $data['data_vencimento'] : $transacao['data_transacao'];
@@ -249,7 +249,7 @@ class TransacaoPendenteController extends Controller
             return $response->json(['error' => 'Acesso negado'], 403);
         }
         
-        $data = $request->all();
+        $data = $request->isJson() ? ($request->json() ?? []) : $request->all();
         
         if ($this->transacaoModel->ignorar($id, $usuarioId, $data['observacao'] ?? null)) {
             return $response->json([
@@ -266,7 +266,7 @@ class TransacaoPendenteController extends Controller
      */
     public function aprovarLote(Request $request, Response $response)
     {
-        $data = $request->all();
+        $data = $request->isJson() ? ($request->json() ?? []) : $request->all();
         $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         $usuarioId = $_SESSION['usuario_id'] ?? null;
         
@@ -346,7 +346,7 @@ class TransacaoPendenteController extends Controller
      */
     public function ignorarLote(Request $request, Response $response)
     {
-        $data = $request->all();
+        $data = $request->isJson() ? ($request->json() ?? []) : $request->all();
         $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         $usuarioId = $_SESSION['usuario_id'] ?? null;
         

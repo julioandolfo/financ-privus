@@ -476,7 +476,9 @@ class SicoobBankService extends AbstractBankService
             if (!is_array($txn)) continue;
 
             $valor = (float) ($txn['valor'] ?? 0);
-            $descricao = $txn['descricao'] ?? 'Transação Sicoob';
+            $descricao = trim($txn['descricao'] ?? 'Transação Sicoob');
+            $infoComplementar = trim($txn['descInfComplementar'] ?? '');
+            $cpfCnpj = trim($txn['cpfCnpj'] ?? '');
             $data = $txn['data'] ?? date('Y-m-d');
             $tipo = strtoupper(trim($txn['tipo'] ?? ''));
 
@@ -491,13 +493,22 @@ class SicoobBankService extends AbstractBankService
                 $data = substr($data, 0, 10);
             }
 
+            // Enriquecer descrição com informação complementar quando disponível
+            $descricaoCompleta = $descricao;
+            if ($infoComplementar && stripos($descricaoCompleta, $infoComplementar) === false) {
+                $descricaoCompleta .= ' - ' . $infoComplementar;
+            }
+            if ($cpfCnpj && stripos($descricaoCompleta, $cpfCnpj) === false) {
+                $descricaoCompleta .= ' [' . $cpfCnpj . ']';
+            }
+
             // Gerar ID único usando transactionId se disponível
             $transacaoId = $txn['transactionId'] ?? $txn['numeroDocumento'] ?? uniqid();
 
             $transacoes[] = [
                 'banco_transacao_id' => 'SCB-' . $transacaoId,
                 'data_transacao' => $data,
-                'descricao_original' => $descricao,
+                'descricao_original' => $descricaoCompleta,
                 'valor' => abs($valor),
                 'tipo' => $tipoTransacao,
                 'metodo_pagamento' => $this->identificarMetodoPagamento($descricao),
@@ -507,9 +518,10 @@ class SicoobBankService extends AbstractBankService
                     'tipo_lancamento' => $txn['tipo'] ?? '',
                     'transaction_id' => $txn['transactionId'] ?? '',
                     'numero_documento' => $txn['numeroDocumento'] ?? '',
-                    'cpf_cnpj' => $txn['cpfCnpj'] ?? '',
+                    'cpf_cnpj' => $cpfCnpj,
                     'data_lote' => $txn['dataLote'] ?? '',
-                    'info_complementar' => $txn['descInfComplementar'] ?? ''
+                    'info_complementar' => $infoComplementar,
+                    'descricao_banco' => $descricao
                 ]
             ];
         }

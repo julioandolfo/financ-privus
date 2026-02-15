@@ -743,6 +743,7 @@ class ConexaoBancariaController extends Controller
                     'cliente_sugerido_id' => $classificacao['cliente_id'] ?? null,
                     'confianca_ia' => $classificacao['confianca'] ?? null,
                     'justificativa_ia' => $classificacao['justificativa'] ?? null,
+                    'dados_extras' => $transacao['dados_extras'] ?? null,
                     'status' => 'pendente'
                 ];
                 

@@ -74,7 +74,17 @@ class TransacaoPendente extends Model
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        
+        foreach ($results as &$row) {
+            if (!empty($row['dados_extras'])) {
+                $row['dados_extras'] = json_decode($row['dados_extras'], true) ?: [];
+            } else {
+                $row['dados_extras'] = [];
+            }
+        }
+        
+        return $results;
     }
     
     /**
@@ -96,16 +106,21 @@ class TransacaoPendente extends Model
                  categoria_sugerida_id, centro_custo_sugerido_id, 
                  fornecedor_sugerido_id, cliente_sugerido_id, 
                  confianca_ia, justificativa_ia,
-                 banco_transacao_id, metodo_pagamento, saldo_apos) 
+                 banco_transacao_id, metodo_pagamento, saldo_apos, dados_extras) 
                 VALUES 
                 (:empresa_id, :conexao_bancaria_id, :data_transacao, :descricao_original,
                  :valor, :tipo, :origem, :referencia_externa, :transacao_hash,
                  :categoria_sugerida_id, :centro_custo_sugerido_id,
                  :fornecedor_sugerido_id, :cliente_sugerido_id,
                  :confianca_ia, :justificativa_ia,
-                 :banco_transacao_id, :metodo_pagamento, :saldo_apos)";
+                 :banco_transacao_id, :metodo_pagamento, :saldo_apos, :dados_extras)";
         
         $stmt = $this->db->prepare($sql);
+        
+        $dadosExtras = $data['dados_extras'] ?? null;
+        if (is_array($dadosExtras)) {
+            $dadosExtras = json_encode($dadosExtras, JSON_UNESCAPED_UNICODE);
+        }
         
         return $stmt->execute([
             'empresa_id' => $data['empresa_id'],
@@ -125,7 +140,8 @@ class TransacaoPendente extends Model
             'justificativa_ia' => $data['justificativa_ia'] ?? null,
             'banco_transacao_id' => $data['banco_transacao_id'] ?? null,
             'metodo_pagamento' => $data['metodo_pagamento'] ?? null,
-            'saldo_apos' => $data['saldo_apos'] ?? null
+            'saldo_apos' => $data['saldo_apos'] ?? null,
+            'dados_extras' => $dadosExtras
         ]) ? $this->db->lastInsertId() : false;
     }
     
@@ -279,6 +295,14 @@ class TransacaoPendente extends Model
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['id' => $id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result && !empty($result['dados_extras'])) {
+            $result['dados_extras'] = json_decode($result['dados_extras'], true) ?: [];
+        } elseif ($result) {
+            $result['dados_extras'] = [];
+        }
+        
+        return $result;
     }
 }
