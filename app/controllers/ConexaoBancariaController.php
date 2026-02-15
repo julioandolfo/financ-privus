@@ -470,13 +470,37 @@ class ConexaoBancariaController extends Controller
             $contaBancariaModel = new ContaBancaria();
             $contaCriada = false;
             
-            // Se não tem conta bancária vinculada, criar automaticamente
+            // Verificar se a conta vinculada realmente existe e está ativa
+            $precisaCriar = false;
             if (empty($conexao['conta_bancaria_id'])) {
+                $precisaCriar = true;
                 \App\Models\LogSistema::info('ConexaoBancaria', 'saldo_sem_conta', 'Conexão sem conta bancária vinculada, tentando criar...', [
                     'conexao_id' => $id,
                     'banco' => $conexao['banco'],
                 ]);
-                
+            } else {
+                // Tem ID, mas a conta realmente existe?
+                $contaVinculada = $contaBancariaModel->findById($conexao['conta_bancaria_id']);
+                if (!$contaVinculada || empty($contaVinculada['ativo'])) {
+                    $precisaCriar = true;
+                    // Limpar referência inválida
+                    $this->conexaoModel->update($id, ['conta_bancaria_id' => null]);
+                    $conexao['conta_bancaria_id'] = null;
+                    \App\Models\LogSistema::warning('ConexaoBancaria', 'saldo_conta_fantasma', 'conta_bancaria_id apontava para conta inexistente/inativa, limpando referência e criando nova', [
+                        'conexao_id' => $id,
+                        'conta_bancaria_id_antigo' => $conexao['conta_bancaria_id'] ?? 1,
+                        'conta_encontrada' => $contaVinculada ? 'sim (ativo=' . ($contaVinculada['ativo'] ?? '?') . ')' : 'NÃO EXISTE',
+                    ]);
+                } else {
+                    \App\Models\LogSistema::debug('ConexaoBancaria', 'saldo_conta_existe', 'Conexão já tem conta vinculada e válida', [
+                        'conexao_id' => $id,
+                        'conta_bancaria_id' => $conexao['conta_bancaria_id'],
+                        'banco_nome' => $contaVinculada['banco_nome'] ?? '',
+                    ]);
+                }
+            }
+            
+            if ($precisaCriar) {
                 $novaConta = $this->criarContaBancariaAutomatica($conexao, $saldoData['saldo'], $contaBancariaModel);
                 
                 \App\Models\LogSistema::debug('ConexaoBancaria', 'saldo_resultado_criar', 'Resultado da criação automática', [
@@ -498,11 +522,6 @@ class ConexaoBancariaController extends Controller
                         'conexao_id' => $id,
                     ]);
                 }
-            } else {
-                \App\Models\LogSistema::debug('ConexaoBancaria', 'saldo_conta_existe', 'Conexão já tem conta vinculada', [
-                    'conexao_id' => $id,
-                    'conta_bancaria_id' => $conexao['conta_bancaria_id'],
-                ]);
             }
             
             // Propagar saldo real para a conta bancária do sistema
@@ -713,8 +732,21 @@ class ConexaoBancariaController extends Controller
                 
                 $contaBancariaModel = new \App\Models\ContaBancaria();
                 
-                // Se não tem conta bancária vinculada, criar automaticamente
+                // Verificar se a conta vinculada realmente existe
+                $precisaCriar = false;
                 if (empty($conexao['conta_bancaria_id'])) {
+                    $precisaCriar = true;
+                } else {
+                    $contaVinculada = $contaBancariaModel->findById($conexao['conta_bancaria_id']);
+                    if (!$contaVinculada || empty($contaVinculada['ativo'])) {
+                        $precisaCriar = true;
+                        $this->conexaoModel->update($id, ['conta_bancaria_id' => null]);
+                        $conexao['conta_bancaria_id'] = null;
+                        $detalhes[] = "Referência a conta bancária inválida (não existe), criando nova...";
+                    }
+                }
+                
+                if ($precisaCriar) {
                     $novaConta = $this->criarContaBancariaAutomatica($conexao, $saldoData['saldo'], $contaBancariaModel);
                     if ($novaConta) {
                         $conexao['conta_bancaria_id'] = $novaConta;
