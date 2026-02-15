@@ -24,6 +24,7 @@ class TransacaoPendenteController extends Controller
     private $centroCustoModel;
     private $fornecedorModel;
     private $clienteModel;
+    private $empresasUsuarioIds = [];
     
     public function __construct()
     {
@@ -35,6 +36,21 @@ class TransacaoPendenteController extends Controller
         $this->centroCustoModel = new CentroCusto();
         $this->fornecedorModel = new Fornecedor();
         $this->clienteModel = new Cliente();
+        
+        $usuarioId = $_SESSION['usuario_id'] ?? null;
+        if ($usuarioId) {
+            $usuarioModel = new Usuario();
+            $empresas = $usuarioModel->getEmpresas($usuarioId);
+            $this->empresasUsuarioIds = array_map(fn($e) => (int)$e['id'], $empresas);
+        }
+    }
+    
+    /**
+     * Verifica se o usuário tem acesso a determinada empresa
+     */
+    private function temAcessoEmpresa($empresaId): bool
+    {
+        return in_array((int)$empresaId, $this->empresasUsuarioIds);
     }
     
     /**
@@ -123,11 +139,11 @@ class TransacaoPendenteController extends Controller
             return $response->redirect('/transacoes-pendentes');
         }
         
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        if ($transacao['empresa_id'] != $empresaId) {
+        if (!$this->temAcessoEmpresa($transacao['empresa_id'])) {
             $_SESSION['error'] = 'Acesso negado';
             return $response->redirect('/transacoes-pendentes');
         }
+        $empresaId = $transacao['empresa_id'];
         
         // Buscar categorias e centros de custo para edição
         $categorias = $this->categoriaModel->findAll($empresaId);
@@ -155,13 +171,13 @@ class TransacaoPendenteController extends Controller
             return $response->json(['error' => 'Transação não encontrada'], 404);
         }
         
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         $usuarioId = $_SESSION['usuario_id'] ?? null;
         
-        if ($transacao['empresa_id'] != $empresaId) {
+        if (!$this->temAcessoEmpresa($transacao['empresa_id'])) {
             return $response->json(['error' => 'Acesso negado'], 403);
         }
         
+        $empresaId = $transacao['empresa_id'];
         $data = $request->isJson() ? ($request->json() ?? []) : $request->all();
         
         try {
@@ -242,10 +258,9 @@ class TransacaoPendenteController extends Controller
             return $response->json(['error' => 'Transação não encontrada'], 404);
         }
         
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         $usuarioId = $_SESSION['usuario_id'] ?? null;
         
-        if ($transacao['empresa_id'] != $empresaId) {
+        if (!$this->temAcessoEmpresa($transacao['empresa_id'])) {
             return $response->json(['error' => 'Acesso negado'], 403);
         }
         
@@ -267,7 +282,6 @@ class TransacaoPendenteController extends Controller
     public function aprovarLote(Request $request, Response $response)
     {
         $data = $request->isJson() ? ($request->json() ?? []) : $request->all();
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         $usuarioId = $_SESSION['usuario_id'] ?? null;
         
         if (empty($data['transacoes']) || !is_array($data['transacoes'])) {
@@ -281,15 +295,16 @@ class TransacaoPendenteController extends Controller
             try {
                 $transacao = $this->transacaoModel->findById($transacaoId);
                 
-                if (!$transacao || $transacao['empresa_id'] != $empresaId) {
+                if (!$transacao || !$this->temAcessoEmpresa($transacao['empresa_id'])) {
                     $erros[] = "Transação #{$transacaoId}: não encontrada ou sem permissão";
                     continue;
                 }
                 
                 // Criar conta a pagar/receber usando dados sugeridos
+                $txEmpresaId = $transacao['empresa_id'];
                 if ($transacao['tipo'] === 'debito') {
                     $contaData = [
-                        'empresa_id' => $empresaId,
+                        'empresa_id' => $txEmpresaId,
                         'categoria_id' => $transacao['categoria_sugerida_id'],
                         'centro_custo_id' => $transacao['centro_custo_sugerido_id'],
                         'fornecedor_id' => $transacao['fornecedor_sugerido_id'],
@@ -307,7 +322,7 @@ class TransacaoPendenteController extends Controller
                     }
                 } else {
                     $contaData = [
-                        'empresa_id' => $empresaId,
+                        'empresa_id' => $txEmpresaId,
                         'categoria_id' => $transacao['categoria_sugerida_id'],
                         'centro_custo_id' => $transacao['centro_custo_sugerido_id'],
                         'cliente_id' => $transacao['cliente_sugerido_id'],
@@ -347,7 +362,6 @@ class TransacaoPendenteController extends Controller
     public function ignorarLote(Request $request, Response $response)
     {
         $data = $request->isJson() ? ($request->json() ?? []) : $request->all();
-        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
         $usuarioId = $_SESSION['usuario_id'] ?? null;
         
         if (empty($data['transacoes']) || !is_array($data['transacoes'])) {
@@ -361,7 +375,7 @@ class TransacaoPendenteController extends Controller
             try {
                 $transacao = $this->transacaoModel->findById($transacaoId);
                 
-                if (!$transacao || $transacao['empresa_id'] != $empresaId) {
+                if (!$transacao || !$this->temAcessoEmpresa($transacao['empresa_id'])) {
                     $erros[] = "Transação #{$transacaoId}: não encontrada ou sem permissão";
                     continue;
                 }
