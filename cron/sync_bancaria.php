@@ -159,6 +159,21 @@ try {
             $transacoes = $service->getTransacoes($conexaoCredenciais, $dataInicio, $dataFim);
             echo "  Encontradas " . count($transacoes) . " transações no período\n";
             
+            // Filtrar por tipo_sync (apenas_despesas, apenas_receitas ou ambos)
+            $tipoSync = $conexao['tipo_sync'] ?? 'ambos';
+            if ($tipoSync !== 'ambos') {
+                $antes = count($transacoes);
+                $transacoes = array_filter($transacoes, function($t) use ($tipoSync) {
+                    if ($tipoSync === 'apenas_despesas') return ($t['tipo'] ?? '') === 'debito';
+                    if ($tipoSync === 'apenas_receitas') return ($t['tipo'] ?? '') === 'credito';
+                    return true;
+                });
+                $transacoes = array_values($transacoes);
+                $filtradas = $antes - count($transacoes);
+                $tipoLabel = $tipoSync === 'apenas_despesas' ? 'despesas' : 'receitas';
+                echo "  Filtro tipo_sync: {$tipoSync} - mantidas " . count($transacoes) . " ({$filtradas} {$tipoLabel} filtradas)\n";
+            }
+            
             // === 4. Processar e Classificar ===
             $classificadorService = new ClassificadorIAService($conexao['empresa_id']);
             $novas = 0;

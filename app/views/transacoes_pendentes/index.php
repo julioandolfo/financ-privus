@@ -40,6 +40,83 @@ $errors = $this->session->get('errors') ?? [];
         </div>
     </div>
 
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <form method="GET" action="/transacoes-pendentes" class="space-y-4">
+            <input type="hidden" name="empresa_id" value="<?= htmlspecialchars($empresa_id_selecionada ?? '') ?>">
+            
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <!-- Filtro: Tipo -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Tipo</label>
+                    <select name="tipo" onchange="this.form.submit()" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Todos</option>
+                        <option value="debito" <?= ($filtros['tipo'] ?? '') === 'debito' ? 'selected' : '' ?>>Despesas (débitos)</option>
+                        <option value="credito" <?= ($filtros['tipo'] ?? '') === 'credito' ? 'selected' : '' ?>>Receitas (créditos)</option>
+                    </select>
+                </div>
+
+                <!-- Filtro: Status -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Status</label>
+                    <select name="status" onchange="this.form.submit()" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="pendente" <?= ($filtros['status'] ?? 'pendente') === 'pendente' ? 'selected' : '' ?>>Pendentes</option>
+                        <option value="aprovada" <?= ($filtros['status'] ?? '') === 'aprovada' ? 'selected' : '' ?>>Aprovadas</option>
+                        <option value="ignorada" <?= ($filtros['status'] ?? '') === 'ignorada' ? 'selected' : '' ?>>Ignoradas</option>
+                        <option value="" <?= ($filtros['status'] ?? 'pendente') === '' ? 'selected' : '' ?>>Todas</option>
+                    </select>
+                </div>
+
+                <!-- Filtro: Banco/Origem -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Banco</label>
+                    <select name="banco" onchange="this.form.submit()" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Todos</option>
+                        <option value="sicoob" <?= ($filtros['banco'] ?? '') === 'sicoob' ? 'selected' : '' ?>>Sicoob</option>
+                        <option value="sicredi" <?= ($filtros['banco'] ?? '') === 'sicredi' ? 'selected' : '' ?>>Sicredi</option>
+                        <option value="itau" <?= ($filtros['banco'] ?? '') === 'itau' ? 'selected' : '' ?>>Itaú</option>
+                        <option value="bradesco" <?= ($filtros['banco'] ?? '') === 'bradesco' ? 'selected' : '' ?>>Bradesco</option>
+                        <option value="mercadopago" <?= ($filtros['banco'] ?? '') === 'mercadopago' ? 'selected' : '' ?>>Mercado Pago</option>
+                        <option value="ofx" <?= ($filtros['banco'] ?? '') === 'ofx' ? 'selected' : '' ?>>OFX (importação)</option>
+                    </select>
+                </div>
+
+                <!-- Filtro: Data Início -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">De</label>
+                    <input type="date" name="data_inicio" value="<?= htmlspecialchars($filtros['data_inicio'] ?? '') ?>" onchange="this.form.submit()"
+                           class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+
+                <!-- Filtro: Data Fim -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Até</label>
+                    <input type="date" name="data_fim" value="<?= htmlspecialchars($filtros['data_fim'] ?? '') ?>" onchange="this.form.submit()"
+                           class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+            </div>
+
+            <?php 
+            $temFiltroAtivo = !empty($filtros['tipo']) || !empty($filtros['banco']) || !empty($filtros['data_inicio']) || !empty($filtros['data_fim']) || ($filtros['status'] ?? 'pendente') !== 'pendente';
+            if ($temFiltroAtivo): ?>
+            <div class="flex items-center gap-2 pt-2">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Filtros ativos:</span>
+                <?php if (!empty($filtros['tipo'])): ?>
+                    <span class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium">
+                        <?= $filtros['tipo'] === 'debito' ? 'Despesas' : 'Receitas' ?>
+                    </span>
+                <?php endif; ?>
+                <?php if (!empty($filtros['banco'])): ?>
+                    <span class="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium">
+                        <?= ucfirst($filtros['banco']) ?>
+                    </span>
+                <?php endif; ?>
+                <a href="/transacoes-pendentes?empresa_id=<?= $empresa_id_selecionada ?>" class="text-xs text-red-600 dark:text-red-400 hover:underline ml-2">Limpar filtros</a>
+            </div>
+            <?php endif; ?>
+        </form>
+    </div>
+
     <!-- Estatísticas -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">

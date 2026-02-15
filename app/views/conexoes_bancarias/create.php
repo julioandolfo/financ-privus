@@ -192,14 +192,25 @@ $camposJson = json_encode($campos_por_banco ?? [], JSON_UNESCAPED_UNICODE);
                     </label>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Frequência</label>
-                    <select name="frequencia_sync" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                        <option value="manual">Manual</option>
-                        <option value="horaria">A cada hora</option>
-                        <option value="diaria" selected>Diária</option>
-                        <option value="semanal">Semanal</option>
-                    </select>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Frequência</label>
+                        <select name="frequencia_sync" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                            <option value="manual">Manual</option>
+                            <option value="horaria">A cada hora</option>
+                            <option value="diaria" selected>Diária</option>
+                            <option value="semanal">Semanal</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">O que sincronizar</label>
+                        <select name="tipo_sync" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                            <option value="ambos">Despesas e Receitas</option>
+                            <option value="apenas_despesas">Apenas Despesas (débitos)</option>
+                            <option value="apenas_receitas">Apenas Receitas (créditos)</option>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Filtra quais transações serão importadas do extrato</p>
+                    </div>
                 </div>
             </div>
 

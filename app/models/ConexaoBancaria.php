@@ -64,7 +64,7 @@ class ConexaoBancaria extends Model
         $sql = "INSERT INTO {$this->table} 
                 (empresa_id, usuario_id, banco, tipo_integracao, tipo, identificacao, 
                  access_token, refresh_token, token_expira_em, consent_id,
-                 auto_sync, frequencia_sync, categoria_padrao_id, 
+                 auto_sync, frequencia_sync, tipo_sync, categoria_padrao_id, 
                  centro_custo_padrao_id, aprovacao_automatica,
                  ambiente, client_id, client_secret, cert_pem, key_pem, cert_password,
                  cert_pfx, cooperativa,
@@ -73,7 +73,7 @@ class ConexaoBancaria extends Model
                 VALUES 
                 (:empresa_id, :usuario_id, :banco, :tipo_integracao, :tipo, :identificacao,
                  :access_token, :refresh_token, :token_expira_em, :consent_id,
-                 :auto_sync, :frequencia_sync, :categoria_padrao_id,
+                 :auto_sync, :frequencia_sync, :tipo_sync, :categoria_padrao_id,
                  :centro_custo_padrao_id, :aprovacao_automatica,
                  :ambiente, :client_id, :client_secret, :cert_pem, :key_pem, :cert_password,
                  :cert_pfx, :cooperativa,
@@ -95,6 +95,7 @@ class ConexaoBancaria extends Model
             'consent_id' => $data['consent_id'] ?? null,
             'auto_sync' => $data['auto_sync'] ?? 1,
             'frequencia_sync' => $data['frequencia_sync'] ?? 'diaria',
+            'tipo_sync' => $data['tipo_sync'] ?? 'ambos',
             'categoria_padrao_id' => $data['categoria_padrao_id'] ?? null,
             'centro_custo_padrao_id' => $data['centro_custo_padrao_id'] ?? null,
             'aprovacao_automatica' => $data['aprovacao_automatica'] ?? 0,
@@ -124,7 +125,7 @@ class ConexaoBancaria extends Model
         $fields = [];
         $params = ['id' => $id];
         
-        $allowed = ['identificacao', 'auto_sync', 'frequencia_sync', 
+        $allowed = ['identificacao', 'auto_sync', 'frequencia_sync', 'tipo_sync',
                    'categoria_padrao_id', 'centro_custo_padrao_id', 'aprovacao_automatica',
                    'access_token', 'refresh_token', 'token_expira_em', 'ultima_sincronizacao',
                    'ambiente', 'client_id', 'client_secret', 'cert_pem', 'key_pem', 'cert_password',

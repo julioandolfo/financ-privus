@@ -46,10 +46,17 @@ class TransacaoPendente extends Model
             $sql .= " AND tp.status = 'pendente'";
         }
         
-        // Filtro por banco
+        // Filtro por tipo (debito/credito)
+        if (!empty($filtros['tipo'])) {
+            $sql .= " AND tp.tipo = :tipo";
+            $params['tipo'] = $filtros['tipo'];
+        }
+        
+        // Filtro por banco/origem
         if (!empty($filtros['banco'])) {
-            $sql .= " AND cb.banco = :banco";
+            $sql .= " AND (cb.banco = :banco OR tp.origem = :origem)";
             $params['banco'] = $filtros['banco'];
+            $params['origem'] = $filtros['banco'];
         }
         
         // Filtro por período

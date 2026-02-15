@@ -55,6 +55,7 @@ class TransacaoPendenteController extends Controller
         // Filtros
         $filtros = [
             'status' => $request->get('status', 'pendente'),
+            'tipo' => $request->get('tipo'),
             'banco' => $request->get('banco'),
             'data_inicio' => $request->get('data_inicio'),
             'data_fim' => $request->get('data_fim')

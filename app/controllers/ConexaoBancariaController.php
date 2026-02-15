@@ -40,17 +40,42 @@ class ConexaoBancariaController extends Controller
         
         $empresasUsuario = $usuarioModel->getEmpresas($usuarioId);
         
-        $empresaId = $request->get('empresa_id');
-        if (!$empresaId && !empty($empresasUsuario)) {
-            $empresaId = $empresasUsuario[0]['id'];
-        }
+        // "todas" como padrão, ou o valor selecionado pelo usuário
+        $empresaId = $request->get('empresa_id') ?? 'todas';
         
         $conexoes = [];
         $empresa = null;
-        $saldoTotal = null;
+        $saldoTotal = ['saldo_total' => 0, 'total_contas' => 0, 'saldo_mais_antigo' => null];
         $transacoesPendentes = 0;
         
-        if ($empresaId) {
+        if ($empresaId === 'todas') {
+            // Buscar conexões de todas as empresas do usuário
+            $empresaIds = array_column($empresasUsuario, 'id');
+            foreach ($empresaIds as $empId) {
+                $empConexoes = $this->conexaoModel->findByEmpresa($empId);
+                // Adicionar nome da empresa em cada conexão para identificar
+                $empData = $this->empresaModel->findById($empId);
+                foreach ($empConexoes as &$con) {
+                    $con['empresa_nome'] = $empData['nome_fantasia'] ?? $empData['razao_social'] ?? 'Empresa #' . $empId;
+                }
+                unset($con);
+                $conexoes = array_merge($conexoes, $empConexoes);
+                
+                $empSaldo = $this->conexaoModel->getSaldoTotalEmpresa($empId);
+                $saldoTotal['saldo_total'] += ($empSaldo['saldo_total'] ?? 0);
+                $saldoTotal['total_contas'] += ($empSaldo['total_contas'] ?? 0);
+                if (!empty($empSaldo['saldo_mais_antigo'])) {
+                    if (empty($saldoTotal['saldo_mais_antigo']) || $empSaldo['saldo_mais_antigo'] < $saldoTotal['saldo_mais_antigo']) {
+                        $saldoTotal['saldo_mais_antigo'] = $empSaldo['saldo_mais_antigo'];
+                    }
+                }
+            }
+            
+            $transacaoModel = new TransacaoPendente();
+            foreach ($empresaIds as $empId) {
+                $transacoesPendentes += $transacaoModel->countByEmpresa($empId, 'pendente');
+            }
+        } elseif ($empresaId) {
             $conexoes = $this->conexaoModel->findByEmpresa($empresaId);
             $empresa = $this->empresaModel->findById($empresaId);
             $saldoTotal = $this->conexaoModel->getSaldoTotalEmpresa($empresaId);
@@ -182,6 +207,7 @@ class ConexaoBancariaController extends Controller
             'cert_pfx' => $certPfxBase64,
             'cert_password' => $data['cert_password'] ?? null,
             'cooperativa' => $data['cooperativa'] ?? null,
+            'tipo_sync' => $data['tipo_sync'] ?? 'ambos',
             'status_conexao' => 'ativa'
         ];
         
@@ -427,6 +453,21 @@ class ConexaoBancariaController extends Controller
             $dataFim = date('Y-m-d');
             
             $transacoes = $service->getTransacoes($conexao, $dataInicio, $dataFim);
+            
+            // Filtrar transações conforme tipo_sync configurado
+            $tipoSync = $conexao['tipo_sync'] ?? 'ambos';
+            if ($tipoSync !== 'ambos') {
+                $transacoes = array_filter($transacoes, function($t) use ($tipoSync) {
+                    if ($tipoSync === 'apenas_despesas') {
+                        return ($t['tipo'] ?? '') === 'debito';
+                    }
+                    if ($tipoSync === 'apenas_receitas') {
+                        return ($t['tipo'] ?? '') === 'credito';
+                    }
+                    return true;
+                });
+                $transacoes = array_values($transacoes);
+            }
             
             // Processar e salvar transações
             $novasTransacoes = $this->processarTransacoes($transacoes, $conexao);
