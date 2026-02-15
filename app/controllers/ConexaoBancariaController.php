@@ -327,26 +327,52 @@ class ConexaoBancariaController extends Controller
             return $response->redirect('/conexoes-bancarias');
         }
         
+        // Limpar número da conta (apenas dígitos)
+        $bancoContaId = $data['banco_conta_id'] ?? $conexao['banco_conta_id'];
+        if (!empty($bancoContaId)) {
+            $bancoContaId = preg_replace('/[^0-9]/', '', $bancoContaId);
+        }
+        
         $updateData = [
             'identificacao' => $data['identificacao'] ?? $conexao['identificacao'],
             'auto_sync' => isset($data['auto_sync']) ? 1 : 0,
             'frequencia_sync' => $data['frequencia_sync'] ?? $conexao['frequencia_sync'],
+            'tipo_sync' => $data['tipo_sync'] ?? $conexao['tipo_sync'] ?? 'ambos',
             'categoria_padrao_id' => !empty($data['categoria_padrao_id']) ? $data['categoria_padrao_id'] : null,
             'centro_custo_padrao_id' => !empty($data['centro_custo_padrao_id']) ? $data['centro_custo_padrao_id'] : null,
             'aprovacao_automatica' => isset($data['aprovacao_automatica']) ? 1 : 0,
             'conta_bancaria_id' => !empty($data['conta_bancaria_id']) ? $data['conta_bancaria_id'] : null,
-            'banco_conta_id' => $data['banco_conta_id'] ?? $conexao['banco_conta_id'],
-            'ativo' => isset($data['ativo']) ? 1 : ($conexao['ativo'] ?? 1)
+            'banco_conta_id' => $bancoContaId,
+            'ativo' => isset($data['ativo']) ? 1 : 0
         ];
         
         // Atualizar credenciais se fornecidas
         if (!empty($data['client_id'])) $updateData['client_id'] = $data['client_id'];
         if (!empty($data['client_secret'])) $updateData['client_secret'] = $data['client_secret'];
         if (!empty($data['access_token'])) $updateData['access_token'] = $data['access_token'];
-        if (!empty($data['cert_pem'])) $updateData['cert_pem'] = $data['cert_pem'];
-        if (!empty($data['key_pem'])) $updateData['key_pem'] = $data['key_pem'];
         if (!empty($data['cert_password'])) $updateData['cert_password'] = $data['cert_password'];
         if (!empty($data['ambiente'])) $updateData['ambiente'] = $data['ambiente'];
+        if (!empty($data['cooperativa'])) $updateData['cooperativa'] = $data['cooperativa'];
+        
+        // Certificado PEM (só atualiza se o conteúdo parecer válido, não o placeholder)
+        if (!empty($data['cert_pem']) && strpos($data['cert_pem'], '-----BEGIN') !== false) {
+            $updateData['cert_pem'] = $data['cert_pem'];
+        }
+        if (!empty($data['key_pem']) && strpos($data['key_pem'], '-----BEGIN') !== false) {
+            $updateData['key_pem'] = $data['key_pem'];
+        }
+        
+        // Upload de certificado PFX
+        if (!empty($_FILES['cert_pfx']['tmp_name']) && $_FILES['cert_pfx']['error'] === UPLOAD_ERR_OK) {
+            $ext = strtolower(pathinfo($_FILES['cert_pfx']['name'], PATHINFO_EXTENSION));
+            if (in_array($ext, ['pfx', 'p12'])) {
+                $pfxContent = file_get_contents($_FILES['cert_pfx']['tmp_name']);
+                $updateData['cert_pfx'] = base64_encode($pfxContent);
+            } else {
+                $_SESSION['error'] = 'Arquivo de certificado deve ser .pfx ou .p12';
+                return $response->redirect("/conexoes-bancarias/{$id}/edit");
+            }
+        }
         
         if ($this->conexaoModel->update($id, $updateData)) {
             $_SESSION['success'] = 'Conexão atualizada com sucesso!';
