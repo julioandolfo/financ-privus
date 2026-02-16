@@ -1,8 +1,6 @@
 <?php
 $errors = $this->session->get('errors') ?? [];
 $old = $this->session->get('old') ?? [];
-$debugCategorias = isset($categorias) ? count($categorias) : 'VAR_NAO_EXISTE';
-$debugEmpresaId = $conta['empresa_id'] ?? 'N/A';
 ?>
 
 <div class="max-w-5xl mx-auto animate-fade-in">
@@ -174,11 +172,9 @@ $debugEmpresaId = $conta['empresa_id'] ?? 'N/A';
                     </div>
 
                     <!-- Data de Recebimento -->
-                    <?php if (in_array($conta['status'], ['recebido', 'parcial'])): ?>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Data de Recebimento
-                            <span class="text-xs text-gray-500">(editável)</span>
                         </label>
                         <input type="date" name="data_recebimento" value="<?= $old['data_recebimento'] ?? $conta['data_recebimento'] ?>"
                                class="w-full px-4 py-3 rounded-xl border <?= isset($errors['data_recebimento']) ? 'border-red-500' : 'border-gray-300 dark:border-gray-600' ?> bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
@@ -186,10 +182,9 @@ $debugEmpresaId = $conta['empresa_id'] ?? 'N/A';
                             <p class="mt-1 text-sm text-red-500"><?= $errors['data_recebimento'] ?></p>
                         <?php endif; ?>
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Disponível apenas para contas recebidas ou parcialmente recebidas
+                            Preencha quando a conta for recebida. Deixe em branco se ainda pendente.
                         </p>
                     </div>
-                    <?php endif; ?>
                 </div>
             </div>
 
@@ -302,21 +297,7 @@ $debugEmpresaId = $conta['empresa_id'] ?? 'N/A';
     </div>
 </div>
 
-<!-- DEBUG: empresa_id=<?= $debugEmpresaId ?> | categorias no PHP=<?= $debugCategorias ?> -->
-
 <script>
-// DEBUG - console e log do PHP
-(function() {
-    const cat = document.getElementById('categoria_id');
-    const info = {
-        empresaId: <?= json_encode($debugEmpresaId) ?>,
-        categoriasNoPHP: <?= json_encode($debugCategorias) ?>,
-        optionsNoSelect: cat ? cat.options.length : 0,
-        textosOptions: cat ? Array.from(cat.options).map(o => o.text) : []
-    };
-    console.log('[DEBUG contas-receber/edit]', info);
-})();
-
 function contaReceberForm() {
     return {
         valorTotal: <?= $old['valor_total'] ?? $conta['valor_total'] ?>,

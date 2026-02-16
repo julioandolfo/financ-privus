@@ -266,9 +266,18 @@ class IntegracaoController extends Controller
         
         // Busca configuração específica baseada no tipo
         $configuracao = null;
+        $categoriasReceita = [];
+        $centrosCusto = [];
         switch ($integracao['tipo']) {
             case IntegracaoConfig::TIPO_WOOCOMMERCE:
                 $configuracao = $this->woocommerceModel->findByIntegracaoId($id);
+                if ($configuracao && !empty($configuracao['empresa_vinculada_id'])) {
+                    $empresaId = $configuracao['empresa_vinculada_id'];
+                    $catModel = new \App\Models\CategoriaFinanceira();
+                    $categoriasReceita = $catModel->findAll($empresaId, 'receita');
+                    $centroModel = new \App\Models\CentroCusto();
+                    $centrosCusto = $centroModel->findAll($empresaId);
+                }
                 break;
             case IntegracaoConfig::TIPO_BANCO_DADOS:
                 $configuracao = $this->bancoDadosModel->findByIntegracaoId($id);
@@ -282,6 +291,8 @@ class IntegracaoController extends Controller
         return $this->render('integracoes/show', [
             'integracao' => $integracao,
             'configuracao' => $configuracao,
+            'categoriasReceita' => $categoriasReceita ?? [],
+            'centrosCusto' => $centrosCusto ?? [],
             'logs' => $logs,
             'estatisticasLogs' => $estatisticasLogs
         ]);

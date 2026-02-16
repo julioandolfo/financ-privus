@@ -451,7 +451,8 @@ class WooCommerceService
                         $statusSistema,
                         $acaoFormaPgto,
                         $statusPagamentoConfirmado,
-                        $contaReceberModel
+                        $contaReceberModel,
+                        $config
                     );
                 }
             }
@@ -827,8 +828,13 @@ class WooCommerceService
     private function criarContaReceberDoPedido(
         $pedidoId, $pedWoo, $empresaId, $clienteId, 
         $statusSistema, $acaoFormaPgto, $statusPagamentoConfirmado,
-        $contaReceberModel
+        $contaReceberModel,
+        $config = null
     ) {
+        $categoriaId = !empty($config['categoria_receita_padrao_id']) 
+            ? (int)$config['categoria_receita_padrao_id'] 
+            : $this->getCategoriaFinanceiraVendaId($empresaId);
+        $centroCustoId = (!empty($config) && !empty($config['centro_custo_padrao_id'])) ? (int)$config['centro_custo_padrao_id'] : null;
         $valorTotal = floatval($pedWoo['total']);
         $formaPagamentoWoo = $pedWoo['payment_method'] ?? '';
         $formaPagamentoTitulo = $pedWoo['payment_method_title'] ?? $formaPagamentoWoo;
@@ -913,8 +919,8 @@ class WooCommerceService
                 $dadosConta = [
                     'empresa_id' => $empresaId,
                     'cliente_id' => $clienteId,
-                    'categoria_id' => $this->getCategoriaFinanceiraVendaId($empresaId),
-                    'centro_custo_id' => null,
+                    'categoria_id' => $categoriaId,
+                    'centro_custo_id' => $centroCustoId,
                     'numero_documento' => "WOO-{$pedWoo['number']}/{$i}",
                     'descricao' => "Pedido #{$pedWoo['number']} - Parcela {$i}/{$numeroParcelas}",
                     'valor_total' => $valorParcela,
@@ -958,8 +964,8 @@ class WooCommerceService
             $dadosConta = [
                 'empresa_id' => $empresaId,
                 'cliente_id' => $clienteId,
-                'categoria_id' => $this->getCategoriaFinanceiraVendaId($empresaId),
-                'centro_custo_id' => null,
+                'categoria_id' => $categoriaId,
+                'centro_custo_id' => $centroCustoId,
                 'numero_documento' => "WOO-{$pedWoo['number']}",
                 'descricao' => "Pedido WooCommerce #{$pedWoo['number']}",
                 'valor_total' => $valorTotal,
@@ -2401,7 +2407,8 @@ class WooCommerceService
                     $contaReceberModel = new \App\Models\ContaReceber();
                     $this->criarContaReceberDoPedido(
                         $pedidoId, $pedWoo, $empresaId, $clienteId,
-                        $statusSistema, $acaoFormaPgto, $statusPagamentoConfirmado, $contaReceberModel
+                        $statusSistema, $acaoFormaPgto, $statusPagamentoConfirmado, $contaReceberModel,
+                        $config
                     );
                 }
             }

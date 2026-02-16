@@ -437,6 +437,78 @@ class IntegracaoWooConfigController extends Controller
     }
     
     /**
+     * Salva categoria de receita padrão
+     */
+    public function salvarCategoriaReceita(Request $request, Response $response, $integracaoId)
+    {
+        try {
+            $data = $request->isJson() ? $request->json() : $request->post();
+            $config = $this->wooModel->findByIntegracaoId($integracaoId);
+            
+            if (!$config) {
+                return $response->json(['success' => false, 'error' => 'Integração não encontrada'], 404);
+            }
+            
+            $categoriaId = isset($data['categoria_receita_padrao_id']) && $data['categoria_receita_padrao_id'] ? (int)$data['categoria_receita_padrao_id'] : null;
+            
+            $db = \App\Core\Database::getInstance()->getConnection();
+            try {
+                $stmtCheck = $db->query("SHOW COLUMNS FROM integracoes_woocommerce LIKE 'categoria_receita_padrao_id'");
+                if ($stmtCheck && $stmtCheck->rowCount() === 0) {
+                    $db->exec("ALTER TABLE integracoes_woocommerce ADD COLUMN categoria_receita_padrao_id INT NULL COMMENT 'Categoria financeira padrão para contas a receber'");
+                }
+            } catch (\Throwable $e) { /* coluna pode já existir */ }
+            
+            $stmt = $db->prepare("UPDATE integracoes_woocommerce SET categoria_receita_padrao_id = :cat WHERE integracao_id = :id");
+            $result = $stmt->execute(['cat' => $categoriaId, 'id' => $integracaoId]);
+            
+            if ($result) {
+                return $response->json(['success' => true, 'message' => 'Categoria de receita padrão salva!']);
+            }
+            return $response->json(['success' => false, 'error' => 'Erro ao salvar'], 500);
+        } catch (\Exception $e) {
+            LogSistema::error('WooConfig', 'salvarCategoriaReceita', 'ERRO: ' . $e->getMessage());
+            return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+    
+    /**
+     * Salva centro de custo padrão
+     */
+    public function salvarCentroCusto(Request $request, Response $response, $integracaoId)
+    {
+        try {
+            $data = $request->isJson() ? $request->json() : $request->post();
+            $config = $this->wooModel->findByIntegracaoId($integracaoId);
+            
+            if (!$config) {
+                return $response->json(['success' => false, 'error' => 'Integração não encontrada'], 404);
+            }
+            
+            $centroId = isset($data['centro_custo_padrao_id']) && $data['centro_custo_padrao_id'] ? (int)$data['centro_custo_padrao_id'] : null;
+            
+            $db = \App\Core\Database::getInstance()->getConnection();
+            try {
+                $stmtCheck = $db->query("SHOW COLUMNS FROM integracoes_woocommerce LIKE 'centro_custo_padrao_id'");
+                if ($stmtCheck && $stmtCheck->rowCount() === 0) {
+                    $db->exec("ALTER TABLE integracoes_woocommerce ADD COLUMN centro_custo_padrao_id INT NULL COMMENT 'Centro de custo padrão para contas a receber'");
+                }
+            } catch (\Throwable $e) { /* coluna pode já existir */ }
+            
+            $stmt = $db->prepare("UPDATE integracoes_woocommerce SET centro_custo_padrao_id = :centro WHERE integracao_id = :id");
+            $result = $stmt->execute(['centro' => $centroId, 'id' => $integracaoId]);
+            
+            if ($result) {
+                return $response->json(['success' => true, 'message' => 'Centro de custo padrão salvo!']);
+            }
+            return $response->json(['success' => false, 'error' => 'Erro ao salvar'], 500);
+        } catch (\Exception $e) {
+            LogSistema::error('WooConfig', 'salvarCentroCusto', 'ERRO: ' . $e->getMessage());
+            return $response->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+    
+    /**
      * Tela de configuração de categorias
      */
     public function configurarCategorias(Request $request, Response $response, $integracaoId)

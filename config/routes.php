@@ -260,6 +260,8 @@ return [
     
     // Config campo custo produto
     'POST /integracoes/{id}/woocommerce/config/campo-custo' => ['handler' => 'IntegracaoWooConfigController@salvarCampoCusto', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/woocommerce/config/categoria-receita' => ['handler' => 'IntegracaoWooConfigController@salvarCategoriaReceita', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/woocommerce/config/centro-custo' => ['handler' => 'IntegracaoWooConfigController@salvarCentroCusto', 'middleware' => ['AuthMiddleware']],
     
     // WooCommerce - Dashboard
     'GET /integracoes/{id}/woocommerce/dashboard' => ['handler' => 'IntegracaoWooDashboardController@index', 'middleware' => ['AuthMiddleware']],

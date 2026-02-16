@@ -328,6 +328,38 @@
         .catch(e => alert('Erro ao salvar: ' + e.message));
     }
 
+    function salvarCategoriaReceita() {
+        const select = document.getElementById('categoriaReceitaPadrao');
+        const valor = select.value ? parseInt(select.value, 10) : null;
+        fetch('<?= $this->baseUrl('/integracoes/' . $integracao['id'] . '/woocommerce/config/categoria-receita') ?>', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ categoria_receita_padrao_id: valor })
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) alert('✓ Categoria de receita padrão salva!');
+            else alert('✗ Erro: ' + (d.error || 'Erro desconhecido'));
+        })
+        .catch(e => alert('Erro ao salvar: ' + e.message));
+    }
+
+    function salvarCentroCusto() {
+        const select = document.getElementById('centroCustoPadrao');
+        const valor = select.value ? parseInt(select.value, 10) : null;
+        fetch('<?= $this->baseUrl('/integracoes/' . $integracao['id'] . '/woocommerce/config/centro-custo') ?>', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ centro_custo_padrao_id: valor })
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) alert('✓ Centro de custo padrão salvo!');
+            else alert('✗ Erro: ' + (d.error || 'Erro desconhecido'));
+        })
+        .catch(e => alert('Erro ao salvar: ' + e.message));
+    }
+
     function copiarWebhookUrlShow() {
         const url = document.getElementById('webhookUrlShow').textContent.trim();
         navigator.clipboard.writeText(url).then(() => {
@@ -375,6 +407,50 @@
                             <dd class="mt-1 flex gap-2">
                                 <?= $configuracao['sincronizar_produtos'] ? '<span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Produtos</span>' : '' ?>
                                 <?= $configuracao['sincronizar_pedidos'] ? '<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Pedidos</span>' : '' ?>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-semibold text-gray-600 dark:text-gray-400">Categoria de Receita Padrão</dt>
+                            <dd class="mt-1">
+                                <form id="formCategoriaReceita" class="flex gap-2 items-center">
+                                    <select name="categoria_receita_padrao_id" id="categoriaReceitaPadrao"
+                                        class="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Automático (Vendas, WooCommerce, Receita...)</option>
+                                        <?php foreach (($categoriasReceita ?? []) as $cat): ?>
+                                            <option value="<?= $cat['id'] ?>" <?= ($configuracao['categoria_receita_padrao_id'] ?? '') == $cat['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($cat['codigo'] . ' - ' . $cat['nome']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <button type="button" onclick="salvarCategoriaReceita()" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+                                        Salvar
+                                    </button>
+                                </form>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Categoria usada ao criar contas a receber a partir de pedidos do WooCommerce. Se vazio, o sistema busca automaticamente.
+                                </p>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-semibold text-gray-600 dark:text-gray-400">Centro de Custo Padrão</dt>
+                            <dd class="mt-1">
+                                <form id="formCentroCusto" class="flex gap-2 items-center">
+                                    <select name="centro_custo_padrao_id" id="centroCustoPadrao"
+                                        class="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Nenhum (deixar em branco)</option>
+                                        <?php foreach (($centrosCusto ?? []) as $cc): ?>
+                                            <option value="<?= $cc['id'] ?>" <?= ($configuracao['centro_custo_padrao_id'] ?? '') == $cc['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars(($cc['codigo'] ?? '') . ' - ' . $cc['nome']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <button type="button" onclick="salvarCentroCusto()" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+                                        Salvar
+                                    </button>
+                                </form>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Centro de custo atribuído às contas a receber criadas a partir de pedidos do WooCommerce.
+                                </p>
                             </dd>
                         </div>
                         <div>
