@@ -216,7 +216,7 @@ class ContaPagar extends Model
             $contaBancariaId,
             $data['tem_rateio'] ?? 0,
             $data['observacoes'] ?? null,
-            $data['tipo_custo'] ?? 'variavel',
+            $data['tipo_custo'] ?? 'fixo',
             $data['eh_parcelado'] ?? 0,
             $data['total_parcelas'] ?? null,
             $data['parcela_numero'] ?? null,
@@ -463,7 +463,7 @@ class ContaPagar extends Model
             $formaPagamentoId,
             $contaBancariaId,
             $data['observacoes'] ?? null,
-            $data['tipo_custo'] ?? 'variavel',
+            $data['tipo_custo'] ?? 'fixo',
             $id
         ]);
     }

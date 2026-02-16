@@ -92,7 +92,7 @@ $saldoRestante = $conta['valor_total'] - $conta['valor_pago'];
                     <div>
                         <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Tipo de Custo</label>
                         <?php 
-                        $tipoCusto = $conta['tipo_custo'] ?? 'variavel';
+                        $tipoCusto = $conta['tipo_custo'] ?? 'fixo';
                         $badgeClass = $tipoCusto === 'fixo' 
                             ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' 
                             : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';

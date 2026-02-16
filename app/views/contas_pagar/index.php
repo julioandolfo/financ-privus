@@ -492,7 +492,7 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                                             Parcela <?= $conta['parcela_numero'] ?>/<?= $conta['total_parcelas'] ?>
                                         </span>
                                     <?php endif; ?>
-                                    <?php if (($conta['tipo_custo'] ?? 'variavel') === 'fixo'): ?>
+                                    <?php if (($conta['tipo_custo'] ?? 'fixo') === 'fixo'): ?>
                                         <span class="inline-block px-2 py-0.5 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400 rounded-full">
                                             Fixo
                                         </span>

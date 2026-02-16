@@ -289,7 +289,7 @@ class RecorrenciaService
             'centro_custo_id' => $contaPagar['centro_custo_id'],
             'descricao' => $contaPagar['descricao'],
             'valor' => $contaPagar['valor_total'],
-            'tipo_custo' => $contaPagar['tipo_custo'] ?? 'variavel',
+            'tipo_custo' => $contaPagar['tipo_custo'] ?? 'fixo',
             'observacoes' => $contaPagar['observacoes'],
             'frequencia' => $configRecorrencia['frequencia'],
             'dia_mes' => $configRecorrencia['dia_mes'] ?? null,

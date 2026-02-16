@@ -364,6 +364,7 @@ class ExtratoBancarioController extends Controller
                 'tem_rateio' => !empty($dados['tem_rateio']) ? 1 : 0,
                 'observacoes' => $dados['observacoes'] ?? null,
                 'status' => 'pendente',
+                'tipo_custo' => 'fixo',
                 'usuario_cadastro_id' => $usuarioId,
             ];
             
