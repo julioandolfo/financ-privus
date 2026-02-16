@@ -1055,7 +1055,7 @@ class ConexaoBancariaController extends Controller
                     AND (cr.data_vencimento = :data OR cr.data_recebimento = :data2)
                     AND cr.status != 'cancelado'
                     AND cr.deleted_at IS NULL
-                    AND (cr.pedido_id IS NULL OR pv.status IN ('processando', 'concluido'))";
+                    AND (cr.pedido_id IS NULL OR pv.status IN ('processando', 'em_processamento', 'concluido'))";
             $params = [
                 'empresa_id' => $empresaId,
                 'valor_min' => $valorMin,
