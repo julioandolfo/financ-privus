@@ -43,9 +43,14 @@ $old = $this->session->get('old') ?? [];
                     <!-- Cliente -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cliente</label>
-                        <select name="cliente_id" id="cliente_id" data-placeholder="Carregando..."
+                        <select name="cliente_id" id="cliente_id" data-placeholder="Selecione..."
                                 class="select-search w-full">
-                            <option value="">Carregando...</option>
+                            <option value="">Selecione...</option>
+                            <?php foreach ($clientes as $cliente): ?>
+                                <option value="<?= $cliente['id'] ?>" <?= ($old['cliente_id'] ?? $conta['cliente_id']) == $cliente['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($cliente['nome_razao_social']) ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
 
@@ -54,9 +59,14 @@ $old = $this->session->get('old') ?? [];
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Categoria <span class="text-red-500">*</span>
                         </label>
-                        <select name="categoria_id" id="categoria_id" required data-placeholder="Carregando..."
+                        <select name="categoria_id" id="categoria_id" required data-placeholder="Selecione..."
                                 class="select-search w-full">
-                            <option value="">Carregando...</option>
+                            <option value="">Selecione...</option>
+                            <?php foreach ($categorias as $categoria): ?>
+                                <option value="<?= $categoria['id'] ?>" <?= ($old['categoria_id'] ?? $conta['categoria_id']) == $categoria['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($categoria['nome']) ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
                         <?php if (isset($errors['categoria_id'])): ?>
                             <p class="mt-1 text-sm text-red-500"><?= $errors['categoria_id'] ?></p>
@@ -66,9 +76,14 @@ $old = $this->session->get('old') ?? [];
                     <!-- Centro de Custo -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Centro de Custo</label>
-                        <select name="centro_custo_id" id="centro_custo_id" data-placeholder="Carregando..."
+                        <select name="centro_custo_id" id="centro_custo_id" data-placeholder="Selecione..."
                                 class="select-search w-full">
-                            <option value="">Carregando...</option>
+                            <option value="">Selecione...</option>
+                            <?php foreach ($centrosCusto as $centro): ?>
+                                <option value="<?= $centro['id'] ?>" <?= ($old['centro_custo_id'] ?? $conta['centro_custo_id']) == $centro['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($centro['nome']) ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
 
@@ -117,7 +132,7 @@ $old = $this->session->get('old') ?? [];
             <div class="mb-8">
                 <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Datas</h2>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Data de Emissão -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -153,6 +168,24 @@ $old = $this->session->get('old') ?? [];
                             <p class="mt-1 text-sm text-red-500"><?= $errors['data_vencimento'] ?></p>
                         <?php endif; ?>
                     </div>
+
+                    <!-- Data de Recebimento -->
+                    <?php if (in_array($conta['status'], ['recebido', 'parcial'])): ?>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Data de Recebimento
+                            <span class="text-xs text-gray-500">(editável)</span>
+                        </label>
+                        <input type="date" name="data_recebimento" value="<?= $old['data_recebimento'] ?? $conta['data_recebimento'] ?>"
+                               class="w-full px-4 py-3 rounded-xl border <?= isset($errors['data_recebimento']) ? 'border-red-500' : 'border-gray-300 dark:border-gray-600' ?> bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                        <?php if (isset($errors['data_recebimento'])): ?>
+                            <p class="mt-1 text-sm text-red-500"><?= $errors['data_recebimento'] ?></p>
+                        <?php endif; ?>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Disponível apenas para contas recebidas ou parcialmente recebidas
+                        </p>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
 

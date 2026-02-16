@@ -440,7 +440,7 @@ class ContaReceber extends Model
         $sql = "UPDATE {$this->table} SET
                 empresa_id = ?, cliente_id = ?, categoria_id = ?, centro_custo_id = ?,
                 numero_documento = ?, descricao = ?, valor_total = ?, desconto = ?, frete = ?,
-                data_emissao = ?, data_competencia = ?, data_vencimento = ?,
+                data_emissao = ?, data_competencia = ?, data_vencimento = ?, data_recebimento = ?,
                 observacoes = ?, regiao = ?, segmento = ?, numero_parcelas = ?,
                 parcela_atual = ?, conta_origem_id = ?, updated_at = NOW()
                 WHERE id = ?";
@@ -451,6 +451,9 @@ class ContaReceber extends Model
         $clienteId = !empty($data['cliente_id']) ? $data['cliente_id'] : null;
         $centroCustoId = !empty($data['centro_custo_id']) ? $data['centro_custo_id'] : null;
         $contaOrigemId = !empty($data['conta_origem_id']) ? $data['conta_origem_id'] : null;
+        
+        // Prepara data_recebimento (permite null ou vazio para limpar)
+        $dataRecebimento = !empty($data['data_recebimento']) ? $data['data_recebimento'] : null;
         
         return $stmt->execute([
             $data['empresa_id'],
@@ -465,6 +468,7 @@ class ContaReceber extends Model
             $data['data_emissao'],
             $data['data_competencia'],
             $data['data_vencimento'],
+            $dataRecebimento,
             $data['observacoes'] ?? null,
             $data['regiao'] ?? null,
             $data['segmento'] ?? null,

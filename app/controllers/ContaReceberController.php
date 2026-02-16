@@ -474,11 +474,16 @@ class ContaReceberController extends Controller
             $this->formaPagamentoModel = new FormaPagamento();
             $this->contaBancariaModel = new ContaBancaria();
             
-            $empresaAtual = $_SESSION['usuario_empresa_id'] ?? null;
+            // Carregar dados da empresa da conta (não do usuário logado)
+            $empresaDaConta = $contaReceber['empresa_id'];
+            
             $empresas = $this->empresaModel->findAll(['ativo' => 1]);
             $clientes = $this->clienteModel->findAll(['ativo' => 1]);
-            $categorias = $this->categoriaModel->findAll($empresaAtual, 'receita');
-            $centrosCusto = $this->centroCustoModel->findAll($empresaAtual);
+            
+            // Carregar categorias e centros de custo da empresa da conta
+            $categorias = $this->categoriaModel->findAll($empresaDaConta, 'receita');
+            $centrosCusto = $this->centroCustoModel->findAll($empresaDaConta);
+            
             $formasRecebimento = $this->formaPagamentoModel->findAll();
             $contasBancarias = $this->contaBancariaModel->findAll();
             

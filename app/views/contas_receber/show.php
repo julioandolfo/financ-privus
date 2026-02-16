@@ -663,13 +663,24 @@ require_once __DIR__ . '/../../../includes/helpers/functions.php';
                 <div class="space-y-4 text-sm">
                     <div>
                         <label class="block text-gray-500 dark:text-gray-400 mb-1">Criado em</label>
-                        <p class="text-gray-900 dark:text-gray-100"><?= date('d/m/Y H:i', strtotime($conta['created_at'])) ?></p>
+                        <?php 
+                        // Usa created_at se existir, senão usa data_cadastro
+                        $dataCriacao = !empty($conta['created_at']) ? $conta['created_at'] : $conta['data_cadastro'];
+                        ?>
+                        <p class="text-gray-900 dark:text-gray-100"><?= date('d/m/Y H:i', strtotime($dataCriacao)) ?></p>
                     </div>
                     
-                    <?php if (!empty($conta['updated_at'])): ?>
+                    <?php if (!empty($conta['updated_at']) && $conta['updated_at'] != '0000-00-00 00:00:00'): ?>
                     <div>
                         <label class="block text-gray-500 dark:text-gray-400 mb-1">Atualizado em</label>
                         <p class="text-gray-900 dark:text-gray-100"><?= date('d/m/Y H:i', strtotime($conta['updated_at'])) ?></p>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($conta['usuario_cadastro_nome'])): ?>
+                    <div>
+                        <label class="block text-gray-500 dark:text-gray-400 mb-1">Cadastrado por</label>
+                        <p class="text-gray-900 dark:text-gray-100"><?= htmlspecialchars($conta['usuario_cadastro_nome']) ?></p>
                     </div>
                     <?php endif; ?>
                 </div>
