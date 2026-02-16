@@ -98,13 +98,13 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
         <div class="mt-8 p-6 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-900/30 rounded-2xl">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div class="flex-1">
-                    <!-- Saldo próprio (dinheiro real na conta) -->
+                    <!-- Saldo da conta (dinheiro real, sem limite) -->
                     <p class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Saldo da Conta</p>
                     <p class="text-4xl font-bold mt-2" :class="parseFloat(saldoContabil.replace('.','').replace(',','.')) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
                         R$ <span x-text="saldoContabil"></span>
                     </p>
 
-                    <!-- Detalhes: Limite + Disponível Total -->
+                    <!-- Detalhes -->
                     <template x-if="saldoCarregado">
                         <div class="mt-4 space-y-3">
                             <div class="grid grid-cols-2 gap-3">
@@ -119,7 +119,7 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
                                 </div>
                             </div>
 
-                            <!-- Agendamentos futuros (info visual, NÃO desconta do saldo) -->
+                            <!-- Info: agendamentos futuros detectados -->
                             <template x-if="txFuturas > 0">
                                 <div class="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-lg">
                                     <div class="flex items-start gap-2">
@@ -127,15 +127,19 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                         </svg>
                                         <div>
-                                            <p class="text-xs font-medium text-amber-700 dark:text-amber-300" x-text="txFuturas + ' despesa(s) agendada(s) no próximo dia útil'"></p>
+                                            <p class="text-xs font-medium text-amber-700 dark:text-amber-300" x-text="txFuturas + ' despesa(s) agendada(s) para o próximo dia útil'"></p>
                                             <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
                                                 Total a debitar: <span class="font-semibold" x-text="'R$ ' + somaFuturosDebito"></span>
                                             </p>
-                                            <p class="text-[10px] text-amber-500 dark:text-amber-500 mt-0.5">Será descontado quando o banco processar</p>
                                         </div>
                                     </div>
                                 </div>
                             </template>
+
+                            <!-- Nota: API D-1 -->
+                            <p class="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
+                                Saldo via API Sicoob (D-1): reflete o fechamento do último dia útil. Pode haver pequenas diferenças em relação ao app do banco até o próximo processamento.
+                            </p>
                         </div>
                     </template>
 

@@ -377,9 +377,8 @@ class SicoobBankService extends AbstractBankService
             ]);
         }
         
-        // saldoExtrato = saldo reportado pela API (último dia útil processado)
-        // NÃO subtraímos agendamentos futuros — só mostra quando o banco processar de fato
-        $saldoFinal = ($saldoExtrato !== null) ? $saldoExtrato : $saldoEndpoint;
+        // saldoExtrato = saldo reportado pela API (último dia útil processado, inclui limite)
+        $saldoAPI = ($saldoExtrato !== null) ? $saldoExtrato : $saldoEndpoint;
         
         // Usar limite do extrato se disponível
         if ($saldoLimiteExtrato !== null && $saldoLimiteExtrato > 0) {
@@ -390,13 +389,19 @@ class SicoobBankService extends AbstractBankService
             $dataReferencia = date('Y-m-d');
         }
         
-        // Saldo próprio = saldo da API menos o limite (dinheiro real na conta)
-        $saldoContabil = round($saldoFinal - $saldoLimite, 2);
-        
-        // Saldo projetado (informativo) = o que vai ficar após os agendamentos
+        // Saldo exibido = saldo direto da API (sem alterar por agendamentos)
+        // A API do Sicoob é D-1 (último dia útil processado).
+        // Agendamentos futuros são mostrados como informação visual,
+        // mas NÃO são descontados do saldo — só quando o banco processar.
         $txFuturasCount = $txFuturas ?? 0;
-        $saldoProjetado = $saldoFinal;
-        if (isset($saldoProjetadoCalc) && $saldoProjetadoCalc !== null) {
+        $saldoExibido = $saldoAPI;
+        
+        // Saldo da conta (dinheiro real, sem o limite de crédito)
+        $saldoContabil = round($saldoExibido - $saldoLimite, 2);
+        
+        // Saldo projetado (informativo): o que ficaria após os agendamentos
+        $saldoProjetado = $saldoAPI;
+        if ($txFuturasCount > 0 && isset($saldoProjetadoCalc) && $saldoProjetadoCalc !== null) {
             $saldoProjetado = round($saldoProjetadoCalc, 2);
         }
         $saldoProjetadoContabil = round($saldoProjetado - $saldoLimite, 2);
@@ -405,20 +410,22 @@ class SicoobBankService extends AbstractBankService
             LogSistema::info('SicoobAPI', 'getSaldo_resultado', 'Saldo final', [
                 'numeroConta' => $numeroConta,
                 'identificacao' => $conexao['identificacao'] ?? '',
-                'saldo_disponivel' => $saldoFinal,
-                'saldo_proprio' => $saldoContabil,
+                'saldo_api' => $saldoAPI,
+                'saldo_contabil' => $saldoContabil,
                 'saldo_limite' => $saldoLimite,
                 'saldo_bloqueado' => $saldoBloqueado,
-                'saldo_projetado_disponivel' => $saldoProjetado,
-                'saldo_projetado_proprio' => $saldoProjetadoContabil,
+                'saldo_projetado' => $saldoProjetado,
+                'saldo_projetado_contabil' => $saldoProjetadoContabil,
                 'tx_futuras' => $txFuturasCount,
+                'soma_futuros_debito' => $somaFuturosDebito ?? 0,
+                'soma_futuros_credito' => $somaFuturosCredito ?? 0,
                 'data_referencia' => $dataReferencia,
-                'fonte' => ($saldoExtrato !== null) ? 'EXTRATO (saldoAtual)' : 'ENDPOINT (/saldo)',
+                'nota' => 'API D-1. saldo_contabil = saldo_api - limite. Agendamentos NAO descontados do saldo.',
             ]);
         } catch (\Exception $e) {}
         
         return [
-            'saldo' => $saldoFinal,
+            'saldo' => $saldoExibido,
             'saldo_contabil' => $saldoContabil,
             'saldo_bloqueado' => $saldoBloqueado,
             'saldo_limite' => $saldoLimite,
