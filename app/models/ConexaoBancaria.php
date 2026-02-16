@@ -251,9 +251,9 @@ class ConexaoBancaria extends Model
     }
 
     /**
-     * Atualiza o saldo real reportado pelo banco.
+     * Atualiza o saldo real reportado pelo banco e registra no histórico.
      */
-    public function atualizarSaldo($id, $saldo, $saldoLimite = null, $saldoContabil = null)
+    public function atualizarSaldo($id, $saldo, $extras = [])
     {
         $sql = "UPDATE {$this->table} 
                 SET saldo_banco = :saldo, 
@@ -264,18 +264,17 @@ class ConexaoBancaria extends Model
         $stmt = $this->db->prepare($sql);
         $result = $stmt->execute(['id' => $id, 'saldo' => $saldo]);
         
-        // Tentar salvar saldo_limite e saldo_contabil (campos opcionais)
-        if ($saldoLimite !== null || $saldoContabil !== null) {
+        // Salvar campos extras (limite, agendamentos, etc)
+        if (!empty($extras)) {
+            $camposPermitidos = ['saldo_limite', 'saldo_contabil', 'tx_futuras', 'soma_futuros_debito', 'soma_futuros_credito'];
             try {
                 $updates = [];
                 $params = ['id' => $id];
-                if ($saldoLimite !== null) {
-                    $updates[] = 'saldo_limite = :saldo_limite';
-                    $params['saldo_limite'] = $saldoLimite;
-                }
-                if ($saldoContabil !== null) {
-                    $updates[] = 'saldo_contabil = :saldo_contabil';
-                    $params['saldo_contabil'] = $saldoContabil;
+                foreach ($camposPermitidos as $campo) {
+                    if (isset($extras[$campo])) {
+                        $updates[] = "$campo = :$campo";
+                        $params[$campo] = $extras[$campo];
+                    }
                 }
                 if (!empty($updates)) {
                     $sqlExtra = "UPDATE {$this->table} SET " . implode(', ', $updates) . " WHERE id = :id";
@@ -283,8 +282,28 @@ class ConexaoBancaria extends Model
                     $stmtExtra->execute($params);
                 }
             } catch (\Exception $e) {
-                // Campos podem não existir ainda na tabela, ignorar silenciosamente
+                // Campos podem não existir ainda na tabela
             }
+        }
+        
+        // Registrar snapshot no histórico de saldos
+        try {
+            $conexao = $this->findById($id);
+            $historico = new SaldoHistorico();
+            $historico->registrar($id, [
+                'empresa_id' => $conexao['empresa_id'] ?? null,
+                'conta_bancaria_id' => $conexao['conta_bancaria_id'] ?? null,
+                'saldo_contabil' => $saldo,
+                'saldo_limite' => $extras['saldo_limite'] ?? 0,
+                'saldo_bloqueado' => $extras['saldo_bloqueado'] ?? 0,
+                'tx_futuras' => $extras['tx_futuras'] ?? 0,
+                'soma_futuros_debito' => $extras['soma_futuros_debito'] ?? 0,
+                'soma_futuros_credito' => $extras['soma_futuros_credito'] ?? 0,
+                'data_referencia' => $extras['data_referencia'] ?? null,
+                'fonte' => $extras['fonte'] ?? 'api',
+            ]);
+        } catch (\Exception $e) {
+            // Tabela pode não existir ainda, silencioso
         }
         
         return $result;

@@ -240,6 +240,113 @@ class PedidoVinculadoController extends Controller
     }
     
     /**
+     * Alterar status de múltiplos pedidos em massa
+     */
+    public function alterarStatusMassa(Request $request, Response $response)
+    {
+        $pedidosIdsJson = $request->post('pedidos_ids');
+        $novoStatus = $request->post('novo_status');
+        
+        // Validar
+        if (empty($pedidosIdsJson) || empty($novoStatus)) {
+            $this->session->set('error', 'Dados inválidos para alteração em massa.');
+            return $response->redirect('/pedidos');
+        }
+        
+        // Decodificar IDs
+        $pedidosIds = json_decode($pedidosIdsJson, true);
+        
+        if (!is_array($pedidosIds) || empty($pedidosIds)) {
+            $this->session->set('error', 'Nenhum pedido selecionado.');
+            return $response->redirect('/pedidos');
+        }
+        
+        // Validar status
+        $statusPermitidos = [
+            PedidoVinculado::STATUS_PENDENTE,
+            PedidoVinculado::STATUS_PROCESSANDO,
+            PedidoVinculado::STATUS_CONCLUIDO,
+            PedidoVinculado::STATUS_CANCELADO,
+            PedidoVinculado::STATUS_REEMBOLSADO
+        ];
+        
+        if (!in_array($novoStatus, $statusPermitidos)) {
+            $this->session->set('error', 'Status inválido.');
+            return $response->redirect('/pedidos');
+        }
+        
+        // Processar alterações
+        $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
+        $totalAtualizados = 0;
+        $erros = [];
+        
+        try {
+            $this->db->beginTransaction();
+            
+            foreach ($pedidosIds as $pedidoId) {
+                // Verificar se o pedido pertence à empresa do usuário
+                $pedido = $this->pedidoModel->findById($pedidoId);
+                
+                if (!$pedido) {
+                    $erros[] = "Pedido #{$pedidoId} não encontrado.";
+                    continue;
+                }
+                
+                if ($pedido['empresa_id'] != $empresaId) {
+                    $erros[] = "Pedido #{$pedido['numero_pedido']} não pertence à sua empresa.";
+                    continue;
+                }
+                
+                // Atualizar status
+                $success = $this->pedidoModel->updateStatus($pedidoId, $novoStatus);
+                
+                if ($success) {
+                    $totalAtualizados++;
+                } else {
+                    $erros[] = "Erro ao atualizar pedido #{$pedido['numero_pedido']}.";
+                }
+            }
+            
+            $this->db->commit();
+            
+            // Mensagens de feedback
+            if ($totalAtualizados > 0) {
+                $statusLabels = [
+                    'pendente' => 'Pendente',
+                    'processando' => 'Processando',
+                    'concluido' => 'Concluído',
+                    'cancelado' => 'Cancelado',
+                    'reembolsado' => 'Reembolsado'
+                ];
+                
+                $msg = "{$totalAtualizados} pedido(s) atualizado(s) para o status \"{$statusLabels[$novoStatus]}\" com sucesso!";
+                $this->session->set('success', $msg);
+                
+                // Log da ação
+                LogSistema::info('Pedidos', 'alteracao_massa', "Alterados {$totalAtualizados} pedidos para status '{$novoStatus}'", [
+                    'pedidos_ids' => $pedidosIds,
+                    'novo_status' => $novoStatus,
+                    'total_atualizados' => $totalAtualizados
+                ]);
+            }
+            
+            if (!empty($erros)) {
+                $this->session->set('warning', 'Alguns pedidos não foram atualizados: ' . implode(' ', $erros));
+            }
+            
+            if ($totalAtualizados === 0) {
+                $this->session->set('error', 'Nenhum pedido foi atualizado.');
+            }
+            
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            $this->session->set('error', 'Erro ao atualizar pedidos: ' . $e->getMessage());
+        }
+        
+        return $response->redirect('/pedidos');
+    }
+    
+    /**
      * Deletar pedido
      */
     public function destroy(Request $request, Response $response, $id)

@@ -125,12 +125,42 @@
     </div>
     <?php endif; ?>
 
+    <!-- Barra de Ações em Massa -->
+    <div id="barraAcoesMassa" class="hidden bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-xl border border-indigo-400 p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <span class="text-white font-semibold">
+                    <span id="countSelecionados">0</span> pedido(s) selecionado(s)
+                </span>
+                <select id="statusMassa" class="px-4 py-2 rounded-lg border border-white/20 bg-white/10 text-white font-medium backdrop-blur-sm">
+                    <option value="">Selecione o novo status</option>
+                    <option value="pendente">Pendente</option>
+                    <option value="processando">Processando</option>
+                    <option value="concluido">Concluído</option>
+                    <option value="cancelado">Cancelado</option>
+                    <option value="reembolsado">Reembolsado</option>
+                </select>
+                <button type="button" onclick="alterarStatusMassa()" class="bg-white text-indigo-600 hover:bg-indigo-50 px-6 py-2 rounded-lg font-semibold transition-all shadow-lg">
+                    Alterar Status
+                </button>
+            </div>
+            <button type="button" onclick="desmarcarTodos()" class="text-white hover:text-indigo-200 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
     <!-- Tabela -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-gradient-to-r from-purple-600 to-pink-600">
                     <tr>
+                        <th class="px-4 py-4 text-center">
+                            <input type="checkbox" id="selecionarTodos" onchange="toggleSelecionarTodos(this)" class="w-5 h-5 rounded border-white/30 text-indigo-600 focus:ring-2 focus:ring-white/50 cursor-pointer">
+                        </th>
                         <th class="px-6 py-4 text-left text-xs font-medium text-white uppercase tracking-wider">Número</th>
                         <th class="px-6 py-4 text-left text-xs font-medium text-white uppercase tracking-wider">Cliente</th>
                         <th class="px-6 py-4 text-left text-xs font-medium text-white uppercase tracking-wider">Data</th>
@@ -144,7 +174,7 @@
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     <?php if (empty($pedidos)): ?>
                         <tr>
-                            <td colspan="8" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                            <td colspan="9" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                                 <svg class="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                                 </svg>
@@ -163,6 +193,9 @@
                             $statusColor = $statusColors[$pedido['status']] ?? 'bg-gray-100 text-gray-800';
                         ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <td class="px-4 py-4 text-center">
+                                <input type="checkbox" class="checkbox-pedido w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-2 focus:ring-indigo-500 cursor-pointer" value="<?= $pedido['id'] ?>" onchange="atualizarSelecao()">
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center space-x-2">
                                     <span class="font-semibold text-gray-900 dark:text-gray-100">#<?= htmlspecialchars($pedido['numero_pedido']) ?></span>
@@ -408,6 +441,105 @@ document.getElementById('modalRecalculo')?.addEventListener('click', function(e)
     if (e.target === this) {
         fecharModalRecalculo();
     }
+});
+
+// ===== FUNCIONALIDADES DE SELEÇÃO MÚLTIPLA =====
+
+function toggleSelecionarTodos(checkbox) {
+    const checkboxes = document.querySelectorAll('.checkbox-pedido');
+    checkboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+    atualizarSelecao();
+}
+
+function atualizarSelecao() {
+    const checkboxes = document.querySelectorAll('.checkbox-pedido:checked');
+    const count = checkboxes.length;
+    const barraAcoes = document.getElementById('barraAcoesMassa');
+    const countSpan = document.getElementById('countSelecionados');
+    const selecionarTodos = document.getElementById('selecionarTodos');
+    
+    // Atualiza contador
+    countSpan.textContent = count;
+    
+    // Mostra/esconde barra de ações
+    if (count > 0) {
+        barraAcoes.classList.remove('hidden');
+    } else {
+        barraAcoes.classList.add('hidden');
+    }
+    
+    // Atualiza estado do checkbox "selecionar todos"
+    const totalCheckboxes = document.querySelectorAll('.checkbox-pedido').length;
+    selecionarTodos.checked = count === totalCheckboxes && count > 0;
+    selecionarTodos.indeterminate = count > 0 && count < totalCheckboxes;
+}
+
+function desmarcarTodos() {
+    const checkboxes = document.querySelectorAll('.checkbox-pedido');
+    checkboxes.forEach(cb => {
+        cb.checked = false;
+    });
+    document.getElementById('selecionarTodos').checked = false;
+    atualizarSelecao();
+}
+
+function alterarStatusMassa() {
+    const checkboxes = document.querySelectorAll('.checkbox-pedido:checked');
+    const novoStatus = document.getElementById('statusMassa').value;
+    
+    if (checkboxes.length === 0) {
+        alert('Selecione pelo menos um pedido.');
+        return;
+    }
+    
+    if (!novoStatus) {
+        alert('Selecione um status.');
+        return;
+    }
+    
+    const pedidosIds = Array.from(checkboxes).map(cb => cb.value);
+    
+    // Confirmação
+    const statusLabels = {
+        'pendente': 'Pendente',
+        'processando': 'Processando',
+        'concluido': 'Concluído',
+        'cancelado': 'Cancelado',
+        'reembolsado': 'Reembolsado'
+    };
+    
+    const confirmMsg = `Deseja alterar o status de ${pedidosIds.length} pedido(s) para "${statusLabels[novoStatus]}"?`;
+    
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+    
+    // Enviar requisição
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/pedidos/alterar-status-massa';
+    
+    const inputIds = document.createElement('input');
+    inputIds.type = 'hidden';
+    inputIds.name = 'pedidos_ids';
+    inputIds.value = JSON.stringify(pedidosIds);
+    form.appendChild(inputIds);
+    
+    const inputStatus = document.createElement('input');
+    inputStatus.type = 'hidden';
+    inputStatus.name = 'novo_status';
+    inputStatus.value = novoStatus;
+    form.appendChild(inputStatus);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Inicializar estado ao carregar página
+document.addEventListener('DOMContentLoaded', function() {
+    atualizarSelecao();
 });
 </script>
 

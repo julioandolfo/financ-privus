@@ -164,16 +164,19 @@ use App\Models\ConexaoBancaria;
                 $saldoContabilCard = $conexao['saldo_banco'] ?? 0;
                 $saldoLimiteCard = $conexao['saldo_limite'] ?? 0;
                 $saldoDisponivelCard = $saldoContabilCard + $saldoLimiteCard;
+                $txFuturasCard = $conexao['tx_futuras'] ?? 0;
+                $somaFuturosDebitoCard = $conexao['soma_futuros_debito'] ?? 0;
+                $somaFuturosCredCard = $conexao['soma_futuros_credito'] ?? 0;
             ?>
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-shadow"
                  x-data="{ 
                     saldo: '<?= number_format($saldoContabilCard, 2, ',', '.') ?>', 
                     saldoDisponivel: '<?= number_format($saldoDisponivelCard, 2, ',', '.') ?>',
                     saldoLimite: '<?= number_format($saldoLimiteCard, 2, ',', '.') ?>',
-                    txFuturas: 0,
-                    somaFuturosDebito: '',
-                    somaFuturosCredito: 0,
-                    saldoDetalhes: false,
+                    txFuturas: <?= (int)$txFuturasCard ?>,
+                    somaFuturosDebito: '<?= number_format($somaFuturosDebitoCard, 2, ',', '.') ?>',
+                    somaFuturosCredito: <?= (float)$somaFuturosCredCard ?>,
+                    saldoDetalhes: <?= ($txFuturasCard > 0) ? 'true' : 'false' ?>,
                     carregando: false, 
                     sincronizando: false,
                     resultadoSync: null,

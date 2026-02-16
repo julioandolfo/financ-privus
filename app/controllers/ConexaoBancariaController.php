@@ -466,9 +466,17 @@ class ConexaoBancariaController extends Controller
             
             // Atualizar saldo na conexão bancária
             // saldo_banco = contábil (dinheiro próprio, sem limite)
-            $saldoLimite = $saldoData['saldo_limite'] ?? 0;
             $saldoContabil = $saldoData['saldo'] ?? 0;
-            $this->conexaoModel->atualizarSaldo($id, $saldoContabil, $saldoLimite, $saldoContabil);
+            $this->conexaoModel->atualizarSaldo($id, $saldoContabil, [
+                'saldo_limite' => $saldoData['saldo_limite'] ?? 0,
+                'saldo_contabil' => $saldoContabil,
+                'saldo_bloqueado' => $saldoData['saldo_bloqueado'] ?? 0,
+                'tx_futuras' => $saldoData['tx_futuras'] ?? 0,
+                'soma_futuros_debito' => $saldoData['soma_futuros_debito'] ?? 0,
+                'soma_futuros_credito' => $saldoData['soma_futuros_credito'] ?? 0,
+                'data_referencia' => $saldoData['data_referencia'] ?? null,
+                'fonte' => 'api_saldo',
+            ]);
             
             // Atualizar data de última sincronização também ao atualizar saldo
             $this->conexaoModel->atualizarUltimaSync($id);
@@ -756,7 +764,16 @@ class ConexaoBancariaController extends Controller
             // Atualizar saldo
             try {
                 $saldoData = $service->getSaldo($conexao);
-                $this->conexaoModel->atualizarSaldo($id, $saldoData['saldo']);
+                $this->conexaoModel->atualizarSaldo($id, $saldoData['saldo'], [
+                    'saldo_limite' => $saldoData['saldo_limite'] ?? 0,
+                    'saldo_contabil' => $saldoData['saldo'] ?? 0,
+                    'saldo_bloqueado' => $saldoData['saldo_bloqueado'] ?? 0,
+                    'tx_futuras' => $saldoData['tx_futuras'] ?? 0,
+                    'soma_futuros_debito' => $saldoData['soma_futuros_debito'] ?? 0,
+                    'soma_futuros_credito' => $saldoData['soma_futuros_credito'] ?? 0,
+                    'data_referencia' => $saldoData['data_referencia'] ?? null,
+                    'fonte' => 'api_sync',
+                ]);
                 $saldoInfo = 'R$ ' . number_format($saldoData['saldo'], 2, ',', '.');
                 
                 $contaBancariaModel = new \App\Models\ContaBancaria();
@@ -1123,7 +1140,16 @@ class ConexaoBancariaController extends Controller
             $saldoInfo = null;
             try {
                 $saldoData = $service->getSaldo($conexao);
-                $this->conexaoModel->atualizarSaldo($id, $saldoData['saldo']);
+                $this->conexaoModel->atualizarSaldo($id, $saldoData['saldo'], [
+                    'saldo_limite' => $saldoData['saldo_limite'] ?? 0,
+                    'saldo_contabil' => $saldoData['saldo'] ?? 0,
+                    'saldo_bloqueado' => $saldoData['saldo_bloqueado'] ?? 0,
+                    'tx_futuras' => $saldoData['tx_futuras'] ?? 0,
+                    'soma_futuros_debito' => $saldoData['soma_futuros_debito'] ?? 0,
+                    'soma_futuros_credito' => $saldoData['soma_futuros_credito'] ?? 0,
+                    'data_referencia' => $saldoData['data_referencia'] ?? null,
+                    'fonte' => 'api_teste',
+                ]);
                 $saldoInfo = 'R$ ' . number_format($saldoData['saldo'], 2, ',', '.');
             } catch (\Exception $e) {
                 // silencioso
