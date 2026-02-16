@@ -295,6 +295,7 @@ class ExtratoBancarioController extends Controller
             'conta_bancaria_id' => !empty($request->post('conta_bancaria_id')) ? $request->post('conta_bancaria_id') : null,
             'forma_pagamento_id' => !empty($request->post('forma_pagamento_id')) ? $request->post('forma_pagamento_id') : null,
             'tem_rateio' => !empty($request->post('tem_rateio')) ? 1 : 0,
+            'descricao_conta' => $request->post('descricao_conta') ? trim($request->post('descricao_conta')) : null,
             'observacoes_padrao' => $request->post('observacoes') ?? null,
         ];
         
@@ -340,13 +341,19 @@ class ExtratoBancarioController extends Controller
                 continue;
             }
             
+            // Descrição: preferir a editada pelo usuário, senão usar a do extrato
+            $descricaoConta = !empty(trim($dados['descricao_conta'] ?? '')) 
+                ? trim($dados['descricao_conta']) 
+                : ($transacao['padrao']['descricao_conta'] ?? null);
+            $descricaoFinal = $descricaoConta ?: $transacao['descricao'];
+            
             // Preparar dados para criar conta a pagar
             $contaData = [
                 'empresa_id' => $dados['empresa_id'],
                 'fornecedor_id' => !empty($dados['fornecedor_id']) ? $dados['fornecedor_id'] : null,
                 'categoria_id' => $dados['categoria_id'],
                 'numero_documento' => 'EXT-' . date('Ymd') . '-' . str_pad($index + 1, 4, '0', STR_PAD_LEFT), // Gerar número único
-                'descricao' => $transacao['descricao'],
+                'descricao' => $descricaoFinal,
                 'valor_total' => $transacao['valor'],
                 'data_emissao' => $transacao['data'],
                 'data_competencia' => $transacao['data'],
@@ -401,6 +408,7 @@ class ExtratoBancarioController extends Controller
                             'conta_bancaria_id' => !empty($dados['conta_bancaria_id']) ? $dados['conta_bancaria_id'] : null,
                             'forma_pagamento_id' => !empty($dados['forma_pagamento_id']) ? $dados['forma_pagamento_id'] : null,
                             'tem_rateio' => !empty($dados['tem_rateio']) ? 1 : 0,
+                            'descricao_conta' => !empty(trim($dados['descricao_conta'] ?? '')) ? trim($dados['descricao_conta']) : null,
                             'observacoes_padrao' => $dados['observacoes'] ?? null,
                         ];
                         

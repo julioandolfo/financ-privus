@@ -94,7 +94,7 @@ class PadraoImportacaoExtrato extends Model
     public function create($data)
     {
         $columns = [
-            'usuario_id', 'empresa_id', 'descricao_padrao', 'descricao_original', 'tipo_padrao',
+            'usuario_id', 'empresa_id', 'descricao_padrao', 'descricao_original', 'descricao_conta', 'tipo_padrao',
             'categoria_id', 'centro_custo_id', 'fornecedor_id', 'conta_bancaria_id',
             'forma_pagamento_id', 'tem_rateio', 'observacoes_padrao', 'usos', 'ultimo_uso_em'
         ];
@@ -127,7 +127,7 @@ class PadraoImportacaoExtrato extends Model
     {
         $columns = [
             'categoria_id', 'centro_custo_id', 'fornecedor_id', 'conta_bancaria_id',
-            'forma_pagamento_id', 'tem_rateio', 'observacoes_padrao', 'usos', 'ultimo_uso_em'
+            'forma_pagamento_id', 'tem_rateio', 'descricao_conta', 'observacoes_padrao', 'usos', 'ultimo_uso_em'
         ];
         
         $updateData = ['id' => $id];

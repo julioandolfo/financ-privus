@@ -138,9 +138,20 @@ $empresasJson = json_encode($empresas ?? []);
                         
                         <!-- Linha de Descrição -->
                         <div class="ml-8 mb-4 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border-l-4 border-blue-500">
-                            <!-- Descrição principal (MEMO) -->
-                            <div class="font-medium text-gray-900 dark:text-gray-100">
-                                <?= htmlspecialchars($transacao['memo'] ?? $transacao['descricao_curta'] ?? $transacao['descricao'] ?? '') ?>
+                            <!-- Descrição editável da conta -->
+                            <div class="mb-2">
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Descrição da conta (editável)</label>
+                                <input type="text" 
+                                       name="transacoes[<?= $index ?>][descricao_conta]" 
+                                       id="descricao_conta_<?= $index ?>"
+                                       value="<?= htmlspecialchars($padrao['descricao_conta'] ?? $transacao['memo'] ?? $transacao['descricao_curta'] ?? $transacao['descricao'] ?? '') ?>"
+                                       placeholder="Ex: Assinatura Netflix"
+                                       class="w-full px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                       title="Edite para um nome mais amigável. Será usada nas próximas importações que identificarem este padrão.">
+                            </div>
+                            <!-- Original do extrato (referência) -->
+                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                <span class="font-medium">Original:</span> <?= htmlspecialchars($transacao['memo'] ?? $transacao['descricao_curta'] ?? $transacao['descricao'] ?? '-') ?>
                             </div>
                             
                             <!-- Nome/Beneficiário -->
@@ -657,6 +668,9 @@ function extratoRevisarForm() {
             formData.append('forma_pagamento_id', formaSelect?.tomselect?.getValue() || formaSelect?.value || '');
             formData.append('tem_rateio', '0');
             formData.append('observacoes', '');
+            
+            const descricaoInput = document.getElementById(`descricao_conta_${index}`);
+            formData.append('descricao_conta', descricaoInput?.value?.trim() || '');
             
             try {
                 const response = await fetch('/extrato-bancario/salvar-padrao', {
