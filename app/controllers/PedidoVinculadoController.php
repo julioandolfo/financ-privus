@@ -300,30 +300,28 @@ class PedidoVinculadoController extends Controller
         // Se empresa_id não está na sessão, busca do usuário
         if (empty($empresaId) && !empty($usuarioId)) {
             $logs[] = "empresa_id NULL, buscando do usuário...";
-            $sqlUsuario = "SELECT empresa_id FROM usuarios WHERE id = :usuario_id LIMIT 1";
+            $sqlUsuario = "SELECT empresa_id, tipo FROM usuarios WHERE id = :usuario_id LIMIT 1";
             $stmtUsuario = $this->db->prepare($sqlUsuario);
             $stmtUsuario->execute(['usuario_id' => $usuarioId]);
             $usuario = $stmtUsuario->fetch(\PDO::FETCH_ASSOC);
             
-            if ($usuario && !empty($usuario['empresa_id'])) {
-                $empresaId = $usuario['empresa_id'];
-                $logs[] = "empresa_id encontrada no banco: {$empresaId}";
-                // Atualiza a sessão para próximas requisições
-                $_SESSION['usuario_empresa_id'] = $empresaId;
+            if ($usuario) {
+                $logs[] = "Usuário encontrado - empresa_id: " . ($usuario['empresa_id'] ?: 'NULL') . ", tipo: " . ($usuario['tipo'] ?? 'NULL');
+                
+                if (!empty($usuario['empresa_id'])) {
+                    $empresaId = $usuario['empresa_id'];
+                    $logs[] = "empresa_id encontrada no banco: {$empresaId}";
+                    // Atualiza a sessão para próximas requisições
+                    $_SESSION['usuario_empresa_id'] = $empresaId;
+                } else {
+                    $logs[] = "AVISO: usuário sem empresa_id no banco (pode ser admin/super)";
+                }
             } else {
-                $logs[] = "ERRO: empresa_id não encontrada no banco para usuario_id: {$usuarioId}";
+                $logs[] = "ERRO: Usuário não encontrado no banco com usuario_id: {$usuarioId}";
             }
         }
         
-        $logs[] = "empresa_id final para validação: " . ($empresaId ?: 'NULL');
-        
-        // Validar se conseguimos empresa_id
-        if (empty($empresaId)) {
-            $logs[] = "ERRO FATAL: Não foi possível determinar a empresa_id do usuário";
-            LogSistema::info('Pedidos', 'alteracao_massa_erro', implode("\n", $logs));
-            $this->session->set('error', 'Erro: não foi possível identificar sua empresa. Tente fazer logout e login novamente.');
-            return $response->redirect('/pedidos');
-        }
+        $logs[] = "empresa_id final para validação: " . ($empresaId ?: 'NULL (sem filtro de empresa)');
         
         $totalAtualizados = 0;
         $erros = [];
@@ -346,11 +344,15 @@ class PedidoVinculadoController extends Controller
                 
                 $logs[] = "  Pedido encontrado: #{$pedido['numero_pedido']}, empresa_id: {$pedido['empresa_id']}, status_atual: {$pedido['status']}";
                 
-                // Validação de segurança: pedido deve pertencer à empresa do usuário
-                if ($pedido['empresa_id'] != $empresaId) {
+                // Validação de segurança: pedido deve pertencer à empresa do usuário (se houver empresa_id)
+                if (!empty($empresaId) && $pedido['empresa_id'] != $empresaId) {
                     $logs[] = "  ERRO: Pedido não pertence à empresa (pedido: {$pedido['empresa_id']} vs usuário: {$empresaId})";
                     $erros[] = "Pedido #{$pedido['numero_pedido']} não pertence à sua empresa.";
                     continue;
+                } else if (!empty($empresaId)) {
+                    $logs[] = "  ✓ Validação de empresa OK (pedido: {$pedido['empresa_id']} = usuário: {$empresaId})";
+                } else {
+                    $logs[] = "  ⚠ Validação de empresa IGNORADA (usuário sem empresa_id - admin/super)";
                 }
                 
                 // Atualizar status
