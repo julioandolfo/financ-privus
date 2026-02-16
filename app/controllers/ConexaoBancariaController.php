@@ -467,6 +467,9 @@ class ConexaoBancariaController extends Controller
             // Atualizar saldo na conexão bancária
             $this->conexaoModel->atualizarSaldo($id, $saldoData['saldo']);
             
+            // Atualizar data de última sincronização também ao atualizar saldo
+            $this->conexaoModel->atualizarUltimaSync($id);
+            
             $contaBancariaModel = new ContaBancaria();
             $contaCriada = false;
             

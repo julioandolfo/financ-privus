@@ -12,7 +12,7 @@ $statusColor = $statusColors[$statusConexao] ?? $statusColors['ativa'];
 $statusLabels = ['ativa' => 'Ativa', 'erro' => 'Erro', 'expirada' => 'Expirada', 'desconectada' => 'Desconectada'];
 ?>
 
-<div class="max-w-5xl mx-auto" x-data="{ saldo: '<?= $conexao['saldo_banco'] !== null ? number_format($conexao['saldo_banco'], 2, ',', '.') : '---' ?>', carregando: false, sincronizando: false }">
+<div class="max-w-5xl mx-auto" x-data="{ saldo: '<?= $conexao['saldo_banco'] !== null ? number_format($conexao['saldo_banco'], 2, ',', '.') : '---' ?>', carregando: false, sincronizando: false, atualizadoEm: '<?= !empty($conexao['saldo_atualizado_em']) ? 'Atualizado em ' . date('d/m/Y H:i', strtotime($conexao['saldo_atualizado_em'])) : '' ?>' }">
     <!-- Breadcrumb -->
     <div class="mb-6">
         <a href="/conexoes-bancarias" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
@@ -62,14 +62,12 @@ $statusLabels = ['ativa' => 'Ativa', 'erro' => 'Erro', 'expirada' => 'Expirada',
                     <p class="text-4xl font-bold text-gray-900 dark:text-gray-100 mt-2">
                         R$ <span x-text="saldo"></span>
                     </p>
-                    <?php if (!empty($conexao['saldo_atualizado_em'])): ?>
-                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                            Atualizado em <?= date('d/m/Y \à\s H:i:s', strtotime($conexao['saldo_atualizado_em'])) ?>
-                        </p>
-                    <?php endif; ?>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-2" x-text="atualizadoEm">
+                        <?= !empty($conexao['saldo_atualizado_em']) ? 'Atualizado em ' . date('d/m/Y H:i', strtotime($conexao['saldo_atualizado_em'])) : '' ?>
+                    </p>
                 </div>
                 <div class="flex gap-3">
-                    <button @click="carregando = true; fetch('/api/conexoes-bancarias/<?= $conexao['id'] ?>/saldo').then(r => r.json()).then(d => { if(d.saldo_formatado) { saldo = d.saldo_formatado.replace('R$ ',''); if(d.conta_criada) { alert(d.message || 'Conta bancária criada e vinculada!'); location.reload(); } } else if(d.error) alert(d.error); }).catch(e => alert('Erro ao atualizar saldo')).finally(() => carregando = false)"
+                    <button @click="carregando = true; fetch('/api/conexoes-bancarias/<?= $conexao['id'] ?>/saldo').then(r => r.json()).then(d => { if(d.saldo_formatado) { saldo = d.saldo_formatado.replace('R$ ',''); let agora = new Date(); atualizadoEm = 'Atualizado em ' + agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}); if(d.conta_criada) { alert(d.message || 'Conta bancária criada e vinculada!'); location.reload(); } } else if(d.error) alert(d.error); }).catch(e => alert('Erro ao atualizar saldo')).finally(() => carregando = false)"
                             :disabled="carregando"
                             class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition flex items-center gap-2">
                         <svg class="w-4 h-4" :class="carregando && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
