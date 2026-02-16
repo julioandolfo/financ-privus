@@ -1,6 +1,11 @@
 <?php
 $errors = $this->session->get('errors') ?? [];
 $old = $this->session->get('old') ?? [];
+
+// Debug: verifica se categorias estão sendo passadas
+if (empty($categorias)) {
+    error_log("AVISO: Nenhuma categoria encontrada para empresa_id: " . ($conta['empresa_id'] ?? 'N/A'));
+}
 ?>
 
 <div class="max-w-5xl mx-auto animate-fade-in">
@@ -59,14 +64,19 @@ $old = $this->session->get('old') ?? [];
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Categoria <span class="text-red-500">*</span>
                         </label>
+                        <!-- DEBUG: Total de categorias: <?= count($categorias ?? []) ?> -->
                         <select name="categoria_id" id="categoria_id" required data-placeholder="Selecione..."
                                 class="select-search w-full">
                             <option value="">Selecione...</option>
-                            <?php foreach ($categorias as $categoria): ?>
-                                <option value="<?= $categoria['id'] ?>" <?= ($old['categoria_id'] ?? $conta['categoria_id']) == $categoria['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($categoria['nome']) ?>
-                                </option>
-                            <?php endforeach; ?>
+                            <?php if (!empty($categorias)): ?>
+                                <?php foreach ($categorias as $categoria): ?>
+                                    <option value="<?= $categoria['id'] ?>" <?= ($old['categoria_id'] ?? $conta['categoria_id']) == $categoria['id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($categoria['nome']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <!-- AVISO: Nenhuma categoria encontrada! -->
+                            <?php endif; ?>
                         </select>
                         <?php if (isset($errors['categoria_id'])): ?>
                             <p class="mt-1 text-sm text-red-500"><?= $errors['categoria_id'] ?></p>
@@ -308,11 +318,20 @@ function contaReceberForm() {
         clienteIdAtual: <?= json_encode($old['cliente_id'] ?? $conta['cliente_id'] ?? '') ?>,
         
         init() {
-            // Carregar categorias, centros e clientes automaticamente ao abrir a página
-            const empresaId = document.querySelector('select[name="empresa_id"]').value;
-            if (empresaId) {
-                this.carregarDadosEmpresa(empresaId);
-            }
+            // DEBUG: Log de dados iniciais
+            console.log('Formulário inicializado');
+            console.log('Empresa da conta:', document.querySelector('select[name="empresa_id"]').value);
+            console.log('Categoria selecionada:', this.categoriaIdAtual);
+            console.log('Total de options em categoria_id:', document.getElementById('categoria_id')?.options?.length);
+            
+            // NÃO recarrega ao inicializar - usa os dados já renderizados pelo servidor
+            // Apenas reinicializa os selects se necessário
+            setTimeout(() => {
+                if (typeof initAllSelectSearch === 'function') {
+                    initAllSelectSearch();
+                }
+                console.log('Select-search inicializado');
+            }, 100);
         },
         
         atualizarRateios() {
@@ -325,6 +344,11 @@ function contaReceberForm() {
                 return;
             }
             
+            // Salva os valores atuais antes de recarregar
+            const categoriaAtual = document.getElementById('categoria_id')?.value || this.categoriaIdAtual;
+            const centroAtual = document.getElementById('centro_custo_id')?.value || this.centroCustoIdAtual;
+            const clienteAtual = document.getElementById('cliente_id')?.value || this.clienteIdAtual;
+            
             // Carregar categorias de receita
             try {
                 const respCategorias = await fetch(`/categorias?ajax=1&empresa_id=${empresaId}&tipo=receita`);
@@ -336,7 +360,7 @@ function contaReceberForm() {
                         options.push({value: cat.id, text: cat.nome});
                     });
                 }
-                refreshSelectSearch('categoria_id', options, this.categoriaIdAtual);
+                refreshSelectSearch('categoria_id', options, categoriaAtual);
             } catch (error) {
                 console.error('Erro ao carregar categorias:', error);
             }
@@ -352,7 +376,7 @@ function contaReceberForm() {
                         options.push({value: centro.id, text: centro.nome});
                     });
                 }
-                refreshSelectSearch('centro_custo_id', options, this.centroCustoIdAtual);
+                refreshSelectSearch('centro_custo_id', options, centroAtual);
             } catch (error) {
                 console.error('Erro ao carregar centros de custo:', error);
             }
@@ -368,7 +392,7 @@ function contaReceberForm() {
                         options.push({value: cliente.id, text: cliente.nome_razao_social});
                     });
                 }
-                refreshSelectSearch('cliente_id', options, this.clienteIdAtual);
+                refreshSelectSearch('cliente_id', options, clienteAtual);
             } catch (error) {
                 console.error('Erro ao carregar clientes:', error);
             }
