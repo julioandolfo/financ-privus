@@ -350,15 +350,34 @@ document.addEventListener('DOMContentLoaded', function() {
         '#select_conta_bancaria'
     ];
     
+    const tomSelectInstances = {};
     selectFields.forEach(selector => {
         const el = document.querySelector(selector);
         if (el && typeof TomSelect !== 'undefined') {
-            new TomSelect(el, {
+            const ts = new TomSelect(el, {
                 ...tomSelectConfig,
                 allowEmptyOption: true
             });
+            tomSelectInstances[selector] = ts;
         }
     });
+    
+    // Ao trocar empresa, recarrega para atualizar categorias e centros de custo da empresa selecionada
+    const tsEmpresa = tomSelectInstances['#select_empresa'];
+    if (tsEmpresa) {
+        tsEmpresa.on('change', function(val) {
+            if (val && val !== '') {
+                window.location = '/despesas-recorrentes/create?empresa_id=' + encodeURIComponent(val);
+            }
+        });
+    } else {
+        const empresaSelect = document.querySelector('#select_empresa');
+        if (empresaSelect) {
+            empresaSelect.addEventListener('change', function() {
+                if (this.value) window.location = '/despesas-recorrentes/create?empresa_id=' + encodeURIComponent(this.value);
+            });
+        }
+    }
 });
 </script>
 

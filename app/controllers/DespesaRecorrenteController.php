@@ -125,16 +125,17 @@ class DespesaRecorrenteController extends Controller
             $this->formaPagamentoModel = new FormaPagamento();
             $this->contaBancariaModel = new ContaBancaria();
             
-            $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-            
             $empresas = $this->empresaModel->findAll(['ativo' => 1]);
+            $old = $_SESSION['old'] ?? [];
+            $empresaId = $request->get('empresa_id') ?: ($old['empresa_id'] ?? null) ?: ($_SESSION['usuario_empresa_id'] ?? null) ?: ($empresas[0]['id'] ?? null);
+            $empresaId = $empresaId ? (int)$empresaId : null;
+            
             $fornecedores = $this->fornecedorModel->findAll(['ativo' => 1]);
             $categorias = $this->categoriaModel->findAll($empresaId, 'despesa');
             $centrosCusto = $this->centroCustoModel->findAll($empresaId);
             $formasPagamento = $this->formaPagamentoModel->findAll();
             $contasBancarias = $this->contaBancariaModel->findAll();
             
-            $old = $_SESSION['old'] ?? [];
             unset($_SESSION['old']);
             
             return $this->render('despesas_recorrentes/create', [
