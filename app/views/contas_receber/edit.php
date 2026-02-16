@@ -1,6 +1,8 @@
 <?php
 $errors = $this->session->get('errors') ?? [];
 $old = $this->session->get('old') ?? [];
+$debugCategorias = isset($categorias) ? count($categorias) : 'VAR_NAO_EXISTE';
+$debugEmpresaId = $conta['empresa_id'] ?? 'N/A';
 ?>
 
 <div class="max-w-5xl mx-auto animate-fade-in">
@@ -300,7 +302,21 @@ $old = $this->session->get('old') ?? [];
     </div>
 </div>
 
+<!-- DEBUG: empresa_id=<?= $debugEmpresaId ?> | categorias no PHP=<?= $debugCategorias ?> -->
+
 <script>
+// DEBUG - console e log do PHP
+(function() {
+    const cat = document.getElementById('categoria_id');
+    const info = {
+        empresaId: <?= json_encode($debugEmpresaId) ?>,
+        categoriasNoPHP: <?= json_encode($debugCategorias) ?>,
+        optionsNoSelect: cat ? cat.options.length : 0,
+        textosOptions: cat ? Array.from(cat.options).map(o => o.text) : []
+    };
+    console.log('[DEBUG contas-receber/edit]', info);
+})();
+
 function contaReceberForm() {
     return {
         valorTotal: <?= $old['valor_total'] ?? $conta['valor_total'] ?>,

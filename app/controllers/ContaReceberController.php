@@ -484,6 +484,9 @@ class ContaReceberController extends Controller
             $categorias = $this->categoriaModel->findAll($empresaDaConta, 'receita');
             $centrosCusto = $this->centroCustoModel->findAll($empresaDaConta);
             
+            // DEBUG: log para diagnóstico
+            error_log("[CONTAS-RECEBER EDIT] conta_id={$id} empresa_id={$empresaDaConta} categorias=" . count($categorias) . " centros=" . count($centrosCusto));
+            
             $formasRecebimento = $this->formaPagamentoModel->findAll();
             $contasBancarias = $this->contaBancariaModel->findAll();
             
