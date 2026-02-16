@@ -169,11 +169,15 @@ class SicoobBankService extends AbstractBankService
         $saldoBloqueado = (float) ($resultado['saldoBloqueado'] ?? $response['saldoBloqueado'] ?? 0);
         $saldoLimite = (float) ($resultado['saldoLimite'] ?? $response['saldoLimite'] ?? 0);
         
-        // Cruzar com extrato do mês atual para pegar saldoAtual mais preciso
+        // Cruzar com extrato para pegar saldoAtual mais preciso
+        // Estratégia: busca mês atual (dia 1 até hoje), se não tiver transações
+        // tenta também o último dia útil anterior
         $saldoExtrato = null;
         $saldoAnterior = null;
         $saldoBloqueadoExtrato = null;
         $saldoLimiteExtrato = null;
+        $ultimaTransacaoData = null;
+        $totalTransacoes = 0;
         try {
             $mesAtual = date('m');
             $anoAtual = date('Y');
@@ -188,10 +192,11 @@ class SicoobBankService extends AbstractBankService
                 'ano' => $anoAtual,
             ]);
             
+            // Buscar extrato do mês inteiro até hoje
             $urlExtrato = $this->baseUrl . "/extrato/{$mesAtual}/{$anoAtual}";
             $paramsExtrato = [
                 'numeroContaCorrente' => $numeroConta,
-                'diaInicial' => $diaAtual,
+                'diaInicial' => '01',
                 'diaFinal' => $diaAtual,
             ];
             
@@ -204,7 +209,6 @@ class SicoobBankService extends AbstractBankService
             );
             
             if (is_array($responseExtrato)) {
-                // Campos podem estar no root ou dentro de resultado
                 $extData = $responseExtrato;
                 if (isset($responseExtrato['resultado']) && is_array($responseExtrato['resultado'])) {
                     $extData = $responseExtrato['resultado'];
@@ -214,11 +218,59 @@ class SicoobBankService extends AbstractBankService
                 $saldoAnterior = isset($extData['saldoAnterior']) ? (float)$extData['saldoAnterior'] : null;
                 $saldoBloqueadoExtrato = isset($extData['saldoBloqueado']) ? (float)$extData['saldoBloqueado'] : null;
                 $saldoLimiteExtrato = isset($extData['saldoLimite']) ? (float)$extData['saldoLimite'] : null;
+                
+                $transacoes = $extData['transacoes'] ?? [];
+                $totalTransacoes = count($transacoes);
+                if ($totalTransacoes > 0) {
+                    $ultimaTx = end($transacoes);
+                    $ultimaTransacaoData = $ultimaTx['data'] ?? null;
+                }
+            }
+            
+            // Se não teve transações no mês atual (ex: início do mês ou fds),
+            // buscar último dia do mês anterior para ter referência
+            if ($totalTransacoes === 0 && (int)$diaAtual <= 3) {
+                $mesAnterior = date('m', strtotime('first day of last month'));
+                $anoAnterior = date('Y', strtotime('first day of last month'));
+                $ultimoDiaMesAnterior = date('t', strtotime('last day of last month'));
+                
+                $urlExtratoAnterior = $this->baseUrl . "/extrato/{$mesAnterior}/{$anoAnterior}";
+                $paramsExtratoAnterior = [
+                    'numeroContaCorrente' => $numeroConta,
+                    'diaInicial' => $ultimoDiaMesAnterior,
+                    'diaFinal' => $ultimoDiaMesAnterior,
+                ];
+                
+                $responseExtratoAnterior = $this->httpRequest(
+                    $urlExtratoAnterior,
+                    'GET',
+                    $this->sicoobHeaders($token, $clientId),
+                    $paramsExtratoAnterior,
+                    $conexao
+                );
+                
+                if (is_array($responseExtratoAnterior)) {
+                    $extDataAnt = $responseExtratoAnterior;
+                    if (isset($responseExtratoAnterior['resultado']) && is_array($responseExtratoAnterior['resultado'])) {
+                        $extDataAnt = $responseExtratoAnterior['resultado'];
+                    }
+                    $saldoMesAnterior = isset($extDataAnt['saldoAtual']) ? (float)$extDataAnt['saldoAtual'] : null;
+                    
+                    if ($saldoMesAnterior !== null && $saldoExtrato === null) {
+                        $saldoExtrato = $saldoMesAnterior;
+                    }
+                    
+                    LogSistema::debug('SicoobAPI', 'getSaldo_extrato_mes_anterior', 'Consultou mês anterior (sem transações no mês atual)', [
+                        'numeroConta' => $numeroConta,
+                        'mes_anterior' => "{$mesAnterior}/{$anoAnterior}",
+                        'saldoAtual_mes_anterior' => $saldoMesAnterior,
+                    ]);
+                }
             }
             
             $extratoResponseJson = is_array($responseExtrato) ? json_encode($responseExtrato, JSON_UNESCAPED_UNICODE) : 'not_array';
             
-            \App\Models\LogSistema::info('SicoobAPI', 'getSaldo_extrato_cruzamento', 'Cruzamento saldo endpoint vs extrato', [
+            LogSistema::info('SicoobAPI', 'getSaldo_extrato_cruzamento', 'Cruzamento saldo endpoint vs extrato', [
                 'numeroConta' => $numeroConta,
                 'identificacao' => $conexao['identificacao'] ?? '',
                 'endpoint_saldo' => $saldoEndpoint,
@@ -227,37 +279,49 @@ class SicoobBankService extends AbstractBankService
                 'extrato_saldoAnterior' => $saldoAnterior,
                 'extrato_saldoBloqueado' => $saldoBloqueadoExtrato,
                 'extrato_saldoLimite' => $saldoLimiteExtrato,
+                'extrato_total_transacoes' => $totalTransacoes,
+                'extrato_ultima_transacao' => $ultimaTransacaoData,
                 'extrato_http_code' => $this->lastHttpCode ?? null,
-                'extrato_response_raw' => substr($extratoResponseJson, 0, 1000),
+                'extrato_response_raw' => substr($extratoResponseJson, 0, 2000),
             ]);
         } catch (\Exception $e) {
-            \App\Models\LogSistema::warning('SicoobAPI', 'getSaldo_extrato_erro', 'Erro ao cruzar saldo com extrato', [
+            LogSistema::warning('SicoobAPI', 'getSaldo_extrato_erro', 'Erro ao cruzar saldo com extrato', [
                 'erro' => $e->getMessage(),
             ]);
         }
         
-        // Usar saldo do extrato se disponível e diferente de null (mais preciso)
+        // Usar saldo do extrato se disponível (mais preciso)
         $saldoFinal = ($saldoExtrato !== null) ? $saldoExtrato : $saldoEndpoint;
         
+        // Calcular saldo contábil (sem limite) — o que o cliente vê como "saldo" no app
+        $saldoContabil = $saldoFinal - $saldoLimite;
+        
         try {
-            \App\Models\LogSistema::info('SicoobAPI', 'getSaldo_resultado', 'Saldo final escolhido', [
+            LogSistema::info('SicoobAPI', 'getSaldo_resultado', 'Saldo final escolhido', [
                 'numeroConta' => $numeroConta,
                 'identificacao' => $conexao['identificacao'] ?? '',
                 'saldo_endpoint' => $saldoEndpoint,
                 'saldo_extrato' => $saldoExtrato,
-                'saldo_final_usado' => $saldoFinal,
-                'fonte' => ($saldoExtrato !== null) ? 'EXTRATO (saldoAtual)' : 'ENDPOINT (/saldo)',
-                'saldo_bloqueado' => $saldoBloqueado,
+                'saldo_api_bruto' => $saldoFinal,
                 'saldo_limite' => $saldoLimite,
+                'saldo_contabil_sem_limite' => $saldoContabil,
+                'saldo_bloqueado' => $saldoBloqueado,
+                'fonte' => ($saldoExtrato !== null) ? 'EXTRATO (saldoAtual)' : 'ENDPOINT (/saldo)',
+                'total_transacoes_periodo' => $totalTransacoes,
+                'ultima_transacao' => $ultimaTransacaoData,
+                'nota' => 'Sicoob retorna saldo_api = saldo_contabil + limite. O saldo real do cliente = saldo_api - limite.',
             ]);
         } catch (\Exception $e) {}
         
         return [
             'saldo' => $saldoFinal,
+            'saldo_contabil' => $saldoContabil,
             'saldo_bloqueado' => $saldoBloqueado,
             'saldo_limite' => $saldoLimite,
             'atualizado_em' => date('Y-m-d\TH:i:s'),
-            'moeda' => 'BRL'
+            'moeda' => 'BRL',
+            'total_transacoes' => $totalTransacoes,
+            'ultima_transacao' => $ultimaTransacaoData,
         ];
     }
 

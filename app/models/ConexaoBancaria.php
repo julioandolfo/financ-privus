@@ -253,7 +253,7 @@ class ConexaoBancaria extends Model
     /**
      * Atualiza o saldo real reportado pelo banco.
      */
-    public function atualizarSaldo($id, $saldo)
+    public function atualizarSaldo($id, $saldo, $saldoLimite = null, $saldoContabil = null)
     {
         $sql = "UPDATE {$this->table} 
                 SET saldo_banco = :saldo, 
@@ -262,7 +262,32 @@ class ConexaoBancaria extends Model
                     ultimo_erro = NULL
                 WHERE id = :id";
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute(['id' => $id, 'saldo' => $saldo]);
+        $result = $stmt->execute(['id' => $id, 'saldo' => $saldo]);
+        
+        // Tentar salvar saldo_limite e saldo_contabil (campos opcionais)
+        if ($saldoLimite !== null || $saldoContabil !== null) {
+            try {
+                $updates = [];
+                $params = ['id' => $id];
+                if ($saldoLimite !== null) {
+                    $updates[] = 'saldo_limite = :saldo_limite';
+                    $params['saldo_limite'] = $saldoLimite;
+                }
+                if ($saldoContabil !== null) {
+                    $updates[] = 'saldo_contabil = :saldo_contabil';
+                    $params['saldo_contabil'] = $saldoContabil;
+                }
+                if (!empty($updates)) {
+                    $sqlExtra = "UPDATE {$this->table} SET " . implode(', ', $updates) . " WHERE id = :id";
+                    $stmtExtra = $this->db->prepare($sqlExtra);
+                    $stmtExtra->execute($params);
+                }
+            } catch (\Exception $e) {
+                // Campos podem não existir ainda na tabela, ignorar silenciosamente
+            }
+        }
+        
+        return $result;
     }
 
     /**

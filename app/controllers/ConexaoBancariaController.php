@@ -464,8 +464,10 @@ class ConexaoBancariaController extends Controller
                 'empresa_id' => $conexao['empresa_id'] ?? 'VAZIO',
             ]);
             
-            // Atualizar saldo na conexão bancária
-            $this->conexaoModel->atualizarSaldo($id, $saldoData['saldo']);
+            // Atualizar saldo na conexão bancária (incluindo limite e contábil)
+            $saldoLimite = $saldoData['saldo_limite'] ?? 0;
+            $saldoContabil = $saldoData['saldo_contabil'] ?? ($saldoData['saldo'] - $saldoLimite);
+            $this->conexaoModel->atualizarSaldo($id, $saldoData['saldo'], $saldoLimite, $saldoContabil);
             
             // Atualizar data de última sincronização também ao atualizar saldo
             $this->conexaoModel->atualizarUltimaSync($id);
@@ -532,13 +534,20 @@ class ConexaoBancariaController extends Controller
                 $contaBancariaModel->setSaldoReal($conexao['conta_bancaria_id'], $saldoData['saldo']);
             }
             
+            $saldoContabil = $saldoData['saldo_contabil'] ?? $saldoData['saldo'];
+            $saldoLimite = $saldoData['saldo_limite'] ?? 0;
+            
             $responseData = [
                 'success' => true,
                 'saldo' => $saldoData['saldo'],
                 'saldo_formatado' => 'R$ ' . number_format($saldoData['saldo'], 2, ',', '.'),
+                'saldo_contabil' => $saldoContabil,
+                'saldo_contabil_formatado' => 'R$ ' . number_format($saldoContabil, 2, ',', '.'),
+                'saldo_limite' => $saldoLimite,
+                'saldo_limite_formatado' => 'R$ ' . number_format($saldoLimite, 2, ',', '.'),
                 'saldo_bloqueado' => $saldoData['saldo_bloqueado'] ?? 0,
                 'atualizado_em' => $saldoData['atualizado_em'],
-                'moeda' => $saldoData['moeda'] ?? 'BRL'
+                'moeda' => $saldoData['moeda'] ?? 'BRL',
             ];
             
             if ($contaCriada) {
