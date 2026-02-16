@@ -610,8 +610,9 @@ $insightsConfigurado = $insights_ia_configurado ?? false;
 
 <!-- ========================================
      INSIGHTS IA - Alpine.js Component
+     Mesma condição do card: API configurada OU insights habilitado
      ======================================== -->
-<?php if ($insightsConfigurado && $insightsHabilitado): ?>
+<?php if ($insightsConfigurado || $insightsHabilitado): ?>
 <script>
 document.addEventListener('alpine:init', () => {
     Alpine.data('insightsIACard', () => ({
