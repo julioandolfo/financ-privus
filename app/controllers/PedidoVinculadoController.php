@@ -244,19 +244,30 @@ class PedidoVinculadoController extends Controller
      */
     public function alterarStatusMassa(Request $request, Response $response)
     {
+        $logs = [];
+        $logs[] = "=== INÍCIO ALTERAÇÃO STATUS MASSA ===";
+        
         $pedidosIdsJson = $request->post('pedidos_ids');
         $novoStatus = $request->post('novo_status');
         
+        $logs[] = "pedidos_ids recebido: " . ($pedidosIdsJson ?: 'NULL/VAZIO');
+        $logs[] = "novo_status recebido: " . ($novoStatus ?: 'NULL/VAZIO');
+        
         // Validar
         if (empty($pedidosIdsJson) || empty($novoStatus)) {
+            $logs[] = "ERRO: Dados inválidos - pedidos_ids ou novo_status vazios";
+            LogSistema::info('Pedidos', 'alteracao_massa_erro', implode("\n", $logs));
             $this->session->set('error', 'Dados inválidos para alteração em massa.');
             return $response->redirect('/pedidos');
         }
         
         // Decodificar IDs
         $pedidosIds = json_decode($pedidosIdsJson, true);
+        $logs[] = "pedidos_ids decodificado: " . print_r($pedidosIds, true);
         
         if (!is_array($pedidosIds) || empty($pedidosIds)) {
+            $logs[] = "ERRO: pedidos_ids não é array ou está vazio após decode";
+            LogSistema::info('Pedidos', 'alteracao_massa_erro', implode("\n", $logs));
             $this->session->set('error', 'Nenhum pedido selecionado.');
             return $response->redirect('/pedidos');
         }
@@ -270,44 +281,64 @@ class PedidoVinculadoController extends Controller
             PedidoVinculado::STATUS_REEMBOLSADO
         ];
         
+        $logs[] = "Status permitidos: " . implode(', ', $statusPermitidos);
+        
         if (!in_array($novoStatus, $statusPermitidos)) {
+            $logs[] = "ERRO: Status '{$novoStatus}' não está na lista de permitidos";
+            LogSistema::info('Pedidos', 'alteracao_massa_erro', implode("\n", $logs));
             $this->session->set('error', 'Status inválido.');
             return $response->redirect('/pedidos');
         }
         
         // Processar alterações
         $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
+        $logs[] = "empresa_id do usuário: " . ($empresaId ?: 'NULL');
+        
         $totalAtualizados = 0;
         $erros = [];
         
         try {
             $this->db->beginTransaction();
+            $logs[] = "Transação iniciada";
             
             foreach ($pedidosIds as $pedidoId) {
+                $logs[] = "--- Processando pedido ID: {$pedidoId} ---";
+                
                 // Verificar se o pedido pertence à empresa do usuário
                 $pedido = $this->pedidoModel->findById($pedidoId);
                 
                 if (!$pedido) {
+                    $logs[] = "  ERRO: Pedido ID:{$pedidoId} não encontrado no banco";
                     $erros[] = "Pedido #{$pedidoId} não encontrado.";
                     continue;
                 }
                 
+                $logs[] = "  Pedido encontrado: #{$pedido['numero_pedido']}, empresa_id: {$pedido['empresa_id']}, status_atual: {$pedido['status']}";
+                
                 if ($pedido['empresa_id'] != $empresaId) {
+                    $logs[] = "  ERRO: Pedido não pertence à empresa (pedido: {$pedido['empresa_id']} vs usuário: {$empresaId})";
                     $erros[] = "Pedido #{$pedido['numero_pedido']} não pertence à sua empresa.";
                     continue;
                 }
                 
                 // Atualizar status
+                $logs[] = "  Tentando atualizar status de '{$pedido['status']}' para '{$novoStatus}'";
                 $success = $this->pedidoModel->updateStatus($pedidoId, $novoStatus);
+                $logs[] = "  Resultado updateStatus: " . ($success ? 'TRUE/SUCCESS' : 'FALSE/FALHOU');
                 
                 if ($success) {
                     $totalAtualizados++;
+                    $logs[] = "  ✓ Pedido #{$pedido['numero_pedido']} atualizado com sucesso";
                 } else {
+                    $logs[] = "  ✗ ERRO ao atualizar pedido #{$pedido['numero_pedido']}";
                     $erros[] = "Erro ao atualizar pedido #{$pedido['numero_pedido']}.";
                 }
             }
             
             $this->db->commit();
+            $logs[] = "Transação commitada";
+            $logs[] = "Total de pedidos atualizados: {$totalAtualizados}";
+            $logs[] = "Total de erros: " . count($erros);
             
             // Mensagens de feedback
             if ($totalAtualizados > 0) {
@@ -321,26 +352,33 @@ class PedidoVinculadoController extends Controller
                 
                 $msg = "{$totalAtualizados} pedido(s) atualizado(s) para o status \"{$statusLabels[$novoStatus]}\" com sucesso!";
                 $this->session->set('success', $msg);
-                
-                // Log da ação
-                LogSistema::info('Pedidos', 'alteracao_massa', "Alterados {$totalAtualizados} pedidos para status '{$novoStatus}'", [
-                    'pedidos_ids' => $pedidosIds,
-                    'novo_status' => $novoStatus,
-                    'total_atualizados' => $totalAtualizados
-                ]);
+                $logs[] = "Mensagem de sucesso definida";
             }
             
             if (!empty($erros)) {
+                $logs[] = "Erros encontrados: " . implode(' | ', $erros);
                 $this->session->set('warning', 'Alguns pedidos não foram atualizados: ' . implode(' ', $erros));
             }
             
             if ($totalAtualizados === 0) {
+                $logs[] = "AVISO: Nenhum pedido foi atualizado";
                 $this->session->set('error', 'Nenhum pedido foi atualizado.');
             }
             
+            $logs[] = "=== FIM ALTERAÇÃO STATUS MASSA ===";
+            
         } catch (\Exception $e) {
             $this->db->rollBack();
+            $logs[] = "EXCEÇÃO: " . $e->getMessage();
+            $logs[] = "Stack trace: " . $e->getTraceAsString();
             $this->session->set('error', 'Erro ao atualizar pedidos: ' . $e->getMessage());
+        }
+        
+        // Grava logs
+        try {
+            LogSistema::info('Pedidos', 'alteracao_massa', implode("\n", $logs));
+        } catch (\Throwable $ignore) {
+            $logs[] = "Erro ao gravar log: " . $ignore->getMessage();
         }
         
         return $response->redirect('/pedidos');

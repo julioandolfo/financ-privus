@@ -132,13 +132,13 @@
                 <span class="text-white font-semibold">
                     <span id="countSelecionados">0</span> pedido(s) selecionado(s)
                 </span>
-                <select id="statusMassa" class="px-4 py-2 rounded-lg border border-white/20 bg-white/10 text-white font-medium backdrop-blur-sm">
-                    <option value="">Selecione o novo status</option>
-                    <option value="pendente">Pendente</option>
-                    <option value="processando">Processando</option>
-                    <option value="concluido">Concluído</option>
-                    <option value="cancelado">Cancelado</option>
-                    <option value="reembolsado">Reembolsado</option>
+                <select id="statusMassa" class="px-4 py-2 rounded-lg border-2 border-white bg-white text-gray-900 font-medium shadow-lg focus:ring-2 focus:ring-white/50 focus:border-white cursor-pointer">
+                    <option value="" class="text-gray-900">Selecione o novo status</option>
+                    <option value="pendente" class="text-gray-900">Pendente</option>
+                    <option value="processando" class="text-gray-900">Processando</option>
+                    <option value="concluido" class="text-gray-900">Concluído</option>
+                    <option value="cancelado" class="text-gray-900">Cancelado</option>
+                    <option value="reembolsado" class="text-gray-900">Reembolsado</option>
                 </select>
                 <button type="button" onclick="alterarStatusMassa()" class="bg-white text-indigo-600 hover:bg-indigo-50 px-6 py-2 rounded-lg font-semibold transition-all shadow-lg">
                     Alterar Status
