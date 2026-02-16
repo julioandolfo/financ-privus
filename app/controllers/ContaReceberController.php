@@ -58,6 +58,9 @@ class ContaReceberController extends Controller
                 $filters['status'] = $request->get('status');
             }
             
+            // Inadimplentes e métricas: considerar apenas contas cujo pedido está processando, em_processamento ou concluído
+            $filters['excluir_pedido_cancelado'] = true;
+            
             // Filtros por ID ou por Nome (consolidado)
             if ($request->get('cliente_id')) {
                 $filters['cliente_id'] = $request->get('cliente_id');
