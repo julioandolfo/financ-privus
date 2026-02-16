@@ -95,11 +95,12 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
                                 <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                <span class="text-xs font-medium text-amber-700 dark:text-amber-300" x-text="txFuturas + ' transações agendadas'"></span>
+                                <span class="text-xs font-medium text-amber-700 dark:text-amber-300" x-text="txFuturas + ' transação(ões) agendada(s) para os próximos dias'"></span>
                             </div>
                             <div class="flex items-baseline gap-2 mt-1">
-                                <span class="text-xs text-amber-600 dark:text-amber-400">Saldo projetado (após agendamentos):</span>
-                                <span class="text-sm font-bold text-amber-700 dark:text-amber-300" x-text="'R$ ' + saldoProjetado"></span>
+                                <span class="text-xs text-amber-600 dark:text-amber-400">Após agendamentos:</span>
+                                <span class="text-sm font-bold" :class="parseFloat(saldoProjetado.replace('.','').replace(',','.')) >= 0 ? 'text-amber-700 dark:text-amber-300' : 'text-red-600 dark:text-red-400'" x-text="'R$ ' + saldoProjetado"></span>
+                                <span class="text-xs text-gray-400">(o que o app do banco pode estar mostrando)</span>
                             </div>
                         </div>
                     </template>
