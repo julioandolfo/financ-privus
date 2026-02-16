@@ -232,12 +232,17 @@
     <!-- Ajuda rápida -->
     <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
         <h4 class="font-semibold text-gray-900 dark:text-gray-100 mb-2">Como interpretar o Ponto de Equilíbrio</h4>
-        <ul class="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
+        <ul class="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside mb-4">
             <li><strong>Ponto de Equilíbrio:</strong> Valor mínimo que você precisa faturar para cobrir todos os custos (fixos + variáveis).</li>
             <li><strong>Margem de Contribuição:</strong> Percentual das receitas que sobra após pagar os custos variáveis. Quanto maior, melhor.</li>
             <li><strong>Margem de Segurança:</strong> Quanto suas receitas estão acima do PE. Positivo = lucro; negativo = prejuízo.</li>
-            <li><strong>Custos fixos:</strong> Despesas que não variam com o volume (aluguel, salários, etc.). Configure <code>tipo_custo = fixo</code> nas contas.</li>
+            <li><strong>Custos fixos:</strong> Despesas que não variam com o volume (aluguel, salários). Configure <code>tipo_custo = fixo</code> nas contas a pagar.</li>
             <li><strong>Custos variáveis:</strong> Despesas proporcionais ao volume (matéria-prima, comissões). Configure <code>tipo_custo = variavel</code>.</li>
+            <li><strong>Quais categorias entram no PE?</strong> Apenas categorias marcadas como "Incluir no Ponto de Equilíbrio". 
+                <a href="/categorias" class="text-purple-600 dark:text-purple-400 hover:underline font-medium">Configurar categorias →</a></li>
         </ul>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+            Para excluir uma categoria do cálculo (ex.: Retirada de Sócios, Empréstimos), edite a categoria e desmarque "Incluir no Ponto de Equilíbrio".
+        </p>
     </div>
 </div>

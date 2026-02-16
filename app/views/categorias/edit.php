@@ -160,6 +160,20 @@
                 </label>
             </div>
 
+            <!-- Incluir no Ponto de Equilíbrio -->
+            <div class="flex items-center gap-3">
+                <input type="checkbox" 
+                       id="incluir_ponto_equilibrio" 
+                       name="incluir_ponto_equilibrio" 
+                       value="1"
+                       <?= ($old['incluir_ponto_equilibrio'] ?? $categoria['incluir_ponto_equilibrio'] ?? 1) ? 'checked' : '' ?>
+                       class="w-5 h-5 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2">
+                <label for="incluir_ponto_equilibrio" class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    Incluir no Ponto de Equilíbrio
+                </label>
+                <span class="text-xs text-gray-500 dark:text-gray-400">(Desmarque para excluir desta categoria do cálculo do PE)</span>
+            </div>
+
             <!-- Botões -->
             <div class="flex gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <button type="submit" 

@@ -135,8 +135,9 @@ class CategoriaController extends Controller
                 return;
             }
             
-            // Converte ativo para boolean
+            // Converte ativo e incluir_ponto_equilibrio para boolean
             $data['ativo'] = isset($data['ativo']) ? 1 : 0;
+            $data['incluir_ponto_equilibrio'] = isset($data['incluir_ponto_equilibrio']) ? 1 : 0;
             
             // Converte categoria_pai_id vazio em NULL
             if (empty($data['categoria_pai_id'])) {
@@ -309,8 +310,9 @@ class CategoriaController extends Controller
                 return;
             }
             
-            // Converte ativo para boolean
+            // Converte ativo e incluir_ponto_equilibrio para boolean
             $data['ativo'] = isset($data['ativo']) ? 1 : 0;
+            $data['incluir_ponto_equilibrio'] = isset($data['incluir_ponto_equilibrio']) ? 1 : 0;
             
             // Converte categoria_pai_id vazio em NULL
             if (empty($data['categoria_pai_id'])) {

@@ -244,9 +244,9 @@ class CategoriaFinanceira extends Model
     public function create($data)
     {
         $sql = "INSERT INTO {$this->table} 
-                (empresa_id, codigo, nome, tipo, categoria_pai_id, ativo) 
+                (empresa_id, codigo, nome, tipo, categoria_pai_id, ativo, incluir_ponto_equilibrio) 
                 VALUES 
-                (:empresa_id, :codigo, :nome, :tipo, :categoria_pai_id, :ativo)";
+                (:empresa_id, :codigo, :nome, :tipo, :categoria_pai_id, :ativo, :incluir_ponto_equilibrio)";
         
         $stmt = $this->db->prepare($sql);
         
@@ -256,7 +256,8 @@ class CategoriaFinanceira extends Model
             'nome' => $data['nome'],
             'tipo' => $data['tipo'],
             'categoria_pai_id' => $data['categoria_pai_id'] ?? null,
-            'ativo' => $data['ativo'] ?? 1
+            'ativo' => $data['ativo'] ?? 1,
+            'incluir_ponto_equilibrio' => isset($data['incluir_ponto_equilibrio']) ? (int)$data['incluir_ponto_equilibrio'] : 1
         ]) ? $this->db->lastInsertId() : false;
     }
     
@@ -271,7 +272,8 @@ class CategoriaFinanceira extends Model
                 nome = :nome,
                 tipo = :tipo,
                 categoria_pai_id = :categoria_pai_id,
-                ativo = :ativo
+                ativo = :ativo,
+                incluir_ponto_equilibrio = :incluir_ponto_equilibrio
                 WHERE id = :id";
         
         $stmt = $this->db->prepare($sql);
@@ -283,7 +285,8 @@ class CategoriaFinanceira extends Model
             'nome' => $data['nome'],
             'tipo' => $data['tipo'],
             'categoria_pai_id' => $data['categoria_pai_id'] ?? null,
-            'ativo' => $data['ativo'] ?? 1
+            'ativo' => $data['ativo'] ?? 1,
+            'incluir_ponto_equilibrio' => isset($data['incluir_ponto_equilibrio']) ? (int)$data['incluir_ponto_equilibrio'] : 1
         ]);
     }
     

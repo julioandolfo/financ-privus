@@ -79,7 +79,8 @@ class PontoEquilibrioService
                 WHERE cp.status = 'pago'
                   AND cp.data_pagamento BETWEEN ? AND ?
                   AND cp.tipo_custo = 'fixo'
-                  AND cp.deleted_at IS NULL";
+                  AND cp.deleted_at IS NULL
+                  AND (c.incluir_ponto_equilibrio = 1 OR c.incluir_ponto_equilibrio IS NULL)";
         if (!empty($empresasIds)) {
             $ph = implode(',', array_fill(0, count($empresasIds), '?'));
             $sql .= " AND cp.empresa_id IN ($ph)";
@@ -103,7 +104,8 @@ class PontoEquilibrioService
                 WHERE cp.status = 'pago'
                   AND cp.data_pagamento BETWEEN ? AND ?
                   AND (cp.tipo_custo = 'variavel' OR cp.tipo_custo = '' OR cp.tipo_custo IS NULL)
-                  AND cp.deleted_at IS NULL";
+                  AND cp.deleted_at IS NULL
+                  AND (c.incluir_ponto_equilibrio = 1 OR c.incluir_ponto_equilibrio IS NULL)";
         if (!empty($empresasIds)) {
             $ph = implode(',', array_fill(0, count($empresasIds), '?'));
             $sql .= " AND cp.empresa_id IN ($ph)";
@@ -123,9 +125,11 @@ class PontoEquilibrioService
         }
         $sql = "SELECT COALESCE(SUM(cp.valor_total), 0) as total
                 FROM contas_pagar cp
+                JOIN categorias_financeiras c ON cp.categoria_id = c.id
                 WHERE cp.status = 'pago'
                   AND cp.data_pagamento BETWEEN ? AND ?
-                  AND cp.deleted_at IS NULL";
+                  AND cp.deleted_at IS NULL
+                  AND (c.incluir_ponto_equilibrio = 1 OR c.incluir_ponto_equilibrio IS NULL)";
         if ($tipoCusto !== null) {
             $sql .= " AND cp.tipo_custo = ?";
         }
@@ -145,10 +149,12 @@ class PontoEquilibrioService
         $params = [$dataInicio, $dataFim];
         $sql = "SELECT COALESCE(SUM(cp.valor_total), 0) as total
                 FROM contas_pagar cp
+                JOIN categorias_financeiras c ON cp.categoria_id = c.id
                 WHERE cp.status = 'pago'
                   AND cp.data_pagamento BETWEEN ? AND ?
                   AND (cp.tipo_custo IS NULL OR cp.tipo_custo = '')
-                  AND cp.deleted_at IS NULL";
+                  AND cp.deleted_at IS NULL
+                  AND (c.incluir_ponto_equilibrio = 1 OR c.incluir_ponto_equilibrio IS NULL)";
         if (!empty($empresasIds)) {
             $ph = implode(',', array_fill(0, count($empresasIds), '?'));
             $sql .= " AND cp.empresa_id IN ($ph)";
@@ -179,14 +185,25 @@ class PontoEquilibrioService
 
     private function buscarDespesasRecorrentesPorTipo(array $empresasIds, string $tipoCusto): array
     {
+        $categoriasExcluidas = $this->buscarCategoriasExcluidasPE();
         $recorrentes = $this->despesaRecorrenteModel->findAll(['ativo' => 1]);
         $filtradas = [];
         foreach ($recorrentes as $r) {
             if (($r['tipo_custo'] ?? 'fixo') !== $tipoCusto) continue;
             if (!empty($empresasIds) && !in_array((int)$r['empresa_id'], array_map('intval', $empresasIds))) continue;
+            if (in_array((int)($r['categoria_id'] ?? 0), $categoriasExcluidas, true)) continue;
             $filtradas[] = $r;
         }
         return $filtradas;
+    }
+
+    /** IDs de categorias com incluir_ponto_equilibrio = 0 */
+    private function buscarCategoriasExcluidasPE(): array
+    {
+        $sql = "SELECT id FROM categorias_financeiras WHERE incluir_ponto_equilibrio = 0";
+        $stmt = $this->db->query($sql);
+        $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        return array_map('intval', array_column($rows, 'id'));
     }
 
     private function valorMensalRecorrente(array $dr): float
