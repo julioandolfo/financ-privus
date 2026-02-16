@@ -292,7 +292,38 @@ class PedidoVinculadoController extends Controller
         
         // Processar alterações
         $empresaId = $_SESSION['usuario_empresa_id'] ?? null;
-        $logs[] = "empresa_id do usuário: " . ($empresaId ?: 'NULL');
+        $usuarioId = $_SESSION['usuario_id'] ?? null;
+        
+        $logs[] = "empresa_id da sessão: " . ($empresaId ?: 'NULL');
+        $logs[] = "usuario_id da sessão: " . ($usuarioId ?: 'NULL');
+        
+        // Se empresa_id não está na sessão, busca do usuário
+        if (empty($empresaId) && !empty($usuarioId)) {
+            $logs[] = "empresa_id NULL, buscando do usuário...";
+            $sqlUsuario = "SELECT empresa_id FROM usuarios WHERE id = :usuario_id LIMIT 1";
+            $stmtUsuario = $this->db->prepare($sqlUsuario);
+            $stmtUsuario->execute(['usuario_id' => $usuarioId]);
+            $usuario = $stmtUsuario->fetch(\PDO::FETCH_ASSOC);
+            
+            if ($usuario && !empty($usuario['empresa_id'])) {
+                $empresaId = $usuario['empresa_id'];
+                $logs[] = "empresa_id encontrada no banco: {$empresaId}";
+                // Atualiza a sessão para próximas requisições
+                $_SESSION['usuario_empresa_id'] = $empresaId;
+            } else {
+                $logs[] = "ERRO: empresa_id não encontrada no banco para usuario_id: {$usuarioId}";
+            }
+        }
+        
+        $logs[] = "empresa_id final para validação: " . ($empresaId ?: 'NULL');
+        
+        // Validar se conseguimos empresa_id
+        if (empty($empresaId)) {
+            $logs[] = "ERRO FATAL: Não foi possível determinar a empresa_id do usuário";
+            LogSistema::info('Pedidos', 'alteracao_massa_erro', implode("\n", $logs));
+            $this->session->set('error', 'Erro: não foi possível identificar sua empresa. Tente fazer logout e login novamente.');
+            return $response->redirect('/pedidos');
+        }
         
         $totalAtualizados = 0;
         $erros = [];
@@ -315,6 +346,7 @@ class PedidoVinculadoController extends Controller
                 
                 $logs[] = "  Pedido encontrado: #{$pedido['numero_pedido']}, empresa_id: {$pedido['empresa_id']}, status_atual: {$pedido['status']}";
                 
+                // Validação de segurança: pedido deve pertencer à empresa do usuário
                 if ($pedido['empresa_id'] != $empresaId) {
                     $logs[] = "  ERRO: Pedido não pertence à empresa (pedido: {$pedido['empresa_id']} vs usuário: {$empresaId})";
                     $erros[] = "Pedido #{$pedido['numero_pedido']} não pertence à sua empresa.";
