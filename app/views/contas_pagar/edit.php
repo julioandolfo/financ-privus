@@ -187,6 +187,60 @@ $meses = [
                           placeholder="Observações adicionais..."><?= htmlspecialchars($old['observacoes'] ?? $conta['observacoes']) ?></textarea>
             </div>
 
+            <!-- Rateio entre Empresas (conta) -->
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Rateio entre Empresas</h2>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" name="tem_rateio" value="1" x-model="temRateio" @change="toggleRateio"
+                               class="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Ativar Rateio</span>
+                    </label>
+                </div>
+                <div x-show="temRateio" x-transition class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-6">
+                    <div class="space-y-4">
+                        <template x-for="(rateio, index) in rateios" :key="index">
+                            <div class="flex items-end space-x-4 bg-white dark:bg-gray-800 p-4 rounded-lg">
+                                <div class="flex-1">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Empresa</label>
+                                    <select :name="'rateios[' + index + '][empresa_id]'" x-model="rateio.empresa_id"
+                                            class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                        <option value="">Selecione...</option>
+                                        <?php foreach ($empresas as $empresa): ?>
+                                            <option value="<?= $empresa['id'] ?>"><?= htmlspecialchars($empresa['nome_fantasia']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="w-32">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Valor</label>
+                                    <input type="number" :name="'rateios[' + index + '][valor_rateio]'" x-model="rateio.valor" step="0.01" @input="calcularPercentual(index)"
+                                           class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                </div>
+                                <div class="w-24">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">%</label>
+                                    <input type="number" :name="'rateios[' + index + '][percentual]'" x-model="rateio.percentual" step="0.01" readonly
+                                           class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 text-gray-900 dark:text-gray-100">
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Competência</label>
+                                    <input type="date" :name="'rateios[' + index + '][data_competencia]'" x-model="rateio.data_competencia"
+                                           class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                </div>
+                                <button type="button" @click="removerRateio(index)" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                    <button type="button" @click="adicionarRateio" class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">+ Adicionar Empresa</button>
+                    <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <p class="text-sm text-blue-800 dark:text-blue-300">
+                            <strong>Total Rateado:</strong> R$ <span x-text="totalRateado.toFixed(2)"></span> (<span x-text="totalPercentual.toFixed(2)"></span>%)
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tornar Recorrente -->
             <div class="mb-8">
                 <div class="flex items-center justify-between mb-4">
@@ -438,39 +492,72 @@ $meses = [
 
 <script>
 function contaPagarForm() {
-    const rateiosIniciais = <?= json_encode(array_map(function($r) {
+    const rateiosContaIniciais = <?= json_encode(array_map(function($r) {
         return [
             'empresa_id' => $r['empresa_id'],
-            'valor_rateio' => $r['valor_rateio'],
+            'valor' => $r['valor_rateio'],
             'percentual' => $r['percentual'] ?? 0,
             'data_competencia' => $r['data_competencia'] ?? ''
         ];
     }, $rateios ?? [])) ?>;
+    const rateiosRecorrenciaIniciais = <?= json_encode([]) ?>;
     
     return {
-        valorTotal: <?= $old['valor_total'] ?? $conta['valor_total'] ?>,
+        valorTotal: parseFloat('<?= str_replace(',', '.', $old['valor_total'] ?? $conta['valor_total']) ?>') || 0,
         dataCompetencia: '<?= $old['data_competencia'] ?? $conta['data_competencia'] ?>',
         categoriaIdAtual: <?= json_encode($old['categoria_id'] ?? $conta['categoria_id'] ?? '') ?>,
         centroCustoIdAtual: <?= json_encode($old['centro_custo_id'] ?? $conta['centro_custo_id'] ?? '') ?>,
         fornecedorIdAtual: <?= json_encode($old['fornecedor_id'] ?? $conta['fornecedor_id'] ?? '') ?>,
         
+        temRateio: <?= !empty($rateios) ? 'true' : 'false' ?>,
+        rateios: rateiosContaIniciais.length > 0 ? rateiosContaIniciais : [],
+        
         tornarRecorrente: false,
         recorrenciaFrequencia: '<?= $old['recorrencia_frequencia'] ?? 'mensal' ?>',
         recorrenciaReajusteAtivo: false,
-        recorrenciaTemRateio: <?= !empty($rateios) ? 'true' : 'false' ?>,
-        rateiosRecorrencia: rateiosIniciais.length > 0 ? rateiosIniciais : [],
+        recorrenciaTemRateio: false,
+        rateiosRecorrencia: rateiosRecorrenciaIniciais,
         
         init() {
             const empresaId = document.querySelector('select[name="empresa_id"]').value;
             if (empresaId) {
                 this.carregarDadosEmpresa(empresaId);
             }
+            if (this.temRateio && this.rateios.length === 0) {
+                this.adicionarRateio();
+            }
             if (this.recorrenciaTemRateio && this.rateiosRecorrencia.length === 0) {
                 this.adicionarRateioRecorrencia();
             }
         },
         
-        atualizarRateios() {},
+        toggleRateio() {
+            if (this.temRateio && this.rateios.length === 0) {
+                this.adicionarRateio();
+            }
+        },
+        adicionarRateio() {
+            const dc = this.dataCompetencia || '<?= $conta['data_competencia'] ?? date('Y-m-d') ?>';
+            this.rateios.push({ empresa_id: '', valor: '', percentual: 0, data_competencia: dc });
+        },
+        removerRateio(index) {
+            this.rateios.splice(index, 1);
+        },
+        calcularPercentual(index) {
+            const vt = parseFloat(this.valorTotal) || 0;
+            if (vt > 0 && this.rateios[index]) {
+                this.rateios[index].percentual = (parseFloat(this.rateios[index].valor || 0) / vt * 100).toFixed(2);
+            }
+        },
+        atualizarRateios() {
+            this.rateios.forEach((_, i) => this.calcularPercentual(i));
+        },
+        get totalRateado() {
+            return this.rateios.reduce((s, r) => s + parseFloat(r.valor || 0), 0);
+        },
+        get totalPercentual() {
+            return this.rateios.reduce((s, r) => s + parseFloat(r.percentual || 0), 0);
+        },
         
         toggleRecorrenciaRateio() {
             if (this.recorrenciaTemRateio && this.rateiosRecorrencia.length === 0) {
