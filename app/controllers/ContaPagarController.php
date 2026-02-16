@@ -620,8 +620,9 @@ class ContaPagarController extends Controller
             $fornecedores = $this->fornecedorModel->findAll(['ativo' => 1]);
             $categorias = $this->categoriaModel->findAll($empresaAtual, 'despesa');
             $centrosCusto = $this->centroCustoModel->findAll($empresaAtual);
-            $formasPagamento = $this->formaPagamentoModel->findAll();
-            $contasBancarias = $this->contaBancariaModel->findAll();
+            $empresaId = $contaPagar['empresa_id'];
+            $formasPagamento = $this->formaPagamentoModel->findAll($empresaId);
+            $contasBancarias = $this->contaBancariaModel->findAll($empresaId);
             
             // Busca rateios se houver
             $rateios = [];
