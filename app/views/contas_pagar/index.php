@@ -574,8 +574,8 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                         
                         <div class="flex items-center space-x-2">
                             <?php
-                            $urlParams = $filters;
-                            unset($urlParams['pagina']);
+                            $urlParams = $filters ?? [];
+                            unset($urlParams['pagina'], $urlParams['limite'], $urlParams['offset']);
                             
                             // Remover parâmetros vazios
                             $urlParams = array_filter($urlParams, function($value) {

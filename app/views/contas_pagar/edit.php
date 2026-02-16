@@ -187,6 +187,44 @@ $meses = [
                           placeholder="Observações adicionais..."><?= htmlspecialchars($old['observacoes'] ?? $conta['observacoes']) ?></textarea>
             </div>
 
+            <!-- Forma de Pagamento e Conta Bancária -->
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Pagamento</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Forma de pagamento e conta bancária utilizadas (quando a conta for paga)</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Forma de Pagamento</label>
+                        <select name="forma_pagamento_id"
+                                class="w-full px-4 py-3 rounded-xl border <?= isset($errors['forma_pagamento_id']) ? 'border-red-500' : 'border-gray-300 dark:border-gray-600' ?> bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                            <option value="">Selecione...</option>
+                            <?php foreach ($formasPagamento ?? [] as $forma): ?>
+                                <option value="<?= $forma['id'] ?>" <?= ($old['forma_pagamento_id'] ?? $conta['forma_pagamento_id'] ?? '') == $forma['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($forma['nome']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php if (isset($errors['forma_pagamento_id'])): ?>
+                            <p class="mt-1 text-sm text-red-500"><?= $errors['forma_pagamento_id'] ?></p>
+                        <?php endif; ?>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Conta Bancária</label>
+                        <select name="conta_bancaria_id"
+                                class="w-full px-4 py-3 rounded-xl border <?= isset($errors['conta_bancaria_id']) ? 'border-red-500' : 'border-gray-300 dark:border-gray-600' ?> bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                            <option value="">Selecione...</option>
+                            <?php foreach ($contasBancarias ?? [] as $cb): ?>
+                                <option value="<?= $cb['id'] ?>" <?= ($old['conta_bancaria_id'] ?? $conta['conta_bancaria_id'] ?? '') == $cb['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($cb['banco_nome'] . ' - Ag: ' . $cb['agencia'] . ' Cc: ' . $cb['conta']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php if (isset($errors['conta_bancaria_id'])): ?>
+                            <p class="mt-1 text-sm text-red-500"><?= $errors['conta_bancaria_id'] ?></p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+
             <!-- Rateio entre Empresas (conta) -->
             <div class="mb-8">
                 <div class="flex items-center justify-between mb-4">

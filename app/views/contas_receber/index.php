@@ -631,9 +631,9 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                         
                         <div class="flex items-center space-x-2">
                             <?php
-                            // Construir URL base com todos os filtros exceto 'pagina'
-                            $urlParams = $filters;
-                            unset($urlParams['pagina']);
+                            // Construir URL base com todos os filtros (exceto paginação)
+                            $urlParams = $filters ?? [];
+                            unset($urlParams['pagina'], $urlParams['limite'], $urlParams['offset']);
                             
                             // Remover parâmetros vazios
                             $urlParams = array_filter($urlParams, function($value) {

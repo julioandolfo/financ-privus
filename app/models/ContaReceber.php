@@ -895,6 +895,11 @@ class ContaReceber extends Model
             $params[] = $searchTerm;
         }
         
+        // Excluir contas vinculadas a pedidos cancelados (consistente com findAll)
+        if (!empty($filters['excluir_pedido_cancelado'])) {
+            $sql .= " AND (cr.pedido_id IS NULL OR pv.status IN ('processando', 'em_processamento', 'concluido'))";
+        }
+        
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
