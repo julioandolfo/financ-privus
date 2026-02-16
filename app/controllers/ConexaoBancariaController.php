@@ -534,17 +534,16 @@ class ConexaoBancariaController extends Controller
                 $contaBancariaModel->setSaldoReal($conexao['conta_bancaria_id'], $saldoData['saldo']);
             }
             
-            $saldoContabil = round($saldoData['saldo_contabil'] ?? $saldoData['saldo'], 2);
-            $saldoLimite = round($saldoData['saldo_limite'] ?? 0, 2);
             $saldoDisponivel = round($saldoData['saldo'] ?? 0, 2);
+            $saldoContabil = round($saldoData['saldo_contabil'] ?? $saldoDisponivel, 2);
+            $saldoLimite = round($saldoData['saldo_limite'] ?? 0, 2);
             $txFuturas = $saldoData['tx_futuras'] ?? 0;
-            $saldoUltimoDiaUtil = round($saldoData['saldo_ultimo_dia_util'] ?? $saldoContabil, 2);
+            $somaFuturosDebito = round($saldoData['soma_futuros_debito'] ?? 0, 2);
+            $somaFuturosCredito = round($saldoData['soma_futuros_credito'] ?? 0, 2);
             
             // Formatar data de referência para exibição
             $dataRef = $saldoData['data_referencia'] ?? date('Y-m-d');
             $dataRefFormatada = date('d/m/Y', strtotime($dataRef));
-            $ultimaTx = $saldoData['ultima_transacao'] ?? null;
-            $ultimaTxFormatada = $ultimaTx ? date('d/m/Y', strtotime($ultimaTx)) : null;
             
             $responseData = [
                 'success' => true,
@@ -554,15 +553,15 @@ class ConexaoBancariaController extends Controller
                 'saldo_contabil_formatado' => 'R$ ' . number_format($saldoContabil, 2, ',', '.'),
                 'saldo_limite' => $saldoLimite,
                 'saldo_limite_formatado' => 'R$ ' . number_format($saldoLimite, 2, ',', '.'),
-                'saldo_ultimo_dia_util' => $saldoUltimoDiaUtil,
-                'saldo_ultimo_dia_util_formatado' => 'R$ ' . number_format($saldoUltimoDiaUtil, 2, ',', '.'),
                 'saldo_bloqueado' => $saldoData['saldo_bloqueado'] ?? 0,
                 'atualizado_em' => $saldoData['atualizado_em'],
                 'data_referencia' => $dataRef,
                 'data_referencia_formatada' => $dataRefFormatada,
-                'ultima_transacao' => $ultimaTxFormatada,
                 'total_transacoes' => $saldoData['total_transacoes'] ?? 0,
                 'tx_futuras' => $txFuturas,
+                'soma_futuros_debito' => $somaFuturosDebito,
+                'soma_futuros_debito_formatado' => 'R$ ' . number_format($somaFuturosDebito, 2, ',', '.'),
+                'soma_futuros_credito' => $somaFuturosCredito,
                 'moeda' => $saldoData['moeda'] ?? 'BRL',
             ];
             

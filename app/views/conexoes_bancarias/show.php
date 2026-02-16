@@ -21,14 +21,38 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
     saldo: '<?= $conexao['saldo_banco'] !== null ? number_format($conexao['saldo_banco'], 2, ',', '.') : '---' ?>',
     saldoContabil: '<?= number_format($saldoContabilVal, 2, ',', '.') ?>',
     saldoLimite: '<?= number_format($saldoLimiteVal, 2, ',', '.') ?>',
-    saldoUltimoDiaUtil: '',
     dataReferencia: '',
     totalTransacoes: 0,
     txFuturas: 0,
+    somaFuturosDebito: '',
     carregando: false,
     sincronizando: false,
-    atualizadoEm: '<?= !empty($conexao['saldo_atualizado_em']) ? 'Atualizado em ' . date('d/m/Y H:i', strtotime($conexao['saldo_atualizado_em'])) : '' ?>'
-}">
+    saldoCarregado: false,
+    atualizadoEm: '<?= !empty($conexao['saldo_atualizado_em']) ? 'Atualizado em ' . date('d/m/Y H:i', strtotime($conexao['saldo_atualizado_em'])) : '' ?>',
+    atualizarSaldo() {
+        this.carregando = true;
+        fetch('/api/conexoes-bancarias/<?= $conexao['id'] ?>/saldo')
+            .then(r => r.json())
+            .then(d => {
+                if(d.saldo_formatado) {
+                    this.saldo = d.saldo_formatado.replace('R$ ','');
+                    if(d.saldo_contabil_formatado) this.saldoContabil = d.saldo_contabil_formatado.replace('R$ ','');
+                    if(d.saldo_limite_formatado) this.saldoLimite = d.saldo_limite_formatado.replace('R$ ','');
+                    if(d.data_referencia_formatada) this.dataReferencia = d.data_referencia_formatada;
+                    if(d.total_transacoes !== undefined) this.totalTransacoes = d.total_transacoes;
+                    if(d.tx_futuras !== undefined) this.txFuturas = d.tx_futuras;
+                    if(d.soma_futuros_debito_formatado) this.somaFuturosDebito = d.soma_futuros_debito_formatado.replace('R$ ','');
+                    let agora = new Date();
+                    this.atualizadoEm = 'Atualizado em ' + agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+                    this.saldoCarregado = true;
+                    if(d.conta_criada) { alert(d.message || 'Conta bancária criada e vinculada!'); location.reload(); }
+                } else if(d.error) { if(!this.saldoCarregado) this.saldoCarregado = true; }
+            })
+            .catch(e => { if(!this.saldoCarregado) this.saldoCarregado = true; })
+            .finally(() => this.carregando = false);
+    },
+    init() { this.atualizarSaldo(); }
+}" x-init="init()">
     <!-- Breadcrumb -->
     <div class="mb-6">
         <a href="/conexoes-bancarias" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
@@ -74,31 +98,54 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
         <div class="mt-8 p-6 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-900/30 rounded-2xl">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div class="flex-1">
-                    <!-- Saldo principal -->
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Saldo Atual</p>
+                    <!-- Saldo próprio (dinheiro real na conta) -->
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Saldo da Conta</p>
                     <p class="text-4xl font-bold mt-2" :class="parseFloat(saldoContabil.replace('.','').replace(',','.')) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
                         R$ <span x-text="saldoContabil"></span>
                     </p>
 
-                    <!-- Detalhes em grid -->
-                    <div class="grid grid-cols-2 gap-3 mt-4">
-                        <div class="p-2.5 bg-white/60 dark:bg-gray-800/40 rounded-lg">
-                            <p class="text-xs text-gray-400 dark:text-gray-500">Limite de crédito</p>
-                            <p class="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-0.5" x-text="'R$ ' + saldoLimite"></p>
-                        </div>
-                        <div class="p-2.5 bg-white/60 dark:bg-gray-800/40 rounded-lg">
-                            <p class="text-xs text-gray-400 dark:text-gray-500">Disponível (saldo + limite)</p>
-                            <p class="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-0.5" x-text="'R$ ' + saldo"></p>
-                        </div>
-                    </div>
+                    <!-- Detalhes: Limite + Disponível Total -->
+                    <template x-if="saldoCarregado">
+                        <div class="mt-4 space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="p-2.5 bg-white/60 dark:bg-gray-800/40 rounded-lg">
+                                    <p class="text-xs text-gray-400 dark:text-gray-500">Limite de crédito</p>
+                                    <p class="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-0.5" x-text="'R$ ' + saldoLimite"></p>
+                                </div>
+                                <div class="p-2.5 bg-white/60 dark:bg-gray-800/40 rounded-lg">
+                                    <p class="text-xs text-gray-400 dark:text-gray-500">Total disponível</p>
+                                    <p class="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-0.5" x-text="'R$ ' + saldo"></p>
+                                    <p class="text-[10px] text-gray-400 dark:text-gray-500">saldo + limite</p>
+                                </div>
+                            </div>
 
-                    <!-- Info: transações agendadas (quando há) -->
-                    <template x-if="txFuturas > 0">
-                        <div class="mt-3 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
-                            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            <!-- Agendamentos futuros (info visual, NÃO desconta do saldo) -->
+                            <template x-if="txFuturas > 0">
+                                <div class="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-lg">
+                                    <div class="flex items-start gap-2">
+                                        <svg class="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                        </svg>
+                                        <div>
+                                            <p class="text-xs font-medium text-amber-700 dark:text-amber-300" x-text="txFuturas + ' despesa(s) agendada(s) no próximo dia útil'"></p>
+                                            <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                                                Total a debitar: <span class="font-semibold" x-text="'R$ ' + somaFuturosDebito"></span>
+                                            </p>
+                                            <p class="text-[10px] text-amber-500 dark:text-amber-500 mt-0.5">Será descontado quando o banco processar</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <!-- Loading placeholder -->
+                    <template x-if="!saldoCarregado && carregando">
+                        <div class="mt-4 flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                            <svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                             </svg>
-                            <span x-text="'Inclui ' + txFuturas + ' agendamento(s) para o próximo dia útil'"></span>
+                            <span>Carregando detalhes do saldo...</span>
                         </div>
                     </template>
 
@@ -116,27 +163,7 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
                     </div>
                 </div>
                 <div class="flex gap-3">
-                    <button @click="
-                        carregando = true;
-                        fetch('/api/conexoes-bancarias/<?= $conexao['id'] ?>/saldo')
-                            .then(r => r.json())
-                            .then(d => {
-                                if(d.saldo_formatado) {
-                                    saldo = d.saldo_formatado.replace('R$ ','');
-                                    if(d.saldo_contabil_formatado) saldoContabil = d.saldo_contabil_formatado.replace('R$ ','');
-                                    if(d.saldo_limite_formatado) saldoLimite = d.saldo_limite_formatado.replace('R$ ','');
-                                    if(d.saldo_ultimo_dia_util_formatado) saldoUltimoDiaUtil = d.saldo_ultimo_dia_util_formatado.replace('R$ ','');
-                                    if(d.data_referencia_formatada) dataReferencia = d.data_referencia_formatada;
-                                    if(d.total_transacoes !== undefined) totalTransacoes = d.total_transacoes;
-                                    if(d.tx_futuras !== undefined) txFuturas = d.tx_futuras;
-                                    let agora = new Date();
-                                    atualizadoEm = 'Atualizado em ' + agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-                                    if(d.conta_criada) { alert(d.message || 'Conta bancária criada e vinculada!'); location.reload(); }
-                                } else if(d.error) alert(d.error);
-                            })
-                            .catch(e => alert('Erro ao atualizar saldo'))
-                            .finally(() => carregando = false)
-                    "
+                    <button @click="atualizarSaldo()"
                             :disabled="carregando"
                             class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition flex items-center gap-2">
                         <svg class="w-4 h-4" :class="carregando && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24">

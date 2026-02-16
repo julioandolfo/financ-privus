@@ -377,10 +377,11 @@ class SicoobBankService extends AbstractBankService
             ]);
         }
         
-        // saldoExtrato = saldo do último dia útil processado (NÃO inclui futuras)
+        // saldoExtrato = saldo reportado pela API (último dia útil processado)
+        // NÃO subtraímos agendamentos futuros — só mostra quando o banco processar de fato
         $saldoFinal = ($saldoExtrato !== null) ? $saldoExtrato : $saldoEndpoint;
         
-        // Usar limite do extrato se disponível (pode ser mais atualizado)
+        // Usar limite do extrato se disponível
         if ($saldoLimiteExtrato !== null && $saldoLimiteExtrato > 0) {
             $saldoLimite = $saldoLimiteExtrato;
         }
@@ -389,51 +390,47 @@ class SicoobBankService extends AbstractBankService
             $dataReferencia = date('Y-m-d');
         }
         
-        // Calcular saldo projetado (após agendamentos futuros)
+        // Saldo próprio = saldo da API menos o limite (dinheiro real na conta)
+        $saldoContabil = round($saldoFinal - $saldoLimite, 2);
+        
+        // Saldo projetado (informativo) = o que vai ficar após os agendamentos
         $txFuturasCount = $txFuturas ?? 0;
         $saldoProjetado = $saldoFinal;
         if (isset($saldoProjetadoCalc) && $saldoProjetadoCalc !== null) {
             $saldoProjetado = round($saldoProjetadoCalc, 2);
         }
-        
-        // O saldo que o app do banco mostra é o PROJETADO (com agendamentos).
-        // Quando há transações futuras, usamos o projetado como saldo principal.
-        $saldoReal = ($txFuturasCount > 0) ? $saldoProjetado : $saldoFinal;
-        
-        // Contábil = saldo sem limite (o que realmente tem na conta)
-        $saldoContabil = round($saldoReal - $saldoLimite, 2);
-        
-        // Saldo do último dia útil (antes dos agendamentos) para referência
-        $saldoUltimoDiaUtil = round($saldoFinal - $saldoLimite, 2);
+        $saldoProjetadoContabil = round($saldoProjetado - $saldoLimite, 2);
         
         try {
             LogSistema::info('SicoobAPI', 'getSaldo_resultado', 'Saldo final', [
                 'numeroConta' => $numeroConta,
                 'identificacao' => $conexao['identificacao'] ?? '',
-                'saldo_api_bruto' => $saldoFinal,
-                'saldo_api_contabil' => round($saldoFinal - $saldoLimite, 2),
-                'saldo_projetado' => $saldoProjetado,
-                'saldo_real_usado' => $saldoReal,
-                'saldo_contabil_final' => $saldoContabil,
+                'saldo_disponivel' => $saldoFinal,
+                'saldo_proprio' => $saldoContabil,
                 'saldo_limite' => $saldoLimite,
                 'saldo_bloqueado' => $saldoBloqueado,
+                'saldo_projetado_disponivel' => $saldoProjetado,
+                'saldo_projetado_proprio' => $saldoProjetadoContabil,
                 'tx_futuras' => $txFuturasCount,
                 'data_referencia' => $dataReferencia,
-                'fonte' => ($txFuturasCount > 0) ? 'PROJETADO (saldoAtual - agendamentos)' : 'EXTRATO (saldoAtual)',
+                'fonte' => ($saldoExtrato !== null) ? 'EXTRATO (saldoAtual)' : 'ENDPOINT (/saldo)',
             ]);
         } catch (\Exception $e) {}
         
         return [
-            'saldo' => $saldoReal,
+            'saldo' => $saldoFinal,
             'saldo_contabil' => $saldoContabil,
             'saldo_bloqueado' => $saldoBloqueado,
             'saldo_limite' => $saldoLimite,
-            'saldo_ultimo_dia_util' => $saldoUltimoDiaUtil,
+            'saldo_projetado' => $saldoProjetado,
+            'saldo_projetado_contabil' => $saldoProjetadoContabil,
             'atualizado_em' => date('Y-m-d\TH:i:s'),
             'data_referencia' => $dataReferencia,
             'ultima_transacao' => $ultimaTransacaoData,
             'total_transacoes' => $totalTransacoes,
             'tx_futuras' => $txFuturasCount,
+            'soma_futuros_debito' => $somaFuturosDebito ?? 0,
+            'soma_futuros_credito' => $somaFuturosCredito ?? 0,
             'moeda' => 'BRL',
         ];
     }
