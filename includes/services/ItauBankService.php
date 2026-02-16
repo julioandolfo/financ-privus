@@ -47,7 +47,7 @@ class ItauBankService extends AbstractBankService
             throw new \Exception('Client ID e Client Secret do Itaú são obrigatórios.');
         }
 
-        $hasCerts = !empty($conexao['cert_pem']) && !empty($conexao['key_pem']);
+        $hasCerts = (!empty($conexao['cert_pem']) && !empty($conexao['key_pem'])) || !empty($conexao['cert_pfx']);
 
         if ($ambiente === 'sandbox' && !$hasCerts) {
             return [
@@ -85,7 +85,8 @@ class ItauBankService extends AbstractBankService
         $ambiente = $conexao['ambiente'] ?? 'sandbox';
         $baseUrl = $this->baseUrls[$ambiente] ?? $this->baseUrls['sandbox'];
 
-        if ($ambiente === 'sandbox' && (empty($conexao['cert_pem']) || empty($conexao['key_pem']))) {
+        $hasCerts = (!empty($conexao['cert_pem']) && !empty($conexao['key_pem'])) || !empty($conexao['cert_pfx']);
+        if ($ambiente === 'sandbox' && !$hasCerts) {
             return [
                 'saldo' => 45200.15,
                 'saldo_bloqueado' => 0,
@@ -129,7 +130,8 @@ class ItauBankService extends AbstractBankService
         $ambiente = $conexao['ambiente'] ?? 'sandbox';
         $baseUrl = $this->baseUrls[$ambiente] ?? $this->baseUrls['sandbox'];
 
-        if ($ambiente === 'sandbox' && (empty($conexao['cert_pem']) || empty($conexao['key_pem']))) {
+        $hasCerts = (!empty($conexao['cert_pem']) && !empty($conexao['key_pem'])) || !empty($conexao['cert_pfx']);
+        if ($ambiente === 'sandbox' && !$hasCerts) {
             return $this->getMockTransacoes();
         }
 

@@ -245,6 +245,9 @@ class PedidoVinculadoController extends Controller
     public function alterarStatusMassa(Request $request, Response $response)
     {
         $logs = [];
+        
+        try {
+        
         $logs[] = "=== INÍCIO ALTERAÇÃO STATUS MASSA ===";
         
         $pedidosIdsJson = $request->post('pedidos_ids');
@@ -256,7 +259,7 @@ class PedidoVinculadoController extends Controller
         // Validar
         if (empty($pedidosIdsJson) || empty($novoStatus)) {
             $logs[] = "ERRO: Dados inválidos - pedidos_ids ou novo_status vazios";
-            LogSistema::info('Pedidos', 'alteracao_massa_erro', implode("\n", $logs));
+            try { LogSistema::info('Pedidos', 'alteracao_massa_erro', implode("\n", $logs)); } catch (\Throwable $ignore) {}
             $this->session->set('error', 'Dados inválidos para alteração em massa.');
             return $response->redirect('/pedidos');
         }
@@ -267,7 +270,7 @@ class PedidoVinculadoController extends Controller
         
         if (!is_array($pedidosIds) || empty($pedidosIds)) {
             $logs[] = "ERRO: pedidos_ids não é array ou está vazio após decode";
-            LogSistema::info('Pedidos', 'alteracao_massa_erro', implode("\n", $logs));
+            try { LogSistema::info('Pedidos', 'alteracao_massa_erro', implode("\n", $logs)); } catch (\Throwable $ignore) {}
             $this->session->set('error', 'Nenhum pedido selecionado.');
             return $response->redirect('/pedidos');
         }
@@ -285,7 +288,7 @@ class PedidoVinculadoController extends Controller
         
         if (!in_array($novoStatus, $statusPermitidos)) {
             $logs[] = "ERRO: Status '{$novoStatus}' não está na lista de permitidos";
-            LogSistema::info('Pedidos', 'alteracao_massa_erro', implode("\n", $logs));
+            try { LogSistema::info('Pedidos', 'alteracao_massa_erro', implode("\n", $logs)); } catch (\Throwable $ignore) {}
             $this->session->set('error', 'Status inválido.');
             return $response->redirect('/pedidos');
         }
@@ -296,32 +299,36 @@ class PedidoVinculadoController extends Controller
         
         $logs[] = "empresa_id da sessão: " . ($empresaId ?: 'NULL');
         $logs[] = "usuario_id da sessão: " . ($usuarioId ?: 'NULL');
+        $logs[] = "SESSION completa: " . print_r(array_keys($_SESSION), true);
         
         // Se empresa_id não está na sessão, busca do usuário
         if (empty($empresaId) && !empty($usuarioId)) {
             $logs[] = "empresa_id NULL, buscando do usuário...";
-            $sqlUsuario = "SELECT empresa_id, tipo FROM usuarios WHERE id = :usuario_id LIMIT 1";
-            $stmtUsuario = $this->db->prepare($sqlUsuario);
-            $stmtUsuario->execute(['usuario_id' => $usuarioId]);
-            $usuario = $stmtUsuario->fetch(\PDO::FETCH_ASSOC);
-            
-            if ($usuario) {
-                $logs[] = "Usuário encontrado - empresa_id: " . ($usuario['empresa_id'] ?: 'NULL') . ", tipo: " . ($usuario['tipo'] ?? 'NULL');
+            try {
+                $sqlUsuario = "SELECT empresa_id FROM usuarios WHERE id = :usuario_id LIMIT 1";
+                $stmtUsuario = $this->db->prepare($sqlUsuario);
+                $stmtUsuario->execute(['usuario_id' => $usuarioId]);
+                $usuario = $stmtUsuario->fetch(\PDO::FETCH_ASSOC);
                 
-                if (!empty($usuario['empresa_id'])) {
-                    $empresaId = $usuario['empresa_id'];
-                    $logs[] = "empresa_id encontrada no banco: {$empresaId}";
-                    // Atualiza a sessão para próximas requisições
-                    $_SESSION['usuario_empresa_id'] = $empresaId;
+                if ($usuario) {
+                    $logs[] = "Usuário encontrado - empresa_id: " . ($usuario['empresa_id'] ?: 'NULL');
+                    
+                    if (!empty($usuario['empresa_id'])) {
+                        $empresaId = $usuario['empresa_id'];
+                        $logs[] = "empresa_id encontrada no banco: {$empresaId}";
+                        $_SESSION['usuario_empresa_id'] = $empresaId;
+                    } else {
+                        $logs[] = "AVISO: usuário sem empresa_id no banco";
+                    }
                 } else {
-                    $logs[] = "AVISO: usuário sem empresa_id no banco (pode ser admin/super)";
+                    $logs[] = "ERRO: Usuário não encontrado no banco com usuario_id: {$usuarioId}";
                 }
-            } else {
-                $logs[] = "ERRO: Usuário não encontrado no banco com usuario_id: {$usuarioId}";
+            } catch (\Throwable $e) {
+                $logs[] = "ERRO ao buscar usuário: " . $e->getMessage();
             }
         }
         
-        $logs[] = "empresa_id final para validação: " . ($empresaId ?: 'NULL (sem filtro de empresa)');
+        $logs[] = "empresa_id final: " . ($empresaId ?: 'NULL (sem filtro de empresa)');
         
         $totalAtualizados = 0;
         $erros = [];
@@ -411,8 +418,16 @@ class PedidoVinculadoController extends Controller
         // Grava logs
         try {
             LogSistema::info('Pedidos', 'alteracao_massa', implode("\n", $logs));
-        } catch (\Throwable $ignore) {
-            $logs[] = "Erro ao gravar log: " . $ignore->getMessage();
+        } catch (\Throwable $ignore) {}
+        
+        } catch (\Throwable $fatalError) {
+            // Catch geral para nunca dar 500
+            try {
+                $logs[] = "ERRO FATAL: " . $fatalError->getMessage() . " em " . $fatalError->getFile() . ":" . $fatalError->getLine();
+                LogSistema::info('Pedidos', 'alteracao_massa_fatal', implode("\n", $logs));
+            } catch (\Throwable $ignore) {}
+            
+            $this->session->set('error', 'Erro ao processar alteração em massa: ' . $fatalError->getMessage());
         }
         
         return $response->redirect('/pedidos');
