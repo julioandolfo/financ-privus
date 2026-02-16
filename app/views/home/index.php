@@ -493,7 +493,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                             </div>
                             <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
                                 <span class="text-xs text-gray-600 dark:text-gray-400 block">Runway</span>
-                                <span class="font-bold text-gray-900 dark:text-gray-100"><?= $dados['runway'] > 24 ? '24+' : number_format($dados['runway'], 0) ?> meses</span>
+                                <span class="font-bold text-gray-900 dark:text-gray-100"><?= $dados['runway'] > 24 ? '24+' : number_format($dados['runway'], 1, ',', '.') ?> meses</span>
                             </div>
                             <a href="/ponto-equilibrio?empresa_id=<?= $empresaId ?>" class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors cursor-pointer" title="Ver Ponto de Equilíbrio">
                                 <span class="text-xs text-gray-600 dark:text-gray-400 block">Ponto Equilíbrio</span>
@@ -644,7 +644,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                     </div>
                 </div>
                 <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    <?= $metricas_financeiras['runway'] > 24 ? '24+' : number_format($metricas_financeiras['runway'], 0) ?> meses
+                    <?= $metricas_financeiras['runway'] > 24 ? '24+' : number_format($metricas_financeiras['runway'], 1, ',', '.') ?> meses
                 </p>
             </div>
         </div>
@@ -772,7 +772,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                     <div class="flex justify-between items-center">
                         <span class="text-sm text-gray-600 dark:text-gray-400">Meses de Sobrevivência</span>
                         <span class="font-bold <?= $metricas_financeiras['runway'] < 3 ? 'text-red-600 dark:text-red-400' : ($metricas_financeiras['runway'] < 6 ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400') ?>">
-                            <?= $metricas_financeiras['runway'] > 24 ? '24+' : number_format($metricas_financeiras['runway'], 0) ?>
+                            <?= $metricas_financeiras['runway'] > 24 ? '24+' : number_format($metricas_financeiras['runway'], 1, ',', '.') ?>
                         </span>
                     </div>
                 </div>
@@ -1830,7 +1830,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-rose-100 mb-1">Meses de sobrevivência:</p>
-                                <p class="text-4xl font-bold"><?= $metricas_financeiras['runway'] > 24 ? '24+' : number_format($metricas_financeiras['runway'], 0) ?> meses</p>
+                                <p class="text-4xl font-bold"><?= $metricas_financeiras['runway'] > 24 ? '24+' : number_format($metricas_financeiras['runway'], 1, ',', '.') ?> meses</p>
                             </div>
                             <div class="text-right">
                                 <p class="text-rose-100 text-sm mb-1">Saldo em Caixa:</p>
@@ -2977,7 +2977,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                             <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
                                 <p class="text-sm text-gray-600 dark:text-gray-400">Runway Atual:</p>
                                 <p class="text-2xl font-bold <?= $metricas_financeiras['runway'] < 3 ? 'text-red-600' : ($metricas_financeiras['runway'] < 6 ? 'text-amber-600' : 'text-green-600') ?>">
-                                    <?= $metricas_financeiras['runway'] > 24 ? '24+' : number_format($metricas_financeiras['runway'], 0) ?> meses
+                                    <?= $metricas_financeiras['runway'] > 24 ? '24+' : number_format($metricas_financeiras['runway'], 1, ',', '.') ?> meses
                                 </p>
                                 <p class="text-xs text-gray-500 mt-1">
                                     Status: 
@@ -3010,7 +3010,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                             </div>
                             <div class="flex justify-between items-center">
                                 <span class="text-amber-100">Runway:</span>
-                                <span class="font-bold text-xl"><?= $metricas_financeiras['runway'] > 24 ? '24+' : number_format($metricas_financeiras['runway'], 0) ?> meses</span>
+                                <span class="font-bold text-xl"><?= $metricas_financeiras['runway'] > 24 ? '24+' : number_format($metricas_financeiras['runway'], 1, ',', '.') ?> meses</span>
                             </div>
                         </div>
                     </div>
