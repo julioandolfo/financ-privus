@@ -213,7 +213,8 @@ PROMPT;
 
         $texto = "## CONTEXTO\nAnalise os dados financeiros abaixo e gere insights diários para o gestor.\n\n";
 
-        $texto .= "## MÉTRICAS DO PERÍODO ({$payload['metricas_financeiras']['periodo'] ?? 'N/A'})\n";
+        $periodo = $mf['periodo'] ?? 'N/A';
+        $texto .= "## MÉTRICAS DO PERÍODO ({$periodo})\n";
         $texto .= "- Receitas: R$ " . number_format($mf['receitas'] ?? 0, 2, ',', '.') . "\n";
         $texto .= "- Despesas: R$ " . number_format($mf['despesas'] ?? 0, 2, ',', '.') . "\n";
         $texto .= "- Lucro Bruto: R$ " . number_format($mf['lucro_bruto'] ?? 0, 2, ',', '.') . "\n";
