@@ -125,11 +125,20 @@ class Request
     }
     
     /**
+     * Retorna o body bruto (raw)
+     */
+    public function getBody(): string
+    {
+        return $this->body;
+    }
+
+    /**
      * Retorna o body como JSON
      */
     public function json()
     {
-        return json_decode($this->body, true);
+        $decoded = json_decode($this->body, true);
+        return is_array($decoded) ? $decoded : null;
     }
     
     /**

@@ -1111,23 +1111,36 @@ class HomeController extends Controller
      */
     public function insights(Request $request, Response $response)
     {
-        $payload = [];
-        if ($request->isJson() && $request->getMethod() === 'POST') {
-            $payload = $request->json() ?? [];
-        }
+        try {
+            $payload = [];
+            if ($request->getMethod() === 'POST') {
+                $payload = $request->json();
+                if (!is_array($payload) && strlen($request->getBody()) > 0) {
+                    $payload = json_decode($request->getBody(), true);
+                }
+                $payload = is_array($payload) ? $payload : [];
+            }
 
-        $forcar = (bool) ($request->post('forcar_atualizacao') ?? $payload['forcar_atualizacao'] ?? false);
+            $forcar = (bool) ($payload['forcar_atualizacao'] ?? false);
 
-        if (empty($payload) || !isset($payload['metricas_financeiras'])) {
+            if (empty($payload) || !isset($payload['metricas_financeiras'])) {
+                return $response->json([
+                    'erro' => 'Payload inválido. Envie os dados do dashboard.',
+                    'consolidado' => ['insights' => [], 'resumo' => ''],
+                    'por_empresa' => []
+                ], 400);
+            }
+
+            $resultado = InsightsIAService::gerarInsights($payload, $forcar);
+            return $response->json($resultado);
+        } catch (\Throwable $e) {
+            error_log('Insights API erro: ' . $e->getMessage() . ' em ' . $e->getFile() . ':' . $e->getLine());
             return $response->json([
-                'erro' => 'Payload inválido. Envie os dados do dashboard.',
+                'erro' => 'Erro ao gerar insights: ' . $e->getMessage(),
                 'consolidado' => ['insights' => [], 'resumo' => ''],
                 'por_empresa' => []
-            ], 400);
+            ], 500);
         }
-
-        $resultado = InsightsIAService::gerarInsights($payload, $forcar);
-        return $response->json($resultado);
     }
 
     /**
