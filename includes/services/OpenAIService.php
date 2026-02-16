@@ -121,9 +121,23 @@ class OpenAIService
     }
     
     /**
+     * Chama API OpenAI com suporte a override de modelo
+     * @param string $prompt
+     * @param string|null $systemPrompt
+     * @param string|null $modelOverride Modelo alternativo (ex: gpt-4o para insights)
+     * @param int|null $maxTokensOverride
+     * @return string
+     */
+    public static function chat($prompt, $systemPrompt = null, $modelOverride = null, $maxTokensOverride = null)
+    {
+        self::init();
+        return self::chamarAPI($prompt, $systemPrompt, $modelOverride, $maxTokensOverride);
+    }
+    
+    /**
      * Chama API OpenAI
      */
-    private static function chamarAPI($prompt, $systemPrompt = null)
+    private static function chamarAPI($prompt, $systemPrompt = null, $modelOverride = null, $maxTokensOverride = null)
     {
         $url = 'https://api.openai.com/v1/chat/completions';
         
@@ -141,11 +155,14 @@ class OpenAIService
             'content' => $prompt
         ];
         
+        $model = $modelOverride ?? self::$model;
+        $maxTokens = $maxTokensOverride ?? self::$maxTokens;
+        
         $data = [
-            'model' => self::$model,
+            'model' => $model,
             'messages' => $messages,
             'temperature' => (float)self::$temperature,
-            'max_tokens' => (int)self::$maxTokens
+            'max_tokens' => (int)$maxTokens
         ];
         
         $ch = curl_init($url);

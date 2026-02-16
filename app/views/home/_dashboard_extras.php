@@ -1,6 +1,7 @@
 <?php
 /**
  * Seções extras do Dashboard:
+ * - Insights diários com IA
  * - Saúde Financeira (Score)
  * - Alertas Inteligentes
  * - Gráficos de Evolução (12 meses)
@@ -34,7 +35,108 @@ elseif ($saudeData['score'] >= 20) $scoreColor = 'orange';
 else $scoreColor = 'red';
 
 $scoreDeg = ($saudeData['score'] / 100) * 360;
+$insightsPayload = $insights_payload ?? [];
+$insightsHabilitado = $insights_ia_habilitado ?? true;
+$insightsConfigurado = $insights_ia_configurado ?? false;
 ?>
+
+<!-- ========================================
+     INSIGHTS DIÁRIOS COM IA
+     ======================================== -->
+<?php if ($insightsConfigurado && $insightsHabilitado): ?>
+<script>window.__INSIGHTS_PAYLOAD = <?= json_encode($insightsPayload, JSON_UNESCAPED_UNICODE) ?>;</script>
+<div class="mb-8" x-data="insightsIACard()">
+    <div class="bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 dark:from-violet-900 dark:via-purple-900 dark:to-indigo-900 rounded-2xl shadow-2xl border border-violet-200 dark:border-violet-800 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-white flex items-center">
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+                Insights diários com IA
+                <span class="ml-2 px-2 py-0.5 text-xs font-bold rounded-full bg-white/20 text-white">GPT-4o</span>
+            </h3>
+            <button type="button" 
+                    @click="carregarInsights(true)"
+                    :disabled="carregando"
+                    class="px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                <svg x-show="!carregando" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <svg x-show="carregando" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span x-text="carregando ? 'Analisando...' : 'Atualizar'"></span>
+            </button>
+        </div>
+        
+        <div x-show="erro" class="mb-4 p-3 rounded-lg bg-red-500/30 text-red-100 text-sm" x-text="erro"></div>
+        
+        <p x-show="resumo && !carregando && !erro" class="text-violet-100 text-sm mb-4" x-text="resumo"></p>
+        
+        <div x-show="carregando && !dadosCarregados" class="py-12 text-center">
+            <svg class="w-12 h-12 mx-auto text-white/60 animate-spin mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            <p class="text-white/80">Analisando métricas com IA especializada em gestão financeira...</p>
+        </div>
+        
+        <div x-show="dadosCarregados && !carregando" class="space-y-3 max-h-96 overflow-y-auto pr-1">
+            <template x-for="(insight, i) in insights" :key="i">
+                <div class="flex items-start gap-3 p-4 rounded-xl border transition-colors"
+                     :class="{
+                         'bg-amber-500/20 border-amber-400/50': insight.tipo === 'atencao',
+                         'bg-blue-500/20 border-blue-400/50': insight.tipo === 'sugestao',
+                         'bg-green-500/20 border-green-400/50': insight.tipo === 'oportunidade' || insight.tipo === 'positivo',
+                         'bg-purple-500/20 border-purple-400/50': insight.tipo === 'tendencia',
+                         'bg-white/10 border-white/30': !['atencao','sugestao','oportunidade','positivo','tendencia'].includes(insight.tipo)
+                     }">
+                    <span class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+                          :class="{
+                              'bg-amber-500/50 text-amber-100': insight.prioridade === 'alta',
+                              'bg-blue-500/50 text-blue-100': insight.prioridade === 'media',
+                              'bg-gray-500/50 text-gray-200': insight.prioridade === 'baixa'
+                          }"
+                          x-text="i+1"></span>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-white" x-text="insight.titulo"></p>
+                        <p class="text-sm text-white/90 mt-0.5" x-text="insight.mensagem"></p>
+                        <a x-show="insight.link_sugerido" :href="insight.link_sugerido" 
+                           class="inline-block mt-2 text-xs font-semibold text-violet-200 hover:text-white underline"
+                           x-text="'Ver detalhes →'"></a>
+                    </div>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Insights por empresa (quando múltiplas empresas) -->
+        <template x-if="porEmpresa && porEmpresa.length > 0">
+            <div class="mt-6 pt-6 border-t border-white/20">
+                <h4 class="text-white font-semibold mb-3 flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                    Insights por empresa
+                </h4>
+                <div class="space-y-4">
+                    <template x-for="emp in porEmpresa" :key="emp.empresa_id">
+                        <div class="bg-white/10 rounded-xl p-4 border border-white/20">
+                            <p class="font-bold text-white mb-2" x-text="emp.empresa_nome"></p>
+                            <div class="space-y-2">
+                                <template x-for="(ins, j) in (emp.insights || [])" :key="j">
+                                    <div class="flex gap-2 text-sm">
+                                        <span class="text-amber-300">•</span>
+                                        <p><span class="font-medium text-white" x-text="ins.titulo"></span>: <span class="text-white/90" x-text="ins.mensagem"></span></p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- ========================================
      SAÚDE FINANCEIRA + ALERTAS
@@ -467,6 +569,62 @@ $scoreDeg = ($saudeData['score'] / 100) * 360;
         <?php endif; ?>
     </div>
 </div>
+
+<!-- ========================================
+     INSIGHTS IA - Alpine.js Component
+     ======================================== -->
+<?php if ($insightsConfigurado && $insightsHabilitado): ?>
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('insightsIACard', () => ({
+        payload: window.__INSIGHTS_PAYLOAD || {},
+        insights: [],
+        resumo: '',
+        porEmpresa: [],
+        carregando: true,
+        dadosCarregados: false,
+        erro: null,
+        init() {
+            if (this.payload && this.payload.metricas_financeiras) {
+                this.carregarInsights(false);
+            } else {
+                this.carregando = false;
+                this.erro = 'Dados do dashboard não disponíveis.';
+            }
+        },
+        async carregarInsights(forcar) {
+            this.carregando = true;
+            this.erro = null;
+            try {
+                const body = JSON.stringify({
+                    ...this.payload,
+                    forcar_atualizacao: forcar
+                });
+                const base = (typeof BASE_URL !== 'undefined' ? BASE_URL : '') || '';
+const url = (base.endsWith('/') ? base.slice(0,-1) : base) + '/api/dashboard/insights';
+const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: body
+                });
+                const data = await res.json();
+                if (data.erro && !data.consolidado?.insights?.length) {
+                    this.erro = data.erro;
+                }
+                this.insights = data.consolidado?.insights || [];
+                this.resumo = data.consolidado?.resumo || '';
+                this.porEmpresa = data.por_empresa || [];
+                this.dadosCarregados = true;
+            } catch (e) {
+                this.erro = 'Erro ao carregar insights: ' + (e.message || 'Verifique sua conexão.');
+            } finally {
+                this.carregando = false;
+            }
+        }
+    }));
+});
+</script>
+<?php endif; ?>
 
 <!-- ========================================
      CHART.JS SCRIPTS

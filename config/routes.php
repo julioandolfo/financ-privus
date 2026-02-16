@@ -15,6 +15,7 @@ return [
     
     // Home (protegido)
     'GET /' => ['handler' => 'HomeController@index', 'middleware' => ['AuthMiddleware']],
+    'POST /api/dashboard/insights' => ['handler' => 'HomeController@insights', 'middleware' => ['AuthMiddleware']],
     'POST /dashboard/filtrar' => ['handler' => 'HomeController@filtrar', 'middleware' => ['AuthMiddleware']],
     'POST /dashboard/filtrar-periodo' => ['handler' => 'HomeController@filtrarPeriodo', 'middleware' => ['AuthMiddleware']],
     'POST /dashboard/limpar-filtro' => ['handler' => 'HomeController@limparFiltro', 'middleware' => ['AuthMiddleware']],

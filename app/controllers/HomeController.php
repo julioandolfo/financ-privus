@@ -21,6 +21,7 @@ use App\Models\ConexaoBancaria;
 use App\Models\TransacaoPendente;
 use App\Models\LogSistema;
 use includes\services\PontoEquilibrioService;
+use includes\services\InsightsIAService;
 
 class HomeController extends Controller
 {
@@ -1037,7 +1038,55 @@ class HomeController extends Controller
                     'componentes' => $scoreComponents
                 ],
                 // Alertas Inteligentes
-                'alertas' => $alertas
+                'alertas' => $alertas,
+                // Payload para Insights com IA (usado no card do dashboard)
+                'insights_payload' => [
+                    'metricas_financeiras' => [
+                        'periodo' => $periodoLabel,
+                        'receitas' => $receitasUltimos30Dias,
+                        'despesas' => $despesasUltimos30Dias,
+                        'lucro_bruto' => $lucroBruto,
+                        'lucro_liquido' => $lucroLiquido,
+                        'margem_bruta' => $margemBruta,
+                        'margem_liquida' => $margemLiquida,
+                        'margem_ebitda' => $margemEbitda,
+                        'ebitda' => $ebitda,
+                        'ponto_equilibrio' => $pontoEquilibrio,
+                        'margem_contribuicao' => $margemContribuicaoPercentual,
+                        'burn_rate' => $burnRate,
+                        'runway' => $runway,
+                        'ticket_medio' => $ticketMedio,
+                        'inadimplencia_taxa' => $taxaInadimplencia,
+                        'inadimplencia_valor' => $valorContasVencidas,
+                        'contas_vencidas' => $totalContasVencidas
+                    ],
+                    'comparativo' => [
+                        'var_receitas' => $varReceitas,
+                        'var_despesas' => $varDespesas,
+                        'var_lucro' => $varLucro,
+                        'var_ebitda' => $varEbitda
+                    ],
+                    'saude_financeira' => ['score' => $saudeFinanceira, 'label' => $saudeLabel],
+                    'alertas' => $alertas,
+                    'top_devedores' => $topDevedores,
+                    'top_despesas' => $topDespesas,
+                    'top_receitas' => $topReceitas,
+                    'aging' => ['valores' => $aging, 'quantidade' => $agingQtd],
+                    'receitas_por_categoria' => $receitasPorCategoria,
+                    'despesas_por_categoria' => $despesasPorCategoria,
+                    'evolucao_mensal' => $evolucaoMensal,
+                    'fluxo_projetado' => $fluxoProjetado,
+                    'vencimentos_proximos' => $vencimentosProximos,
+                    'contas_pagar' => $contasPagarResumo,
+                    'contas_receber' => $contasReceberResumo,
+                    'contas_bancarias' => [
+                        'saldo_total' => $saldoTotal,
+                        'por_banco' => $contasPorBanco
+                    ],
+                    'metricas_por_empresa' => $metricasPorEmpresa
+                ],
+                'insights_ia_habilitado' => InsightsIAService::isHabilitado(),
+                'insights_ia_configurado' => \includes\services\OpenAIService::isConfigured()
             ]);
             
         } catch (\Exception $e) {
@@ -1085,11 +1134,38 @@ class HomeController extends Controller
                 'evolucao_mensal' => [], 'vencimentos_proximos' => [], 'fluxo_projetado' => [],
                 'mini_dre' => [],
                 'saude_financeira' => ['score' => 0, 'label' => 'N/A', 'componentes' => []],
-                'alertas' => []
+                'alertas' => [],
+                'insights_payload' => [],
+                'insights_ia_habilitado' => InsightsIAService::isHabilitado(),
+                'insights_ia_configurado' => \includes\services\OpenAIService::isConfigured()
             ]);
         }
     }
     
+    /**
+     * API de insights com IA - recebe payload do dashboard e retorna insights
+     */
+    public function insights(Request $request, Response $response)
+    {
+        $payload = [];
+        if ($request->isJson() && $request->getMethod() === 'POST') {
+            $payload = $request->json() ?? [];
+        }
+
+        $forcar = (bool) ($request->post('forcar_atualizacao') ?? $payload['forcar_atualizacao'] ?? false);
+
+        if (empty($payload) || !isset($payload['metricas_financeiras'])) {
+            return $response->json([
+                'erro' => 'Payload inválido. Envie os dados do dashboard.',
+                'consolidado' => ['insights' => [], 'resumo' => ''],
+                'por_empresa' => []
+            ], 400);
+        }
+
+        $resultado = InsightsIAService::gerarInsights($payload, $forcar);
+        return $response->json($resultado);
+    }
+
     /**
      * Aplicar filtro de empresas no dashboard
      */

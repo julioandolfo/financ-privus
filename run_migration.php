@@ -21,6 +21,9 @@ $sqls = [
     "ALTER TABLE conexoes_bancarias ADD COLUMN IF NOT EXISTS codigo_beneficiario VARCHAR(20) NULL COMMENT 'Código beneficiário Sicredi' AFTER posto",
 
     // Tabela de histórico de saldos
+    // Configuração IA Insights Dashboard
+    "INSERT INTO configuracoes (chave, valor, tipo, descricao, grupo) VALUES ('ia.insights_dashboard_habilitado', 'true', 'boolean', 'Habilitar insights diários com IA no dashboard', 'api') ON DUPLICATE KEY UPDATE descricao = VALUES(descricao)",
+    
     "CREATE TABLE IF NOT EXISTS saldo_historico (
         id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         conexao_bancaria_id INT UNSIGNED NOT NULL,

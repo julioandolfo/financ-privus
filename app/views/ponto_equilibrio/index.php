@@ -137,15 +137,15 @@
                 <div class="space-y-2 text-sm">
                     <div class="flex justify-between">
                         <span class="text-gray-600 dark:text-gray-400">Receitas</span>
-                        <span class="font-medium">R$ <?= number_format($d['receitas'] ?? 0, 2, ',', '.') ?></span>
+                        <span class="font-medium text-gray-900 dark:text-gray-100">R$ <?= number_format($d['receitas'] ?? 0, 2, ',', '.') ?></span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600 dark:text-gray-400">Custos Fixos</span>
-                        <span class="font-medium">R$ <?= number_format($d['custos_fixos'] ?? 0, 2, ',', '.') ?></span>
+                        <span class="font-medium text-gray-900 dark:text-gray-100">R$ <?= number_format($d['custos_fixos'] ?? 0, 2, ',', '.') ?></span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600 dark:text-gray-400">Custos Variáveis</span>
-                        <span class="font-medium">R$ <?= number_format($d['custos_variaveis'] ?? 0, 2, ',', '.') ?></span>
+                        <span class="font-medium text-gray-900 dark:text-gray-100">R$ <?= number_format($d['custos_variaveis'] ?? 0, 2, ',', '.') ?></span>
                     </div>
                     <div class="flex justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
                         <span class="text-purple-600 dark:text-purple-400 font-medium">Ponto Equilíbrio</span>
@@ -153,7 +153,7 @@
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600 dark:text-gray-400">Margem Contrib. %</span>
-                        <span class="font-medium"><?= number_format($d['margem_contribuicao_pct'] ?? 0, 1) ?>%</span>
+                        <span class="font-medium text-gray-900 dark:text-gray-100"><?= number_format($d['margem_contribuicao_pct'] ?? 0, 1) ?>%</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600 dark:text-gray-400">Margem Segurança</span>
@@ -192,7 +192,7 @@
                         <?php foreach ($custos_fixos_detalhe as $row): ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                             <td class="px-6 py-3 text-gray-900 dark:text-gray-100"><?= htmlspecialchars($row['categoria_nome'] ?? '') ?></td>
-                            <td class="px-6 py-3 text-right font-medium">R$ <?= number_format($row['total'] ?? 0, 2, ',', '.') ?></td>
+                            <td class="px-6 py-3 text-right font-medium text-gray-900 dark:text-gray-100">R$ <?= number_format($row['total'] ?? 0, 2, ',', '.') ?></td>
                         </tr>
                         <?php endforeach; ?>
                         <?php endif; ?>
@@ -219,7 +219,7 @@
                         <?php foreach ($custos_variaveis_detalhe as $row): ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                             <td class="px-6 py-3 text-gray-900 dark:text-gray-100"><?= htmlspecialchars($row['categoria_nome'] ?? '') ?></td>
-                            <td class="px-6 py-3 text-right font-medium">R$ <?= number_format($row['total'] ?? 0, 2, ',', '.') ?></td>
+                            <td class="px-6 py-3 text-right font-medium text-gray-900 dark:text-gray-100">R$ <?= number_format($row['total'] ?? 0, 2, ',', '.') ?></td>
                         </tr>
                         <?php endforeach; ?>
                         <?php endif; ?>

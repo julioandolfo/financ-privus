@@ -127,20 +127,22 @@ class ConfiguracaoController extends Controller
         unset($data['grupo']);
         
         // CORREÇÃO: PHP converte pontos (.) em underscores (_) automaticamente nos nomes de campos POST!
-        // Precisamos reverter isso para as chaves que pertencem ao grupo
+        // Precisamos reverter isso para as chaves (ex: ia_insights_dashboard_habilitado -> ia.insights_dashboard_habilitado)
         $this->log("Convertendo underscores de volta para pontos...");
         $dataCorrigido = [];
-        $prefixo = $grupo . '_';
-        $prefixoComPonto = $grupo . '.';
+        $mapeamento = [$grupo . '_' => $grupo . '.', 'ia_' => 'ia.', 'api_' => 'api.'];
         
         foreach ($data as $key => $value) {
-            // Se a chave começa com "grupo_", converter para "grupo."
-            if (strpos($key, $prefixo) === 0) {
-                $novaChave = str_replace($prefixo, $prefixoComPonto, $key);
-                $dataCorrigido[$novaChave] = $value;
+            $novaChave = $key;
+            foreach ($mapeamento as $prefixo => $substituto) {
+                if (strpos($key, $prefixo) === 0) {
+                    $novaChave = $substituto . substr($key, strlen($prefixo));
+                    break;
+                }
+            }
+            $dataCorrigido[$novaChave] = $value;
+            if ($novaChave !== $key) {
                 $this->log("  - {$key} → {$novaChave}");
-            } else {
-                $dataCorrigido[$key] = $value;
             }
         }
         
