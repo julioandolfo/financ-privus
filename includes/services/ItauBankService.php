@@ -42,19 +42,21 @@ class ItauBankService extends AbstractBankService
 
         $clientId = $conexao['client_id'] ?? '';
         $clientSecret = $conexao['client_secret'] ?? '';
-
-        if (empty($clientId) || empty($clientSecret)) {
-            throw new \Exception('Client ID e Client Secret do Itaú são obrigatórios.');
-        }
-
         $hasCerts = (!empty($conexao['cert_pem']) && !empty($conexao['key_pem'])) || !empty($conexao['cert_pfx']);
 
-        if ($ambiente === 'sandbox' && !$hasCerts) {
+        if ($ambiente === 'sandbox') {
             return [
                 'access_token' => 'sandbox-mock-token-itau-' . time(),
                 'expires_in' => 3600,
                 'token_type' => 'Bearer'
             ];
+        }
+
+        if (empty($clientId) || empty($clientSecret)) {
+            throw new \Exception('Client ID e Client Secret do Itaú são obrigatórios.');
+        }
+        if (!$hasCerts) {
+            throw new \Exception('Certificado digital é obrigatório para o ambiente de produção do Itaú. Faça upload do PFX ou preencha os campos PEM.');
         }
 
         $body = [
@@ -85,12 +87,16 @@ class ItauBankService extends AbstractBankService
         $ambiente = $conexao['ambiente'] ?? 'sandbox';
         $baseUrl = $this->baseUrls[$ambiente] ?? $this->baseUrls['sandbox'];
 
-        $hasCerts = (!empty($conexao['cert_pem']) && !empty($conexao['key_pem'])) || !empty($conexao['cert_pfx']);
-        if ($ambiente === 'sandbox' && !$hasCerts) {
+        if ($ambiente === 'sandbox') {
             return [
                 'saldo' => 45200.15,
                 'saldo_bloqueado' => 0,
+                'saldo_limite' => 0,
                 'atualizado_em' => date('Y-m-d\TH:i:s'),
+                'data_referencia' => date('Y-m-d'),
+                'tx_futuras' => 0,
+                'soma_futuros_debito' => 0,
+                'soma_futuros_credito' => 0,
                 'moeda' => 'BRL'
             ];
         }
@@ -130,8 +136,7 @@ class ItauBankService extends AbstractBankService
         $ambiente = $conexao['ambiente'] ?? 'sandbox';
         $baseUrl = $this->baseUrls[$ambiente] ?? $this->baseUrls['sandbox'];
 
-        $hasCerts = (!empty($conexao['cert_pem']) && !empty($conexao['key_pem'])) || !empty($conexao['cert_pfx']);
-        if ($ambiente === 'sandbox' && !$hasCerts) {
+        if ($ambiente === 'sandbox') {
             return $this->getMockTransacoes();
         }
 
