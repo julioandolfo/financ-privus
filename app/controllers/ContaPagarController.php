@@ -143,7 +143,9 @@ class ContaPagarController extends Controller
             $fornecedores = $this->fornecedorModel->findAll(['ativo' => 1]);
             $categorias = $this->categoriaModel->findAll($empresaAtual, 'despesa');
             $centrosCusto = $this->centroCustoModel->findAll($empresaAtual);
+            $this->contaBancariaModel = new ContaBancaria();
             $formasPagamento = $this->formaPagamentoModel->findAll();
+            $contasBancarias = $this->contaBancariaModel->findAll();
             
             // Retorna os filtros aplicados para a view
             $filtersApplied = $request->all();
@@ -165,6 +167,7 @@ class ContaPagarController extends Controller
                 'categorias' => $categorias,
                 'centrosCusto' => $centrosCusto,
                 'formasPagamento' => $formasPagamento,
+                'contasBancarias' => $contasBancarias ?? [],
                 'filters' => $filtersApplied,
                 'transacoes_pendentes_count' => $transacoesPendentesCount,
                 'paginacao' => [
@@ -233,6 +236,109 @@ class ContaPagarController extends Controller
         }
         $_SESSION['success'] = $msg;
         $response->redirect('/contas-pagar?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'categoria_id']))));
+    }
+
+    /**
+     * Efetuar baixa (pagamento) em massa
+     */
+    public function efetuarBaixaMassa(Request $request, Response $response)
+    {
+        $ids = $request->post('ids', []);
+        $dataPagamento = $request->post('data_pagamento');
+        $formaPagamentoId = $request->post('forma_pagamento_id');
+        $contaBancariaId = $request->post('conta_bancaria_id');
+        
+        if (empty($ids) || !$dataPagamento || !$formaPagamentoId || !$contaBancariaId) {
+            $_SESSION['error'] = 'Selecione contas e preencha data, forma de pagamento e conta bancária.';
+            $response->redirect('/contas-pagar?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'data_pagamento', 'forma_pagamento_id', 'conta_bancaria_id']))));
+            return;
+        }
+        
+        $contaBancariaModel = new ContaBancaria();
+        $contaBancaria = $contaBancariaModel->findById($contaBancariaId);
+        if (!$contaBancaria) {
+            $_SESSION['error'] = 'Conta bancária inválida.';
+            $response->redirect('/contas-pagar');
+            return;
+        }
+        
+        $empresaIdContaBancaria = (int)($contaBancaria['empresa_id'] ?? 0);
+        $contaPagarModel = new ContaPagar();
+        $movimentacaoService = new MovimentacaoService();
+        
+        $atualizadas = 0;
+        $ignoradas = 0;
+        $erros = [];
+        
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if (!$id) continue;
+            
+            $conta = $contaPagarModel->findById($id);
+            if (!$conta) {
+                $ignoradas++;
+                continue;
+            }
+            if ($conta['status'] === 'pago') {
+                $ignoradas++;
+                continue;
+            }
+            if ((int)($conta['empresa_id'] ?? 0) !== $empresaIdContaBancaria) {
+                $ignoradas++;
+                continue;
+            }
+            
+            $valorRestante = floatval($conta['valor_total']) - floatval($conta['valor_pago'] ?? 0);
+            if ($valorRestante <= 0) {
+                $ignoradas++;
+                continue;
+            }
+            
+            try {
+                $valorPago = floatval($conta['valor_pago'] ?? 0) + $valorRestante;
+                $status = 'pago';
+                
+                $dadosAntes = $conta;
+                $contaPagarModel->atualizarPagamento($id, $valorPago, $dataPagamento, $status);
+                
+                \App\Models\Auditoria::registrar(
+                    'contas_pagar',
+                    $id,
+                    'make_payment',
+                    $dadosAntes,
+                    $contaPagarModel->findById($id),
+                    "Pagamento em massa: R$ " . number_format($valorRestante, 2, ',', '.')
+                );
+                
+                $dadosBaixa = [
+                    'empresa_id' => $conta['empresa_id'],
+                    'categoria_id' => $conta['categoria_id'],
+                    'centro_custo_id' => $conta['centro_custo_id'],
+                    'conta_bancaria_id' => $contaBancariaId,
+                    'descricao' => "Pagamento: " . ($conta['descricao'] ?? ''),
+                    'valor' => $valorRestante,
+                    'data_movimento' => $dataPagamento,
+                    'data_competencia' => $conta['data_competencia'],
+                    'forma_pagamento_id' => $formaPagamentoId,
+                    'observacoes' => 'Baixa em massa'
+                ];
+                
+                $movimentacaoService->criarMovimentacaoPagamento($id, $dadosBaixa);
+                $atualizadas++;
+            } catch (\Exception $e) {
+                $erros[] = "Conta #{$id}: " . $e->getMessage();
+            }
+        }
+        
+        $msg = "{$atualizadas} conta(s) paga(s) com sucesso.";
+        if ($ignoradas > 0) {
+            $msg .= " {$ignoradas} ignorada(s) (já pagas ou de outra empresa).";
+        }
+        if (!empty($erros)) {
+            $msg .= " Erros: " . implode('; ', array_slice($erros, 0, 3));
+        }
+        $_SESSION['success'] = $msg;
+        $response->redirect('/contas-pagar?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'data_pagamento', 'forma_pagamento_id', 'conta_bancaria_id']))));
     }
 
     public function create(Request $request, Response $response)

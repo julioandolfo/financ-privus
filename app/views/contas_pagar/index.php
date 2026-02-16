@@ -320,13 +320,20 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
 
     <!-- Tabela de Contas -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
-         x-data="{ selecionados: [], showCategoriaModal: false }"
-         x-init="$watch('selecionados.length', v => { if (v === 0) showCategoriaModal = false })">
+         x-data="{ selecionados: [], showCategoriaModal: false, showBaixaModal: false }"
+         x-init="$watch('selecionados.length', v => { if (v === 0) { showCategoriaModal = false; showBaixaModal = false; } })">
         <!-- Barra de ações em massa -->
         <div x-show="selecionados.length > 0" x-cloak x-transition
              class="sticky top-0 z-10 bg-red-600 dark:bg-red-700 px-6 py-3 flex items-center justify-between gap-4">
             <span class="text-white font-medium" x-text="selecionados.length + ' conta(s) selecionada(s)'"></span>
             <div class="flex items-center gap-3">
+                <button type="button" @click="showBaixaModal = true"
+                        class="px-4 py-2 bg-white text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    Dar Baixa
+                </button>
                 <button type="button" @click="showCategoriaModal = true"
                         class="px-4 py-2 bg-white text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -373,6 +380,60 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                         <button type="button" @click="showCategoriaModal = false"
                                 class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancelar</button>
                         <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Aplicar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Dar Baixa em massa -->
+        <div x-show="showBaixaModal" x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+             @keydown.escape.window="showBaixaModal = false">
+            <div @click.self="showBaixaModal = false" class="absolute inset-0"></div>
+            <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-md w-full">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Dar Baixa em Massa</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Pagar as contas selecionadas. Contas já pagas ou de outra empresa serão ignoradas.</p>
+                <form method="POST" action="/contas-pagar/efetuar-baixa-massa">
+                    <?php
+                    $urlParams = array_filter($filters ?? [], fn($v) => $v !== '' && $v !== null);
+                    foreach ($urlParams as $k => $v):
+                        if (!is_array($v)):
+                    ?><input type="hidden" name="<?= htmlspecialchars($k) ?>" value="<?= htmlspecialchars($v) ?>"><?php
+                        endif;
+                    endforeach;
+                    ?>
+                    <template x-for="id in selecionados" :key="id">
+                        <input type="hidden" :name="'ids[]'" :value="id">
+                    </template>
+                    <div class="space-y-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Pagamento</label>
+                            <input type="date" name="data_pagamento" required value="<?= date('Y-m-d') ?>"
+                                   class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Forma de Pagamento</label>
+                            <select name="forma_pagamento_id" required class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                <option value="">Selecione...</option>
+                                <?php foreach ($formasPagamento ?? [] as $fp): ?>
+                                <option value="<?= $fp['id'] ?>"><?= htmlspecialchars($fp['nome']) ?><?= !empty($fp['empresa_nome']) ? ' (' . htmlspecialchars($fp['empresa_nome']) . ')' : '' ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Conta Bancária</label>
+                            <select name="conta_bancaria_id" required class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                                <option value="">Selecione...</option>
+                                <?php foreach ($contasBancarias ?? [] as $cb): ?>
+                                <option value="<?= $cb['id'] ?>"><?= htmlspecialchars(($cb['banco_nome'] ?? 'Conta') . ' - Ag: ' . ($cb['agencia'] ?? '') . ' Cc: ' . ($cb['conta'] ?? $cb['numero_conta'] ?? '')) ?><?= !empty($cb['empresa_nome']) ? ' (' . htmlspecialchars($cb['empresa_nome']) . ')' : '' ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" @click="showBaixaModal = false"
+                                class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Dar Baixa</button>
                     </div>
                 </form>
             </div>

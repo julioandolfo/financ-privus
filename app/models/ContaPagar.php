@@ -39,15 +39,19 @@ class ContaPagar extends Model
                 LEFT JOIN centros_custo cc ON cp.centro_custo_id = cc.id
                 LEFT JOIN contas_bancarias cb ON cp.conta_bancaria_id = cb.id
                 LEFT JOIN formas_pagamento fp ON cp.forma_pagamento_id = fp.id
-                JOIN usuarios u ON cp.usuario_cadastro_id = u.id
+                LEFT JOIN usuarios u ON cp.usuario_cadastro_id = u.id
                 WHERE cp.deleted_at IS NULL";
         $params = [];
         
         // Filtro por empresa ou consolidação
         if (isset($filters['empresas_ids']) && is_array($filters['empresas_ids'])) {
-            $placeholders = implode(',', array_fill(0, count($filters['empresas_ids']), '?'));
-            $sql .= " AND cp.empresa_id IN ({$placeholders})";
-            $params = array_merge($params, $filters['empresas_ids']);
+            if (empty($filters['empresas_ids'])) {
+                $sql .= " AND 1=0"; // Nenhuma empresa selecionada = sem resultados
+            } else {
+                $placeholders = implode(',', array_fill(0, count($filters['empresas_ids']), '?'));
+                $sql .= " AND cp.empresa_id IN ({$placeholders})";
+                $params = array_merge($params, $filters['empresas_ids']);
+            }
         } elseif (isset($filters['empresa_id']) && $filters['empresa_id'] !== '') {
             $sql .= " AND cp.empresa_id = ?";
             $params[] = $filters['empresa_id'];
@@ -162,7 +166,7 @@ class ContaPagar extends Model
                 LEFT JOIN centros_custo cc ON cp.centro_custo_id = cc.id
                 LEFT JOIN contas_bancarias cb ON cp.conta_bancaria_id = cb.id
                 LEFT JOIN formas_pagamento fp ON cp.forma_pagamento_id = fp.id
-                JOIN usuarios u ON cp.usuario_cadastro_id = u.id
+                LEFT JOIN usuarios u ON cp.usuario_cadastro_id = u.id
                 WHERE cp.id = ? LIMIT 1";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$id]);
@@ -743,9 +747,13 @@ class ContaPagar extends Model
         
         // Aplicar os mesmos filtros do findAll
         if (isset($filters['empresas_ids']) && is_array($filters['empresas_ids'])) {
-            $placeholders = implode(',', array_fill(0, count($filters['empresas_ids']), '?'));
-            $sql .= " AND cp.empresa_id IN ({$placeholders})";
-            $params = array_merge($params, $filters['empresas_ids']);
+            if (empty($filters['empresas_ids'])) {
+                $sql .= " AND 1=0";
+            } else {
+                $placeholders = implode(',', array_fill(0, count($filters['empresas_ids']), '?'));
+                $sql .= " AND cp.empresa_id IN ({$placeholders})";
+                $params = array_merge($params, $filters['empresas_ids']);
+            }
         } elseif (isset($filters['empresa_id']) && $filters['empresa_id'] !== '') {
             $sql .= " AND cp.empresa_id = ?";
             $params[] = $filters['empresa_id'];

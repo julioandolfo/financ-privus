@@ -137,6 +137,7 @@ return [
     // Contas a Pagar (protegido) - Rotas específicas primeiro
     'GET /contas-pagar' => ['handler' => 'ContaPagarController@index', 'middleware' => ['AuthMiddleware']],
     'POST /contas-pagar/atualizar-categoria-massa' => ['handler' => 'ContaPagarController@atualizarCategoriaMassa', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-pagar/efetuar-baixa-massa' => ['handler' => 'ContaPagarController@efetuarBaixaMassa', 'middleware' => ['AuthMiddleware']],
     'GET /contas-pagar/deletados' => ['handler' => 'ContaPagarController@deletados', 'middleware' => ['AuthMiddleware']],
     'GET /contas-pagar/create' => ['handler' => 'ContaPagarController@create', 'middleware' => ['AuthMiddleware']],
     'POST /contas-pagar' => ['handler' => 'ContaPagarController@store', 'middleware' => ['AuthMiddleware']],
@@ -161,6 +162,7 @@ return [
     // Contas a Receber (protegido) - Rotas específicas primeiro
     'GET /contas-receber' => ['handler' => 'ContaReceberController@index', 'middleware' => ['AuthMiddleware']],
     'POST /contas-receber/atualizar-categoria-massa' => ['handler' => 'ContaReceberController@atualizarCategoriaMassa', 'middleware' => ['AuthMiddleware']],
+    'POST /contas-receber/efetuar-baixa-massa' => ['handler' => 'ContaReceberController@efetuarBaixaMassa', 'middleware' => ['AuthMiddleware']],
     'GET /contas-receber/deletados' => ['handler' => 'ContaReceberController@deletados', 'middleware' => ['AuthMiddleware']],
     'GET /contas-receber/create' => ['handler' => 'ContaReceberController@create', 'middleware' => ['AuthMiddleware']],
     'POST /contas-receber' => ['handler' => 'ContaReceberController@store', 'middleware' => ['AuthMiddleware']],

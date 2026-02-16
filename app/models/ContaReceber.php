@@ -58,9 +58,13 @@ class ContaReceber extends Model
         
         // Filtro por empresa ou consolidação
         if (isset($filters['empresas_ids']) && is_array($filters['empresas_ids'])) {
-            $placeholders = implode(',', array_fill(0, count($filters['empresas_ids']), '?'));
-            $sql .= " AND cr.empresa_id IN ({$placeholders})";
-            $params = array_merge($params, $filters['empresas_ids']);
+            if (empty($filters['empresas_ids'])) {
+                $sql .= " AND 1=0"; // Nenhuma empresa selecionada = sem resultados
+            } else {
+                $placeholders = implode(',', array_fill(0, count($filters['empresas_ids']), '?'));
+                $sql .= " AND cr.empresa_id IN ({$placeholders})";
+                $params = array_merge($params, $filters['empresas_ids']);
+            }
         } elseif (isset($filters['empresa_id'])) {
             $sql .= " AND cr.empresa_id = ?";
             $params[] = $filters['empresa_id'];
@@ -821,9 +825,13 @@ class ContaReceber extends Model
         
         // Aplicar os mesmos filtros do findAll
         if (isset($filters['empresas_ids']) && is_array($filters['empresas_ids'])) {
-            $placeholders = implode(',', array_fill(0, count($filters['empresas_ids']), '?'));
-            $sql .= " AND cr.empresa_id IN ({$placeholders})";
-            $params = array_merge($params, $filters['empresas_ids']);
+            if (empty($filters['empresas_ids'])) {
+                $sql .= " AND 1=0";
+            } else {
+                $placeholders = implode(',', array_fill(0, count($filters['empresas_ids']), '?'));
+                $sql .= " AND cr.empresa_id IN ({$placeholders})";
+                $params = array_merge($params, $filters['empresas_ids']);
+            }
         } elseif (isset($filters['empresa_id'])) {
             $sql .= " AND cr.empresa_id = ?";
             $params[] = $filters['empresa_id'];

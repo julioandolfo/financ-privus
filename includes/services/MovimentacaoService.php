@@ -31,6 +31,7 @@ class MovimentacaoService
         try {
             $valor = $dadosBaixa['valor'] ?? 0;
             
+            $dataMov = $dadosBaixa['data_movimentacao'] ?? $dadosBaixa['data_movimento'] ?? $dadosBaixa['data_pagamento'] ?? date('Y-m-d');
             $dados = [
                 'empresa_id' => $dadosBaixa['empresa_id'],
                 'tipo' => 'saida',
@@ -39,7 +40,7 @@ class MovimentacaoService
                 'conta_bancaria_id' => $dadosBaixa['conta_bancaria_id'],
                 'descricao' => $dadosBaixa['descricao'] ?? 'Pagamento de conta',
                 'valor' => $valor,
-                'data_movimento' => $dadosBaixa['data_movimento'] ?? date('Y-m-d'),
+                'data_movimentacao' => $dataMov,
                 'data_competencia' => $dadosBaixa['data_competencia'] ?? null,
                 'forma_pagamento_id' => $dadosBaixa['forma_pagamento_id'] ?? null,
                 'referencia_id' => $contaPagarId,

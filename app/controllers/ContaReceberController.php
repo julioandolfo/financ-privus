@@ -152,6 +152,10 @@ class ContaReceberController extends Controller
             $clientes = $this->clienteModel->findAll(['ativo' => 1]);
             $categorias = $this->categoriaModel->findAll($empresaAtual, 'receita');
             $centrosCusto = $this->centroCustoModel->findAll($empresaAtual);
+            $this->formaPagamentoModel = new FormaPagamento();
+            $this->contaBancariaModel = new ContaBancaria();
+            $formasRecebimento = $this->formaPagamentoModel->findAll();
+            $contasBancarias = $this->contaBancariaModel->findAll();
             
             // Buscar status WooCommerce distintos para o filtro
             $statusWooList = $this->contaReceberModel->getStatusWooDistintos();
@@ -175,6 +179,8 @@ class ContaReceberController extends Controller
                 'clientes' => $clientes,
                 'categorias' => $categorias,
                 'centrosCusto' => $centrosCusto,
+                'formasRecebimento' => $formasRecebimento ?? [],
+                'contasBancarias' => $contasBancarias ?? [],
                 'statusWooList' => $statusWooList,
                 'filters' => $filtersApplied,
                 'transacoes_pendentes_count' => $transacoesPendentesCount,
@@ -244,6 +250,115 @@ class ContaReceberController extends Controller
         }
         $_SESSION['success'] = $msg;
         $response->redirect('/contas-receber?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'categoria_id']))));
+    }
+
+    /**
+     * Efetuar baixa (recebimento) em massa
+     */
+    public function efetuarBaixaMassa(Request $request, Response $response)
+    {
+        $ids = $request->post('ids', []);
+        $dataRecebimento = $request->post('data_recebimento');
+        $formaRecebimentoId = $request->post('forma_recebimento_id');
+        $contaBancariaId = $request->post('conta_bancaria_id');
+        
+        if (empty($ids) || !$dataRecebimento || !$formaRecebimentoId || !$contaBancariaId) {
+            $_SESSION['error'] = 'Selecione contas e preencha data, forma de recebimento e conta bancária.';
+            $response->redirect('/contas-receber?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'data_recebimento', 'forma_recebimento_id', 'conta_bancaria_id']))));
+            return;
+        }
+        
+        $contaBancariaModel = new ContaBancaria();
+        $contaBancaria = $contaBancariaModel->findById($contaBancariaId);
+        if (!$contaBancaria) {
+            $_SESSION['error'] = 'Conta bancária inválida.';
+            $response->redirect('/contas-receber');
+            return;
+        }
+        
+        $empresaIdContaBancaria = (int)($contaBancaria['empresa_id'] ?? 0);
+        $contaReceberModel = new ContaReceber();
+        $parcelaModel = new ParcelaReceber();
+        $movimentacaoService = new MovimentacaoService();
+        
+        $atualizadas = 0;
+        $ignoradas = 0;
+        $erros = [];
+        
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if (!$id) continue;
+            
+            $conta = $contaReceberModel->findById($id);
+            if (!$conta) {
+                $ignoradas++;
+                continue;
+            }
+            if ($conta['status'] === 'recebido') {
+                $ignoradas++;
+                continue;
+            }
+            if ((int)($conta['empresa_id'] ?? 0) !== $empresaIdContaBancaria) {
+                $ignoradas++;
+                continue;
+            }
+            $parcelas = $parcelaModel->findByContaReceber($id);
+            if (!empty($parcelas)) {
+                $ignoradas++;
+                continue;
+            }
+            
+            $valorRestante = floatval($conta['valor_total']) - floatval($conta['valor_recebido'] ?? 0);
+            if ($valorRestante <= 0) {
+                $ignoradas++;
+                continue;
+            }
+            
+            try {
+                $valorRecebido = floatval($conta['valor_recebido'] ?? 0) + $valorRestante;
+                $status = 'recebido';
+                
+                $dadosAntes = $conta;
+                $contaReceberModel->atualizarRecebimento($id, $valorRecebido, $dataRecebimento, $status);
+                
+                \App\Models\Auditoria::registrar(
+                    'contas_receber',
+                    $id,
+                    'make_receipt',
+                    $dadosAntes,
+                    $contaReceberModel->findById($id),
+                    "Recebimento em massa: R$ " . number_format($valorRestante, 2, ',', '.')
+                );
+                
+                $dadosBaixa = [
+                    'empresa_id' => $conta['empresa_id'],
+                    'categoria_id' => $conta['categoria_id'],
+                    'centro_custo_id' => $conta['centro_custo_id'],
+                    'conta_bancaria_id' => $contaBancariaId,
+                    'descricao' => "Recebimento: " . ($conta['descricao'] ?? ''),
+                    'valor_recebido' => $valorRestante,
+                    'data_recebimento' => $dataRecebimento,
+                    'data_competencia' => $conta['data_competencia'],
+                    'forma_recebimento_id' => $formaRecebimentoId,
+                    'observacoes' => 'Baixa em massa'
+                ];
+                
+                $movimentacaoService->criarMovimentacaoRecebimento($id, $dadosBaixa);
+                $atualizadas++;
+            } catch (\Exception $e) {
+                $erros[] = "Conta #{$id}: " . $e->getMessage();
+            }
+        }
+        
+        $msg = "{$atualizadas} conta(s) recebida(s) com sucesso.";
+        if ($ignoradas > 0) {
+            $msg .= " {$ignoradas} ignorada(s) (já recebidas, com parcelas ou de outra empresa).";
+        }
+        if (!empty($erros)) {
+            $msg .= " Erros: " . implode('; ', array_slice($erros, 0, 3));
+        }
+        $_SESSION['success'] = $msg;
+        $response->redirect('/contas-receber?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'data_recebimento', 'forma_recebimento_id', 'conta_bancaria_id']))));
     }
 
     public function create(Request $request, Response $response)
