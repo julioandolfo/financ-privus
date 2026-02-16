@@ -1,11 +1,6 @@
 <?php
 $errors = $this->session->get('errors') ?? [];
 $old = $this->session->get('old') ?? [];
-
-// Debug: verifica se categorias estão sendo passadas
-if (empty($categorias)) {
-    error_log("AVISO: Nenhuma categoria encontrada para empresa_id: " . ($conta['empresa_id'] ?? 'N/A'));
-}
 ?>
 
 <div class="max-w-5xl mx-auto animate-fade-in">
@@ -48,8 +43,8 @@ if (empty($categorias)) {
                     <!-- Cliente -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cliente</label>
-                        <select name="cliente_id" id="cliente_id" data-placeholder="Selecione..."
-                                class="select-search w-full">
+                        <select name="cliente_id" id="cliente_id"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
                             <option value="">Selecione...</option>
                             <?php foreach ($clientes as $cliente): ?>
                                 <option value="<?= $cliente['id'] ?>" <?= ($old['cliente_id'] ?? $conta['cliente_id']) == $cliente['id'] ? 'selected' : '' ?>>
@@ -64,9 +59,8 @@ if (empty($categorias)) {
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Categoria <span class="text-red-500">*</span>
                         </label>
-                        <!-- DEBUG: Total de categorias: <?= count($categorias ?? []) ?> -->
-                        <select name="categoria_id" id="categoria_id" required data-placeholder="Selecione..."
-                                class="select-search w-full">
+                        <select name="categoria_id" id="categoria_id" required
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
                             <option value="">Selecione...</option>
                             <?php if (!empty($categorias)): ?>
                                 <?php foreach ($categorias as $categoria): ?>
@@ -74,8 +68,6 @@ if (empty($categorias)) {
                                         <?= htmlspecialchars($categoria['nome']) ?>
                                     </option>
                                 <?php endforeach; ?>
-                            <?php else: ?>
-                                <!-- AVISO: Nenhuma categoria encontrada! -->
                             <?php endif; ?>
                         </select>
                         <?php if (isset($errors['categoria_id'])): ?>
@@ -86,8 +78,8 @@ if (empty($categorias)) {
                     <!-- Centro de Custo -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Centro de Custo</label>
-                        <select name="centro_custo_id" id="centro_custo_id" data-placeholder="Selecione..."
-                                class="select-search w-full">
+                        <select name="centro_custo_id" id="centro_custo_id"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
                             <option value="">Selecione...</option>
                             <?php foreach ($centrosCusto as $centro): ?>
                                 <option value="<?= $centro['id'] ?>" <?= ($old['centro_custo_id'] ?? $conta['centro_custo_id']) == $centro['id'] ? 'selected' : '' ?>>
@@ -318,24 +310,18 @@ function contaReceberForm() {
         clienteIdAtual: <?= json_encode($old['cliente_id'] ?? $conta['cliente_id'] ?? '') ?>,
         
         init() {
-            // DEBUG: Log de dados iniciais
-            console.log('Formulário inicializado');
-            console.log('Empresa da conta:', document.querySelector('select[name="empresa_id"]').value);
-            console.log('Categoria selecionada:', this.categoriaIdAtual);
-            console.log('Total de options em categoria_id:', document.getElementById('categoria_id')?.options?.length);
-            
-            // NÃO recarrega ao inicializar - usa os dados já renderizados pelo servidor
-            // Apenas reinicializa os selects se necessário
-            setTimeout(() => {
-                if (typeof initAllSelectSearch === 'function') {
-                    initAllSelectSearch();
-                }
-                console.log('Select-search inicializado');
-            }, 100);
+            // Dados já renderizados pelo servidor - nada a fazer
         },
         
         atualizarRateios() {
             // Placeholder para lógica de rateio se necessário
+        },
+        
+        atualizarSelectNativo(selectId, options, valorSelecionado) {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            sel.innerHTML = options.map(o => `<option value="${o.value}">${o.text}</option>`).join('');
+            sel.value = valorSelecionado || '';
         },
         
         async carregarDadosEmpresa(empresaId) {
@@ -344,57 +330,44 @@ function contaReceberForm() {
                 return;
             }
             
-            // Salva os valores atuais antes de recarregar
-            const categoriaAtual = document.getElementById('categoria_id')?.value || this.categoriaIdAtual;
-            const centroAtual = document.getElementById('centro_custo_id')?.value || this.centroCustoIdAtual;
-            const clienteAtual = document.getElementById('cliente_id')?.value || this.clienteIdAtual;
+            const emptyOpt = [{value: '', text: 'Carregando...'}];
+            this.atualizarSelectNativo('categoria_id', emptyOpt);
+            this.atualizarSelectNativo('centro_custo_id', emptyOpt);
+            this.atualizarSelectNativo('cliente_id', emptyOpt);
             
-            // Carregar categorias de receita
             try {
-                const respCategorias = await fetch(`/categorias?ajax=1&empresa_id=${empresaId}&tipo=receita`);
-                const dataCategorias = await respCategorias.json();
+                const [respCat, respCentro, respCli] = await Promise.all([
+                    fetch(`/categorias?ajax=1&empresa_id=${empresaId}&tipo=receita`),
+                    fetch(`/centros-custo?ajax=1&empresa_id=${empresaId}`),
+                    fetch(`/clientes?ajax=1&empresa_id=${empresaId}`)
+                ]);
                 
-                const options = [{value: '', text: 'Selecione...'}];
-                if (dataCategorias.success && dataCategorias.categorias) {
-                    dataCategorias.categorias.forEach(cat => {
-                        options.push({value: cat.id, text: cat.nome});
-                    });
-                }
-                refreshSelectSearch('categoria_id', options, categoriaAtual);
-            } catch (error) {
-                console.error('Erro ao carregar categorias:', error);
-            }
-            
-            // Carregar centros de custo
-            try {
-                const respCentros = await fetch(`/centros-custo?ajax=1&empresa_id=${empresaId}`);
-                const dataCentros = await respCentros.json();
+                const dataCat = await respCat.json();
+                const dataCentro = await respCentro.json();
+                const dataCli = await respCli.json();
                 
-                const options = [{value: '', text: 'Selecione...'}];
-                if (dataCentros.success && dataCentros.centros) {
-                    dataCentros.centros.forEach(centro => {
-                        options.push({value: centro.id, text: centro.nome});
-                    });
+                const optsCat = [{value: '', text: 'Selecione...'}];
+                if (dataCat.success && dataCat.categorias) {
+                    dataCat.categorias.forEach(c => optsCat.push({value: c.id, text: c.nome}));
                 }
-                refreshSelectSearch('centro_custo_id', options, centroAtual);
-            } catch (error) {
-                console.error('Erro ao carregar centros de custo:', error);
-            }
-            
-            // Carregar clientes
-            try {
-                const respClientes = await fetch(`/clientes?ajax=1&empresa_id=${empresaId}`);
-                const dataClientes = await respClientes.json();
+                this.atualizarSelectNativo('categoria_id', optsCat, '');
                 
-                const options = [{value: '', text: 'Selecione...'}];
-                if (dataClientes.success && dataClientes.clientes) {
-                    dataClientes.clientes.forEach(cliente => {
-                        options.push({value: cliente.id, text: cliente.nome_razao_social});
-                    });
+                const optsCentro = [{value: '', text: 'Selecione...'}];
+                if (dataCentro.success && dataCentro.centros) {
+                    dataCentro.centros.forEach(c => optsCentro.push({value: c.id, text: c.nome}));
                 }
-                refreshSelectSearch('cliente_id', options, clienteAtual);
-            } catch (error) {
-                console.error('Erro ao carregar clientes:', error);
+                this.atualizarSelectNativo('centro_custo_id', optsCentro, '');
+                
+                const optsCli = [{value: '', text: 'Selecione...'}];
+                if (dataCli.success && dataCli.clientes) {
+                    dataCli.clientes.forEach(c => optsCli.push({value: c.id, text: c.nome_razao_social}));
+                }
+                this.atualizarSelectNativo('cliente_id', optsCli, '');
+            } catch (e) {
+                console.error('Erro ao carregar dados:', e);
+                this.atualizarSelectNativo('categoria_id', [{value: '', text: 'Erro ao carregar'}]);
+                this.atualizarSelectNativo('centro_custo_id', [{value: '', text: 'Erro ao carregar'}]);
+                this.atualizarSelectNativo('cliente_id', [{value: '', text: 'Erro ao carregar'}]);
             }
         },
         
@@ -407,10 +380,10 @@ function contaReceberForm() {
         },
         
         limparSelects() {
-            const emptyOptions = [{value: '', text: 'Selecione uma empresa primeiro...'}];
-            refreshSelectSearch('categoria_id', emptyOptions);
-            refreshSelectSearch('centro_custo_id', emptyOptions);
-            refreshSelectSearch('cliente_id', emptyOptions);
+            const emptyOpt = [{value: '', text: 'Selecione uma empresa primeiro...'}];
+            this.atualizarSelectNativo('categoria_id', emptyOpt);
+            this.atualizarSelectNativo('centro_custo_id', emptyOpt);
+            this.atualizarSelectNativo('cliente_id', emptyOpt);
         }
     }
 }
