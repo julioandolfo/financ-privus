@@ -5,6 +5,8 @@ use App\Models\DespesaRecorrente;
 use App\Models\ReceitaRecorrente;
 use App\Models\ContaPagar;
 use App\Models\ContaReceber;
+use App\Models\RateioPagamento;
+use App\Models\RateioRecebimento;
 use App\Core\Database;
 
 /**
@@ -106,6 +108,20 @@ class RecorrenciaService
             throw new \Exception('Erro ao criar conta a pagar');
         }
         
+        // Aplica rateio se configurado na despesa recorrente
+        if (!empty($despesa['rateios_json'])) {
+            $rateios = json_decode($despesa['rateios_json'], true);
+            if (is_array($rateios) && !empty($rateios)) {
+                $usuarioId = $despesa['usuario_cadastro_id'] ?? null;
+                foreach ($rateios as &$r) {
+                    $r['data_competencia'] = $dataVencimento;
+                }
+                $rateioModel = new RateioPagamento();
+                $rateioModel->saveBatch($contaId, $rateios, $usuarioId);
+                $this->contaPagarModel->atualizarRateio($contaId, 1);
+            }
+        }
+        
         // Se já é pago, cria movimentação
         if ($despesa['status_inicial'] === 'pago' && $despesa['conta_bancaria_id']) {
             $this->contaPagarModel->atualizarPagamento($contaId, $despesa['valor'], $hoje, 'pago');
@@ -183,6 +199,20 @@ class RecorrenciaService
         
         if (!$contaId) {
             throw new \Exception('Erro ao criar conta a receber');
+        }
+        
+        // Aplica rateio se configurado na receita recorrente
+        if (!empty($receita['rateios_json'])) {
+            $rateios = json_decode($receita['rateios_json'], true);
+            if (is_array($rateios) && !empty($rateios)) {
+                $usuarioId = $receita['usuario_cadastro_id'] ?? null;
+                foreach ($rateios as &$r) {
+                    $r['data_competencia'] = $dataVencimento;
+                }
+                $rateioModel = new RateioRecebimento();
+                $rateioModel->saveBatch($contaId, $rateios, $usuarioId);
+                $this->contaReceberModel->atualizarRateio($contaId, 1);
+            }
         }
         
         // Se já é recebido, cria movimentação

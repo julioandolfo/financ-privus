@@ -12,6 +12,7 @@ use App\Models\CentroCusto;
 use App\Models\FormaPagamento;
 use App\Models\ContaBancaria;
 use Includes\Services\RecorrenciaService;
+use includes\services\RateioService;
 
 /**
  * Controller para Receitas Recorrentes
@@ -133,6 +134,23 @@ class ReceitaRecorrenteController extends Controller
         
         $data['usuario_cadastro_id'] = $_SESSION['usuario_id'];
         
+        // Processa rateios para JSON
+        if (!empty($data['tem_rateio']) && $data['tem_rateio'] == 1 && !empty($data['rateios'])) {
+            $rateioService = new RateioService();
+            $errosRateio = $rateioService->validarRateios($data['rateios'], $data['valor']);
+            if (!empty($errosRateio)) {
+                $_SESSION['errors'] = array_merge($_SESSION['errors'] ?? [], ['rateios' => implode(', ', $errosRateio)]);
+                $_SESSION['old'] = $data;
+                $response->redirect('/receitas-recorrentes/create');
+                return;
+            }
+            $rateiosPreparados = $rateioService->prepararParaSalvar($data['rateios'], $_SESSION['usuario_id']);
+            $data['rateios_json'] = json_encode($rateiosPreparados);
+            unset($data['rateios'], $data['tem_rateio']);
+        } else {
+            unset($data['rateios'], $data['tem_rateio']);
+        }
+        
         try {
             $this->receitaRecorrenteModel = new ReceitaRecorrente();
             $id = $this->receitaRecorrenteModel->create($data);
@@ -213,9 +231,13 @@ class ReceitaRecorrenteController extends Controller
             $formasPagamento = $this->formaPagamentoModel->findAll();
             $contasBancarias = $this->contaBancariaModel->findAll();
             
+            $old = $_SESSION['old'] ?? [];
+            if (!empty($old)) unset($_SESSION['old']);
+            
             return $this->render('receitas_recorrentes/edit', [
                 'title' => 'Editar Receita Recorrente',
                 'receita' => $receita,
+                'old' => $old,
                 'empresas' => $empresas,
                 'clientes' => $clientes,
                 'categorias' => $categorias,
@@ -240,9 +262,27 @@ class ReceitaRecorrenteController extends Controller
         $errors = $this->validateData($data);
         if (!empty($errors)) {
             $_SESSION['errors'] = $errors;
+            $_SESSION['old'] = $data;
             $response->redirect("/receitas-recorrentes/{$id}/edit");
             return;
         }
+        
+        // Processa rateios para JSON
+        if (!empty($data['tem_rateio']) && $data['tem_rateio'] == 1 && !empty($data['rateios'])) {
+            $rateioService = new RateioService();
+            $errosRateio = $rateioService->validarRateios($data['rateios'], $data['valor']);
+            if (!empty($errosRateio)) {
+                $_SESSION['errors'] = array_merge($_SESSION['errors'] ?? [], ['rateios' => implode(', ', $errosRateio)]);
+                $_SESSION['old'] = $data;
+                $response->redirect("/receitas-recorrentes/{$id}/edit");
+                return;
+            }
+            $rateiosPreparados = $rateioService->prepararParaSalvar($data['rateios'], $_SESSION['usuario_id']);
+            $data['rateios_json'] = json_encode($rateiosPreparados);
+        } else {
+            $data['rateios_json'] = null;
+        }
+        unset($data['rateios'], $data['tem_rateio']);
         
         try {
             $this->receitaRecorrenteModel = new ReceitaRecorrente();

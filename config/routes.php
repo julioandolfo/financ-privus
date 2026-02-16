@@ -184,6 +184,9 @@ return [
     
     // DRE (protegido)
     'GET /dre' => ['handler' => 'DREController@index', 'middleware' => ['AuthMiddleware']],
+
+    // Ponto de Equilíbrio (protegido)
+    'GET /ponto-equilibrio' => ['handler' => 'PontoEquilibrioController@index', 'middleware' => ['AuthMiddleware']],
     
     // DFC (protegido)
     'GET /dfc' => ['handler' => 'DFCController@index', 'middleware' => ['AuthMiddleware']],

@@ -178,6 +178,11 @@ $menuItems = [
                 'active' => $isActive('/dre')
             ],
             [
+                'title' => 'Ponto de Equilíbrio',
+                'path' => '/ponto-equilibrio',
+                'active' => $isActive('/ponto-equilibrio')
+            ],
+            [
                 'title' => 'DFC',
                 'path' => '/dfc',
                 'active' => $isActive('/dfc')

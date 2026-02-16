@@ -104,8 +104,8 @@ class ReceitaRecorrente extends Model
                  antecedencia_dias, status_inicial, criar_automaticamente,
                  ajuste_fim_semana, reajuste_ativo, reajuste_tipo, reajuste_valor, reajuste_mes,
                  valor_original, forma_pagamento_id, conta_bancaria_id,
-                 ativo, proxima_geracao, usuario_cadastro_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                 rateios_json, ativo, proxima_geracao, usuario_cadastro_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $this->db->prepare($sql);
         
@@ -138,6 +138,7 @@ class ReceitaRecorrente extends Model
             $data['valor'],
             !empty($data['forma_pagamento_id']) ? $data['forma_pagamento_id'] : null,
             !empty($data['conta_bancaria_id']) ? $data['conta_bancaria_id'] : null,
+            !empty($data['rateios_json']) ? $data['rateios_json'] : null,
             1,
             $proximaGeracao,
             $data['usuario_cadastro_id']
@@ -159,6 +160,7 @@ class ReceitaRecorrente extends Model
                 antecedencia_dias = ?, status_inicial = ?, criar_automaticamente = ?,
                 ajuste_fim_semana = ?, reajuste_ativo = ?, reajuste_tipo = ?, reajuste_valor = ?, reajuste_mes = ?,
                 forma_pagamento_id = ?, conta_bancaria_id = ?,
+                rateios_json = ?,
                 proxima_geracao = ?
                 WHERE id = ?";
         
@@ -193,6 +195,7 @@ class ReceitaRecorrente extends Model
             $data['reajuste_mes'] ?? null,
             !empty($data['forma_pagamento_id']) ? $data['forma_pagamento_id'] : null,
             !empty($data['conta_bancaria_id']) ? $data['conta_bancaria_id'] : null,
+            !empty($data['rateios_json']) ? $data['rateios_json'] : null,
             $proximaGeracao,
             $id
         ]);

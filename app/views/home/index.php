@@ -495,6 +495,13 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                                 <span class="text-xs text-gray-600 dark:text-gray-400 block">Runway</span>
                                 <span class="font-bold text-gray-900 dark:text-gray-100"><?= $dados['runway'] > 24 ? '24+' : number_format($dados['runway'], 0) ?> meses</span>
                             </div>
+                            <a href="/ponto-equilibrio?empresa_id=<?= $empresaId ?>" class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors cursor-pointer" title="Ver Ponto de Equilíbrio">
+                                <span class="text-xs text-gray-600 dark:text-gray-400 block">Ponto Equilíbrio</span>
+                                <span class="font-bold text-purple-600 dark:text-purple-400">R$ <?= number_format($dados['ponto_equilibrio'] ?? 0, 0, ',', '.') ?></span>
+                                <?php if (!empty($dados['margem_contribuicao'])): ?>
+                                <span class="text-xs text-gray-500 dark:text-gray-400 block">MC <?= number_format($dados['margem_contribuicao'], 1) ?>%</span>
+                                <?php endif; ?>
+                            </a>
                             <a href="/contas-receber?status=vencido&empresa_id=<?= $empresaId ?>" class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer">
                                 <span class="text-xs text-gray-600 dark:text-gray-400 block">Contas Vencidas</span>
                                 <span class="font-bold text-red-600 dark:text-red-400"><?= $dados['contas_vencidas'] ?> (R$ <?= number_format($dados['valor_vencido'], 2, ',', '.') ?>)</span>

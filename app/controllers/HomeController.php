@@ -20,6 +20,7 @@ use App\Models\PedidoVinculado;
 use App\Models\ConexaoBancaria;
 use App\Models\TransacaoPendente;
 use App\Models\LogSistema;
+use includes\services\PontoEquilibrioService;
 
 class HomeController extends Controller
 {
@@ -312,15 +313,15 @@ class HomeController extends Controller
             $roi = $investimentoTotal > 0 ? 
                 (($lucroLiquido / $investimentoTotal) * 100) : 0;
             
-            // PONTO DE EQUILÍBRIO (Break-even point)
-            // Custos Fixos / (Margem de Contribuição)
-            $custosFixos = $despesasOperacionais;
-            $margemContribuicao = $receitasUltimos30Dias - $custosVariaveis;
-            $margemContribuicaoPercentual = $receitasUltimos30Dias > 0 ?
-                ($margemContribuicao / $receitasUltimos30Dias) * 100 : 0;
-            
-            $pontoEquilibrio = $margemContribuicaoPercentual > 0 ? 
-                $custosFixos / ($margemContribuicaoPercentual / 100) : 0;
+            // PONTO DE EQUILÍBRIO (Break-even point) - via PontoEquilibrioService
+            $peService = new PontoEquilibrioService();
+            $peResultado = $peService->calcularPorEmpresa($empresasIds, $dataInicio, $dataFim);
+            $peConsolidado = $peResultado['consolidado'] ?? [];
+            $custosFixos = (float)($peConsolidado['custos_fixos'] ?? 0);
+            $custosVariaveis = (float)($peConsolidado['custos_variaveis'] ?? 0);
+            $margemContribuicao = (float)($peConsolidado['margem_contribuicao'] ?? max(0, $receitasUltimos30Dias - $custosVariaveis));
+            $margemContribuicaoPercentual = (float)($peConsolidado['margem_contribuicao_pct'] ?? ($receitasUltimos30Dias > 0 ? ($margemContribuicao / $receitasUltimos30Dias) * 100 : 0));
+            $pontoEquilibrio = (float)($peConsolidado['ponto_equilibrio'] ?? ($margemContribuicaoPercentual > 0 ? $custosFixos / ($margemContribuicaoPercentual / 100) : 0));
             
             // BURN RATE (Taxa de queima de caixa) - mensal
             $burnRate = abs($despesasUltimos30Dias - $receitasUltimos30Dias);
@@ -407,7 +408,7 @@ class HomeController extends Controller
             $empresasParaMetricas = array_values(array_filter($todasEmpresas, function($e) use ($empresasIdsNorm) {
                 return in_array((int)($e['id'] ?? 0), $empresasIdsNorm, true);
             }));
-            $metricasPorEmpresa = $this->calcularMetricasPorEmpresa($empresasParaMetricas, $contaReceberModel, $contaPagarModel, $contaBancariaModel, $dataInicio, $dataFim);
+            $metricasPorEmpresa = $this->calcularMetricasPorEmpresa($empresasParaMetricas, $contaReceberModel, $contaPagarModel, $contaBancariaModel, $dataInicio, $dataFim, $peResultado['por_empresa'] ?? []);
             
             // ========================================
             // COMPARATIVO MÊS ATUAL VS MÊS ANTERIOR
@@ -967,6 +968,8 @@ class HomeController extends Controller
                     'roi' => $roi,
                     'ponto_equilibrio' => $pontoEquilibrio,
                     'margem_contribuicao' => $margemContribuicaoPercentual,
+                    'margem_seguranca_valor' => (float)($peConsolidado['margem_seguranca'] ?? 0),
+                    'margem_seguranca_pct' => (float)($peConsolidado['margem_seguranca_pct'] ?? 0),
                     'burn_rate' => $burnRate,
                     'runway' => $runway,
                     'ticket_medio' => $ticketMedio,
@@ -1254,7 +1257,7 @@ class HomeController extends Controller
      * Calcular métricas financeiras por empresa individual
      * @param array $empresas Array de registros de empresas (from findByIds)
      */
-    private function calcularMetricasPorEmpresa($empresas, $contaReceberModel, $contaPagarModel, $contaBancariaModel, $dataInicio, $dataFim)
+    private function calcularMetricasPorEmpresa($empresas, $contaReceberModel, $contaPagarModel, $contaBancariaModel, $dataInicio, $dataFim, array $pontoEquilibrioPorEmpresa = [])
     {
         $metricasPorEmpresa = [];
         
@@ -1342,6 +1345,7 @@ class HomeController extends Controller
             $burnRate = abs($despesas - $receitas);
             $runway = $burnRate > 0 ? ($saldoBancos / $burnRate) : 999;
             
+            $peEmpresa = $pontoEquilibrioPorEmpresa[$empresaId] ?? [];
             $metricasPorEmpresa[$empresaId] = [
                 'empresa' => [
                     'id' => $empresaId,
@@ -1361,7 +1365,11 @@ class HomeController extends Controller
                 'burn_rate' => $burnRate,
                 'runway' => $runway,
                 'contas_vencidas' => $totalContasVencidas,
-                'valor_vencido' => $valorContasVencidas
+                'valor_vencido' => $valorContasVencidas,
+                'ponto_equilibrio' => (float)($peEmpresa['ponto_equilibrio'] ?? 0),
+                'margem_contribuicao' => (float)($peEmpresa['margem_contribuicao_pct'] ?? 0),
+                'custos_fixos' => (float)($peEmpresa['custos_fixos'] ?? 0),
+                'custos_variaveis' => (float)($peEmpresa['custos_variaveis'] ?? 0)
             ];
         }
         
