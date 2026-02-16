@@ -271,15 +271,40 @@ $scoreDeg = ($saudeData['score'] / 100) * 360;
                 <p class="text-gray-500 dark:text-gray-400 text-sm">Nenhum devedor no momento</p>
             </div>
         <?php else: ?>
-        <div class="space-y-3">
-            <?php $pos = 1; foreach ($topDevedoresData as $nome => $info): ?>
-            <div class="flex items-center gap-3">
-                <span class="flex-shrink-0 w-7 h-7 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold flex items-center justify-center"><?= $pos ?></span>
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate"><?= htmlspecialchars($nome) ?></p>
-                    <p class="text-xs text-gray-500"><?= $info['qtd'] ?> conta<?= $info['qtd'] != 1 ? 's' : '' ?> vencida<?= $info['qtd'] != 1 ? 's' : '' ?></p>
+        <div class="space-y-3" x-data="{ aberto: null }">
+            <?php $pos = 1; foreach ($topDevedoresData as $nome => $info): 
+                $contas = $info['contas'] ?? [];
+                $temContas = !empty($contas);
+                $posKey = 'devedor_' . $pos;
+            ?>
+            <div class="border border-transparent rounded-lg hover:border-gray-200 dark:hover:border-gray-600 transition-colors">
+                <div class="flex items-center gap-3">
+                    <span class="flex-shrink-0 w-7 h-7 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold flex items-center justify-center"><?= $pos ?></span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate"><?= htmlspecialchars($nome) ?></p>
+                        <?php if ($temContas): ?>
+                        <button type="button" @click="aberto = aberto === '<?= $posKey ?>' ? null : '<?= $posKey ?>'" 
+                                class="text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer focus:outline-none">
+                            <?= $info['qtd'] ?> conta<?= $info['qtd'] != 1 ? 's' : '' ?> vencida<?= $info['qtd'] != 1 ? 's' : '' ?>
+                        </button>
+                        <?php else: ?>
+                        <p class="text-xs text-gray-500"><?= $info['qtd'] ?> conta<?= $info['qtd'] != 1 ? 's' : '' ?> vencida<?= $info['qtd'] != 1 ? 's' : '' ?></p>
+                        <?php endif; ?>
+                    </div>
+                    <span class="font-bold text-red-600 dark:text-red-400 text-sm">R$ <?= number_format($info['valor'], 2, ',', '.') ?></span>
                 </div>
-                <span class="font-bold text-red-600 dark:text-red-400 text-sm">R$ <?= number_format($info['valor'], 2, ',', '.') ?></span>
+                <?php if ($temContas): ?>
+                <div x-show="aberto === '<?= $posKey ?>'" x-transition x-cloak
+                     class="mt-2 ml-10 pl-3 border-l-2 border-red-200 dark:border-red-800 space-y-1.5">
+                    <?php foreach ($contas as $c): ?>
+                    <a href="/contas-receber/<?= (int)$c['id'] ?>" 
+                       class="block text-xs py-1 px-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors group">
+                        <span class="text-gray-700 dark:text-gray-300 group-hover:text-red-700 dark:group-hover:text-red-400 truncate block"><?= htmlspecialchars($c['descricao']) ?></span>
+                        <span class="text-gray-500 text-[11px]"><?= $c['data_vencimento'] ? date('d/m/Y', strtotime($c['data_vencimento'])) : '' ?> — R$ <?= number_format($c['valor'], 2, ',', '.') ?></span>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
             </div>
             <?php $pos++; endforeach; ?>
         </div>

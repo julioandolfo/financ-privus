@@ -478,13 +478,21 @@ class HomeController extends Controller
                     ($conta['status'] === 'pendente' && isset($conta['data_vencimento']) && $conta['data_vencimento'] < $hoje)) {
                     $clienteNome = $conta['cliente_nome'] ?? $conta['empresa_nome'] ?? 'Sem cliente';
                     if (!isset($devedoresPorCliente[$clienteNome])) {
-                        $devedoresPorCliente[$clienteNome] = ['valor' => 0, 'qtd' => 0];
+                        $devedoresPorCliente[$clienteNome] = ['valor' => 0, 'qtd' => 0, 'contas' => []];
                     }
-                    $devedoresPorCliente[$clienteNome]['valor'] += floatval($conta['valor_total'] ?? 0);
+                    $valorConta = floatval($conta['valor_total'] ?? 0);
+                    $devedoresPorCliente[$clienteNome]['valor'] += $valorConta;
                     $devedoresPorCliente[$clienteNome]['qtd']++;
+                    $devedoresPorCliente[$clienteNome]['contas'][] = [
+                        'id' => $conta['id'],
+                        'descricao' => $conta['descricao'] ?? 'Sem descrição',
+                        'valor' => $valorConta,
+                        'data_vencimento' => $conta['data_vencimento'] ?? null,
+                        'numero_documento' => $conta['numero_documento'] ?? ''
+                    ];
                 }
             }
-            arsort($devedoresPorCliente);
+            uasort($devedoresPorCliente, fn($a, $b) => $b['valor'] <=> $a['valor']);
             $topDevedores = array_slice($devedoresPorCliente, 0, 5, true);
             
             // ========================================
