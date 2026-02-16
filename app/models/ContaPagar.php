@@ -406,6 +406,16 @@ class ContaPagar extends Model
     }
     
     /**
+     * Atualiza apenas a categoria de uma conta
+     */
+    public function updateCategoria($id, $categoriaId)
+    {
+        $sql = "UPDATE {$this->table} SET categoria_id = ? WHERE id = ? AND deleted_at IS NULL";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$categoriaId, $id]);
+    }
+    
+    /**
      * Atualiza uma conta a pagar
      */
     public function update($id, $data)

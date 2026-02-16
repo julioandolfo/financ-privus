@@ -181,6 +181,60 @@ class ContaPagarController extends Controller
         }
     }
 
+    /**
+     * Atualizar categoria em massa
+     */
+    public function atualizarCategoriaMassa(Request $request, Response $response)
+    {
+        $ids = $request->post('ids', []);
+        $categoriaId = (int) $request->post('categoria_id');
+        
+        if (empty($ids) || !$categoriaId) {
+            $_SESSION['error'] = 'Selecione pelo menos uma conta e uma categoria.';
+            $response->redirect('/contas-pagar?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'categoria_id']))));
+            return;
+        }
+        
+        $contaPagarModel = new ContaPagar();
+        $categoriaModel = new CategoriaFinanceira();
+        $categoria = $categoriaModel->findById($categoriaId);
+        
+        if (!$categoria || ($categoria['tipo'] ?? '') !== 'despesa') {
+            $_SESSION['error'] = 'Categoria inválida ou não é do tipo despesa.';
+            $response->redirect('/contas-pagar?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'categoria_id']))));
+            return;
+        }
+        
+        $atualizadas = 0;
+        $ignoradas = 0;
+        $categoriaEmpresaId = (int)($categoria['empresa_id'] ?? 0);
+        
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if (!$id) continue;
+            $conta = $contaPagarModel->findById($id);
+            if (!$conta) {
+                $ignoradas++;
+                continue;
+            }
+            $contaEmpresaId = (int)($conta['empresa_id'] ?? 0);
+            if ($categoriaEmpresaId && $contaEmpresaId !== $categoriaEmpresaId) {
+                $ignoradas++;
+                continue;
+            }
+            if ($contaPagarModel->updateCategoria($id, $categoriaId)) {
+                $atualizadas++;
+            }
+        }
+        
+        $msg = "{$atualizadas} conta(s) atualizada(s).";
+        if ($ignoradas > 0) {
+            $msg .= " {$ignoradas} ignorada(s) (categoria de outra empresa).";
+        }
+        $_SESSION['success'] = $msg;
+        $response->redirect('/contas-pagar?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'categoria_id']))));
+    }
+
     public function create(Request $request, Response $response)
     {
         try {

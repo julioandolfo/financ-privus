@@ -328,12 +328,75 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
     </div>
 
     <!-- Tabela de Contas -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden" 
+         x-data="{ selecionados: [], showCategoriaModal: false }"
+         x-init="$watch('selecionados.length', v => { if (v === 0) showCategoriaModal = false })">
+        <!-- Barra de ações em massa -->
+        <div x-show="selecionados.length > 0" x-cloak x-transition
+             class="sticky top-0 z-10 bg-green-600 dark:bg-green-700 px-6 py-3 flex items-center justify-between gap-4">
+            <span class="text-white font-medium" x-text="selecionados.length + ' conta(s) selecionada(s)'"></span>
+            <div class="flex items-center gap-3">
+                <button type="button" @click="showCategoriaModal = true"
+                        class="px-4 py-2 bg-white text-green-600 rounded-lg font-medium hover:bg-green-50 transition-colors flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                    Alterar Categoria
+                </button>
+                <button type="button" @click="selecionados = []"
+                        class="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors">
+                    Desmarcar
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal alterar categoria em massa -->
+        <div x-show="showCategoriaModal" x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+             @keydown.escape.window="showCategoriaModal = false">
+            <div @click.self="showCategoriaModal = false" class="absolute inset-0"></div>
+            <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-md w-full">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Alterar categoria em massa</h3>
+                <form method="POST" action="/contas-receber/atualizar-categoria-massa">
+                    <?php 
+                    $urlParams = array_filter($filters ?? [], fn($v) => $v !== '' && $v !== null);
+                    foreach ($urlParams as $k => $v): 
+                        if (!is_array($v)):
+                    ?><input type="hidden" name="<?= htmlspecialchars($k) ?>" value="<?= htmlspecialchars($v) ?>"><?php 
+                        endif;
+                    endforeach; 
+                    ?>
+                    <template x-for="id in selecionados" :key="id">
+                        <input type="hidden" :name="'ids[]'" :value="id">
+                    </template>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nova categoria</label>
+                        <select name="categoria_id" required class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            <option value="">Selecione...</option>
+                            <?php foreach ($categorias as $cat): ?>
+                            <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['nome']) ?><?= !empty($cat['empresa_nome']) ? ' (' . htmlspecialchars($cat['empresa_nome']) . ')' : '' ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" @click="showCategoriaModal = false"
+                                class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">Aplicar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <?php if (!empty($contasReceber)): ?>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead class="bg-gradient-to-r from-green-600 to-emerald-600">
                         <tr>
+                            <th class="px-4 py-4 text-left">
+                                <input type="checkbox" class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500"
+                                       :checked="selecionados.length === <?= count($contasReceber) ?>"
+                                       @change="selecionados = $event.target.checked ? [<?= implode(',', array_map(fn($c) => $c['id'], $contasReceber)) ?>] : []">
+                            </th>
                             <?php if ($modoConsolidacao): ?>
                             <th class="px-6 py-4 text-left text-xs font-medium text-white uppercase tracking-wider">Empresa</th>
                             <?php endif; ?>
@@ -349,6 +412,11 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                         <?php foreach ($contasReceber as $conta): ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <input type="checkbox" class="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500"
+                                       :checked="selecionados.includes(<?= $conta['id'] ?>)"
+                                       @change="selecionados.includes(<?= $conta['id'] ?>) ? selecionados = selecionados.filter(i => i !== <?= $conta['id'] ?>) : selecionados.push(<?= $conta['id'] ?>)">
+                            </td>
                             <?php if ($modoConsolidacao): ?>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                                 <?= htmlspecialchars($conta['empresa_nome']) ?>

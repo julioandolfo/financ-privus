@@ -438,6 +438,16 @@ class ContaReceber extends Model
     }
     
     /**
+     * Atualiza apenas a categoria de uma conta
+     */
+    public function updateCategoria($id, $categoriaId)
+    {
+        $sql = "UPDATE {$this->table} SET categoria_id = ?, updated_at = NOW() WHERE id = ? AND deleted_at IS NULL";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$categoriaId, $id]);
+    }
+    
+    /**
      * Atualiza uma conta a receber
      */
     public function update($id, $data)
