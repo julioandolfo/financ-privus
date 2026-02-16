@@ -493,6 +493,15 @@ class ContaReceberController extends Controller
             
             // Carregar categorias e centros de custo da empresa da conta
             $categorias = $this->categoriaModel->findAll($empresaDaConta, 'receita');
+            
+            // Se não há categorias na empresa, inclui a categoria vinculada (pode ser de outra empresa ou inativa)
+            if (empty($categorias) && !empty($contaReceber['categoria_id'])) {
+                $categoriaVinculada = $this->categoriaModel->findById($contaReceber['categoria_id']);
+                if ($categoriaVinculada) {
+                    $categorias = [$categoriaVinculada];
+                }
+            }
+            
             $centrosCusto = $this->centroCustoModel->findAll($empresaDaConta);
             
             // DEBUG: log para diagnóstico
