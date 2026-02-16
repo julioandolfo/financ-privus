@@ -146,7 +146,8 @@ class DespesaRecorrenteController extends Controller
                 'centrosCusto' => $centrosCusto,
                 'formasPagamento' => $formasPagamento,
                 'contasBancarias' => $contasBancarias,
-                'old' => $old
+                'old' => $old,
+                'empresaId' => $empresaId
             ]);
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Erro ao carregar formulário: ' . $e->getMessage();
