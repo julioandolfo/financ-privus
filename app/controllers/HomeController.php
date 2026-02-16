@@ -1039,54 +1039,18 @@ class HomeController extends Controller
                 ],
                 // Alertas Inteligentes
                 'alertas' => $alertas,
-                // Payload para Insights com IA (usado no card do dashboard)
-                'insights_payload' => [
-                    'metricas_financeiras' => [
-                        'periodo' => $periodoLabel,
-                        'receitas' => $receitasUltimos30Dias,
-                        'despesas' => $despesasUltimos30Dias,
-                        'lucro_bruto' => $lucroBruto,
-                        'lucro_liquido' => $lucroLiquido,
-                        'margem_bruta' => $margemBruta,
-                        'margem_liquida' => $margemLiquida,
-                        'margem_ebitda' => $margemEbitda,
-                        'ebitda' => $ebitda,
-                        'ponto_equilibrio' => $pontoEquilibrio,
-                        'margem_contribuicao' => $margemContribuicaoPercentual,
-                        'burn_rate' => $burnRate,
-                        'runway' => $runway,
-                        'ticket_medio' => $ticketMedio,
-                        'inadimplencia_taxa' => $taxaInadimplencia,
-                        'inadimplencia_valor' => $valorContasVencidas,
-                        'contas_vencidas' => $totalContasVencidas
-                    ],
-                    'comparativo' => [
-                        'var_receitas' => $varReceitas,
-                        'var_despesas' => $varDespesas,
-                        'var_lucro' => $varLucro,
-                        'var_ebitda' => $varEbitda
-                    ],
-                    'saude_financeira' => ['score' => $saudeFinanceira, 'label' => $saudeLabel],
-                    'alertas' => $alertas,
-                    'top_devedores' => $topDevedores,
-                    'top_despesas' => $topDespesas,
-                    'top_receitas' => $topReceitas,
-                    'aging' => ['valores' => $aging, 'quantidade' => $agingQtd],
-                    'receitas_por_categoria' => $receitasPorCategoria,
-                    'despesas_por_categoria' => $despesasPorCategoria,
-                    'evolucao_mensal' => $evolucaoMensal,
-                    'fluxo_projetado' => $fluxoProjetado,
-                    'vencimentos_proximos' => $vencimentosProximos,
-                    'contas_pagar' => $contasPagarResumo,
-                    'contas_receber' => $contasReceberResumo,
-                    'contas_bancarias' => [
-                        'saldo_total' => $saldoTotal,
-                        'por_banco' => $contasPorBanco
-                    ],
-                    'metricas_por_empresa' => $metricasPorEmpresa
-                ],
-                'insights_ia_habilitado' => InsightsIAService::isHabilitado(),
-                'insights_ia_configurado' => \includes\services\OpenAIService::isConfigured()
+                // Payload e flags para Insights com IA (com fallback seguro em caso de erro)
+                'insights_payload' => $this->buildInsightsPayloadSafe(
+                    $periodoLabel, $receitasUltimos30Dias, $despesasUltimos30Dias, $lucroBruto, $lucroLiquido,
+                    $margemBruta, $margemLiquida, $margemEbitda, $ebitda, $pontoEquilibrio, $margemContribuicaoPercentual,
+                    $burnRate, $runway, $ticketMedio, $taxaInadimplencia, $valorContasVencidas, $totalContasVencidas,
+                    $varReceitas, $varDespesas, $varLucro, $varEbitda, $saudeFinanceira, $saudeLabel, $alertas,
+                    $topDevedores, $topDespesas, $topReceitas, $aging, $agingQtd, $receitasPorCategoria, $despesasPorCategoria,
+                    $evolucaoMensal, $fluxoProjetado, $vencimentosProximos, $contasPagarResumo, $contasReceberResumo,
+                    $saldoTotal, $contasPorBanco, $metricasPorEmpresa
+                ),
+                'insights_ia_habilitado' => $this->isInsightsHabilitado(),
+                'insights_ia_configurado' => $this->isInsightsConfigurado()
             ]);
             
         } catch (\Exception $e) {
@@ -1136,8 +1100,8 @@ class HomeController extends Controller
                 'saude_financeira' => ['score' => 0, 'label' => 'N/A', 'componentes' => []],
                 'alertas' => [],
                 'insights_payload' => [],
-                'insights_ia_habilitado' => InsightsIAService::isHabilitado(),
-                'insights_ia_configurado' => \includes\services\OpenAIService::isConfigured()
+                'insights_ia_habilitado' => false,
+                'insights_ia_configurado' => false
             ]);
         }
     }
@@ -1164,6 +1128,89 @@ class HomeController extends Controller
 
         $resultado = InsightsIAService::gerarInsights($payload, $forcar);
         return $response->json($resultado);
+    }
+
+    /**
+     * Verifica se Insights IA está habilitado (com fallback seguro)
+     */
+    private function isInsightsHabilitado(): bool
+    {
+        try {
+            return InsightsIAService::isHabilitado();
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Verifica se OpenAI está configurada (com fallback seguro)
+     */
+    private function isInsightsConfigurado(): bool
+    {
+        try {
+            return \includes\services\OpenAIService::isConfigured();
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Constrói payload para Insights IA de forma segura (JSON-serializável)
+     */
+    private function buildInsightsPayloadSafe(
+        $periodoLabel, $receitas, $despesas, $lucroBruto, $lucroLiquido,
+        $margemBruta, $margemLiquida, $margemEbitda, $ebitda, $pontoEquilibrio, $margemContribuicao,
+        $burnRate, $runway, $ticketMedio, $taxaInadimplencia, $valorContasVencidas, $totalContasVencidas,
+        $varReceitas, $varDespesas, $varLucro, $varEbitda, $saudeFinanceira, $saudeLabel, $alertas,
+        $topDevedores, $topDespesas, $topReceitas, $aging, $agingQtd,
+        $receitasPorCategoria, $despesasPorCategoria, $evolucaoMensal, $fluxoProjetado, $vencimentosProximos,
+        $contasPagarResumo, $contasReceberResumo, $saldoTotal, $contasPorBanco, $metricasPorEmpresa
+    ): array {
+        return [
+            'metricas_financeiras' => [
+                'periodo' => (string) $periodoLabel,
+                'receitas' => (float) $receitas,
+                'despesas' => (float) $despesas,
+                'lucro_bruto' => (float) $lucroBruto,
+                'lucro_liquido' => (float) $lucroLiquido,
+                'margem_bruta' => (float) $margemBruta,
+                'margem_liquida' => (float) $margemLiquida,
+                'margem_ebitda' => (float) $margemEbitda,
+                'ebitda' => (float) $ebitda,
+                'ponto_equilibrio' => (float) $pontoEquilibrio,
+                'margem_contribuicao' => (float) $margemContribuicao,
+                'burn_rate' => (float) $burnRate,
+                'runway' => (float) $runway,
+                'ticket_medio' => (float) $ticketMedio,
+                'inadimplencia_taxa' => (float) $taxaInadimplencia,
+                'inadimplencia_valor' => (float) $valorContasVencidas,
+                'contas_vencidas' => (int) $totalContasVencidas
+            ],
+            'comparativo' => [
+                'var_receitas' => (float) $varReceitas,
+                'var_despesas' => (float) $varDespesas,
+                'var_lucro' => (float) $varLucro,
+                'var_ebitda' => (float) $varEbitda
+            ],
+            'saude_financeira' => ['score' => (int) $saudeFinanceira, 'label' => (string) $saudeLabel],
+            'alertas' => is_array($alertas) ? $alertas : [],
+            'top_devedores' => is_array($topDevedores) ? $topDevedores : [],
+            'top_despesas' => is_array($topDespesas) ? array_slice($topDespesas, 0, 5) : [],
+            'top_receitas' => is_array($topReceitas) ? array_slice($topReceitas, 0, 5) : [],
+            'aging' => ['valores' => is_array($aging) ? $aging : [], 'quantidade' => is_array($agingQtd) ? $agingQtd : []],
+            'receitas_por_categoria' => is_array($receitasPorCategoria) ? $receitasPorCategoria : [],
+            'despesas_por_categoria' => is_array($despesasPorCategoria) ? $despesasPorCategoria : [],
+            'evolucao_mensal' => is_array($evolucaoMensal) ? $evolucaoMensal : [],
+            'fluxo_projetado' => is_array($fluxoProjetado) ? $fluxoProjetado : [],
+            'vencimentos_proximos' => is_array($vencimentosProximos) ? $vencimentosProximos : [],
+            'contas_pagar' => is_array($contasPagarResumo) ? $contasPagarResumo : ['valor_a_pagar' => 0],
+            'contas_receber' => is_array($contasReceberResumo) ? $contasReceberResumo : ['valor_a_receber' => 0],
+            'contas_bancarias' => [
+                'saldo_total' => (float) $saldoTotal,
+                'por_banco' => is_array($contasPorBanco) ? $contasPorBanco : []
+            ],
+            'metricas_por_empresa' => is_array($metricasPorEmpresa) ? $metricasPorEmpresa : []
+        ];
     }
 
     /**

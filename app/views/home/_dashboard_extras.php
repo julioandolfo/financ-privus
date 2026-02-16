@@ -44,7 +44,13 @@ $insightsConfigurado = $insights_ia_configurado ?? false;
      INSIGHTS DIÁRIOS COM IA
      ======================================== -->
 <?php if ($insightsConfigurado && $insightsHabilitado): ?>
-<script>window.__INSIGHTS_PAYLOAD = <?= json_encode($insightsPayload, JSON_UNESCAPED_UNICODE) ?>;</script>
+<?php
+    $insightsPayloadJson = @json_encode($insightsPayload, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+    if ($insightsPayloadJson === false) {
+        $insightsPayloadJson = '{}';
+    }
+?>
+<script>window.__INSIGHTS_PAYLOAD = <?= $insightsPayloadJson ?>;</script>
 <div class="mb-8" x-data="insightsIACard()">
     <div class="bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 dark:from-violet-900 dark:via-purple-900 dark:to-indigo-900 rounded-2xl shadow-2xl border border-violet-200 dark:border-violet-800 p-6">
         <div class="flex items-center justify-between mb-4">
