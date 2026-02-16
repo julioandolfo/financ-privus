@@ -119,6 +119,11 @@ class ContaReceber extends Model
             $params[] = $filters['status_woo'];
         }
         
+        // Excluir contas vinculadas a pedidos cancelados (para métricas/receita válida)
+        if (!empty($filters['excluir_pedido_cancelado'])) {
+            $sql .= " AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+        }
+        
         // Busca por descrição, número de documento, cliente, código do cliente ou ID do pedido
         if (isset($filters['search']) && $filters['search'] !== '') {
             $sql .= " AND (cr.descricao LIKE ? OR cr.numero_documento LIKE ? OR c.nome_razao_social LIKE ? OR c.codigo_cliente LIKE ? OR cr.pedido_id LIKE ?)";
@@ -543,19 +548,29 @@ class ContaReceber extends Model
     
     /**
      * Retorna contagem de contas por status
+     * @param array|null $empresasIds
+     * @param bool $excluirPedidoCancelado Excluir contas vinculadas a pedidos cancelados
      */
-    public function getCountPorStatus($empresasIds = null)
+    public function getCountPorStatus($empresasIds = null, $excluirPedidoCancelado = false)
     {
-        $sql = "SELECT status, COUNT(*) as total
-                FROM {$this->table}
-                WHERE deleted_at IS NULL";
+        if ($excluirPedidoCancelado) {
+            $sql = "SELECT cr.status, COUNT(*) as total
+                    FROM {$this->table} cr
+                    LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
+                    WHERE cr.deleted_at IS NULL
+                    AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+        } else {
+            $sql = "SELECT status, COUNT(*) as total
+                    FROM {$this->table}
+                    WHERE deleted_at IS NULL";
+        }
         
         if ($empresasIds) {
             $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
-            $sql .= " AND empresa_id IN ($placeholders)";
+            $sql .= ($excluirPedidoCancelado ? " AND cr.empresa_id" : " AND empresa_id") . " IN ($placeholders)";
         }
         
-        $sql .= " GROUP BY status";
+        $sql .= " GROUP BY " . ($excluirPedidoCancelado ? "cr.status" : "status");
         
         if ($empresasIds) {
             $stmt = $this->db->prepare($sql);
@@ -577,17 +592,28 @@ class ContaReceber extends Model
     
     /**
      * Retorna valor total a receber (pendente + parcial + vencido)
+     * @param array|null $empresasIds
+     * @param bool $excluirPedidoCancelado Excluir contas vinculadas a pedidos cancelados
      */
-    public function getValorTotalAReceber($empresasIds = null)
+    public function getValorTotalAReceber($empresasIds = null, $excluirPedidoCancelado = false)
     {
-        $sql = "SELECT SUM(valor_total - valor_recebido) as total
-                FROM {$this->table}
-                WHERE status IN ('pendente', 'parcial', 'vencido')
-                  AND deleted_at IS NULL";
+        if ($excluirPedidoCancelado) {
+            $sql = "SELECT SUM(cr.valor_total - cr.valor_recebido) as total
+                    FROM {$this->table} cr
+                    LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
+                    WHERE cr.status IN ('pendente', 'parcial', 'vencido')
+                      AND cr.deleted_at IS NULL
+                      AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+        } else {
+            $sql = "SELECT SUM(valor_total - valor_recebido) as total
+                    FROM {$this->table}
+                    WHERE status IN ('pendente', 'parcial', 'vencido')
+                      AND deleted_at IS NULL";
+        }
         
         if ($empresasIds) {
             $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
-            $sql .= " AND empresa_id IN ($placeholders)";
+            $sql .= ($excluirPedidoCancelado ? " AND cr.empresa_id" : " AND empresa_id") . " IN ($placeholders)";
             $stmt = $this->db->prepare($sql);
             $stmt->execute($empresasIds);
         } else {
@@ -601,18 +627,30 @@ class ContaReceber extends Model
     
     /**
      * Retorna valor total já recebido
+     * @param array|null $empresasIds
+     * @param bool $excluirPedidoCancelado Excluir contas vinculadas a pedidos cancelados
      */
-    public function getValorTotalRecebido($empresasIds = null)
+    public function getValorTotalRecebido($empresasIds = null, $excluirPedidoCancelado = false)
     {
-        $sql = "SELECT COALESCE(SUM(valor_recebido), 0) as total
-                FROM {$this->table}
-                WHERE status IN ('parcial', 'recebido')
-                  AND valor_recebido > 0
-                  AND deleted_at IS NULL";
+        if ($excluirPedidoCancelado) {
+            $sql = "SELECT COALESCE(SUM(cr.valor_recebido), 0) as total
+                    FROM {$this->table} cr
+                    LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
+                    WHERE cr.status IN ('parcial', 'recebido')
+                      AND cr.valor_recebido > 0
+                      AND cr.deleted_at IS NULL
+                      AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+        } else {
+            $sql = "SELECT COALESCE(SUM(valor_recebido), 0) as total
+                    FROM {$this->table}
+                    WHERE status IN ('parcial', 'recebido')
+                      AND valor_recebido > 0
+                      AND deleted_at IS NULL";
+        }
         
         if ($empresasIds) {
             $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
-            $sql .= " AND empresa_id IN ($placeholders)";
+            $sql .= ($excluirPedidoCancelado ? " AND cr.empresa_id" : " AND empresa_id") . " IN ($placeholders)";
             $stmt = $this->db->prepare($sql);
             $stmt->execute($empresasIds);
         } else {
@@ -626,19 +664,32 @@ class ContaReceber extends Model
     
     /**
      * Retorna contas vencidas (quantidade e valor)
+     * @param array|null $empresasIds
+     * @param bool $excluirPedidoCancelado Excluir contas vinculadas a pedidos cancelados
      */
-    public function getContasVencidas($empresasIds = null)
+    public function getContasVencidas($empresasIds = null, $excluirPedidoCancelado = false)
     {
-        $sql = "SELECT COUNT(*) as quantidade, 
-                       SUM(valor_total - valor_recebido) as valor_total
-                FROM {$this->table}
-                WHERE status IN ('pendente', 'parcial')
-                  AND data_vencimento < CURDATE()
-                  AND deleted_at IS NULL";
+        if ($excluirPedidoCancelado) {
+            $sql = "SELECT COUNT(*) as quantidade, 
+                           SUM(cr.valor_total - cr.valor_recebido) as valor_total
+                    FROM {$this->table} cr
+                    LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
+                    WHERE cr.status IN ('pendente', 'parcial')
+                      AND cr.data_vencimento < CURDATE()
+                      AND cr.deleted_at IS NULL
+                      AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+        } else {
+            $sql = "SELECT COUNT(*) as quantidade, 
+                           SUM(valor_total - valor_recebido) as valor_total
+                    FROM {$this->table}
+                    WHERE status IN ('pendente', 'parcial')
+                      AND data_vencimento < CURDATE()
+                      AND deleted_at IS NULL";
+        }
         
         if ($empresasIds) {
             $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
-            $sql .= " AND empresa_id IN ($placeholders)";
+            $sql .= ($excluirPedidoCancelado ? " AND cr.empresa_id" : " AND empresa_id") . " IN ($placeholders)";
             $stmt = $this->db->prepare($sql);
             $stmt->execute($empresasIds);
         } else {
@@ -655,21 +706,35 @@ class ContaReceber extends Model
     
     /**
      * Retorna contas a vencer nos próximos N dias
+     * @param int $dias
+     * @param array|null $empresasIds
+     * @param bool $excluirPedidoCancelado Excluir contas vinculadas a pedidos cancelados
      */
-    public function getContasAVencer($dias = 7, $empresasIds = null)
+    public function getContasAVencer($dias = 7, $empresasIds = null, $excluirPedidoCancelado = false)
     {
-        $sql = "SELECT COUNT(*) as quantidade, 
-                       SUM(valor_total - valor_recebido) as valor_total
+        if ($excluirPedidoCancelado) {
+            $sql = "SELECT COUNT(*) as quantidade, 
+                           SUM(cr.valor_total - cr.valor_recebido) as valor_total
+                    FROM {$this->table} cr
+                    LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
+                    WHERE cr.status IN ('pendente', 'parcial')
+                      AND cr.data_vencimento BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)
+                      AND cr.deleted_at IS NULL
+                      AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+        } else {
+            $sql = "SELECT COUNT(*) as quantidade, 
+                           SUM(valor_total - valor_recebido) as valor_total
                 FROM {$this->table}
                 WHERE status IN ('pendente', 'parcial')
                   AND data_vencimento BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)
                   AND deleted_at IS NULL";
+        }
         
         $params = [$dias];
         
         if ($empresasIds) {
             $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
-            $sql .= " AND empresa_id IN ($placeholders)";
+            $sql .= ($excluirPedidoCancelado ? " AND cr.empresa_id" : " AND empresa_id") . " IN ($placeholders)";
             $params = array_merge($params, $empresasIds);
         }
         
@@ -685,30 +750,41 @@ class ContaReceber extends Model
     
     /**
      * Retorna resumo completo para dashboard
+     * @param array|null $empresasIds
+     * @param bool $excluirPedidoCancelado Excluir contas vinculadas a pedidos cancelados
      */
-    public function getResumo($empresasIds = null)
+    public function getResumo($empresasIds = null, $excluirPedidoCancelado = false)
     {
         return [
-            'total' => $this->count($empresasIds),
-            'por_status' => $this->getCountPorStatus($empresasIds),
-            'valor_a_receber' => $this->getValorTotalAReceber($empresasIds),
-            'valor_recebido' => $this->getValorTotalRecebido($empresasIds),
-            'vencidas' => $this->getContasVencidas($empresasIds),
-            'a_vencer_7d' => $this->getContasAVencer(7, $empresasIds),
-            'a_vencer_30d' => $this->getContasAVencer(30, $empresasIds)
+            'total' => $this->count($empresasIds, $excluirPedidoCancelado),
+            'por_status' => $this->getCountPorStatus($empresasIds, $excluirPedidoCancelado),
+            'valor_a_receber' => $this->getValorTotalAReceber($empresasIds, $excluirPedidoCancelado),
+            'valor_recebido' => $this->getValorTotalRecebido($empresasIds, $excluirPedidoCancelado),
+            'vencidas' => $this->getContasVencidas($empresasIds, $excluirPedidoCancelado),
+            'a_vencer_7d' => $this->getContasAVencer(7, $empresasIds, $excluirPedidoCancelado),
+            'a_vencer_30d' => $this->getContasAVencer(30, $empresasIds, $excluirPedidoCancelado)
         ];
     }
     
     /**
      * Retorna total de registros
+     * @param array|null $empresasIds
+     * @param bool $excluirPedidoCancelado Excluir contas vinculadas a pedidos cancelados
      */
-    public function count($empresasIds = null)
+    public function count($empresasIds = null, $excluirPedidoCancelado = false)
     {
-        $sql = "SELECT COUNT(*) FROM {$this->table} WHERE deleted_at IS NULL";
+        if ($excluirPedidoCancelado) {
+            $sql = "SELECT COUNT(*) FROM {$this->table} cr
+                    LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
+                    WHERE cr.deleted_at IS NULL
+                    AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+        } else {
+            $sql = "SELECT COUNT(*) FROM {$this->table} WHERE deleted_at IS NULL";
+        }
         
         if ($empresasIds) {
             $placeholders = str_repeat('?,', count($empresasIds) - 1) . '?';
-            $sql .= " AND empresa_id IN ($placeholders)";
+            $sql .= ($excluirPedidoCancelado ? " AND cr.empresa_id" : " AND empresa_id") . " IN ($placeholders)";
             $stmt = $this->db->prepare($sql);
             $stmt->execute($empresasIds);
             return $stmt->fetchColumn();
@@ -811,11 +887,26 @@ class ContaReceber extends Model
     /**
      * Retorna soma por período
      */
-    public function getSomaByPeriodo($empresaId, $dataInicio, $dataFim, $status = null)
+    /**
+     * @param int|null $empresaId
+     * @param string $dataInicio
+     * @param string $dataFim
+     * @param string|null $status
+     * @param bool $excluirPedidoCancelado Excluir contas vinculadas a pedidos cancelados
+     */
+    public function getSomaByPeriodo($empresaId, $dataInicio, $dataFim, $status = null, $excluirPedidoCancelado = true)
     {
-        $sql = "SELECT COALESCE(SUM(valor_total), 0) as total
-                FROM {$this->table}
-                WHERE data_recebimento BETWEEN :data_inicio AND :data_fim";
+        if ($excluirPedidoCancelado) {
+            $sql = "SELECT COALESCE(SUM(cr.valor_total), 0) as total
+                    FROM {$this->table} cr
+                    LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
+                    WHERE cr.data_recebimento BETWEEN :data_inicio AND :data_fim
+                    AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+        } else {
+            $sql = "SELECT COALESCE(SUM(valor_total), 0) as total
+                    FROM {$this->table}
+                    WHERE data_recebimento BETWEEN :data_inicio AND :data_fim";
+        }
         
         $params = [
             'data_inicio' => $dataInicio,
@@ -823,12 +914,12 @@ class ContaReceber extends Model
         ];
         
         if ($empresaId) {
-            $sql .= " AND empresa_id = :empresa_id";
+            $sql .= " AND " . ($excluirPedidoCancelado ? "cr." : "") . "empresa_id = :empresa_id";
             $params['empresa_id'] = $empresaId;
         }
         
         if ($status) {
-            $sql .= " AND status = :status";
+            $sql .= " AND " . ($excluirPedidoCancelado ? "cr." : "") . "status = :status";
             $params['status'] = $status;
         }
         
@@ -842,14 +933,32 @@ class ContaReceber extends Model
     /**
      * Retorna soma por categoria
      */
-    public function getSomaByCategoria($empresaId, $dataInicio, $dataFim, $categoriaNome)
+    /**
+     * @param int|null $empresaId
+     * @param string $dataInicio
+     * @param string $dataFim
+     * @param string $categoriaNome
+     * @param bool $excluirPedidoCancelado Excluir contas vinculadas a pedidos cancelados
+     */
+    public function getSomaByCategoria($empresaId, $dataInicio, $dataFim, $categoriaNome, $excluirPedidoCancelado = true)
     {
-        $sql = "SELECT COALESCE(SUM(cr.valor_total), 0) as total
-                FROM {$this->table} cr
-                JOIN categorias_financeiras c ON cr.categoria_id = c.id
-                WHERE cr.data_recebimento BETWEEN :data_inicio AND :data_fim
-                AND c.nome LIKE :categoria_nome
-                AND cr.status = 'recebido'";
+        if ($excluirPedidoCancelado) {
+            $sql = "SELECT COALESCE(SUM(cr.valor_total), 0) as total
+                    FROM {$this->table} cr
+                    JOIN categorias_financeiras c ON cr.categoria_id = c.id
+                    LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
+                    WHERE cr.data_recebimento BETWEEN :data_inicio AND :data_fim
+                    AND c.nome LIKE :categoria_nome
+                    AND cr.status = 'recebido'
+                    AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+        } else {
+            $sql = "SELECT COALESCE(SUM(cr.valor_total), 0) as total
+                    FROM {$this->table} cr
+                    JOIN categorias_financeiras c ON cr.categoria_id = c.id
+                    WHERE cr.data_recebimento BETWEEN :data_inicio AND :data_fim
+                    AND c.nome LIKE :categoria_nome
+                    AND cr.status = 'recebido'";
+        }
         
         $params = [
             'data_inicio' => $dataInicio,
@@ -872,15 +981,33 @@ class ContaReceber extends Model
     /**
      * Retorna receitas agrupadas por categoria
      */
-    public function getReceitasPorCategoria($empresaId, $dataInicio, $dataFim)
+    /**
+     * @param int|null $empresaId
+     * @param string $dataInicio
+     * @param string $dataFim
+     * @param bool $excluirPedidoCancelado Excluir contas vinculadas a pedidos cancelados
+     */
+    public function getReceitasPorCategoria($empresaId, $dataInicio, $dataFim, $excluirPedidoCancelado = true)
     {
-        $sql = "SELECT 
-                    c.nome as categoria,
-                    COALESCE(SUM(cr.valor_total), 0) as total
-                FROM {$this->table} cr
-                JOIN categorias_financeiras c ON cr.categoria_id = c.id
-                WHERE cr.data_recebimento BETWEEN :data_inicio AND :data_fim
-                AND cr.status = 'recebido'";
+        if ($excluirPedidoCancelado) {
+            $sql = "SELECT 
+                        c.nome as categoria,
+                        COALESCE(SUM(cr.valor_total), 0) as total
+                    FROM {$this->table} cr
+                    JOIN categorias_financeiras c ON cr.categoria_id = c.id
+                    LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
+                    WHERE cr.data_recebimento BETWEEN :data_inicio AND :data_fim
+                    AND cr.status = 'recebido'
+                    AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+        } else {
+            $sql = "SELECT 
+                        c.nome as categoria,
+                        COALESCE(SUM(cr.valor_total), 0) as total
+                    FROM {$this->table} cr
+                    JOIN categorias_financeiras c ON cr.categoria_id = c.id
+                    WHERE cr.data_recebimento BETWEEN :data_inicio AND :data_fim
+                    AND cr.status = 'recebido'";
+        }
         
         $params = [
             'data_inicio' => $dataInicio,
@@ -902,13 +1029,28 @@ class ContaReceber extends Model
     /**
      * Retorna lista detalhada de contas vencidas
      */
-    public function getContasVencidasDetalhadas($empresaId = null)
+    /**
+     * @param int|null $empresaId
+     * @param bool $excluirPedidoCancelado Excluir contas vinculadas a pedidos cancelados
+     */
+    public function getContasVencidasDetalhadas($empresaId = null, $excluirPedidoCancelado = true)
     {
-        $sql = "SELECT cr.*, c.nome_razao_social as cliente_nome
-                FROM {$this->table} cr
-                LEFT JOIN clientes c ON cr.cliente_id = c.id
-                WHERE cr.status = 'pendente'
-                AND cr.data_vencimento < CURDATE()";
+        if ($excluirPedidoCancelado) {
+            $sql = "SELECT cr.*, c.nome_razao_social as cliente_nome
+                    FROM {$this->table} cr
+                    LEFT JOIN clientes c ON cr.cliente_id = c.id
+                    LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
+                    WHERE cr.status = 'pendente'
+                    AND cr.data_vencimento < CURDATE()
+                    AND cr.deleted_at IS NULL
+                    AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+        } else {
+            $sql = "SELECT cr.*, c.nome_razao_social as cliente_nome
+                    FROM {$this->table} cr
+                    LEFT JOIN clientes c ON cr.cliente_id = c.id
+                    WHERE cr.status = 'pendente'
+                    AND cr.data_vencimento < CURDATE()";
+        }
         
         $params = [];
         

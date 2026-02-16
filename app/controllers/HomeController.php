@@ -150,7 +150,7 @@ class HomeController extends Controller
             
             // Métricas de Contas a Pagar e Receber (com filtro de empresas)
             $contasPagarResumo = $contaPagarModel->getResumo($empresasIds);
-            $contasReceberResumo = $contaReceberModel->getResumo($empresasIds);
+            $contasReceberResumo = $contaReceberModel->getResumo($empresasIds, true);
             
             // Métricas de Movimentações de Caixa
             $movimentacoes = $this->buscarPorEmpresas($movimentacaoCaixaModel, 'findAll', $empresasIds);
@@ -199,8 +199,11 @@ class HomeController extends Controller
             $receitasUltimos30Dias = 0;
             $despesasUltimos30Dias = 0;
             
-            // Receitas (contas recebidas) - busca todas as empresas de uma vez
-            $contasRecebidas = $contaReceberModel->findAll(['empresas_ids' => $empresasIds]);
+            // Receitas (contas recebidas) - busca todas as empresas de uma vez (exclui pedidos cancelados)
+            $contasRecebidas = $contaReceberModel->findAll([
+                'empresas_ids' => $empresasIds,
+                'excluir_pedido_cancelado' => true
+            ]);
             
             // LOG: Contas a receber encontradas
             LogSistema::debug('Dashboard', 'contas_receber', 'Contas a receber encontradas', [
@@ -1251,8 +1254,11 @@ class HomeController extends Controller
             $empresaId = (int)($empresa['id'] ?? 0);
             if (!$empresaId) continue;
             
-            // Contas a Receber e Pagar da empresa específica
-            $contasReceber = $contaReceberModel->findAll(['empresa_id' => $empresaId]);
+            // Contas a Receber e Pagar da empresa específica (exclui pedidos cancelados)
+            $contasReceber = $contaReceberModel->findAll([
+                'empresa_id' => $empresaId,
+                'excluir_pedido_cancelado' => true
+            ]);
             $contasPagar = $contaPagarModel->findAll(['empresa_id' => $empresaId]);
             
             // Calcular receitas e despesas da empresa (últimos 30 dias)

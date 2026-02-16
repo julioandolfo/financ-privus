@@ -1046,14 +1046,16 @@ class ConexaoBancariaController extends Controller
             }
         }
         
-        // Verificar em contas_receber (créditos)
+        // Verificar em contas_receber (créditos) - não considerar contas de pedidos cancelados
         if ($tipo === 'credito') {
-            $sql = "SELECT COUNT(*) FROM contas_receber 
-                    WHERE empresa_id = :empresa_id 
-                    AND ABS(valor_total) BETWEEN :valor_min AND :valor_max
-                    AND (data_vencimento = :data OR data_recebimento = :data2)
-                    AND status != 'cancelado'
-                    AND deleted_at IS NULL";
+            $sql = "SELECT COUNT(*) FROM contas_receber cr
+                    LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
+                    WHERE cr.empresa_id = :empresa_id 
+                    AND ABS(cr.valor_total) BETWEEN :valor_min AND :valor_max
+                    AND (cr.data_vencimento = :data OR cr.data_recebimento = :data2)
+                    AND cr.status != 'cancelado'
+                    AND cr.deleted_at IS NULL
+                    AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
             $params = [
                 'empresa_id' => $empresaId,
                 'valor_min' => $valorMin,
@@ -1063,7 +1065,7 @@ class ConexaoBancariaController extends Controller
             ];
             
             if ($contaBancariaId) {
-                $sql .= " AND conta_bancaria_id = :conta_id";
+                $sql .= " AND cr.conta_bancaria_id = :conta_id";
                 $params['conta_id'] = $contaBancariaId;
             }
             

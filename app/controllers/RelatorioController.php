@@ -57,9 +57,9 @@ class RelatorioController extends Controller
         // Buscar empresas
         $empresas = $this->empresaModel->findAll();
         
-        // Calcular receitas
+        // Calcular receitas (exclui pedidos cancelados)
         $receitas = $this->contaReceberModel->getSomaByPeriodo(
-            $empresaSelecionada, $dataInicio, $dataFim, 'recebido'
+            $empresaSelecionada, $dataInicio, $dataFim, 'recebido', true
         );
         
         // Calcular despesas
@@ -70,9 +70,9 @@ class RelatorioController extends Controller
         // Lucro bruto e líquido
         $lucroBruto = $receitas - $despesas;
         
-        // Receitas por categoria
+        // Receitas por categoria (exclui pedidos cancelados)
         $receitasPorCategoria = $this->contaReceberModel->getReceitasPorCategoria(
-            $empresaSelecionada, $dataInicio, $dataFim
+            $empresaSelecionada, $dataInicio, $dataFim, true
         );
         
         // Despesas por categoria
@@ -156,8 +156,8 @@ class RelatorioController extends Controller
         // Buscar empresas
         $empresas = $this->empresaModel->findAll();
         
-        // Buscar contas vencidas
-        $contasVencidas = $this->contaReceberModel->getContasVencidasDetalhadas($empresaSelecionada);
+        // Buscar contas vencidas (exclui pedidos cancelados)
+        $contasVencidas = $this->contaReceberModel->getContasVencidasDetalhadas($empresaSelecionada, true);
         
         // Calcular inadimplência
         $valorTotal = 0;
@@ -187,10 +187,11 @@ class RelatorioController extends Controller
             return $b['total_vencido'] <=> $a['total_vencido'];
         });
         
-        // Calcular todas as contas a receber
+        // Calcular todas as contas a receber (exclui pedidos cancelados)
         $todasContas = $this->contaReceberModel->findAll([
             'empresa_id' => $empresaSelecionada,
-            'status' => 'pendente'
+            'status' => 'pendente',
+            'excluir_pedido_cancelado' => true
         ]);
         
         foreach ($todasContas as $conta) {
@@ -223,11 +224,13 @@ class RelatorioController extends Controller
                     SUM(CASE WHEN tipo = 'receita' THEN valor ELSE 0 END) as receitas,
                     SUM(CASE WHEN tipo = 'despesa' THEN valor ELSE 0 END) as despesas
                 FROM (
-                    SELECT data_recebimento as data, valor_total as valor, 'receita' as tipo
-                    FROM contas_receber
-                    WHERE status = 'recebido'
-                    AND data_recebimento BETWEEN :data_inicio AND :data_fim
-                    " . ($empresaId ? "AND empresa_id = :empresa_id1" : "") . "
+                    SELECT cr.data_recebimento as data, cr.valor_total as valor, 'receita' as tipo
+                    FROM contas_receber cr
+                    LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
+                    WHERE cr.status = 'recebido'
+                    AND cr.data_recebimento BETWEEN :data_inicio AND :data_fim
+                    AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')
+                    " . ($empresaId ? "AND cr.empresa_id = :empresa_id1" : "") . "
                     
                     UNION ALL
                     
