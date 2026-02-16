@@ -15,6 +15,9 @@ namespace Includes\Services;
  */
 class BradescoBankService extends AbstractBankService
 {
+    // TODO: Configurar URLs reais quando a integração Bradesco for contratada
+    private $integracaoAtiva = false;
+
     private $baseUrls = [
         'sandbox' => 'https://proxy.api.prebanco.com.br',
         'producao' => 'https://openapi.bradesco.com.br'
@@ -37,26 +40,21 @@ class BradescoBankService extends AbstractBankService
 
     public function autenticar(array $conexao): array
     {
-        $ambiente = $conexao['ambiente'] ?? 'sandbox';
-        $authUrl = $this->authUrls[$ambiente] ?? $this->authUrls['sandbox'];
-
-        $clientId = $conexao['client_id'] ?? '';
-        $clientSecret = $conexao['client_secret'] ?? '';
-        $hasCerts = (!empty($conexao['cert_pem']) && !empty($conexao['key_pem'])) || !empty($conexao['cert_pfx']);
-
-        if ($ambiente === 'sandbox') {
+        if (!$this->integracaoAtiva) {
             return [
-                'access_token' => 'sandbox-mock-token-bradesco-' . time(),
+                'access_token' => 'mock-token-bradesco-' . time(),
                 'expires_in' => 3600,
                 'token_type' => 'Bearer'
             ];
         }
 
+        $ambiente = $conexao['ambiente'] ?? 'sandbox';
+        $authUrl = $this->authUrls[$ambiente] ?? $this->authUrls['sandbox'];
+        $clientId = $conexao['client_id'] ?? '';
+        $clientSecret = $conexao['client_secret'] ?? '';
+
         if (empty($clientId) || empty($clientSecret)) {
             throw new \Exception('Client ID e Client Secret do Bradesco são obrigatórios.');
-        }
-        if (!$hasCerts) {
-            throw new \Exception('Certificado digital é obrigatório para o ambiente de produção do Bradesco. Faça upload do PFX ou preencha os campos PEM.');
         }
 
         $headers = [
@@ -83,10 +81,7 @@ class BradescoBankService extends AbstractBankService
 
     public function getSaldo(array $conexao): array
     {
-        $ambiente = $conexao['ambiente'] ?? 'sandbox';
-        $baseUrl = $this->baseUrls[$ambiente] ?? $this->baseUrls['sandbox'];
-
-        if ($ambiente === 'sandbox') {
+        if (!$this->integracaoAtiva) {
             return [
                 'saldo' => 31480.67,
                 'saldo_bloqueado' => 0,
@@ -100,6 +95,8 @@ class BradescoBankService extends AbstractBankService
             ];
         }
 
+        $ambiente = $conexao['ambiente'] ?? 'sandbox';
+        $baseUrl = $this->baseUrls[$ambiente] ?? $this->baseUrls['sandbox'];
         $token = $this->getAccessToken($conexao);
 
         $url = $baseUrl . '/conta-corrente/v1/saldo';
@@ -131,13 +128,12 @@ class BradescoBankService extends AbstractBankService
 
     public function getTransacoes(array $conexao, string $dataInicio, string $dataFim): array
     {
-        $ambiente = $conexao['ambiente'] ?? 'sandbox';
-        $baseUrl = $this->baseUrls[$ambiente] ?? $this->baseUrls['sandbox'];
-
-        if ($ambiente === 'sandbox') {
+        if (!$this->integracaoAtiva) {
             return $this->getMockTransacoes();
         }
 
+        $ambiente = $conexao['ambiente'] ?? 'sandbox';
+        $baseUrl = $this->baseUrls[$ambiente] ?? $this->baseUrls['sandbox'];
         $token = $this->getAccessToken($conexao);
 
         $url = $baseUrl . '/conta-corrente/v1/extrato';

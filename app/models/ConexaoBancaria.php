@@ -67,7 +67,7 @@ class ConexaoBancaria extends Model
                  auto_sync, frequencia_sync, tipo_sync, categoria_padrao_id, 
                  centro_custo_padrao_id, aprovacao_automatica,
                  ambiente, client_id, client_secret, cert_pem, key_pem, cert_password,
-                 cert_pfx, cooperativa,
+                 cert_pfx, cooperativa, x_api_key, username, password, posto, codigo_beneficiario,
                  ativo, ultima_sincronizacao,
                  conta_bancaria_id, saldo_banco, saldo_atualizado_em, status_conexao, banco_conta_id) 
                 VALUES 
@@ -76,7 +76,7 @@ class ConexaoBancaria extends Model
                  :auto_sync, :frequencia_sync, :tipo_sync, :categoria_padrao_id,
                  :centro_custo_padrao_id, :aprovacao_automatica,
                  :ambiente, :client_id, :client_secret, :cert_pem, :key_pem, :cert_password,
-                 :cert_pfx, :cooperativa,
+                 :cert_pfx, :cooperativa, :x_api_key, :username, :password, :posto, :codigo_beneficiario,
                  :ativo, :ultima_sincronizacao,
                  :conta_bancaria_id, :saldo_banco, :saldo_atualizado_em, :status_conexao, :banco_conta_id)";
         
@@ -107,6 +107,11 @@ class ConexaoBancaria extends Model
             'cert_password' => $data['cert_password'] ?? null,
             'cert_pfx' => $data['cert_pfx'] ?? null,
             'cooperativa' => $data['cooperativa'] ?? null,
+            'x_api_key' => $data['x_api_key'] ?? null,
+            'username' => $data['username'] ?? null,
+            'password' => $data['password'] ?? null,
+            'posto' => $data['posto'] ?? null,
+            'codigo_beneficiario' => $data['codigo_beneficiario'] ?? null,
             'ativo' => $data['ativo'] ?? 1,
             'ultima_sincronizacao' => $data['ultima_sincronizacao'] ?? null,
             'conta_bancaria_id' => $data['conta_bancaria_id'] ?? null,

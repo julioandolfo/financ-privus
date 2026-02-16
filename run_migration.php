@@ -13,6 +13,13 @@ $sqls = [
     "ALTER TABLE conexoes_bancarias ADD COLUMN IF NOT EXISTS soma_futuros_debito DECIMAL(15,2) DEFAULT 0.00 AFTER tx_futuras",
     "ALTER TABLE conexoes_bancarias ADD COLUMN IF NOT EXISTS soma_futuros_credito DECIMAL(15,2) DEFAULT 0.00 AFTER soma_futuros_debito",
     
+    // Campos Sicredi Cobrança
+    "ALTER TABLE conexoes_bancarias ADD COLUMN IF NOT EXISTS x_api_key VARCHAR(255) NULL COMMENT 'Token x-api-key do portal Sicredi' AFTER cooperativa",
+    "ALTER TABLE conexoes_bancarias ADD COLUMN IF NOT EXISTS username VARCHAR(50) NULL COMMENT 'Username auth Sicredi' AFTER x_api_key",
+    "ALTER TABLE conexoes_bancarias ADD COLUMN IF NOT EXISTS password VARCHAR(255) NULL COMMENT 'Código de acesso Sicredi' AFTER username",
+    "ALTER TABLE conexoes_bancarias ADD COLUMN IF NOT EXISTS posto VARCHAR(10) NULL COMMENT 'Código posto/agência Sicredi' AFTER password",
+    "ALTER TABLE conexoes_bancarias ADD COLUMN IF NOT EXISTS codigo_beneficiario VARCHAR(20) NULL COMMENT 'Código beneficiário Sicredi' AFTER posto",
+
     // Tabela de histórico de saldos
     "CREATE TABLE IF NOT EXISTS saldo_historico (
         id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

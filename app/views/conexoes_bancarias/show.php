@@ -2,6 +2,8 @@
 use App\Models\ConexaoBancaria;
 $bancoInfo = ConexaoBancaria::getBancoInfo($conexao['banco']);
 $statusConexao = $conexao['status_conexao'] ?? 'ativa';
+$bancosApenasCobranca = ['sicredi', 'bradesco', 'itau'];
+$somenteCobranca = in_array(strtolower($conexao['banco'] ?? ''), $bancosApenasCobranca);
 $statusColors = [
     'ativa' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
     'erro' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
@@ -51,7 +53,8 @@ $saldoDisponivelVal = $saldoContabilVal + $saldoLimiteVal;
             .catch(e => { if(!this.saldoCarregado) this.saldoCarregado = true; })
             .finally(() => this.carregando = false);
     },
-    init() { this.atualizarSaldo(); }
+    somenteCobranca: <?= $somenteCobranca ? 'true' : 'false' ?>,
+    init() { if (!this.somenteCobranca) this.atualizarSaldo(); }
 }" x-init="init()">
     <!-- Breadcrumb -->
     <div class="mb-6">
@@ -94,6 +97,61 @@ $saldoDisponivelVal = $saldoContabilVal + $saldoLimiteVal;
             </div>
         </div>
 
+        <?php if ($somenteCobranca): ?>
+        <!-- Aviso: Integração apenas de Cobrança -->
+        <div class="mt-8 p-6 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-900/10 rounded-2xl border border-amber-200 dark:border-amber-800/40">
+            <div class="flex items-start gap-4">
+                <div class="p-3 bg-amber-100 dark:bg-amber-900/40 rounded-xl flex-shrink-0">
+                    <svg class="w-8 h-8 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-bold text-amber-800 dark:text-amber-200">Integração de Cobrança</h3>
+                    <p class="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                        O <?= ucfirst(htmlspecialchars($conexao['banco'])) ?> <strong>não disponibiliza API para consulta de saldo ou extrato de conta corrente</strong>.
+                    </p>
+                    <p class="text-sm text-amber-600 dark:text-amber-400 mt-2">
+                        Esta conexão é utilizada exclusivamente para:
+                    </p>
+                    <ul class="mt-2 space-y-1 text-sm text-amber-700 dark:text-amber-300">
+                        <li class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            Emissão de boletos de cobrança
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            Consulta e segunda via de boletos
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            Alteração e baixa de boletos
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            Consulta de liquidações (movimentação)
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            <span class="text-gray-500 dark:text-gray-500">Consulta de saldo / extrato (não disponível)</span>
+                        </li>
+                    </ul>
+                    <div class="flex gap-3 mt-4">
+                        <a href="/boletos?conexao_bancaria_id=<?= $conexao['id'] ?>" 
+                           class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-xl transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            Ver Boletos
+                        </a>
+                        <a href="/boletos/criar?conexao_bancaria_id=<?= $conexao['id'] ?>" 
+                           class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            Emitir Boleto
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php else: ?>
         <!-- Saldo em Destaque -->
         <div class="mt-8 p-6 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-900/30 rounded-2xl">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -186,6 +244,7 @@ $saldoDisponivelVal = $saldoContabilVal + $saldoLimiteVal;
                 </div>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 
     <!-- Grid de Info -->
@@ -236,9 +295,53 @@ $saldoDisponivelVal = $saldoContabilVal + $saldoLimiteVal;
             </div>
         </div>
 
-        <!-- Configurações de Sincronização -->
+        <!-- Configurações -->
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Sincronização</h2>
+            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+                <?= $somenteCobranca ? 'Configuração da Cobrança' : 'Sincronização' ?>
+            </h2>
+
+            <?php if ($somenteCobranca): ?>
+            <dl class="space-y-3">
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-500 dark:text-gray-400">Tipo</dt>
+                    <dd class="text-sm font-medium text-amber-600 dark:text-amber-400">Apenas Cobrança (Boletos)</dd>
+                </div>
+                <?php if (!empty($conexao['cooperativa'])): ?>
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-500 dark:text-gray-400">Cooperativa</dt>
+                    <dd class="text-sm font-medium text-gray-900 dark:text-gray-100"><?= htmlspecialchars($conexao['cooperativa']) ?></dd>
+                </div>
+                <?php endif; ?>
+                <?php if (!empty($conexao['posto'])): ?>
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-500 dark:text-gray-400">Posto</dt>
+                    <dd class="text-sm font-medium text-gray-900 dark:text-gray-100"><?= htmlspecialchars($conexao['posto']) ?></dd>
+                </div>
+                <?php endif; ?>
+                <?php if (!empty($conexao['codigo_beneficiario'])): ?>
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-500 dark:text-gray-400">Cód. Beneficiário</dt>
+                    <dd class="text-sm font-medium text-gray-900 dark:text-gray-100"><?= htmlspecialchars($conexao['codigo_beneficiario']) ?></dd>
+                </div>
+                <?php endif; ?>
+                <?php if (!empty($conexao['x_api_key'])): ?>
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-500 dark:text-gray-400">x-api-key</dt>
+                    <dd class="text-sm font-medium text-gray-900 dark:text-gray-100"><?= mb_substr($conexao['x_api_key'], 0, 12) ?>...</dd>
+                </div>
+                <?php endif; ?>
+                <div class="flex justify-between">
+                    <dt class="text-sm text-gray-500 dark:text-gray-400">Funcionalidades</dt>
+                    <dd class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Boletos
+                        <?php if (\Includes\Services\CobrancaServiceFactory::getFuncionalidades($conexao['banco'] ?? '')['suporta_pix'] ?? false): ?>
+                            | Pix
+                        <?php endif; ?>
+                    </dd>
+                </div>
+            </dl>
+            <?php else: ?>
             <dl class="space-y-3">
                 <div class="flex justify-between">
                     <dt class="text-sm text-gray-500 dark:text-gray-400">Auto Sync</dt>
@@ -267,6 +370,7 @@ $saldoDisponivelVal = $saldoContabilVal + $saldoLimiteVal;
                     </dd>
                 </div>
             </dl>
+            <?php endif; ?>
 
             <?php if (!empty($conexao['ultimo_erro'])): ?>
             <div class="mt-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-700">
@@ -279,12 +383,35 @@ $saldoDisponivelVal = $saldoContabilVal + $saldoLimiteVal;
             <div class="mt-6">
                 <button @click="fetch('/conexoes-bancarias/<?= $conexao['id'] ?>/testar', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r => r.json()).then(d => alert(d.message || d.error)).catch(e => alert('Erro ao testar'))"
                         class="w-full px-4 py-2.5 bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 text-sm font-semibold rounded-xl transition">
-                    Testar Conexão
+                    <?= $somenteCobranca ? 'Testar Conexão (API de Cobrança)' : 'Testar Conexão' ?>
                 </button>
             </div>
         </div>
     </div>
 
+    <?php if ($somenteCobranca): ?>
+    <!-- Info: sem transações para bancos somente cobrança -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Transações / Extrato</h2>
+        </div>
+        <div class="p-12 text-center">
+            <svg class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+            </svg>
+            <p class="text-gray-500 dark:text-gray-400 font-medium">Funcionalidade não disponível</p>
+            <p class="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                O <?= ucfirst(htmlspecialchars($conexao['banco'])) ?> não oferece API de extrato/transações.<br>
+                Esta conexão é exclusiva para <strong>emissão e gestão de boletos</strong>.
+            </p>
+            <a href="/boletos?conexao_bancaria_id=<?= $conexao['id'] ?>" 
+               class="inline-flex items-center gap-2 mt-4 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Gerenciar Boletos
+            </a>
+        </div>
+    </div>
+    <?php else: ?>
     <!-- Últimas Transações Importadas -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
@@ -345,4 +472,5 @@ $saldoDisponivelVal = $saldoContabilVal + $saldoLimiteVal;
             </div>
         <?php endif; ?>
     </div>
+    <?php endif; /* if ($somenteCobranca) ... else */ ?>
 </div>

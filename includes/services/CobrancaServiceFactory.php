@@ -20,6 +20,13 @@ class CobrancaServiceFactory
             'suporta_negativacao' => true,
             'suporta_pix' => true,
         ],
+        'sicredi' => [
+            'class' => SicrediCobrancaService::class,
+            'nome' => 'Sicredi Cobrança',
+            'suporta_protesto' => false,
+            'suporta_negativacao' => false,
+            'suporta_pix' => true,
+        ],
     ];
 
     /**

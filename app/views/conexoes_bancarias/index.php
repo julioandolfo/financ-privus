@@ -214,7 +214,33 @@ use App\Models\ConexaoBancaria;
                 </div>
 
                 <!-- Saldo -->
+                <?php
+                    $bancosApenasCobranca = ['sicredi', 'bradesco', 'itau'];
+                    $somenteCobranca = in_array(strtolower($conexao['banco'] ?? ''), $bancosApenasCobranca);
+                ?>
                 <div class="px-6 py-4">
+                <?php if ($somenteCobranca): ?>
+                    <div class="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-xl">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div>
+                                <p class="text-sm font-semibold text-amber-700 dark:text-amber-300">Integração de Cobrança</p>
+                                <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                    <?= ucfirst($conexao['banco']) ?> não oferece API de conta corrente (saldo/extrato). 
+                                    Esta conexão é utilizada apenas para <strong>emissão e gestão de boletos</strong>.
+                                </p>
+                                <?php if (\Includes\Services\CobrancaServiceFactory::isSuportado($conexao['banco'] ?? '')): ?>
+                                <a href="/boletos?conexao_bancaria_id=<?= $conexao['id'] ?>" class="inline-flex items-center gap-1 mt-2 text-xs font-medium text-amber-700 dark:text-amber-300 hover:underline">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    Ver boletos
+                                </a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php else: ?>
                     <div class="flex justify-between items-center">
                         <div>
                             <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Saldo Atual</p>
@@ -236,7 +262,9 @@ use App\Models\ConexaoBancaria;
                             </svg>
                         </button>
                     </div>
+                <?php endif; ?>
 
+                    <?php if (!$somenteCobranca): ?>
                     <!-- Detalhes: Limite + Disponível + Agendamentos -->
                     <?php if ($saldoLimiteCard > 0): ?>
                     <div class="mt-3 grid grid-cols-2 gap-2">
@@ -272,6 +300,7 @@ use App\Models\ConexaoBancaria;
                             </div>
                         </div>
                     </template>
+                    <?php endif; /* if (!$somenteCobranca) - detalhes saldo */ ?>
 
                     <?php if (!empty($conexao['ultimo_erro'])): ?>
                         <div class="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
@@ -380,6 +409,7 @@ use App\Models\ConexaoBancaria;
                     </div>
                 </template>
 
+                <?php if (!$somenteCobranca): ?>
                 <!-- Opções de Sincronização -->
                 <template x-if="showOpcoes">
                     <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
@@ -437,9 +467,12 @@ use App\Models\ConexaoBancaria;
                     </div>
                 </template>
 
+                <?php endif; /* if (!$somenteCobranca) - Opções de Sincronização */ ?>
+
                 <!-- Ações -->
                 <div class="px-6 py-4 flex gap-2 flex-wrap"
                      x-data="{ importandoExtrato: false, resultadoExtrato: null, erroExtrato: null, showResultadoExtrato: false }">
+                    <?php if (!$somenteCobranca): ?>
                     <button @click="
                         sincronizando = true; 
                         showResultado = false; 
@@ -571,15 +604,22 @@ use App\Models\ConexaoBancaria;
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
                     </button>
-                    <a href="/conexoes-bancarias/<?= $conexao['id'] ?>" 
-                       class="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-xl transition">
-                        Detalhes
-                    </a>
                     <a href="/extrato-api?conexao_bancaria_id=<?= $conexao['id'] ?>" 
                        class="px-4 py-2.5 bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 text-sm font-semibold rounded-xl transition"
                        title="Ver extrato importado">
                         Ver Extrato
                     </a>
+                    <?php endif; /* if (!$somenteCobranca) - botões de sync/extrato */ ?>
+                    <a href="/conexoes-bancarias/<?= $conexao['id'] ?>" 
+                       class="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-xl transition">
+                        Detalhes
+                    </a>
+                    <?php if ($somenteCobranca && \Includes\Services\CobrancaServiceFactory::isSuportado($conexao['banco'] ?? '')): ?>
+                    <a href="/boletos/criar?conexao_bancaria_id=<?= $conexao['id'] ?>" 
+                       class="px-4 py-2.5 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-300 text-sm font-semibold rounded-xl transition">
+                        Emitir Boleto
+                    </a>
+                    <?php endif; ?>
                     <button @click="fetch('/conexoes-bancarias/<?= $conexao['id'] ?>/testar', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r => r.json()).then(d => alert(d.message || d.error)).catch(e => alert('Erro ao testar'))"
                             class="px-4 py-2.5 bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-sm font-semibold rounded-xl transition">
                         Testar

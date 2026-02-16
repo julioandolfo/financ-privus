@@ -16,6 +16,7 @@ use App\Models\ContaReceber;
 use App\Models\MovimentacaoCaixa;
 use App\Models\ExtratoBancarioApi;
 use Includes\Services\BankServiceFactory;
+use Includes\Services\CobrancaServiceFactory;
 use Includes\Services\ClassificadorIAService;
 
 class ConexaoBancariaController extends Controller
@@ -211,6 +212,11 @@ class ConexaoBancariaController extends Controller
             'cert_pfx' => $certPfxBase64,
             'cert_password' => $data['cert_password'] ?? null,
             'cooperativa' => $data['cooperativa'] ?? null,
+            'x_api_key' => $data['x_api_key'] ?? null,
+            'username' => $data['username'] ?? null,
+            'password' => $data['password'] ?? null,
+            'posto' => $data['posto'] ?? null,
+            'codigo_beneficiario' => $data['codigo_beneficiario'] ?? null,
             'tipo_sync' => $data['tipo_sync'] ?? 'ambos',
             'status_conexao' => 'ativa',
             // Campos de cobrança bancária (boletos)
@@ -358,6 +364,11 @@ class ConexaoBancariaController extends Controller
         if (!empty($data['cert_password'])) $updateData['cert_password'] = $data['cert_password'];
         if (!empty($data['ambiente'])) $updateData['ambiente'] = $data['ambiente'];
         if (!empty($data['cooperativa'])) $updateData['cooperativa'] = $data['cooperativa'];
+        if (!empty($data['x_api_key'])) $updateData['x_api_key'] = $data['x_api_key'];
+        if (!empty($data['username'])) $updateData['username'] = $data['username'];
+        if (!empty($data['password'])) $updateData['password'] = $data['password'];
+        if (!empty($data['posto'])) $updateData['posto'] = $data['posto'];
+        if (!empty($data['codigo_beneficiario'])) $updateData['codigo_beneficiario'] = $data['codigo_beneficiario'];
         
         // Campos de cobrança bancária (boletos)
         if (array_key_exists('numero_cliente_banco', $data)) {
@@ -411,6 +422,39 @@ class ConexaoBancariaController extends Controller
         }
         
         try {
+            $banco = strtolower(trim($conexao['banco'] ?? ''));
+
+            if ($this->isBancoApenasCobranca($banco) && CobrancaServiceFactory::isSuportado($banco)) {
+                $cobrancaService = CobrancaServiceFactory::create($banco);
+                try {
+                    $authResult = $cobrancaService->autenticar($conexao);
+                } catch (\Exception $authEx) {
+                    $this->conexaoModel->registrarErro($id, $authEx->getMessage());
+                    return $response->json([
+                        'success' => false,
+                        'message' => 'Falha ao autenticar na API de Cobrança: ' . $authEx->getMessage()
+                    ]);
+                }
+
+                if (!empty($authResult['access_token'])) {
+                    $this->conexaoModel->update($id, [
+                        'status_conexao' => 'ativa',
+                        'ultimo_erro' => null
+                    ]);
+                    return $response->json([
+                        'success' => true,
+                        'message' => 'Conexão com ' . $cobrancaService->getBancoLabel() . ' testada com sucesso! (API de Cobrança autenticada)'
+                    ]);
+                } else {
+                    $erro = $authResult['error'] ?? $authResult['error_description'] ?? 'Token não retornado';
+                    $this->conexaoModel->registrarErro($id, 'Falha na autenticação de cobrança: ' . $erro);
+                    return $response->json([
+                        'success' => false,
+                        'message' => 'Falha ao autenticar na API de Cobrança. Verifique x-api-key, username e password. Detalhe: ' . $erro
+                    ]);
+                }
+            }
+
             $service = BankServiceFactory::create($conexao['banco']);
             $ok = $service->testarConexao($conexao);
             
@@ -442,12 +486,27 @@ class ConexaoBancariaController extends Controller
     /**
      * Obter saldo em tempo real (AJAX)
      */
+    private static $bancosApenasCobranca = ['sicredi', 'bradesco', 'itau'];
+
+    private function isBancoApenasCobranca(string $banco): bool
+    {
+        return in_array(strtolower(trim($banco)), self::$bancosApenasCobranca);
+    }
+
     public function saldo(Request $request, Response $response, $id)
     {
         $conexao = $this->conexaoModel->getConexaoComCredenciais($id);
         
         if (!$conexao) {
             return $response->json(['error' => 'Conexão não encontrada'], 404);
+        }
+
+        if ($this->isBancoApenasCobranca($conexao['banco'] ?? '')) {
+            $banco = ucfirst($conexao['banco']);
+            return $response->json([
+                'error' => "{$banco} não possui API de saldo/extrato. Esta conexão é utilizada apenas para emissão e gestão de boletos.",
+                'apenas_cobranca' => true,
+            ], 400);
         }
         
         try {
@@ -604,6 +663,14 @@ class ConexaoBancariaController extends Controller
         
         if (!$conexao) {
             return $response->json(['error' => 'Conexão não encontrada'], 404);
+        }
+
+        if ($this->isBancoApenasCobranca($conexao['banco'] ?? '')) {
+            $banco = ucfirst($conexao['banco']);
+            return $response->json([
+                'error' => "{$banco} não possui API de extrato/transações. Esta conexão é utilizada apenas para emissão e gestão de boletos. Para consultar liquidações, utilize a tela de Boletos.",
+                'apenas_cobranca' => true,
+            ], 400);
         }
         
         $detalhes = [];
@@ -1045,6 +1112,14 @@ class ConexaoBancariaController extends Controller
         
         if (!$conexao) {
             return $response->json(['error' => 'Conexão não encontrada'], 404);
+        }
+
+        if ($this->isBancoApenasCobranca($conexao['banco'] ?? '')) {
+            $banco = ucfirst($conexao['banco']);
+            return $response->json([
+                'error' => "{$banco} não possui API de extrato. Esta conexão é utilizada apenas para emissão e gestão de boletos.",
+                'apenas_cobranca' => true,
+            ], 400);
         }
         
         $detalhes = [];

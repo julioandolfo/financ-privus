@@ -134,7 +134,8 @@ class BoletoController extends Controller
         try {
             $conexoes = $this->conexaoModel->findByEmpresa($empresaId);
             $conexoesCobranca = array_values(array_filter($conexoes, function($c) {
-                return CobrancaServiceFactory::isSuportado($c['banco'] ?? '') && !empty($c['numero_cliente_banco']);
+                return CobrancaServiceFactory::isSuportado($c['banco'] ?? '')
+                    && (!empty($c['numero_cliente_banco']) || !empty($c['codigo_beneficiario']));
             }));
         } catch (\Exception $e) {}
 
