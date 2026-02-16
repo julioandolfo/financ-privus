@@ -229,21 +229,72 @@ class SicoobBankService extends AbstractBankService
                 $transacoes = $extData['transacoes'] ?? [];
                 $totalTransacoes = count($transacoes);
                 
-                if ($totalTransacoes > 0) {
-                    // Encontrar a data mais recente entre todas as transações
-                    $ultimaTx = end($transacoes);
-                    $ultimaTransacaoData = $ultimaTx['data'] ?? null;
+                // Separar transações passadas/hoje vs futuras (agendamentos)
+                // O saldoAtual do extrato inclui TODAS as transações (inclusive futuras),
+                // então precisamos reverter as futuras para obter o saldo de HOJE
+                $hoje = date('Y-m-d');
+                $somaFuturosCredito = 0.0;
+                $somaFuturosDebito = 0.0;
+                $txFuturas = 0;
+                $txPassadas = 0;
+                $maxDataPassada = null;
+                $maxDataFutura = null;
+                
+                foreach ($transacoes as $tx) {
+                    $txData = $tx['data'] ?? null;
+                    $txValor = (float) ($tx['valor'] ?? 0);
+                    $txTipo = strtoupper($tx['tipo'] ?? '');
                     
-                    // Percorrer para achar a data máxima (transações futuras agendadas)
-                    $maxData = null;
-                    foreach ($transacoes as $tx) {
-                        $txData = $tx['data'] ?? null;
-                        if ($txData && ($maxData === null || $txData > $maxData)) {
-                            $maxData = $txData;
+                    // Extrair apenas a parte de data (YYYY-MM-DD) ignorando hora
+                    $txDataDia = $txData ? substr($txData, 0, 10) : null;
+                    
+                    if ($txDataDia && $txDataDia > $hoje) {
+                        // Transação futura (agendada)
+                        $txFuturas++;
+                        if ($txTipo === 'CREDITO') {
+                            $somaFuturosCredito += $txValor;
+                        } else {
+                            $somaFuturosDebito += $txValor;
+                        }
+                        if ($maxDataFutura === null || $txData > $maxDataFutura) {
+                            $maxDataFutura = $txData;
+                        }
+                    } else {
+                        $txPassadas++;
+                        if ($txDataDia && ($maxDataPassada === null || $txData > $maxDataPassada)) {
+                            $maxDataPassada = $txData;
                         }
                     }
-                    $ultimaTransacaoData = $maxData;
-                    $dataReferencia = $maxData;
+                }
+                
+                $ultimaTransacaoData = $maxDataPassada ?? $maxDataFutura;
+                $dataReferencia = $maxDataPassada ?? $hoje;
+                
+                // Calcular saldo real de HOJE: reverter transações futuras do saldoAtual
+                // saldoAtual = saldo_hoje + creditos_futuros - debitos_futuros
+                // saldo_hoje = saldoAtual - creditos_futuros + debitos_futuros
+                $saldoHoje = null;
+                if ($saldoExtrato !== null && $txFuturas > 0) {
+                    $saldoHoje = $saldoExtrato - $somaFuturosCredito + $somaFuturosDebito;
+                }
+                
+                LogSistema::info('SicoobAPI', 'getSaldo_separacao_futuras', 'Separação transações passadas vs futuras', [
+                    'numeroConta' => $numeroConta,
+                    'hoje' => $hoje,
+                    'total_transacoes' => $totalTransacoes,
+                    'tx_passadas_hoje' => $txPassadas,
+                    'tx_futuras_agendadas' => $txFuturas,
+                    'soma_futuros_credito' => $somaFuturosCredito,
+                    'soma_futuros_debito' => $somaFuturosDebito,
+                    'saldoAtual_extrato_com_futuras' => $saldoExtrato,
+                    'saldo_hoje_calculado' => $saldoHoje,
+                    'ultima_tx_passada' => $maxDataPassada,
+                    'ultima_tx_futura' => $maxDataFutura,
+                ]);
+                
+                // Se temos transações futuras, usar o saldo calculado de hoje
+                if ($saldoHoje !== null) {
+                    $saldoExtrato = $saldoHoje;
                 }
             }
             
@@ -330,7 +381,8 @@ class SicoobBankService extends AbstractBankService
             ]);
         }
         
-        // Usar saldo do extrato se disponível (mais preciso, inclui transações agendadas)
+        // saldoExtrato agora já foi ajustado (transações futuras revertidas)
+        // Representa o saldo de HOJE, sem agendamentos futuros
         $saldoFinal = ($saldoExtrato !== null) ? $saldoExtrato : $saldoEndpoint;
         
         // Usar limite do extrato se disponível (pode ser mais atualizado)
@@ -346,21 +398,29 @@ class SicoobBankService extends AbstractBankService
             $dataReferencia = date('Y-m-d');
         }
         
+        // Quantas transações futuras temos
+        $txFuturasCount = $txFuturas ?? 0;
+        $saldoProjetado = isset($saldoHoje) && $saldoHoje !== null
+            ? ($saldoFinal + ($somaFuturosCredito ?? 0) - ($somaFuturosDebito ?? 0))
+            : $saldoFinal;
+        $saldoProjetadoContabil = $saldoProjetado - $saldoLimite;
+        
         try {
             LogSistema::info('SicoobAPI', 'getSaldo_resultado', 'Saldo final escolhido', [
                 'numeroConta' => $numeroConta,
                 'identificacao' => $conexao['identificacao'] ?? '',
-                'saldo_endpoint' => $saldoEndpoint,
-                'saldo_extrato' => $saldoExtrato,
-                'saldo_api_bruto' => $saldoFinal,
+                'saldo_endpoint_api' => $saldoEndpoint,
+                'saldo_extrato_ajustado' => $saldoExtrato,
+                'saldo_disponivel_hoje' => $saldoFinal,
+                'saldo_contabil_hoje' => $saldoContabil,
+                'saldo_projetado' => $saldoProjetado,
+                'saldo_projetado_contabil' => $saldoProjetadoContabil,
                 'saldo_limite' => $saldoLimite,
-                'saldo_contabil_sem_limite' => $saldoContabil,
                 'saldo_bloqueado' => $saldoBloqueado,
                 'data_referencia' => $dataReferencia,
-                'fonte' => ($saldoExtrato !== null) ? 'EXTRATO (saldoAtual)' : 'ENDPOINT (/saldo)',
-                'total_transacoes_periodo' => $totalTransacoes,
-                'ultima_transacao' => $ultimaTransacaoData,
-                'nota' => 'Sicoob saldo_api = contabil + limite. Extrato consultado até +5 dias para incluir agendamentos.',
+                'tx_futuras_revertidas' => $txFuturasCount,
+                'fonte' => ($saldoExtrato !== null) ? 'EXTRATO (ajustado sem futuras)' : 'ENDPOINT (/saldo)',
+                'nota' => 'saldo_contabil_hoje = saldo real sem limite e sem transações futuras agendadas',
             ]);
         } catch (\Exception $e) {}
         
@@ -369,10 +429,13 @@ class SicoobBankService extends AbstractBankService
             'saldo_contabil' => $saldoContabil,
             'saldo_bloqueado' => $saldoBloqueado,
             'saldo_limite' => $saldoLimite,
+            'saldo_projetado' => $saldoProjetado,
+            'saldo_projetado_contabil' => $saldoProjetadoContabil,
             'atualizado_em' => date('Y-m-d\TH:i:s'),
             'data_referencia' => $dataReferencia,
             'ultima_transacao' => $ultimaTransacaoData,
             'total_transacoes' => $totalTransacoes,
+            'tx_futuras' => $txFuturasCount,
             'moeda' => 'BRL',
         ];
     }

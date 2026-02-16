@@ -536,6 +536,9 @@ class ConexaoBancariaController extends Controller
             
             $saldoContabil = $saldoData['saldo_contabil'] ?? $saldoData['saldo'];
             $saldoLimite = $saldoData['saldo_limite'] ?? 0;
+            $saldoProjetado = $saldoData['saldo_projetado'] ?? $saldoData['saldo'];
+            $saldoProjetadoContabil = $saldoData['saldo_projetado_contabil'] ?? $saldoContabil;
+            $txFuturas = $saldoData['tx_futuras'] ?? 0;
             
             // Formatar data de referência para exibição
             $dataRef = $saldoData['data_referencia'] ?? date('Y-m-d');
@@ -551,12 +554,15 @@ class ConexaoBancariaController extends Controller
                 'saldo_contabil_formatado' => 'R$ ' . number_format($saldoContabil, 2, ',', '.'),
                 'saldo_limite' => $saldoLimite,
                 'saldo_limite_formatado' => 'R$ ' . number_format($saldoLimite, 2, ',', '.'),
+                'saldo_projetado_contabil' => $saldoProjetadoContabil,
+                'saldo_projetado_contabil_formatado' => 'R$ ' . number_format($saldoProjetadoContabil, 2, ',', '.'),
                 'saldo_bloqueado' => $saldoData['saldo_bloqueado'] ?? 0,
                 'atualizado_em' => $saldoData['atualizado_em'],
                 'data_referencia' => $dataRef,
                 'data_referencia_formatada' => $dataRefFormatada,
                 'ultima_transacao' => $ultimaTxFormatada,
                 'total_transacoes' => $saldoData['total_transacoes'] ?? 0,
+                'tx_futuras' => $txFuturas,
                 'moeda' => $saldoData['moeda'] ?? 'BRL',
             ];
             

@@ -21,8 +21,10 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
     saldo: '<?= $conexao['saldo_banco'] !== null ? number_format($conexao['saldo_banco'], 2, ',', '.') : '---' ?>',
     saldoContabil: '<?= number_format($saldoContabilVal, 2, ',', '.') ?>',
     saldoLimite: '<?= number_format($saldoLimiteVal, 2, ',', '.') ?>',
+    saldoProjetado: '',
     dataReferencia: '',
     totalTransacoes: 0,
+    txFuturas: 0,
     carregando: false,
     sincronizando: false,
     atualizadoEm: '<?= !empty($conexao['saldo_atualizado_em']) ? 'Atualizado em ' . date('d/m/Y H:i', strtotime($conexao['saldo_atualizado_em'])) : '' ?>'
@@ -86,6 +88,21 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
                             <span class="text-xs font-medium text-blue-600 dark:text-blue-400" x-text="'R$ ' + saldo"></span>
                         </div>
                     </div>
+                    <!-- Saldo projetado (quando há transações futuras agendadas) -->
+                    <template x-if="txFuturas > 0 && saldoProjetado">
+                        <div class="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span class="text-xs font-medium text-amber-700 dark:text-amber-300" x-text="txFuturas + ' transações agendadas'"></span>
+                            </div>
+                            <div class="flex items-baseline gap-2 mt-1">
+                                <span class="text-xs text-amber-600 dark:text-amber-400">Saldo projetado (após agendamentos):</span>
+                                <span class="text-sm font-bold text-amber-700 dark:text-amber-300" x-text="'R$ ' + saldoProjetado"></span>
+                            </div>
+                        </div>
+                    </template>
                     <div class="flex flex-wrap items-center gap-3 mt-2">
                         <p class="text-xs text-gray-400 dark:text-gray-500" x-text="atualizadoEm">
                             <?= !empty($conexao['saldo_atualizado_em']) ? 'Atualizado em ' . date('d/m/Y H:i', strtotime($conexao['saldo_atualizado_em'])) : '' ?>
@@ -97,9 +114,6 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
                             <span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full" x-text="totalTransacoes + ' transações no período'"></span>
                         </template>
                     </div>
-                    <p class="text-xs text-amber-500 dark:text-amber-400 mt-1">
-                        * Saldo via API do banco — em feriados/fins de semana pode refletir o último dia útil processado
-                    </p>
                 </div>
                 <div class="flex gap-3">
                     <button @click="
@@ -111,8 +125,10 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
                                     saldo = d.saldo_formatado.replace('R$ ','');
                                     if(d.saldo_contabil_formatado) saldoContabil = d.saldo_contabil_formatado.replace('R$ ','');
                                     if(d.saldo_limite_formatado) saldoLimite = d.saldo_limite_formatado.replace('R$ ','');
+                                    if(d.saldo_projetado_contabil_formatado) saldoProjetado = d.saldo_projetado_contabil_formatado.replace('R$ ','');
                                     if(d.data_referencia_formatada) dataReferencia = d.data_referencia_formatada;
                                     if(d.total_transacoes !== undefined) totalTransacoes = d.total_transacoes;
+                                    if(d.tx_futuras !== undefined) txFuturas = d.tx_futuras;
                                     let agora = new Date();
                                     atualizadoEm = 'Atualizado em ' + agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
                                     if(d.conta_criada) { alert(d.message || 'Conta bancária criada e vinculada!'); location.reload(); }
