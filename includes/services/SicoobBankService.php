@@ -1,6 +1,8 @@
 <?php
 namespace Includes\Services;
 
+use App\Models\LogSistema;
+
 /**
  * Integração com a API do Sicoob (Conta Corrente V4).
  * 
