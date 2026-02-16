@@ -42,8 +42,9 @@ $insightsConfigurado = $insights_ia_configurado ?? false;
 
 <!-- ========================================
      INSIGHTS DIÁRIOS COM IA
+     Mostra o card quando: API configurada OU insights habilitado
      ======================================== -->
-<?php if ($insightsHabilitado): ?>
+<?php if ($insightsConfigurado || $insightsHabilitado): ?>
 <?php
     $insightsPayloadJson = @json_encode($insightsPayload, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
     if ($insightsPayloadJson === false) {
