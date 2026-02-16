@@ -135,6 +135,7 @@ class ConexaoBancaria extends Model
                    'access_token', 'refresh_token', 'token_expira_em', 'ultima_sincronizacao',
                    'ambiente', 'client_id', 'client_secret', 'cert_pem', 'key_pem', 'cert_password',
                    'cert_pfx', 'cooperativa',
+                   'x_api_key', 'username', 'password', 'posto', 'codigo_beneficiario',
                    'ativo', 'tipo_integracao',
                    'conta_bancaria_id', 'saldo_banco', 'saldo_atualizado_em', 'status_conexao', 'ultimo_erro', 'banco_conta_id'];
         

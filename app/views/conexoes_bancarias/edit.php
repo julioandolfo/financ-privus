@@ -112,6 +112,78 @@ $bancoInfo = ConexaoBancaria::getBancoInfo($conexao['banco']);
                 </div>
                 <?php endif; ?>
 
+                <?php
+                $bancosApenasCobranca = ['sicredi', 'bradesco', 'itau'];
+                $somenteCobranca = in_array(strtolower($conexao['banco'] ?? ''), $bancosApenasCobranca);
+                ?>
+
+                <?php if ($somenteCobranca): ?>
+                <!-- Campos específicos da API de Cobrança -->
+                <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/40 rounded-xl">
+                    <h4 class="text-sm font-bold text-amber-800 dark:text-amber-200 mb-3 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Credenciais da API de Cobrança (<?= ucfirst($conexao['banco']) ?>)
+                    </h4>
+                    <p class="text-xs text-amber-600 dark:text-amber-400 mb-4">
+                        Obrigatório para emissão de boletos. Obtenha no portal do desenvolvedor <?= ucfirst($conexao['banco']) ?>.
+                    </p>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">x-api-key (Token do Portal)</label>
+                            <input type="text" name="x_api_key" value="<?= htmlspecialchars($conexao['x_api_key'] ?? '') ?>"
+                                   placeholder="Token gerado no portal do desenvolvedor"
+                                   class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                            <p class="mt-1 text-xs text-gray-500">Obtido no portal developer.sicredi.com.br ao cadastrar sua aplicação</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Username (Autenticação)</label>
+                                <input type="text" name="username" value="<?= htmlspecialchars($conexao['username'] ?? '') ?>"
+                                       placeholder="Ex: beneficiário+cooperativa"
+                                       class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                <p class="mt-1 text-xs text-gray-500">Formato: código beneficiário + cooperativa</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Password (Código de Acesso)</label>
+                                <input type="password" name="password" value="<?= htmlspecialchars($conexao['password'] ?? '') ?>"
+                                       placeholder="Código gerado no Internet Banking"
+                                       class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                <p class="mt-1 text-xs text-gray-500">Gerado na área de Convênios do Internet Banking</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Cooperativa</label>
+                                <input type="text" name="cooperativa" value="<?= htmlspecialchars($conexao['cooperativa'] ?? '') ?>"
+                                       placeholder="Ex: 0100"
+                                       maxlength="4"
+                                       class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                <p class="mt-1 text-xs text-gray-500">4 dígitos</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Posto</label>
+                                <input type="text" name="posto" value="<?= htmlspecialchars($conexao['posto'] ?? '') ?>"
+                                       placeholder="Ex: 08"
+                                       maxlength="2"
+                                       class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                <p class="mt-1 text-xs text-gray-500">2 dígitos</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Código Beneficiário</label>
+                                <input type="text" name="codigo_beneficiario" value="<?= htmlspecialchars($conexao['codigo_beneficiario'] ?? '') ?>"
+                                       placeholder="Ex: 12345"
+                                       maxlength="5"
+                                       class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                <p class="mt-1 text-xs text-gray-500">5 dígitos do convênio de cobrança</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <!-- Certificado PFX -->
                 <div class="mb-4" x-data="{ fileName: '', hasFile: false, hasExisting: <?= !empty($conexao['cert_pfx']) ? 'true' : 'false' ?> }">
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Certificado Digital (.pfx)</label>
