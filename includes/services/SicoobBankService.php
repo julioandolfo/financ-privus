@@ -389,48 +389,51 @@ class SicoobBankService extends AbstractBankService
             $dataReferencia = date('Y-m-d');
         }
         
-        // Saldo exibido = saldo direto da API (sem alterar por agendamentos)
-        // A API do Sicoob é D-1 (último dia útil processado).
-        // Agendamentos futuros são mostrados como informação visual,
-        // mas NÃO são descontados do saldo — só quando o banco processar.
+        // IMPORTANTE: No Sicoob, o saldo da API JÁ É o saldo contábil (dinheiro próprio).
+        // O limite de crédito é ADITIVO — não está incluído no saldo.
+        // Prova: saldoAnterior pode ser negativo (ex: -4562.34 = usando o limite).
+        // Fórmula: disponível = saldo_api + limite
         $txFuturasCount = $txFuturas ?? 0;
-        $saldoExibido = $saldoAPI;
         
-        // Saldo da conta (dinheiro real, sem o limite de crédito)
-        $saldoContabil = round($saldoExibido - $saldoLimite, 2);
+        // Saldo contábil = saldo da API (já é o dinheiro próprio)
+        $saldoContabil = round($saldoAPI, 2);
         
-        // Saldo projetado (informativo): o que ficaria após os agendamentos
-        $saldoProjetado = $saldoAPI;
+        // Saldo disponível = contábil + limite (total que pode gastar)
+        $saldoDisponivel = round($saldoAPI + $saldoLimite, 2);
+        
+        // Saldo projetado (informativo): contábil após os agendamentos futuros
+        $saldoProjetadoContabil = $saldoContabil;
         if ($txFuturasCount > 0 && isset($saldoProjetadoCalc) && $saldoProjetadoCalc !== null) {
-            $saldoProjetado = round($saldoProjetadoCalc, 2);
+            // saldoProjetadoCalc = saldoAPI - debitos + creditos
+            $saldoProjetadoContabil = round($saldoProjetadoCalc, 2);
         }
-        $saldoProjetadoContabil = round($saldoProjetado - $saldoLimite, 2);
+        $saldoProjetadoDisponivel = round($saldoProjetadoContabil + $saldoLimite, 2);
         
         try {
             LogSistema::info('SicoobAPI', 'getSaldo_resultado', 'Saldo final', [
                 'numeroConta' => $numeroConta,
                 'identificacao' => $conexao['identificacao'] ?? '',
-                'saldo_api' => $saldoAPI,
                 'saldo_contabil' => $saldoContabil,
+                'saldo_disponivel' => $saldoDisponivel,
                 'saldo_limite' => $saldoLimite,
                 'saldo_bloqueado' => $saldoBloqueado,
-                'saldo_projetado' => $saldoProjetado,
                 'saldo_projetado_contabil' => $saldoProjetadoContabil,
+                'saldo_projetado_disponivel' => $saldoProjetadoDisponivel,
                 'tx_futuras' => $txFuturasCount,
                 'soma_futuros_debito' => $somaFuturosDebito ?? 0,
                 'soma_futuros_credito' => $somaFuturosCredito ?? 0,
                 'data_referencia' => $dataReferencia,
-                'nota' => 'API D-1. saldo_contabil = saldo_api - limite. Agendamentos NAO descontados do saldo.',
+                'nota' => 'API D-1. saldo_api JA E o contabil. disponivel = contabil + limite.',
             ]);
         } catch (\Exception $e) {}
         
         return [
-            'saldo' => $saldoExibido,
-            'saldo_contabil' => $saldoContabil,
+            'saldo' => $saldoContabil,
+            'saldo_disponivel' => $saldoDisponivel,
             'saldo_bloqueado' => $saldoBloqueado,
             'saldo_limite' => $saldoLimite,
-            'saldo_projetado' => $saldoProjetado,
-            'saldo_projetado_contabil' => $saldoProjetadoContabil,
+            'saldo_projetado' => $saldoProjetadoContabil,
+            'saldo_projetado_disponivel' => $saldoProjetadoDisponivel,
             'atualizado_em' => date('Y-m-d\TH:i:s'),
             'data_referencia' => $dataReferencia,
             'ultima_transacao' => $ultimaTransacaoData,

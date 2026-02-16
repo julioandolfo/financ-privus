@@ -11,15 +11,15 @@ $statusColors = [
 $statusColor = $statusColors[$statusConexao] ?? $statusColors['ativa'];
 $statusLabels = ['ativa' => 'Ativa', 'erro' => 'Erro', 'expirada' => 'Expirada', 'desconectada' => 'Desconectada'];
 
-// Calcular saldo contábil: saldo_banco já inclui o limite no Sicoob
-$saldoBanco = $conexao['saldo_banco'] ?? 0;
+// No Sicoob: saldo_banco JÁ É o contábil (dinheiro próprio). Disponível = contábil + limite.
+$saldoContabilVal = $conexao['saldo_banco'] ?? 0;
 $saldoLimiteVal = $conexao['saldo_limite'] ?? 0;
-$saldoContabilVal = $saldoBanco - $saldoLimiteVal;
+$saldoDisponivelVal = $saldoContabilVal + $saldoLimiteVal;
 ?>
 
 <div class="max-w-5xl mx-auto" x-data="{
-    saldo: '<?= $conexao['saldo_banco'] !== null ? number_format($conexao['saldo_banco'], 2, ',', '.') : '---' ?>',
-    saldoContabil: '<?= number_format($saldoContabilVal, 2, ',', '.') ?>',
+    saldo: '<?= number_format($saldoContabilVal, 2, ',', '.') ?>',
+    saldoDisponivel: '<?= number_format($saldoDisponivelVal, 2, ',', '.') ?>',
     saldoLimite: '<?= number_format($saldoLimiteVal, 2, ',', '.') ?>',
     dataReferencia: '',
     totalTransacoes: 0,
@@ -36,7 +36,7 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
             .then(d => {
                 if(d.saldo_formatado) {
                     this.saldo = d.saldo_formatado.replace('R$ ','');
-                    if(d.saldo_contabil_formatado) this.saldoContabil = d.saldo_contabil_formatado.replace('R$ ','');
+                    if(d.saldo_disponivel_formatado) this.saldoDisponivel = d.saldo_disponivel_formatado.replace('R$ ','');
                     if(d.saldo_limite_formatado) this.saldoLimite = d.saldo_limite_formatado.replace('R$ ','');
                     if(d.data_referencia_formatada) this.dataReferencia = d.data_referencia_formatada;
                     if(d.total_transacoes !== undefined) this.totalTransacoes = d.total_transacoes;
@@ -98,10 +98,10 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
         <div class="mt-8 p-6 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-900/30 rounded-2xl">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div class="flex-1">
-                    <!-- Saldo da conta (dinheiro real, sem limite) -->
+                    <!-- Saldo da conta (dinheiro próprio) -->
                     <p class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Saldo da Conta</p>
-                    <p class="text-4xl font-bold mt-2" :class="parseFloat(saldoContabil.replace('.','').replace(',','.')) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                        R$ <span x-text="saldoContabil"></span>
+                    <p class="text-4xl font-bold mt-2" :class="parseFloat(saldo.replace('.','').replace(',','.')) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                        R$ <span x-text="saldo"></span>
                     </p>
 
                     <!-- Detalhes -->
@@ -114,7 +114,7 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
                                 </div>
                                 <div class="p-2.5 bg-white/60 dark:bg-gray-800/40 rounded-lg">
                                     <p class="text-xs text-gray-400 dark:text-gray-500">Total disponível</p>
-                                    <p class="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-0.5" x-text="'R$ ' + saldo"></p>
+                                    <p class="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-0.5" x-text="'R$ ' + saldoDisponivel"></p>
                                     <p class="text-[10px] text-gray-400 dark:text-gray-500">saldo + limite</p>
                                 </div>
                             </div>

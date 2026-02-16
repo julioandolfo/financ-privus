@@ -160,9 +160,20 @@ use App\Models\ConexaoBancaria;
                 $statusColor = $statusColors[$statusConexao] ?? $statusColors['ativa'];
                 $statusLabels = ['ativa' => 'Ativa', 'erro' => 'Erro', 'expirada' => 'Expirada', 'desconectada' => 'Desconectada'];
             ?>
+            <?php
+                $saldoContabilCard = $conexao['saldo_banco'] ?? 0;
+                $saldoLimiteCard = $conexao['saldo_limite'] ?? 0;
+                $saldoDisponivelCard = $saldoContabilCard + $saldoLimiteCard;
+            ?>
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-shadow"
                  x-data="{ 
-                    saldo: '<?= $conexao['saldo_banco'] !== null ? number_format($conexao['saldo_banco'], 2, ',', '.') : '---' ?>', 
+                    saldo: '<?= number_format($saldoContabilCard, 2, ',', '.') ?>', 
+                    saldoDisponivel: '<?= number_format($saldoDisponivelCard, 2, ',', '.') ?>',
+                    saldoLimite: '<?= number_format($saldoLimiteCard, 2, ',', '.') ?>',
+                    txFuturas: 0,
+                    somaFuturosDebito: '',
+                    somaFuturosCredito: 0,
+                    saldoDetalhes: false,
                     carregando: false, 
                     sincronizando: false,
                     resultadoSync: null,
@@ -213,7 +224,7 @@ use App\Models\ConexaoBancaria;
                                 </p>
                             <?php endif; ?>
                         </div>
-                        <button @click="carregando = true; fetch('/api/conexoes-bancarias/<?= $conexao['id'] ?>/saldo').then(r => r.json()).then(d => { if(d.saldo_formatado) saldo = d.saldo_formatado.replace('R$ ',''); else if(d.error) alert(d.error); }).catch(e => alert('Erro ao atualizar saldo')).finally(() => carregando = false)"
+                        <button @click="carregando = true; fetch('/api/conexoes-bancarias/<?= $conexao['id'] ?>/saldo').then(r => r.json()).then(d => { if(d.saldo_formatado) { saldo = d.saldo_formatado.replace('R$ ',''); if(d.saldo_disponivel_formatado) saldoDisponivel = d.saldo_disponivel_formatado.replace('R$ ',''); if(d.saldo_limite_formatado) saldoLimite = d.saldo_limite_formatado.replace('R$ ',''); if(d.tx_futuras !== undefined) txFuturas = d.tx_futuras; if(d.soma_futuros_debito_formatado) somaFuturosDebito = d.soma_futuros_debito_formatado.replace('R$ ',''); if(d.soma_futuros_credito !== undefined) somaFuturosCredito = d.soma_futuros_credito; saldoDetalhes = true; } else if(d.error) alert(d.error); }).catch(e => alert('Erro ao atualizar saldo')).finally(() => carregando = false)"
                                 :disabled="carregando"
                                 class="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition"
                                 title="Atualizar saldo">
@@ -222,6 +233,42 @@ use App\Models\ConexaoBancaria;
                             </svg>
                         </button>
                     </div>
+
+                    <!-- Detalhes: Limite + Disponível + Agendamentos -->
+                    <?php if ($saldoLimiteCard > 0): ?>
+                    <div class="mt-3 grid grid-cols-2 gap-2">
+                        <div class="p-2 bg-gray-50 dark:bg-gray-900/30 rounded-lg">
+                            <p class="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Limite</p>
+                            <p class="text-xs font-semibold text-blue-600 dark:text-blue-400" x-text="'R$ ' + saldoLimite"></p>
+                        </div>
+                        <div class="p-2 bg-gray-50 dark:bg-gray-900/30 rounded-lg">
+                            <p class="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Disponível</p>
+                            <p class="text-xs font-semibold text-gray-700 dark:text-gray-200" x-text="'R$ ' + saldoDisponivel"></p>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- Agendamentos futuros -->
+                    <template x-if="saldoDetalhes && txFuturas > 0">
+                        <div class="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200/50 dark:border-amber-800/30 rounded-lg">
+                            <div class="flex items-center gap-1.5">
+                                <svg class="w-3 h-3 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <p class="text-[10px] font-medium text-amber-700 dark:text-amber-300" x-text="txFuturas + ' agendamento(s)'"></p>
+                            </div>
+                            <div class="mt-1 flex items-center justify-between">
+                                <p class="text-[10px] text-amber-600 dark:text-amber-400">
+                                    Débito: <span class="font-semibold" x-text="'R$ ' + somaFuturosDebito"></span>
+                                </p>
+                                <template x-if="somaFuturosCredito > 0">
+                                    <p class="text-[10px] text-green-600 dark:text-green-400">
+                                        Crédito: <span class="font-semibold" x-text="'R$ ' + Number(somaFuturosCredito).toLocaleString('pt-BR', {minimumFractionDigits: 2})"></span>
+                                    </p>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
 
                     <?php if (!empty($conexao['ultimo_erro'])): ?>
                         <div class="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">

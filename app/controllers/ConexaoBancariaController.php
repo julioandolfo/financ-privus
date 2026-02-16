@@ -464,10 +464,11 @@ class ConexaoBancariaController extends Controller
                 'empresa_id' => $conexao['empresa_id'] ?? 'VAZIO',
             ]);
             
-            // Atualizar saldo na conexão bancária (incluindo limite e contábil)
+            // Atualizar saldo na conexão bancária
+            // saldo_banco = contábil (dinheiro próprio, sem limite)
             $saldoLimite = $saldoData['saldo_limite'] ?? 0;
-            $saldoContabil = $saldoData['saldo_contabil'] ?? ($saldoData['saldo'] - $saldoLimite);
-            $this->conexaoModel->atualizarSaldo($id, $saldoData['saldo'], $saldoLimite, $saldoContabil);
+            $saldoContabil = $saldoData['saldo'] ?? 0;
+            $this->conexaoModel->atualizarSaldo($id, $saldoContabil, $saldoLimite, $saldoContabil);
             
             // Atualizar data de última sincronização também ao atualizar saldo
             $this->conexaoModel->atualizarUltimaSync($id);
@@ -534,8 +535,9 @@ class ConexaoBancariaController extends Controller
                 $contaBancariaModel->setSaldoReal($conexao['conta_bancaria_id'], $saldoData['saldo']);
             }
             
-            $saldoDisponivel = round($saldoData['saldo'] ?? 0, 2);
-            $saldoContabil = round($saldoData['saldo_contabil'] ?? $saldoDisponivel, 2);
+            // No Sicoob: saldo = contábil (dinheiro próprio), disponível = saldo + limite
+            $saldoContabil = round($saldoData['saldo'] ?? 0, 2);
+            $saldoDisponivel = round($saldoData['saldo_disponivel'] ?? $saldoContabil, 2);
             $saldoLimite = round($saldoData['saldo_limite'] ?? 0, 2);
             $txFuturas = $saldoData['tx_futuras'] ?? 0;
             $somaFuturosDebito = round($saldoData['soma_futuros_debito'] ?? 0, 2);
@@ -547,10 +549,10 @@ class ConexaoBancariaController extends Controller
             
             $responseData = [
                 'success' => true,
-                'saldo' => $saldoDisponivel,
-                'saldo_formatado' => 'R$ ' . number_format($saldoDisponivel, 2, ',', '.'),
-                'saldo_contabil' => $saldoContabil,
-                'saldo_contabil_formatado' => 'R$ ' . number_format($saldoContabil, 2, ',', '.'),
+                'saldo' => $saldoContabil,
+                'saldo_formatado' => 'R$ ' . number_format($saldoContabil, 2, ',', '.'),
+                'saldo_disponivel' => $saldoDisponivel,
+                'saldo_disponivel_formatado' => 'R$ ' . number_format($saldoDisponivel, 2, ',', '.'),
                 'saldo_limite' => $saldoLimite,
                 'saldo_limite_formatado' => 'R$ ' . number_format($saldoLimite, 2, ',', '.'),
                 'saldo_bloqueado' => $saldoData['saldo_bloqueado'] ?? 0,
