@@ -385,45 +385,50 @@ class SicoobBankService extends AbstractBankService
             $saldoLimite = $saldoLimiteExtrato;
         }
         
-        // Saldo contábil = saldo sem o limite de crédito (o que realmente tem na conta)
-        $saldoContabil = $saldoFinal - $saldoLimite;
-        
         if (!$dataReferencia) {
             $dataReferencia = date('Y-m-d');
         }
         
-        // Saldo projetado = o que vai ficar APÓS os agendamentos futuros executarem
+        // Calcular saldo projetado (após agendamentos futuros)
         $txFuturasCount = $txFuturas ?? 0;
         $saldoProjetado = $saldoFinal;
         if (isset($saldoProjetadoCalc) && $saldoProjetadoCalc !== null) {
-            $saldoProjetado = $saldoProjetadoCalc;
+            $saldoProjetado = round($saldoProjetadoCalc, 2);
         }
-        $saldoProjetadoContabil = $saldoProjetado - $saldoLimite;
+        
+        // O saldo que o app do banco mostra é o PROJETADO (com agendamentos).
+        // Quando há transações futuras, usamos o projetado como saldo principal.
+        $saldoReal = ($txFuturasCount > 0) ? $saldoProjetado : $saldoFinal;
+        
+        // Contábil = saldo sem limite (o que realmente tem na conta)
+        $saldoContabil = round($saldoReal - $saldoLimite, 2);
+        
+        // Saldo do último dia útil (antes dos agendamentos) para referência
+        $saldoUltimoDiaUtil = round($saldoFinal - $saldoLimite, 2);
         
         try {
             LogSistema::info('SicoobAPI', 'getSaldo_resultado', 'Saldo final', [
                 'numeroConta' => $numeroConta,
                 'identificacao' => $conexao['identificacao'] ?? '',
-                'saldo_disponivel' => $saldoFinal,
-                'saldo_contabil' => $saldoContabil,
+                'saldo_api_bruto' => $saldoFinal,
+                'saldo_api_contabil' => round($saldoFinal - $saldoLimite, 2),
+                'saldo_projetado' => $saldoProjetado,
+                'saldo_real_usado' => $saldoReal,
+                'saldo_contabil_final' => $saldoContabil,
                 'saldo_limite' => $saldoLimite,
                 'saldo_bloqueado' => $saldoBloqueado,
-                'saldo_projetado_apos_agendamentos' => $saldoProjetado,
-                'saldo_projetado_contabil' => $saldoProjetadoContabil,
                 'tx_futuras' => $txFuturasCount,
                 'data_referencia' => $dataReferencia,
-                'fonte' => ($saldoExtrato !== null) ? 'EXTRATO (saldoAtual)' : 'ENDPOINT (/saldo)',
-                'nota' => 'saldoAtual = último dia útil processado (inclui limite). contabil = saldoAtual - limite. Pode ter atraso vs app (fds/feriado).',
+                'fonte' => ($txFuturasCount > 0) ? 'PROJETADO (saldoAtual - agendamentos)' : 'EXTRATO (saldoAtual)',
             ]);
         } catch (\Exception $e) {}
         
         return [
-            'saldo' => $saldoFinal,
+            'saldo' => $saldoReal,
             'saldo_contabil' => $saldoContabil,
             'saldo_bloqueado' => $saldoBloqueado,
             'saldo_limite' => $saldoLimite,
-            'saldo_projetado' => $saldoProjetado,
-            'saldo_projetado_contabil' => $saldoProjetadoContabil,
+            'saldo_ultimo_dia_util' => $saldoUltimoDiaUtil,
             'atualizado_em' => date('Y-m-d\TH:i:s'),
             'data_referencia' => $dataReferencia,
             'ultima_transacao' => $ultimaTransacaoData,

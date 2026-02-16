@@ -21,7 +21,7 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
     saldo: '<?= $conexao['saldo_banco'] !== null ? number_format($conexao['saldo_banco'], 2, ',', '.') : '---' ?>',
     saldoContabil: '<?= number_format($saldoContabilVal, 2, ',', '.') ?>',
     saldoLimite: '<?= number_format($saldoLimiteVal, 2, ',', '.') ?>',
-    saldoProjetado: '',
+    saldoUltimoDiaUtil: '',
     dataReferencia: '',
     totalTransacoes: 0,
     txFuturas: 0,
@@ -74,45 +74,44 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
         <div class="mt-8 p-6 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-900/30 rounded-2xl">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div class="flex-1">
+                    <!-- Saldo principal -->
                     <p class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Saldo Atual</p>
                     <p class="text-4xl font-bold mt-2" :class="parseFloat(saldoContabil.replace('.','').replace(',','.')) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
                         R$ <span x-text="saldoContabil"></span>
                     </p>
-                    <div class="flex flex-wrap gap-4 mt-3">
-                        <div>
-                            <span class="text-xs text-gray-400 dark:text-gray-500">Limite:</span>
-                            <span class="text-xs font-medium text-gray-600 dark:text-gray-300" x-text="'R$ ' + saldoLimite"></span>
+
+                    <!-- Detalhes em grid -->
+                    <div class="grid grid-cols-2 gap-3 mt-4">
+                        <div class="p-2.5 bg-white/60 dark:bg-gray-800/40 rounded-lg">
+                            <p class="text-xs text-gray-400 dark:text-gray-500">Limite de crédito</p>
+                            <p class="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-0.5" x-text="'R$ ' + saldoLimite"></p>
                         </div>
-                        <div>
-                            <span class="text-xs text-gray-400 dark:text-gray-500">Disponível (saldo + limite):</span>
-                            <span class="text-xs font-medium text-blue-600 dark:text-blue-400" x-text="'R$ ' + saldo"></span>
+                        <div class="p-2.5 bg-white/60 dark:bg-gray-800/40 rounded-lg">
+                            <p class="text-xs text-gray-400 dark:text-gray-500">Disponível (saldo + limite)</p>
+                            <p class="text-sm font-semibold text-blue-600 dark:text-blue-400 mt-0.5" x-text="'R$ ' + saldo"></p>
                         </div>
                     </div>
-                    <!-- Saldo projetado (quando há transações futuras agendadas) -->
-                    <template x-if="txFuturas > 0 && saldoProjetado">
-                        <div class="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                            <div class="flex items-center gap-2">
-                                <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                <span class="text-xs font-medium text-amber-700 dark:text-amber-300" x-text="txFuturas + ' transação(ões) agendada(s) para os próximos dias'"></span>
-                            </div>
-                            <div class="flex items-baseline gap-2 mt-1">
-                                <span class="text-xs text-amber-600 dark:text-amber-400">Após agendamentos:</span>
-                                <span class="text-sm font-bold" :class="parseFloat(saldoProjetado.replace('.','').replace(',','.')) >= 0 ? 'text-amber-700 dark:text-amber-300' : 'text-red-600 dark:text-red-400'" x-text="'R$ ' + saldoProjetado"></span>
-                                <span class="text-xs text-gray-400">(o que o app do banco pode estar mostrando)</span>
-                            </div>
+
+                    <!-- Info: transações agendadas (quando há) -->
+                    <template x-if="txFuturas > 0">
+                        <div class="mt-3 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span x-text="'Inclui ' + txFuturas + ' agendamento(s) para o próximo dia útil'"></span>
                         </div>
                     </template>
-                    <div class="flex flex-wrap items-center gap-3 mt-2">
+
+                    <!-- Metadados -->
+                    <div class="flex flex-wrap items-center gap-2 mt-3">
                         <p class="text-xs text-gray-400 dark:text-gray-500" x-text="atualizadoEm">
                             <?= !empty($conexao['saldo_atualizado_em']) ? 'Atualizado em ' . date('d/m/Y H:i', strtotime($conexao['saldo_atualizado_em'])) : '' ?>
                         </p>
                         <template x-if="dataReferencia">
-                            <span class="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full" x-text="'Ref: ' + dataReferencia"></span>
+                            <span class="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full" x-text="'Ref. ' + dataReferencia"></span>
                         </template>
                         <template x-if="totalTransacoes > 0">
-                            <span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full" x-text="totalTransacoes + ' transações no período'"></span>
+                            <span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full" x-text="totalTransacoes + ' transações no mês'"></span>
                         </template>
                     </div>
                 </div>
@@ -126,7 +125,7 @@ $saldoContabilVal = $saldoBanco - $saldoLimiteVal;
                                     saldo = d.saldo_formatado.replace('R$ ','');
                                     if(d.saldo_contabil_formatado) saldoContabil = d.saldo_contabil_formatado.replace('R$ ','');
                                     if(d.saldo_limite_formatado) saldoLimite = d.saldo_limite_formatado.replace('R$ ','');
-                                    if(d.saldo_projetado_contabil_formatado) saldoProjetado = d.saldo_projetado_contabil_formatado.replace('R$ ','');
+                                    if(d.saldo_ultimo_dia_util_formatado) saldoUltimoDiaUtil = d.saldo_ultimo_dia_util_formatado.replace('R$ ','');
                                     if(d.data_referencia_formatada) dataReferencia = d.data_referencia_formatada;
                                     if(d.total_transacoes !== undefined) totalTransacoes = d.total_transacoes;
                                     if(d.tx_futuras !== undefined) txFuturas = d.tx_futuras;

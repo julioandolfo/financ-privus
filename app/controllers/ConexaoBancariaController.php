@@ -534,11 +534,11 @@ class ConexaoBancariaController extends Controller
                 $contaBancariaModel->setSaldoReal($conexao['conta_bancaria_id'], $saldoData['saldo']);
             }
             
-            $saldoContabil = $saldoData['saldo_contabil'] ?? $saldoData['saldo'];
-            $saldoLimite = $saldoData['saldo_limite'] ?? 0;
-            $saldoProjetado = $saldoData['saldo_projetado'] ?? $saldoData['saldo'];
-            $saldoProjetadoContabil = $saldoData['saldo_projetado_contabil'] ?? $saldoContabil;
+            $saldoContabil = round($saldoData['saldo_contabil'] ?? $saldoData['saldo'], 2);
+            $saldoLimite = round($saldoData['saldo_limite'] ?? 0, 2);
+            $saldoDisponivel = round($saldoData['saldo'] ?? 0, 2);
             $txFuturas = $saldoData['tx_futuras'] ?? 0;
+            $saldoUltimoDiaUtil = round($saldoData['saldo_ultimo_dia_util'] ?? $saldoContabil, 2);
             
             // Formatar data de referência para exibição
             $dataRef = $saldoData['data_referencia'] ?? date('Y-m-d');
@@ -548,14 +548,14 @@ class ConexaoBancariaController extends Controller
             
             $responseData = [
                 'success' => true,
-                'saldo' => $saldoData['saldo'],
-                'saldo_formatado' => 'R$ ' . number_format($saldoData['saldo'], 2, ',', '.'),
+                'saldo' => $saldoDisponivel,
+                'saldo_formatado' => 'R$ ' . number_format($saldoDisponivel, 2, ',', '.'),
                 'saldo_contabil' => $saldoContabil,
                 'saldo_contabil_formatado' => 'R$ ' . number_format($saldoContabil, 2, ',', '.'),
                 'saldo_limite' => $saldoLimite,
                 'saldo_limite_formatado' => 'R$ ' . number_format($saldoLimite, 2, ',', '.'),
-                'saldo_projetado_contabil' => $saldoProjetadoContabil,
-                'saldo_projetado_contabil_formatado' => 'R$ ' . number_format($saldoProjetadoContabil, 2, ',', '.'),
+                'saldo_ultimo_dia_util' => $saldoUltimoDiaUtil,
+                'saldo_ultimo_dia_util_formatado' => 'R$ ' . number_format($saldoUltimoDiaUtil, 2, ',', '.'),
                 'saldo_bloqueado' => $saldoData['saldo_bloqueado'] ?? 0,
                 'atualizado_em' => $saldoData['atualizado_em'],
                 'data_referencia' => $dataRef,
