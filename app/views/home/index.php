@@ -12,6 +12,7 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
 <div class="animate-fade-in" x-data="{ 
     showFiltro: false, 
     showRunwayModal: false, 
+    showSaudeFinanceiraModal: false,
     showMargemBrutaModal: false,
     showRoiModal: false,
     showTicketMedioModal: false,

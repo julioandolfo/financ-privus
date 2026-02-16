@@ -182,11 +182,23 @@ $insightsConfigurado = $insights_ia_configurado ?? false;
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
     <!-- Indicador de Saúde Financeira -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6">
-        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-            <svg class="w-5 h-5 mr-2 text-<?= $scoreColor ?>-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-            </svg>
-            Saúde Financeira
+        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center justify-between">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2 text-<?= $scoreColor ?>-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+                Saúde Financeira
+                <button 
+                    @click="showSaudeFinanceiraModal = true"
+                    type="button"
+                    class="ml-2 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors flex items-center justify-center cursor-pointer"
+                    title="Como é calculada a Saúde Financeira?"
+                >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </button>
+            </div>
         </h3>
         <div class="flex items-center justify-center mb-4">
             <div class="relative w-36 h-36">
@@ -214,6 +226,100 @@ $insightsConfigurado = $insights_ia_configurado ?? false;
                 </div>
             </div>
             <?php endforeach; ?>
+        </div>
+    </div>
+
+    <!-- Modal Saúde Financeira -->
+    <div x-show="showSaudeFinanceiraModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="showSaudeFinanceiraModal = false"></div>
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div x-show="showSaudeFinanceiraModal"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-6 rounded-t-2xl">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-white">Saúde Financeira</h2>
+                                <p class="text-white/90 text-sm">Como o score é calculado</p>
+                            </div>
+                        </div>
+                        <button @click="showSaudeFinanceiraModal = false" class="text-white/80 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="px-8 py-6 space-y-6">
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                        <p class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">📊 O que é o Score de Saúde Financeira?</p>
+                        <p class="text-gray-700 dark:text-gray-300">
+                            O indicador varia de <strong>0 a 100</strong> e combina quatro pilares: Liquidez, Inadimplência, Rentabilidade e Tendência. 
+                            Cada pilar vale até 25 pontos. O total indica se sua saúde financeira está <strong>Crítica</strong>, <strong>Atenção</strong>, <strong>Regular</strong>, <strong>Boa</strong> ou <strong>Excelente</strong>.
+                        </p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">📐 Os 4 Componentes (25 pts cada)</h3>
+                        <div class="space-y-4">
+                            <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                                <h4 class="font-bold text-gray-900 dark:text-gray-100 mb-2">1. Liquidez (Runway)</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Baseado em quantos meses sua empresa sobrevive com o caixa atual.</p>
+                                <p class="text-xs font-mono bg-gray-100 dark:bg-gray-700/50 p-2 rounded">Score = min(25, (Runway / 6) × 25)</p>
+                                <p class="text-xs text-gray-500 mt-1">Runway ≥ 6 meses = 25 pts. Quanto maior o runway, melhor.</p>
+                            </div>
+                            <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                                <h4 class="font-bold text-gray-900 dark:text-gray-100 mb-2">2. Inadimplência</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Quanto menor a taxa de inadimplência (contas a receber vencidas), melhor.</p>
+                                <p class="text-xs font-mono bg-gray-100 dark:bg-gray-700/50 p-2 rounded">Score = 25 − (Taxa Inadimplência × 2,5)</p>
+                                <p class="text-xs text-gray-500 mt-1">0% inadimplência = 25 pts. 10% ou mais = 0 pts.</p>
+                            </div>
+                            <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                                <h4 class="font-bold text-gray-900 dark:text-gray-100 mb-2">3. Rentabilidade (Margem Líquida)</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Margem líquida = (Lucro Líquido / Receitas) × 100.</p>
+                                <p class="text-xs font-mono bg-gray-100 dark:bg-gray-700/50 p-2 rounded">Score = min(25, (Margem Líquida / 20) × 25)</p>
+                                <p class="text-xs text-gray-500 mt-1">Margem ≥ 20% = 25 pts. Margem negativa = 0 pts.</p>
+                            </div>
+                            <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                                <h4 class="font-bold text-gray-900 dark:text-gray-100 mb-2">4. Tendência</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Baseado na variação das receitas em relação ao mês anterior.</p>
+                                <p class="text-xs font-mono bg-gray-100 dark:bg-gray-700/50 p-2 rounded">Receitas crescendo: 12,5 + (Variação% / 20) × 12,5 | Receitas caindo: 12,5 + (Variação% / 20) × 12,5</p>
+                                <p class="text-xs text-gray-500 mt-1">Receitas em alta = mais pontos. Receitas em queda = menos pontos.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4">
+                        <p class="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-1">📌 Classificação do score total</p>
+                        <p class="text-sm text-amber-800 dark:text-amber-200">
+                            80–100: Excelente | 60–79: Bom | 40–59: Regular | 20–39: Atenção | 0–19: Crítico
+                        </p>
+                    </div>
+                    <div class="flex justify-end">
+                        <button @click="showSaudeFinanceiraModal = false" 
+                                class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-xl transition-colors">
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

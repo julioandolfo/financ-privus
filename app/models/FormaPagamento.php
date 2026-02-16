@@ -51,6 +51,48 @@ class FormaPagamento extends Model
     }
     
     /**
+     * Busca forma de pagamento por nome ou código (match exato ou contém)
+     * Útil para vincular formas do WooCommerce (ex: "PIX" -> forma "PIX")
+     */
+    public function findByNomeOuCodigo($termo, $empresaId)
+    {
+        if (empty($termo)) return null;
+        
+        $termo = trim($termo);
+        $like = '%' . $termo . '%';
+        $exato = strtolower($termo);
+        
+        // 1. Match exato em nome ou código
+        $sql = "SELECT id FROM {$this->table} 
+                WHERE empresa_id = :empresa_id AND ativo = 1 
+                AND (LOWER(nome) = :exato OR LOWER(COALESCE(codigo,'')) = :exato2) 
+                LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'empresa_id' => $empresaId,
+            'exato' => $exato,
+            'exato2' => $exato
+        ]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) return (int)$row['id'];
+        
+        // 2. Match LIKE (contém) em nome ou código
+        $sql2 = "SELECT id FROM {$this->table} 
+                 WHERE empresa_id = :empresa_id AND ativo = 1 
+                 AND (LOWER(nome) LIKE :like OR LOWER(COALESCE(codigo,'')) LIKE :like2) 
+                 ORDER BY LENGTH(nome) ASC 
+                 LIMIT 1";
+        $stmt2 = $this->db->prepare($sql2);
+        $stmt2->execute([
+            'empresa_id' => $empresaId,
+            'like' => strtolower($like),
+            'like2' => strtolower($like)
+        ]);
+        $row2 = $stmt2->fetch(PDO::FETCH_ASSOC);
+        return $row2 ? (int)$row2['id'] : null;
+    }
+    
+    /**
      * Retorna forma de pagamento por código
      */
     public function findByCodigo($codigo, $empresaId = null)

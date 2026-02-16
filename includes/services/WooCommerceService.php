@@ -386,6 +386,11 @@ class WooCommerceService
                     "Pedido #{$numeroPedido}: atualizado (ID: {$pedidoId})",
                     ['status_anterior' => $pedidoExistente['status'], 'status_novo' => $statusSistema]);
                 
+                // Atualiza forma de pagamento nas contas a receber (pode ter mudado)
+                $this->atualizarFormaPagamentoContasReceber(
+                    $pedidoId, $formaPagamentoWoo, $formaPagamentoTitulo, $acoesFormasPagamento, $empresaId
+                );
+                
                 // Se status mudou, verifica baixa automática
                 if ($pedidoExistente['status'] !== $statusSistema && empty($acaoFormaPgto['nao_criar_receita'])) {
                     $this->verificarBaixaAutomatica(
@@ -452,7 +457,8 @@ class WooCommerceService
                         $acaoFormaPgto,
                         $statusPagamentoConfirmado,
                         $contaReceberModel,
-                        $config
+                        $config,
+                        $acoesFormasPagamento
                     );
                 }
             }
@@ -816,6 +822,96 @@ class WooCommerceService
     }
     
     /**
+     * Atualiza forma_recebimento_id nas contas a receber vinculadas ao pedido.
+     * Usado quando o pedido é atualizado (sync/webhook) e a forma de pagamento pode ter mudado.
+     */
+    private function atualizarFormaPagamentoContasReceber($pedidoId, $formaPagamentoWoo, $formaPagamentoTitulo, $acoesFormasPagamento, $empresaId)
+    {
+        $formaPagamentoId = $this->resolverFormaPagamentoId(
+            $formaPagamentoWoo, $formaPagamentoTitulo, $acoesFormasPagamento, $empresaId
+        );
+        try {
+            $db = \App\Core\Database::getInstance()->getConnection();
+            $stmt = $db->prepare("UPDATE contas_receber SET forma_recebimento_id = :fid WHERE pedido_id = :pedido_id");
+            $stmt->execute(['fid' => $formaPagamentoId, 'pedido_id' => $pedidoId]);
+            $rows = $stmt->rowCount();
+            if ($rows > 0) {
+                \App\Models\LogSistema::info('WooCommerce', 'atualizarFormaPgto', 
+                    "Pedido #{$pedidoId}: {$rows} conta(s) a receber atualizada(s) com forma_recebimento_id=" . ($formaPagamentoId ?: 'null'));
+            }
+        } catch (\Throwable $e) {
+            \App\Models\LogSistema::warning('WooCommerce', 'atualizarFormaPgto', 
+                "Erro ao atualizar forma pagamento contas pedido #{$pedidoId}: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Resolve o ID da forma de pagamento no sistema a partir dos dados do WooCommerce.
+     * Ordem: 1) mapeamento configurado (payment_method), 2) mapeamento por título,
+     * 3) match parcial em chaves config, 4) busca por nome/código nas formas do sistema.
+     */
+    private function resolverFormaPagamentoId($formaPagamentoWoo, $formaPagamentoTitulo, $acoesFormasPagamento, $empresaId)
+    {
+        // 1. Mapeamento exato por payment_method (id do gateway)
+        if (!empty($formaPagamentoWoo)) {
+            $acao = $acoesFormasPagamento[$formaPagamentoWoo] ?? null;
+            if ($acao && !empty($acao['forma_pagamento_id'])) {
+                \App\Models\LogSistema::debug('WooCommerce', 'formaPagamento', 
+                    "Forma resolvida via mapeamento: {$formaPagamentoWoo} -> ID {$acao['forma_pagamento_id']}");
+                return (int)$acao['forma_pagamento_id'];
+            }
+        }
+        
+        // 2. Mapeamento por payment_method_title (ex: "PIX" como chave)
+        if (!empty($formaPagamentoTitulo)) {
+            $acao = $acoesFormasPagamento[$formaPagamentoTitulo] ?? null;
+            if ($acao && !empty($acao['forma_pagamento_id'])) {
+                \App\Models\LogSistema::debug('WooCommerce', 'formaPagamento', 
+                    "Forma resolvida via título: '{$formaPagamentoTitulo}' -> ID {$acao['forma_pagamento_id']}");
+                return (int)$acao['forma_pagamento_id'];
+            }
+        }
+        
+        // 3. Match parcial: payment_method contém alguma chave config (ex: "woo_pix" contém "pix")
+        $termo = preg_replace('/[^a-z0-9]/i', '', strtolower($formaPagamentoWoo));
+        if (!empty($termo) && strlen($termo) >= 2) {
+            foreach ($acoesFormasPagamento as $chave => $acao) {
+                if (empty($acao['forma_pagamento_id'])) continue;
+                $chaveLimpa = preg_replace('/[^a-z0-9]/i', '', strtolower($chave));
+                if ($chaveLimpa && (strpos($termo, $chaveLimpa) !== false || strpos($chaveLimpa, $termo) !== false)) {
+                    \App\Models\LogSistema::debug('WooCommerce', 'formaPagamento', 
+                        "Forma resolvida via match parcial: '{$formaPagamentoWoo}' ~ '{$chave}' -> ID {$acao['forma_pagamento_id']}");
+                    return (int)$acao['forma_pagamento_id'];
+                }
+            }
+        }
+        
+        // 4. Fallback: buscar forma de pagamento por nome/código no sistema
+        if ($empresaId && !empty($formaPagamentoTitulo)) {
+            $formaPgtoModel = new \App\Models\FormaPagamento();
+            $formaId = $formaPgtoModel->findByNomeOuCodigo($formaPagamentoTitulo, $empresaId);
+            if ($formaId) {
+                \App\Models\LogSistema::info('WooCommerce', 'formaPagamento', 
+                    "Forma resolvida por nome: '{$formaPagamentoTitulo}' -> ID {$formaId} (fallback)");
+                return $formaId;
+            }
+        }
+        if ($empresaId && !empty($formaPagamentoWoo) && $formaPagamentoWoo !== $formaPagamentoTitulo) {
+            $formaPgtoModel = new \App\Models\FormaPagamento();
+            $formaId = $formaPgtoModel->findByNomeOuCodigo($formaPagamentoWoo, $empresaId);
+            if ($formaId) {
+                \App\Models\LogSistema::info('WooCommerce', 'formaPagamento', 
+                    "Forma resolvida por id gateway: '{$formaPagamentoWoo}' -> ID {$formaId} (fallback)");
+                return $formaId;
+            }
+        }
+        
+        \App\Models\LogSistema::debug('WooCommerce', 'formaPagamento', 
+            "Forma NÃO encontrada para '{$formaPagamentoWoo}' / '{$formaPagamentoTitulo}' - usará null (Outro)");
+        return null;
+    }
+    
+    /**
      * Cria conta a receber a partir de um pedido WooCommerce
      * 
      * Lógica:
@@ -829,7 +925,8 @@ class WooCommerceService
         $pedidoId, $pedWoo, $empresaId, $clienteId, 
         $statusSistema, $acaoFormaPgto, $statusPagamentoConfirmado,
         $contaReceberModel,
-        $config = null
+        $config = null,
+        $acoesFormasPagamento = []
     ) {
         $categoriaId = !empty($config['categoria_receita_padrao_id']) 
             ? (int)$config['categoria_receita_padrao_id'] 
@@ -840,10 +937,10 @@ class WooCommerceService
         $formaPagamentoTitulo = $pedWoo['payment_method_title'] ?? $formaPagamentoWoo;
         $dataPedido = date('Y-m-d', strtotime($pedWoo['date_created']));
         
-        // ID da forma de pagamento no sistema (se vinculada)
-        $formaPagamentoId = !empty($acaoFormaPgto['forma_pagamento_id']) 
-            ? $acaoFormaPgto['forma_pagamento_id'] 
-            : null;
+        // ID da forma de pagamento no sistema (mapeamento config + fallback por nome)
+        $formaPagamentoId = $this->resolverFormaPagamentoId(
+            $formaPagamentoWoo, $formaPagamentoTitulo, $acoesFormasPagamento, $empresaId
+        );
         
         // Verifica se deve criar parcelas
         $criarParcelas = !empty($acaoFormaPgto['criar_parcelas']);
@@ -2366,6 +2463,11 @@ class WooCommerceService
                     "Pedido #{$numeroPedido}: atualizado (ID: {$pedidoId})",
                     ['status_anterior' => $pedidoExistente['status'], 'status_novo' => $statusSistema]);
                 
+                // Atualiza forma de pagamento nas contas a receber (pode ter mudado)
+                $this->atualizarFormaPagamentoContasReceber(
+                    $pedidoId, $formaPagamentoWoo, $formaPagamentoTitulo, $acoesFormasPagamento, $empresaId
+                );
+                
                 // Se status mudou, verifica baixa automática
                 if ($pedidoExistente['status'] !== $statusSistema && empty($acaoFormaPgto['nao_criar_receita'])) {
                     $contaReceberModel = new \App\Models\ContaReceber();
@@ -2408,7 +2510,8 @@ class WooCommerceService
                     $this->criarContaReceberDoPedido(
                         $pedidoId, $pedWoo, $empresaId, $clienteId,
                         $statusSistema, $acaoFormaPgto, $statusPagamentoConfirmado, $contaReceberModel,
-                        $config
+                        $config,
+                        $acoesFormasPagamento
                     );
                 }
             }
