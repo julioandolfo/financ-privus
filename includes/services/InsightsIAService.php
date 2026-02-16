@@ -19,10 +19,15 @@ class InsightsIAService
 
     /**
      * Verifica se o recurso de insights está habilitado
+     * Aceita ia.insights_dashboard_habilitado ou ia.insights_dashboard_hab (chave truncada no banco)
      */
     public static function isHabilitado(): bool
     {
-        return (bool) Configuracao::get('ia.insights_dashboard_habilitado', true);
+        $v = Configuracao::get('ia.insights_dashboard_habilitado', null);
+        if ($v === null) {
+            $v = Configuracao::get('ia.insights_dashboard_hab', true); // fallback chave truncada
+        }
+        return (bool) $v;
     }
 
     /**
