@@ -121,7 +121,7 @@ class ContaReceber extends Model
         
         // Excluir contas vinculadas a pedidos cancelados (para métricas/receita válida)
         if (!empty($filters['excluir_pedido_cancelado'])) {
-            $sql .= " AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+            $sql .= " AND (cr.pedido_id IS NULL OR pv.status IN ('processando', 'concluido'))";
         }
         
         // Busca por descrição, número de documento, cliente, código do cliente ou ID do pedido
@@ -558,7 +558,7 @@ class ContaReceber extends Model
                     FROM {$this->table} cr
                     LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
                     WHERE cr.deleted_at IS NULL
-                    AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+                    AND (cr.pedido_id IS NULL OR pv.status IN ('processando', 'concluido'))";
         } else {
             $sql = "SELECT status, COUNT(*) as total
                     FROM {$this->table}
@@ -603,7 +603,7 @@ class ContaReceber extends Model
                     LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
                     WHERE cr.status IN ('pendente', 'parcial', 'vencido')
                       AND cr.deleted_at IS NULL
-                      AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+                      AND (cr.pedido_id IS NULL OR pv.status IN ('processando', 'concluido'))";
         } else {
             $sql = "SELECT SUM(valor_total - valor_recebido) as total
                     FROM {$this->table}
@@ -639,7 +639,7 @@ class ContaReceber extends Model
                     WHERE cr.status IN ('parcial', 'recebido')
                       AND cr.valor_recebido > 0
                       AND cr.deleted_at IS NULL
-                      AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+                      AND (cr.pedido_id IS NULL OR pv.status IN ('processando', 'concluido'))";
         } else {
             $sql = "SELECT COALESCE(SUM(valor_recebido), 0) as total
                     FROM {$this->table}
@@ -677,7 +677,7 @@ class ContaReceber extends Model
                     WHERE cr.status IN ('pendente', 'parcial')
                       AND cr.data_vencimento < CURDATE()
                       AND cr.deleted_at IS NULL
-                      AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+                      AND (cr.pedido_id IS NULL OR pv.status IN ('processando', 'concluido'))";
         } else {
             $sql = "SELECT COUNT(*) as quantidade, 
                            SUM(valor_total - valor_recebido) as valor_total
@@ -720,7 +720,7 @@ class ContaReceber extends Model
                     WHERE cr.status IN ('pendente', 'parcial')
                       AND cr.data_vencimento BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL ? DAY)
                       AND cr.deleted_at IS NULL
-                      AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+                      AND (cr.pedido_id IS NULL OR pv.status IN ('processando', 'concluido'))";
         } else {
             $sql = "SELECT COUNT(*) as quantidade, 
                            SUM(valor_total - valor_recebido) as valor_total
@@ -777,7 +777,7 @@ class ContaReceber extends Model
             $sql = "SELECT COUNT(*) FROM {$this->table} cr
                     LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
                     WHERE cr.deleted_at IS NULL
-                    AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+                    AND (cr.pedido_id IS NULL OR pv.status IN ('processando', 'concluido'))";
         } else {
             $sql = "SELECT COUNT(*) FROM {$this->table} WHERE deleted_at IS NULL";
         }
@@ -901,7 +901,7 @@ class ContaReceber extends Model
                     FROM {$this->table} cr
                     LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
                     WHERE cr.data_recebimento BETWEEN :data_inicio AND :data_fim
-                    AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+                    AND (cr.pedido_id IS NULL OR pv.status IN ('processando', 'concluido'))";
         } else {
             $sql = "SELECT COALESCE(SUM(valor_total), 0) as total
                     FROM {$this->table}
@@ -950,7 +950,7 @@ class ContaReceber extends Model
                     WHERE cr.data_recebimento BETWEEN :data_inicio AND :data_fim
                     AND c.nome LIKE :categoria_nome
                     AND cr.status = 'recebido'
-                    AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+                    AND (cr.pedido_id IS NULL OR pv.status IN ('processando', 'concluido'))";
         } else {
             $sql = "SELECT COALESCE(SUM(cr.valor_total), 0) as total
                     FROM {$this->table} cr
@@ -998,7 +998,7 @@ class ContaReceber extends Model
                     LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
                     WHERE cr.data_recebimento BETWEEN :data_inicio AND :data_fim
                     AND cr.status = 'recebido'
-                    AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+                    AND (cr.pedido_id IS NULL OR pv.status IN ('processando', 'concluido'))";
         } else {
             $sql = "SELECT 
                         c.nome as categoria,
@@ -1043,7 +1043,7 @@ class ContaReceber extends Model
                     WHERE cr.status = 'pendente'
                     AND cr.data_vencimento < CURDATE()
                     AND cr.deleted_at IS NULL
-                    AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')";
+                    AND (cr.pedido_id IS NULL OR pv.status IN ('processando', 'concluido'))";
         } else {
             $sql = "SELECT cr.*, c.nome_razao_social as cliente_nome
                     FROM {$this->table} cr

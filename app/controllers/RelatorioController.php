@@ -229,7 +229,7 @@ class RelatorioController extends Controller
                     LEFT JOIN pedidos_vinculados pv ON cr.pedido_id = pv.id
                     WHERE cr.status = 'recebido'
                     AND cr.data_recebimento BETWEEN :data_inicio AND :data_fim
-                    AND (cr.pedido_id IS NULL OR pv.status IS NULL OR pv.status != 'cancelado')
+                    AND (cr.pedido_id IS NULL OR pv.status IN ('processando', 'concluido'))
                     " . ($empresaId ? "AND cr.empresa_id = :empresa_id1" : "") . "
                     
                     UNION ALL
