@@ -9,7 +9,18 @@ $pctClientesPJ = $totais['clientes'] > 0 ? ($clientes['pj'] / $totais['clientes'
 $pctCategoriasReceita = $totais['categorias'] > 0 ? ($categorias['receita'] / $totais['categorias'] * 100) : 0;
 $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $totais['categorias'] * 100) : 0;
 ?>
-<div class="animate-fade-in" x-data="{ showFiltro: false, showRunwayModal: false, empresasSelecionadas: <?= json_encode($filtro['empresas_ids']) ?> }">
+<div class="animate-fade-in" x-data="{ 
+    showFiltro: false, 
+    showRunwayModal: false, 
+    showMargemBrutaModal: false,
+    showRoiModal: false,
+    showTicketMedioModal: false,
+    showInadimplenciaModal: false,
+    showRentabilidadeModal: false,
+    showFluxoCaixaModal: false,
+    showRiscosModal: false,
+    empresasSelecionadas: <?= json_encode($filtro['empresas_ids']) ?> 
+}">
     <!-- Hero Banner -->
     <div class="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-800 dark:via-indigo-900 dark:to-purple-900 rounded-2xl shadow-2xl mb-8">
         <div class="absolute inset-0 bg-grid-white/10 z-0"></div>
@@ -505,7 +516,19 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             <!-- Margem Bruta -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
                 <div class="flex items-center justify-between mb-3">
-                    <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Margem Bruta</h4>
+                    <div class="flex items-center space-x-2">
+                        <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Margem Bruta</h4>
+                        <button 
+                            @click="showMargemBrutaModal = true"
+                            type="button"
+                            class="w-5 h-5 rounded-full bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-200 dark:hover:bg-cyan-900/50 transition-colors flex items-center justify-center cursor-pointer"
+                            title="O que é Margem Bruta?"
+                        >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </button>
+                    </div>
                     <div class="w-10 h-10 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
@@ -518,7 +541,19 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             <!-- ROI -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
                 <div class="flex items-center justify-between mb-3">
-                    <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">ROI</h4>
+                    <div class="flex items-center space-x-2">
+                        <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">ROI</h4>
+                        <button 
+                            @click="showRoiModal = true"
+                            type="button"
+                            class="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors flex items-center justify-center cursor-pointer"
+                            title="O que é ROI?"
+                        >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </button>
+                    </div>
                     <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
@@ -531,7 +566,19 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             <!-- Ticket Médio -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
                 <div class="flex items-center justify-between mb-3">
-                    <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Ticket Médio</h4>
+                    <div class="flex items-center space-x-2">
+                        <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Ticket Médio</h4>
+                        <button 
+                            @click="showTicketMedioModal = true"
+                            type="button"
+                            class="w-5 h-5 rounded-full bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 hover:bg-teal-200 dark:hover:bg-teal-900/50 transition-colors flex items-center justify-center cursor-pointer"
+                            title="O que é Ticket Médio?"
+                        >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </button>
+                    </div>
                     <div class="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 8h6m-5 0a3 3 0 110 6H9l3 3m-3-6h6m6 1a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -542,9 +589,21 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
             </div>
 
             <!-- Inadimplência -->
-            <a href="/contas-receber?status=vencido" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xl transition-all cursor-pointer block">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
                 <div class="flex items-center justify-between mb-3">
-                    <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Inadimplência</h4>
+                    <div class="flex items-center space-x-2">
+                        <h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Inadimplência</h4>
+                        <button 
+                            @click="showInadimplenciaModal = true"
+                            type="button"
+                            class="w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors flex items-center justify-center cursor-pointer"
+                            title="O que é Inadimplência?"
+                        >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </button>
+                    </div>
                     <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
@@ -552,7 +611,8 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                     </div>
                 </div>
                 <p class="text-2xl font-bold text-gray-900 dark:text-gray-100"><?= number_format($metricas_financeiras['inadimplencia_taxa'], 1) ?>%</p>
-            </a>
+                <a href="/contas-receber?status=vencido" class="text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 mt-2 inline-block">Ver contas vencidas →</a>
+            </div>
 
             <!-- Burn Rate / Runway -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
@@ -586,11 +646,23 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Análise de Rentabilidade -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                    </svg>
-                    Rentabilidade
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center justify-between">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                        Rentabilidade
+                    </div>
+                    <button 
+                        @click="showRentabilidadeModal = true"
+                        type="button"
+                        class="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors flex items-center justify-center cursor-pointer"
+                        title="Entender métricas de Rentabilidade"
+                    >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </button>
                 </h3>
                 <div class="space-y-3">
                     <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
@@ -614,11 +686,23 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
 
             <!-- Análise de Caixa -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
-                    </svg>
-                    Fluxo de Caixa
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center justify-between">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                        Fluxo de Caixa
+                    </div>
+                    <button 
+                        @click="showFluxoCaixaModal = true"
+                        type="button"
+                        class="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors flex items-center justify-center cursor-pointer"
+                        title="Entender métricas de Fluxo de Caixa"
+                    >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </button>
                 </h3>
                 <div class="space-y-3">
                     <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700">
@@ -647,11 +731,23 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
 
             <!-- Análise de Risco -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
-                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <svg class="w-5 h-5 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                    </svg>
-                    Riscos e Alertas
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center justify-between">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        Riscos e Alertas
+                    </div>
+                    <button 
+                        @click="showRiscosModal = true"
+                        type="button"
+                        class="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors flex items-center justify-center cursor-pointer"
+                        title="Entender métricas de Riscos e Alertas"
+                    >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </button>
                 </h3>
                 <div class="space-y-3">
                     <a href="/contas-receber?status=vencido" class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-700 hover:bg-red-50 dark:hover:bg-red-900/10 -mx-2 px-2 py-1 rounded transition-colors cursor-pointer">
@@ -1743,6 +1839,1186 @@ $pctCategoriasDespesa = $totais['categorias'] > 0 ? ($categorias['despesa'] / $t
                 <div class="sticky bottom-0 bg-gray-50 dark:bg-gray-900/50 px-8 py-4 rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
                     <button @click="showRunwayModal = false" 
                             class="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg">
+                        Entendi!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Margem Bruta -->
+    <div x-show="showMargemBrutaModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="showMargemBrutaModal = false"></div>
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div x-show="showMargemBrutaModal"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                
+                <div class="sticky top-0 bg-gradient-to-r from-cyan-600 to-blue-600 px-8 py-6 rounded-t-2xl">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-white">Margem Bruta</h2>
+                                <p class="text-cyan-100 text-sm">Indicador de Lucratividade</p>
+                            </div>
+                        </div>
+                        <button @click="showMargemBrutaModal = false" class="text-white/80 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="px-8 py-6 space-y-6">
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                        <p class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">💰 O que é Margem Bruta?</p>
+                        <p class="text-gray-700 dark:text-gray-300">
+                            A Margem Bruta mostra <strong>quanto você lucra em cada venda</strong> após deduzir os custos diretos do produto ou serviço. 
+                            É um dos indicadores mais importantes para avaliar a saúde financeira do seu negócio.
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                            📊 Como é Calculado
+                        </h3>
+                        <div class="bg-gray-100 dark:bg-gray-700/50 rounded-xl p-4 font-mono text-center">
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Fórmula:</p>
+                            <p class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                                Margem Bruta = (Lucro Bruto / Receita Total) × 100
+                            </p>
+                            <div class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                <p><strong>Lucro Bruto:</strong> Receita Total - Custos Diretos (CPV)</p>
+                                <p><strong>CPV:</strong> Custo dos Produtos Vendidos (matéria-prima, produção, etc.)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            🎯 Exemplo Prático
+                        </h3>
+                        <div class="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-3">Sua empresa vende um produto por:</p>
+                            <ul class="space-y-2 mb-3">
+                                <li class="flex items-start">
+                                    <span class="text-green-600 font-bold mr-2">💵</span>
+                                    <span class="text-gray-700 dark:text-gray-300"><strong>Preço de Venda:</strong> R$ 100</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-red-600 font-bold mr-2">📦</span>
+                                    <span class="text-gray-700 dark:text-gray-300"><strong>Custo Direto (CPV):</strong> R$ 40</span>
+                                </li>
+                            </ul>
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-cyan-300 dark:border-cyan-700">
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Cálculo:</p>
+                                <p class="text-lg font-bold text-cyan-600">Lucro Bruto = R$ 100 - R$ 40 = R$ 60</p>
+                                <p class="text-lg font-bold text-cyan-600">Margem Bruta = (R$ 60 / R$ 100) × 100 = <span class="text-2xl">60%</span></p>
+                            </div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-3 italic">
+                                Isso significa que a cada R$ 100 vendidos, R$ 60 sobram para cobrir despesas operacionais e gerar lucro líquido.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            🚦 Interpretação dos Valores
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="flex items-start space-x-3 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-r-lg">
+                                <span class="text-2xl">🔴</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-red-900 dark:text-red-100">< 20% - CRÍTICO</p>
+                                    <p class="text-sm text-red-700 dark:text-red-300">Margem muito baixa, revisar custos ou precificação urgentemente</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 rounded-r-lg">
+                                <span class="text-2xl">🟡</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-amber-900 dark:text-amber-100">20-40% - ATENÇÃO</p>
+                                    <p class="text-sm text-amber-700 dark:text-amber-300">Margem aceitável, mas há espaço para melhoria</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 rounded-r-lg">
+                                <span class="text-2xl">🟢</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-green-900 dark:text-green-100">40-60% - SAUDÁVEL</p>
+                                    <p class="text-sm text-green-700 dark:text-green-300">Boa margem, negócio sustentável</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 border-l-4 border-emerald-500 rounded-r-lg">
+                                <span class="text-2xl">🟢</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-emerald-900 dark:text-emerald-100">> 60% - EXCELENTE</p>
+                                    <p class="text-sm text-emerald-700 dark:text-emerald-300">Margem alta, muito lucrativo</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl p-6 text-white">
+                        <h3 class="text-xl font-bold mb-3">📊 Sua Margem Bruta Atual</h3>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-cyan-100 mb-1">Percentual:</p>
+                                <p class="text-5xl font-bold"><?= number_format($metricas_financeiras['margem_bruta'], 1) ?>%</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-cyan-100 text-sm mb-1">Lucro Bruto:</p>
+                                <p class="text-2xl font-bold">R$ <?= number_format($metricas_financeiras['lucro_bruto'], 2, ',', '.') ?></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sticky bottom-0 bg-gray-50 dark:bg-gray-900/50 px-8 py-4 rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
+                    <button @click="showMargemBrutaModal = false" 
+                            class="w-full px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-semibold rounded-xl hover:from-cyan-700 hover:to-blue-700 transition-all shadow-lg">
+                        Entendi!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal ROI -->
+    <div x-show="showRoiModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="showRoiModal = false"></div>
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div x-show="showRoiModal"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                
+                <div class="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-6 rounded-t-2xl">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-white">ROI (Return on Investment)</h2>
+                                <p class="text-indigo-100 text-sm">Retorno Sobre o Investimento</p>
+                            </div>
+                        </div>
+                        <button @click="showRoiModal = false" class="text-white/80 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="px-8 py-6 space-y-6">
+                    <div class="bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500 p-4 rounded-r-lg">
+                        <p class="text-lg font-semibold text-indigo-900 dark:text-indigo-100 mb-2">📈 O que é ROI?</p>
+                        <p class="text-gray-700 dark:text-gray-300">
+                            ROI (Return on Investment) mede <strong>o retorno financeiro que você obtém em relação ao capital investido</strong>. 
+                            É a métrica-chave para avaliar se seus investimentos estão gerando lucro.
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                            📊 Como é Calculado
+                        </h3>
+                        <div class="bg-gray-100 dark:bg-gray-700/50 rounded-xl p-4 font-mono text-center">
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Fórmula:</p>
+                            <p class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                                ROI = (Lucro Líquido / Investimento Total) × 100
+                            </p>
+                            <div class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                <p><strong>Lucro Líquido:</strong> Receita - Todas as Despesas</p>
+                                <p><strong>Investimento:</strong> Capital investido no negócio/projeto</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            🎯 Exemplo Prático
+                        </h3>
+                        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-3">Você investiu em uma campanha de marketing:</p>
+                            <ul class="space-y-2 mb-3">
+                                <li class="flex items-start">
+                                    <span class="text-red-600 font-bold mr-2">💸</span>
+                                    <span class="text-gray-700 dark:text-gray-300"><strong>Investimento:</strong> R$ 10.000</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-green-600 font-bold mr-2">💰</span>
+                                    <span class="text-gray-700 dark:text-gray-300"><strong>Retorno Gerado:</strong> R$ 35.000</span>
+                                </li>
+                            </ul>
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-indigo-300 dark:border-indigo-700">
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Cálculo:</p>
+                                <p class="text-lg font-bold text-indigo-600">Lucro = R$ 35.000 - R$ 10.000 = R$ 25.000</p>
+                                <p class="text-lg font-bold text-indigo-600">ROI = (R$ 25.000 / R$ 10.000) × 100 = <span class="text-2xl">250%</span></p>
+                            </div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-3 italic">
+                                Cada R$ 1 investido retornou R$ 2,50 de lucro (R$ 3,50 total - R$ 1 investido).
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            🚦 Interpretação dos Valores
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="flex items-start space-x-3 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-r-lg">
+                                <span class="text-2xl">🔴</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-red-900 dark:text-red-100">< 0% - PREJUÍZO</p>
+                                    <p class="text-sm text-red-700 dark:text-red-300">Investimento não está gerando retorno, revisar estratégia</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 rounded-r-lg">
+                                <span class="text-2xl">🟡</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-amber-900 dark:text-amber-100">0-50% - BAIXO</p>
+                                    <p class="text-sm text-amber-700 dark:text-amber-300">Retorno positivo, mas abaixo do ideal</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 rounded-r-lg">
+                                <span class="text-2xl">🟢</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-green-900 dark:text-green-100">50-200% - BOM</p>
+                                    <p class="text-sm text-green-700 dark:text-green-300">Investimento está gerando retorno saudável</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 border-l-4 border-emerald-500 rounded-r-lg">
+                                <span class="text-2xl">🟢</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-emerald-900 dark:text-emerald-100">> 200% - EXCELENTE</p>
+                                    <p class="text-sm text-emerald-700 dark:text-emerald-300">Retorno excepcional sobre o investimento</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white">
+                        <h3 class="text-xl font-bold mb-3">📊 Seu ROI Atual</h3>
+                        <p class="text-5xl font-bold text-center"><?= number_format($metricas_financeiras['roi'], 1) ?>%</p>
+                        <p class="text-indigo-100 text-center mt-2">Retorno sobre o investimento</p>
+                    </div>
+                </div>
+
+                <div class="sticky bottom-0 bg-gray-50 dark:bg-gray-900/50 px-8 py-4 rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
+                    <button @click="showRoiModal = false" 
+                            class="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg">
+                        Entendi!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ticket Médio -->
+    <div x-show="showTicketMedioModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="showTicketMedioModal = false"></div>
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div x-show="showTicketMedioModal"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                
+                <div class="sticky top-0 bg-gradient-to-r from-teal-600 to-cyan-600 px-8 py-6 rounded-t-2xl">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 8h6m-5 0a3 3 0 110 6H9l3 3m-3-6h6m6 1a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-white">Ticket Médio</h2>
+                                <p class="text-teal-100 text-sm">Valor Médio por Transação</p>
+                            </div>
+                        </div>
+                        <button @click="showTicketMedioModal = false" class="text-white/80 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="px-8 py-6 space-y-6">
+                    <div class="bg-teal-50 dark:bg-teal-900/20 border-l-4 border-teal-500 p-4 rounded-r-lg">
+                        <p class="text-lg font-semibold text-teal-900 dark:text-teal-100 mb-2">🎫 O que é Ticket Médio?</p>
+                        <p class="text-gray-700 dark:text-gray-300">
+                            O Ticket Médio representa <strong>o valor médio que cada cliente gasta</strong> em uma compra ou transação. 
+                            É fundamental para entender o comportamento de compra e planejar estratégias de vendas.
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                            📊 Como é Calculado
+                        </h3>
+                        <div class="bg-gray-100 dark:bg-gray-700/50 rounded-xl p-4 font-mono text-center">
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Fórmula:</p>
+                            <p class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                                Ticket Médio = Receita Total / Número de Transações
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            🎯 Exemplo Prático
+                        </h3>
+                        <div class="bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-3">Sua loja teve no mês:</p>
+                            <ul class="space-y-2 mb-3">
+                                <li class="flex items-start">
+                                    <span class="text-green-600 font-bold mr-2">💵</span>
+                                    <span class="text-gray-700 dark:text-gray-300"><strong>Receita Total:</strong> R$ 50.000</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-blue-600 font-bold mr-2">📋</span>
+                                    <span class="text-gray-700 dark:text-gray-300"><strong>Número de Vendas:</strong> 100 transações</span>
+                                </li>
+                            </ul>
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-teal-300 dark:border-teal-700">
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Cálculo:</p>
+                                <p class="text-xl font-bold text-teal-600">Ticket Médio = R$ 50.000 / 100 = <span class="text-2xl">R$ 500</span></p>
+                            </div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-3 italic">
+                                Em média, cada cliente gastou R$ 500 por compra.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            💡 Por que é Importante?
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-lg">
+                                <p class="font-semibold text-purple-900 dark:text-purple-100 mb-1">📈 Aumentar Receita</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">Aumentar o ticket médio é mais fácil que conseguir novos clientes</p>
+                            </div>
+                            <div class="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-4 rounded-lg">
+                                <p class="font-semibold text-blue-900 dark:text-blue-100 mb-1">🎯 Segmentação</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">Identificar clientes de alto valor vs baixo valor</p>
+                            </div>
+                            <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-4 rounded-lg">
+                                <p class="font-semibold text-green-900 dark:text-green-100 mb-1">💰 Up-sell e Cross-sell</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">Criar estratégias para aumentar o valor por venda</p>
+                            </div>
+                            <div class="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-4 rounded-lg">
+                                <p class="font-semibold text-amber-900 dark:text-amber-100 mb-1">📊 Metas</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">Definir metas de vendas realistas</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-teal-500 to-cyan-600 rounded-xl p-6 text-white">
+                        <h3 class="text-xl font-bold mb-3">🎫 Seu Ticket Médio Atual</h3>
+                        <p class="text-5xl font-bold text-center">R$ <?= number_format($metricas_financeiras['ticket_medio'], 0, ',', '.') ?></p>
+                        <p class="text-teal-100 text-center mt-2">Valor médio por transação</p>
+                    </div>
+                </div>
+
+                <div class="sticky bottom-0 bg-gray-50 dark:bg-gray-900/50 px-8 py-4 rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
+                    <button @click="showTicketMedioModal = false" 
+                            class="w-full px-6 py-3 bg-gradient-to-r from-teal-600 to-cyan-600 text-white font-semibold rounded-xl hover:from-teal-700 hover:to-cyan-700 transition-all shadow-lg">
+                        Entendi!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Inadimplência -->
+    <div x-show="showInadimplenciaModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="showInadimplenciaModal = false"></div>
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div x-show="showInadimplenciaModal"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                
+                <div class="sticky top-0 bg-gradient-to-r from-amber-600 to-orange-600 px-8 py-6 rounded-t-2xl">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-white">Taxa de Inadimplência</h2>
+                                <p class="text-amber-100 text-sm">Indicador de Risco Financeiro</p>
+                            </div>
+                        </div>
+                        <button @click="showInadimplenciaModal = false" class="text-white/80 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="px-8 py-6 space-y-6">
+                    <div class="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 p-4 rounded-r-lg">
+                        <p class="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-2">⚠️ O que é Inadimplência?</p>
+                        <p class="text-gray-700 dark:text-gray-300">
+                            A taxa de inadimplência mede <strong>o percentual de contas que estão vencidas e não foram pagas</strong>. 
+                            É um indicador crítico da saúde financeira e do risco de crédito do seu negócio.
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                            📊 Como é Calculado
+                        </h3>
+                        <div class="bg-gray-100 dark:bg-gray-700/50 rounded-xl p-4 font-mono text-center">
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Fórmula:</p>
+                            <p class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                                Inadimplência = (Valor Vencido / Valor Total a Receber) × 100
+                            </p>
+                            <div class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                <p><strong>Valor Vencido:</strong> Soma de todas as contas em atraso</p>
+                                <p><strong>Valor Total a Receber:</strong> Todas as contas a receber (vencidas + a vencer)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            🎯 Exemplo Prático
+                        </h3>
+                        <div class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-3">Sua empresa tem:</p>
+                            <ul class="space-y-2 mb-3">
+                                <li class="flex items-start">
+                                    <span class="text-blue-600 font-bold mr-2">💵</span>
+                                    <span class="text-gray-700 dark:text-gray-300"><strong>Total a Receber:</strong> R$ 100.000</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-red-600 font-bold mr-2">⚠️</span>
+                                    <span class="text-gray-700 dark:text-gray-300"><strong>Valor Vencido:</strong> R$ 15.000</span>
+                                </li>
+                            </ul>
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-amber-300 dark:border-amber-700">
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Cálculo:</p>
+                                <p class="text-xl font-bold text-amber-600">Inadimplência = (R$ 15.000 / R$ 100.000) × 100 = <span class="text-2xl">15%</span></p>
+                            </div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-3 italic">
+                                Isso significa que 15% do valor a receber está vencido e não foi pago.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            🚦 Interpretação dos Valores
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="flex items-start space-x-3 p-3 bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 rounded-r-lg">
+                                <span class="text-2xl">🟢</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-green-900 dark:text-green-100">< 5% - EXCELENTE</p>
+                                    <p class="text-sm text-green-700 dark:text-green-300">Inadimplência muito baixa, gestão eficiente de crédito</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 rounded-r-lg">
+                                <span class="text-2xl">🟡</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-amber-900 dark:text-amber-100">5-15% - ATENÇÃO</p>
+                                    <p class="text-sm text-amber-700 dark:text-amber-300">Nível aceitável, mas deve ser monitorado de perto</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 rounded-r-lg">
+                                <span class="text-2xl">🟠</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-orange-900 dark:text-orange-100">15-30% - ALTO</p>
+                                    <p class="text-sm text-orange-700 dark:text-orange-300">Problema sério, revisar política de crédito e cobrança</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-3 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-r-lg">
+                                <span class="text-2xl">🔴</span>
+                                <div class="flex-1">
+                                    <p class="font-bold text-red-900 dark:text-red-100">> 30% - CRÍTICO</p>
+                                    <p class="text-sm text-red-700 dark:text-red-300">Situação crítica! Fluxo de caixa em risco, ação urgente necessária</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            💡 Como Reduzir a Inadimplência?
+                        </h3>
+                        <div class="grid grid-cols-1 gap-3">
+                            <div class="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-4 rounded-lg">
+                                <p class="font-semibold text-blue-900 dark:text-blue-100 mb-1">🔍 Análise de Crédito</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">Avaliar a capacidade de pagamento antes de conceder crédito</p>
+                            </div>
+                            <div class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-4 rounded-lg">
+                                <p class="font-semibold text-green-900 dark:text-green-100 mb-1">📞 Cobrança Proativa</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">Lembrar clientes antes do vencimento e cobrar rapidamente após</p>
+                            </div>
+                            <div class="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 rounded-lg">
+                                <p class="font-semibold text-purple-900 dark:text-purple-100 mb-1">💳 Facilitar Pagamento</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">Oferecer múltiplas formas de pagamento e opções flexíveis</p>
+                            </div>
+                            <div class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-4 rounded-lg">
+                                <p class="font-semibold text-amber-900 dark:text-amber-100 mb-1">📋 Política Clara</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">Ter política de crédito e cobrança bem definida e comunicada</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl p-6 text-white">
+                        <h3 class="text-xl font-bold mb-3">⚠️ Sua Taxa de Inadimplência Atual</h3>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-amber-100 mb-1">Percentual:</p>
+                                <p class="text-5xl font-bold"><?= number_format($metricas_financeiras['inadimplencia_taxa'], 1) ?>%</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-amber-100 text-sm mb-1">Valor em Atraso:</p>
+                                <p class="text-2xl font-bold">R$ <?= number_format($metricas_financeiras['inadimplencia_valor'], 2, ',', '.') ?></p>
+                                <p class="text-amber-100 text-sm mt-2">Contas Vencidas:</p>
+                                <p class="text-xl font-bold"><?= number_format($metricas_financeiras['contas_vencidas']) ?></p>
+                            </div>
+                        </div>
+                        <a href="/contas-receber?status=vencido" class="mt-4 block w-full text-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                            Ver contas vencidas →
+                        </a>
+                    </div>
+                </div>
+
+                <div class="sticky bottom-0 bg-gray-50 dark:bg-gray-900/50 px-8 py-4 rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
+                    <button @click="showInadimplenciaModal = false" 
+                            class="w-full px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all shadow-lg">
+                        Entendi!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Rentabilidade -->
+    <div x-show="showRentabilidadeModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="showRentabilidadeModal = false"></div>
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div x-show="showRentabilidadeModal"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                
+                <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6 rounded-t-2xl">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-white">Análise de Rentabilidade</h2>
+                                <p class="text-blue-100 text-sm">Indicadores de Lucratividade</p>
+                            </div>
+                        </div>
+                        <button @click="showRentabilidadeModal = false" class="text-white/80 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="px-8 py-6 space-y-6">
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                        <p class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">📊 O que são as Métricas de Rentabilidade?</p>
+                        <p class="text-gray-700 dark:text-gray-300">
+                            As métricas de rentabilidade mostram <strong>o quão lucrativo é seu negócio</strong> e se ele está gerando retorno positivo sobre os investimentos.
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            💰 Lucro Bruto
+                        </h3>
+                        <div class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-2">
+                                <strong>Fórmula:</strong> Receita Total - Custos Diretos (CPV)
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                O lucro que sobra após deduzir apenas os custos diretos de produção/aquisição. É o primeiro indicador de lucratividade.
+                            </p>
+                            <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Seu Lucro Bruto:</p>
+                                <p class="text-2xl font-bold text-green-600">R$ <?= number_format($metricas_financeiras['lucro_bruto'], 2, ',', '.') ?></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+                            </svg>
+                            💸 Despesas Operacionais
+                        </h3>
+                        <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-2">
+                                Gastos necessários para manter a operação do negócio
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                Incluem: salários, aluguel, marketing, contas de água/luz, telefone, etc.
+                            </p>
+                            <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Suas Despesas Operacionais:</p>
+                                <p class="text-2xl font-bold text-red-600">R$ <?= number_format($metricas_financeiras['despesas_operacionais'], 2, ',', '.') ?></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+                            </svg>
+                            📈 Margem de Contribuição
+                        </h3>
+                        <div class="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-2">
+                                <strong>Fórmula:</strong> (Receita - Custos Variáveis) / Receita × 100
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                Indica quanto cada venda contribui para cobrir custos fixos e gerar lucro. Quanto maior, melhor!
+                            </p>
+                            <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Sua Margem de Contribuição:</p>
+                                <p class="text-2xl font-bold text-blue-600"><?= number_format($metricas_financeiras['margem_contribuicao'], 1) ?>%</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                            🎯 Ponto de Equilíbrio
+                        </h3>
+                        <div class="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-2">
+                                <strong>Break-even Point:</strong> Faturamento mínimo para não ter prejuízo
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                É o valor de vendas necessário para cobrir todos os custos (fixos + variáveis). Abaixo disso = prejuízo.
+                            </p>
+                            <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Seu Ponto de Equilíbrio:</p>
+                                <p class="text-2xl font-bold text-purple-600">R$ <?= number_format($metricas_financeiras['ponto_equilibrio'], 2, ',', '.') ?></p>
+                                <p class="text-xs text-gray-500 mt-1">Você precisa faturar no mínimo esse valor para não ter prejuízo</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl p-6 text-white">
+                        <h3 class="text-xl font-bold mb-4">📊 Resumo da Rentabilidade</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-blue-100">Lucro Bruto:</span>
+                                <span class="font-bold text-xl">R$ <?= number_format($metricas_financeiras['lucro_bruto'], 2, ',', '.') ?></span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-blue-100">Margem Bruta:</span>
+                                <span class="font-bold text-xl"><?= number_format($metricas_financeiras['margem_bruta'], 1) ?>%</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-blue-100">Margem Contribuição:</span>
+                                <span class="font-bold text-xl"><?= number_format($metricas_financeiras['margem_contribuicao'], 1) ?>%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sticky bottom-0 bg-gray-50 dark:bg-gray-900/50 px-8 py-4 rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
+                    <button @click="showRentabilidadeModal = false" 
+                            class="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg">
+                        Entendi!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Fluxo de Caixa -->
+    <div x-show="showFluxoCaixaModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="showFluxoCaixaModal = false"></div>
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div x-show="showFluxoCaixaModal"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                
+                <div class="sticky top-0 bg-gradient-to-r from-green-600 to-emerald-600 px-8 py-6 rounded-t-2xl">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-white">Análise de Fluxo de Caixa</h2>
+                                <p class="text-green-100 text-sm">Saúde Financeira do Negócio</p>
+                            </div>
+                        </div>
+                        <button @click="showFluxoCaixaModal = false" class="text-white/80 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="px-8 py-6 space-y-6">
+                    <div class="bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 p-4 rounded-r-lg">
+                        <p class="text-lg font-semibold text-green-900 dark:text-green-100 mb-2">💰 O que é Fluxo de Caixa?</p>
+                        <p class="text-gray-700 dark:text-gray-300">
+                            O Fluxo de Caixa mostra <strong>todo o dinheiro que entra e sai</strong> do seu negócio. É a métrica mais importante para garantir a sobrevivência da empresa.
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                            </svg>
+                            🏦 Saldo em Bancos
+                        </h3>
+                        <div class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-2">
+                                Dinheiro disponível em todas as contas bancárias
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                É o recurso imediatamente disponível para pagamentos e investimentos.
+                            </p>
+                            <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Saldo Total:</p>
+                                <p class="text-2xl font-bold text-green-600">R$ <?= number_format($contas_bancarias['saldo_total'], 2, ',', '.') ?></p>
+                                <?php if (($contas_bancarias['contas_com_api'] ?? 0) > 0): ?>
+                                    <p class="text-xs text-green-600 mt-1">✓ Atualizado via API bancária</p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            🔥 Burn Rate (Taxa de Queima)
+                        </h3>
+                        <div class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-2">
+                                <strong>Fórmula:</strong> |Receitas - Despesas| mensal
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                Quanto de dinheiro sua empresa "queima" por mês. Se negativo, está gastando mais do que recebe.
+                            </p>
+                            <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Seu Burn Rate:</p>
+                                <p class="text-2xl font-bold text-amber-600">R$ <?= number_format($metricas_financeiras['burn_rate'], 2, ',', '.') ?>/mês</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
+                            </svg>
+                            💵 Contas a Receber
+                        </h3>
+                        <div class="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-2">
+                                Dinheiro que você tem para receber de clientes
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                São vendas realizadas mas ainda não recebidas. Importante monitorar para garantir o recebimento.
+                            </p>
+                            <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Valor a Receber:</p>
+                                <p class="text-2xl font-bold text-blue-600">R$ <?= number_format($contas_receber['valor_a_receber'], 2, ',', '.') ?></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 13l5 5m0 0l5-5m-5 5V6"/>
+                            </svg>
+                            💳 Contas a Pagar
+                        </h3>
+                        <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-2">
+                                Compromissos financeiros que você precisa pagar
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                Fornecedores, salários, impostos e outras obrigações. Mantenha sempre organizado para evitar multas.
+                            </p>
+                            <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Valor a Pagar:</p>
+                                <p class="text-2xl font-bold text-red-600">R$ <?= number_format($contas_pagar['total'], 2, ',', '.') ?></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-6 text-white">
+                        <h3 class="text-xl font-bold mb-4">💰 Situação do Caixa</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-green-100">Disponível:</span>
+                                <span class="font-bold text-xl">R$ <?= number_format($contas_bancarias['saldo_total'], 2, ',', '.') ?></span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-green-100">A Receber:</span>
+                                <span class="font-bold text-xl">R$ <?= number_format($contas_receber['valor_a_receber'], 2, ',', '.') ?></span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-green-100">A Pagar:</span>
+                                <span class="font-bold text-xl">R$ <?= number_format($contas_pagar['total'], 2, ',', '.') ?></span>
+                            </div>
+                            <div class="pt-3 border-t border-white/30">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-green-100 font-semibold">Projeção:</span>
+                                    <span class="font-bold text-2xl">
+                                        R$ <?= number_format($contas_bancarias['saldo_total'] + $contas_receber['valor_a_receber'] - $contas_pagar['total'], 2, ',', '.') ?>
+                                    </span>
+                                </div>
+                                <p class="text-xs text-green-100 mt-1 text-right">Saldo projetado após receber e pagar tudo</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sticky bottom-0 bg-gray-50 dark:bg-gray-900/50 px-8 py-4 rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
+                    <button @click="showFluxoCaixaModal = false" 
+                            class="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg">
+                        Entendi!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Riscos e Alertas -->
+    <div x-show="showRiscosModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="showRiscosModal = false"></div>
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div x-show="showRiscosModal"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                
+                <div class="sticky top-0 bg-gradient-to-r from-amber-600 to-red-600 px-8 py-6 rounded-t-2xl">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-white">Riscos e Alertas</h2>
+                                <p class="text-amber-100 text-sm">Indicadores de Atenção</p>
+                            </div>
+                        </div>
+                        <button @click="showRiscosModal = false" class="text-white/80 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="px-8 py-6 space-y-6">
+                    <div class="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 p-4 rounded-r-lg">
+                        <p class="text-lg font-semibold text-amber-900 dark:text-amber-100 mb-2">⚠️ O que são Riscos e Alertas?</p>
+                        <p class="text-gray-700 dark:text-gray-300">
+                            São indicadores que mostram <strong>problemas ou situações que precisam de atenção imediata</strong> para evitar prejuízos ou complicações financeiras.
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            🚨 Contas Vencidas
+                        </h3>
+                        <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-2">
+                                Número de contas a receber que passaram da data de vencimento
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                <strong>Por que é importante:</strong> Quanto mais contas vencidas, maior o risco de não receber e pior seu fluxo de caixa.
+                            </p>
+                            <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Total de Contas Vencidas:</p>
+                                <p class="text-2xl font-bold text-red-600"><?= number_format($metricas_financeiras['contas_vencidas']) ?> contas</p>
+                                <a href="/contas-receber?status=vencido" class="text-xs text-red-600 hover:underline mt-1 inline-block">Ver detalhes →</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            💸 Valor em Atraso
+                        </h3>
+                        <div class="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-2">
+                                Soma total do dinheiro que deveria ter sido recebido mas está atrasado
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                <strong>Impacto:</strong> Esse dinheiro estava previsto no seu fluxo de caixa mas não entrou, pode causar problemas para pagar suas contas.
+                            </p>
+                            <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Valor Total em Atraso:</p>
+                                <p class="text-2xl font-bold text-red-600">R$ <?= number_format($metricas_financeiras['inadimplencia_valor'], 2, ',', '.') ?></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            ⏳ Movimentações Pendentes
+                        </h3>
+                        <div class="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-2">
+                                Transações que foram registradas mas ainda não foram confirmadas ou conciliadas
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                <strong>Atenção:</strong> Movimentações pendentes podem indicar processos incompletos que precisam ser revisados.
+                            </p>
+                            <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Movimentações Pendentes:</p>
+                                <p class="text-2xl font-bold text-amber-600"><?= number_format($movimentacoes_caixa['pendentes']) ?></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                            </svg>
+                            🛫 Meses de Sobrevivência (Runway)
+                        </h3>
+                        <div class="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl p-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-2">
+                                Quantos meses sua empresa pode operar com o dinheiro disponível
+                            </p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">
+                                <strong>Crítico:</strong> Se for menor que 3 meses, você precisa tomar ação urgente para aumentar receita ou reduzir custos.
+                            </p>
+                            <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Runway Atual:</p>
+                                <p class="text-2xl font-bold <?= $metricas_financeiras['runway'] < 3 ? 'text-red-600' : ($metricas_financeiras['runway'] < 6 ? 'text-amber-600' : 'text-green-600') ?>">
+                                    <?= $metricas_financeiras['runway'] > 24 ? '24+' : number_format($metricas_financeiras['runway'], 0) ?> meses
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Status: 
+                                    <?php if ($metricas_financeiras['runway'] < 3): ?>
+                                        <span class="text-red-600 font-semibold">CRÍTICO</span>
+                                    <?php elseif ($metricas_financeiras['runway'] < 6): ?>
+                                        <span class="text-amber-600 font-semibold">ATENÇÃO</span>
+                                    <?php else: ?>
+                                        <span class="text-green-600 font-semibold">SAUDÁVEL</span>
+                                    <?php endif; ?>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-amber-500 to-red-600 rounded-xl p-6 text-white">
+                        <h3 class="text-xl font-bold mb-4">⚠️ Resumo dos Alertas</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-amber-100">Contas Vencidas:</span>
+                                <span class="font-bold text-xl"><?= number_format($metricas_financeiras['contas_vencidas']) ?></span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-amber-100">Valor em Atraso:</span>
+                                <span class="font-bold text-xl">R$ <?= number_format($metricas_financeiras['inadimplencia_valor'], 2, ',', '.') ?></span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-amber-100">Mov. Pendentes:</span>
+                                <span class="font-bold text-xl"><?= number_format($movimentacoes_caixa['pendentes']) ?></span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-amber-100">Runway:</span>
+                                <span class="font-bold text-xl"><?= $metricas_financeiras['runway'] > 24 ? '24+' : number_format($metricas_financeiras['runway'], 0) ?> meses</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <p class="text-sm text-blue-900 dark:text-blue-100 font-semibold mb-2">💡 Dica:</p>
+                        <p class="text-sm text-gray-700 dark:text-gray-300">
+                            Monitore esses indicadores diariamente. Quanto mais rápido você identificar e agir sobre os alertas, menor será o impacto no seu negócio.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="sticky bottom-0 bg-gray-50 dark:bg-gray-900/50 px-8 py-4 rounded-b-2xl border-t border-gray-200 dark:border-gray-700">
+                    <button @click="showRiscosModal = false" 
+                            class="w-full px-6 py-3 bg-gradient-to-r from-amber-600 to-red-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-red-700 transition-all shadow-lg">
                         Entendi!
                     </button>
                 </div>
