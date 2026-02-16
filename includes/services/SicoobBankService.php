@@ -176,6 +176,16 @@ class SicoobBankService extends AbstractBankService
             $mesAtual = date('m');
             $anoAtual = date('Y');
             $diaAtual = date('d');
+            
+            LogSistema::debug('SicoobAPI', 'getSaldo_datas_extrato', 'Datas usadas para consulta de extrato', [
+                'numeroConta' => $numeroConta,
+                'timezone_php' => date_default_timezone_get(),
+                'datetime_php' => date('Y-m-d H:i:s'),
+                'dia' => $diaAtual,
+                'mes' => $mesAtual,
+                'ano' => $anoAtual,
+            ]);
+            
             $urlExtrato = $this->baseUrl . "/extrato/{$mesAtual}/{$anoAtual}";
             $paramsExtrato = [
                 'numeroContaCorrente' => $numeroConta,

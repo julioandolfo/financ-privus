@@ -98,8 +98,11 @@ spl_autoload_register(function ($class) {
 });
 
 // Carrega configurações
-require_once APP_ROOT . '/config/config.php';
+$config = require APP_ROOT . '/config/config.php';
 require_once APP_ROOT . '/config/constants.php';
+
+// Aplica timezone do config (Brasília)
+date_default_timezone_set($config['timezone'] ?? 'America/Sao_Paulo');
 
 // Define base path para assets
 define('ASSET_PATH', '/assets');
