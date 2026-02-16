@@ -169,35 +169,42 @@ class SicoobBankService extends AbstractBankService
         $saldoBloqueado = (float) ($resultado['saldoBloqueado'] ?? $response['saldoBloqueado'] ?? 0);
         $saldoLimite = (float) ($resultado['saldoLimite'] ?? $response['saldoLimite'] ?? 0);
         
-        // Cruzar com extrato para pegar saldoAtual mais preciso
-        // Estratégia: busca mês atual (dia 1 até hoje), se não tiver transações
-        // tenta também o último dia útil anterior
+        // Estratégia para obter saldo mais preciso via extrato:
+        // 1) Busca do dia 1 até +5 dias no futuro (captura transações agendadas em feriados/fds)
+        // 2) Se estiver nos primeiros dias do mês sem transações, consulta mês anterior
+        // 3) Identifica a data de referência real do saldo (última transação processada)
         $saldoExtrato = null;
         $saldoAnterior = null;
         $saldoBloqueadoExtrato = null;
         $saldoLimiteExtrato = null;
         $ultimaTransacaoData = null;
         $totalTransacoes = 0;
+        $dataReferencia = null;
         try {
             $mesAtual = date('m');
             $anoAtual = date('Y');
-            $diaAtual = date('d');
+            $diaAtual = (int) date('d');
+            
+            // Estender até +5 dias para capturar transações agendadas (feriados, fins de semana)
+            $ultimoDiaMes = (int) date('t');
+            $diaFinal = min($diaAtual + 5, $ultimoDiaMes);
             
             LogSistema::debug('SicoobAPI', 'getSaldo_datas_extrato', 'Datas usadas para consulta de extrato', [
                 'numeroConta' => $numeroConta,
                 'timezone_php' => date_default_timezone_get(),
                 'datetime_php' => date('Y-m-d H:i:s'),
-                'dia' => $diaAtual,
+                'dia_atual' => $diaAtual,
+                'dia_final_consulta' => $diaFinal,
                 'mes' => $mesAtual,
                 'ano' => $anoAtual,
+                'dias_futuro' => $diaFinal - $diaAtual,
             ]);
             
-            // Buscar extrato do mês inteiro até hoje
             $urlExtrato = $this->baseUrl . "/extrato/{$mesAtual}/{$anoAtual}";
             $paramsExtrato = [
                 'numeroContaCorrente' => $numeroConta,
                 'diaInicial' => '01',
-                'diaFinal' => $diaAtual,
+                'diaFinal' => str_pad($diaFinal, 2, '0', STR_PAD_LEFT),
             ];
             
             $responseExtrato = $this->httpRequest(
@@ -221,15 +228,28 @@ class SicoobBankService extends AbstractBankService
                 
                 $transacoes = $extData['transacoes'] ?? [];
                 $totalTransacoes = count($transacoes);
+                
                 if ($totalTransacoes > 0) {
+                    // Encontrar a data mais recente entre todas as transações
                     $ultimaTx = end($transacoes);
                     $ultimaTransacaoData = $ultimaTx['data'] ?? null;
+                    
+                    // Percorrer para achar a data máxima (transações futuras agendadas)
+                    $maxData = null;
+                    foreach ($transacoes as $tx) {
+                        $txData = $tx['data'] ?? null;
+                        if ($txData && ($maxData === null || $txData > $maxData)) {
+                            $maxData = $txData;
+                        }
+                    }
+                    $ultimaTransacaoData = $maxData;
+                    $dataReferencia = $maxData;
                 }
             }
             
-            // Se não teve transações no mês atual (ex: início do mês ou fds),
-            // buscar último dia do mês anterior para ter referência
-            if ($totalTransacoes === 0 && (int)$diaAtual <= 3) {
+            // Se estamos nos primeiros dias do mês e não tem transações,
+            // buscar o mês anterior para ter uma referência
+            if ($totalTransacoes === 0 && $diaAtual <= 5) {
                 $mesAnterior = date('m', strtotime('first day of last month'));
                 $anoAnterior = date('Y', strtotime('first day of last month'));
                 $ultimoDiaMesAnterior = date('t', strtotime('last day of last month'));
@@ -237,7 +257,7 @@ class SicoobBankService extends AbstractBankService
                 $urlExtratoAnterior = $this->baseUrl . "/extrato/{$mesAnterior}/{$anoAnterior}";
                 $paramsExtratoAnterior = [
                     'numeroContaCorrente' => $numeroConta,
-                    'diaInicial' => $ultimoDiaMesAnterior,
+                    'diaInicial' => '01',
                     'diaFinal' => $ultimoDiaMesAnterior,
                 ];
                 
@@ -256,14 +276,32 @@ class SicoobBankService extends AbstractBankService
                     }
                     $saldoMesAnterior = isset($extDataAnt['saldoAtual']) ? (float)$extDataAnt['saldoAtual'] : null;
                     
-                    if ($saldoMesAnterior !== null && $saldoExtrato === null) {
+                    if ($saldoMesAnterior !== null) {
                         $saldoExtrato = $saldoMesAnterior;
                     }
                     
-                    LogSistema::debug('SicoobAPI', 'getSaldo_extrato_mes_anterior', 'Consultou mês anterior (sem transações no mês atual)', [
+                    // Buscar última transação do mês anterior
+                    $txAnt = $extDataAnt['transacoes'] ?? [];
+                    if (count($txAnt) > 0) {
+                        $maxDataAnt = null;
+                        foreach ($txAnt as $tx) {
+                            $txData = $tx['data'] ?? null;
+                            if ($txData && ($maxDataAnt === null || $txData > $maxDataAnt)) {
+                                $maxDataAnt = $txData;
+                            }
+                        }
+                        if ($maxDataAnt) {
+                            $ultimaTransacaoData = $maxDataAnt;
+                            $dataReferencia = $maxDataAnt;
+                        }
+                        $totalTransacoes += count($txAnt);
+                    }
+                    
+                    LogSistema::debug('SicoobAPI', 'getSaldo_extrato_mes_anterior', 'Consultou mês anterior (sem transações recentes)', [
                         'numeroConta' => $numeroConta,
-                        'mes_anterior' => "{$mesAnterior}/{$anoAnterior}",
+                        'periodo' => "01/{$mesAnterior}/{$anoAnterior} a {$ultimoDiaMesAnterior}/{$mesAnterior}/{$anoAnterior}",
                         'saldoAtual_mes_anterior' => $saldoMesAnterior,
+                        'total_transacoes_ant' => count($txAnt),
                     ]);
                 }
             }
@@ -281,6 +319,8 @@ class SicoobBankService extends AbstractBankService
                 'extrato_saldoLimite' => $saldoLimiteExtrato,
                 'extrato_total_transacoes' => $totalTransacoes,
                 'extrato_ultima_transacao' => $ultimaTransacaoData,
+                'extrato_data_referencia' => $dataReferencia,
+                'extrato_periodo_consultado' => "01/{$mesAtual}/{$anoAtual} a {$diaFinal}/{$mesAtual}/{$anoAtual}",
                 'extrato_http_code' => $this->lastHttpCode ?? null,
                 'extrato_response_raw' => substr($extratoResponseJson, 0, 2000),
             ]);
@@ -290,11 +330,21 @@ class SicoobBankService extends AbstractBankService
             ]);
         }
         
-        // Usar saldo do extrato se disponível (mais preciso)
+        // Usar saldo do extrato se disponível (mais preciso, inclui transações agendadas)
         $saldoFinal = ($saldoExtrato !== null) ? $saldoExtrato : $saldoEndpoint;
+        
+        // Usar limite do extrato se disponível (pode ser mais atualizado)
+        if ($saldoLimiteExtrato !== null && $saldoLimiteExtrato > 0) {
+            $saldoLimite = $saldoLimiteExtrato;
+        }
         
         // Calcular saldo contábil (sem limite) — o que o cliente vê como "saldo" no app
         $saldoContabil = $saldoFinal - $saldoLimite;
+        
+        // Se não temos data de referência, usar hoje
+        if (!$dataReferencia) {
+            $dataReferencia = date('Y-m-d');
+        }
         
         try {
             LogSistema::info('SicoobAPI', 'getSaldo_resultado', 'Saldo final escolhido', [
@@ -306,10 +356,11 @@ class SicoobBankService extends AbstractBankService
                 'saldo_limite' => $saldoLimite,
                 'saldo_contabil_sem_limite' => $saldoContabil,
                 'saldo_bloqueado' => $saldoBloqueado,
+                'data_referencia' => $dataReferencia,
                 'fonte' => ($saldoExtrato !== null) ? 'EXTRATO (saldoAtual)' : 'ENDPOINT (/saldo)',
                 'total_transacoes_periodo' => $totalTransacoes,
                 'ultima_transacao' => $ultimaTransacaoData,
-                'nota' => 'Sicoob retorna saldo_api = saldo_contabil + limite. O saldo real do cliente = saldo_api - limite.',
+                'nota' => 'Sicoob saldo_api = contabil + limite. Extrato consultado até +5 dias para incluir agendamentos.',
             ]);
         } catch (\Exception $e) {}
         
@@ -319,9 +370,10 @@ class SicoobBankService extends AbstractBankService
             'saldo_bloqueado' => $saldoBloqueado,
             'saldo_limite' => $saldoLimite,
             'atualizado_em' => date('Y-m-d\TH:i:s'),
-            'moeda' => 'BRL',
-            'total_transacoes' => $totalTransacoes,
+            'data_referencia' => $dataReferencia,
             'ultima_transacao' => $ultimaTransacaoData,
+            'total_transacoes' => $totalTransacoes,
+            'moeda' => 'BRL',
         ];
     }
 
