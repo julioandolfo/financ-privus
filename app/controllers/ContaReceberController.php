@@ -478,7 +478,18 @@ class ContaReceberController extends Controller
             $empresaDaConta = $contaReceber['empresa_id'];
             
             $empresas = $this->empresaModel->findAll(['ativo' => 1]);
-            $clientes = $this->clienteModel->findAll(['ativo' => 1]);
+            $clientes = $this->clienteModel->findAll($empresaDaConta);
+            
+            // Garantir que o cliente vinculado esteja na lista (pode estar inativo ou em outra empresa)
+            if (!empty($contaReceber['cliente_id'])) {
+                $clienteIds = array_column($clientes, 'id');
+                if (!in_array($contaReceber['cliente_id'], $clienteIds)) {
+                    $clienteVinculado = $this->clienteModel->findById($contaReceber['cliente_id']);
+                    if ($clienteVinculado) {
+                        array_unshift($clientes, $clienteVinculado);
+                    }
+                }
+            }
             
             // Carregar categorias e centros de custo da empresa da conta
             $categorias = $this->categoriaModel->findAll($empresaDaConta, 'receita');
