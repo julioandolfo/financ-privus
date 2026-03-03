@@ -23,7 +23,7 @@
 
     <!-- Filtros -->
     <form method="GET" action="/pedidos" class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700 mb-8">
-        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Número do Pedido</label>
                 <input type="text" name="numero_pedido" value="<?= htmlspecialchars($filters['numero_pedido'] ?? '') ?>" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" placeholder="Buscar...">
@@ -61,7 +61,7 @@
                     <option value="">Todos</option>
                     <?php if (!empty($statusOrigemDisponiveis)): ?>
                         <?php foreach ($statusOrigemDisponiveis as $statusOrigem): ?>
-                            <?php 
+                            <?php
                                 $statusLabel = ucfirst(str_replace(['wc-', '-', '_'], ['', ' ', ' '], $statusOrigem));
                             ?>
                             <option value="<?= htmlspecialchars($statusOrigem) ?>" <?= ($filters['status_origem'] ?? '') === $statusOrigem ? 'selected' : '' ?>>
@@ -70,6 +70,40 @@
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </select>
+            </div>
+
+            <!-- Filtro de Período -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        Período
+                    </span>
+                </label>
+                <select id="periodo_predefinido" name="periodo" onchange="aplicarPeriodoPredefinido(this.value)" class="w-full px-4 py-2 rounded-lg border border-blue-300 dark:border-blue-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    <option value="">Qualquer data</option>
+                    <option value="hoje" <?= ($filters['periodo'] ?? '') === 'hoje' ? 'selected' : '' ?>>Hoje</option>
+                    <option value="ontem" <?= ($filters['periodo'] ?? '') === 'ontem' ? 'selected' : '' ?>>Ontem</option>
+                    <option value="esta_semana" <?= ($filters['periodo'] ?? '') === 'esta_semana' ? 'selected' : '' ?>>Esta semana</option>
+                    <option value="semana_passada" <?= ($filters['periodo'] ?? '') === 'semana_passada' ? 'selected' : '' ?>>Semana passada</option>
+                    <option value="este_mes" <?= ($filters['periodo'] ?? '') === 'este_mes' ? 'selected' : '' ?>>Este mês</option>
+                    <option value="mes_passado" <?= ($filters['periodo'] ?? '') === 'mes_passado' ? 'selected' : '' ?>>Mês passado</option>
+                    <option value="personalizado" <?= ($filters['periodo'] ?? '') === 'personalizado' ? 'selected' : '' ?>>Personalizado</option>
+                </select>
+            </div>
+
+            <!-- Data Início -->
+            <div id="campo_data_inicio" class="<?= ($filters['periodo'] ?? '') === 'personalizado' || !empty($filters['data_inicio']) ? '' : 'hidden' ?>">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Início</label>
+                <input type="date" id="data_inicio" name="data_inicio" value="<?= htmlspecialchars($filters['data_inicio'] ?? '') ?>" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            </div>
+
+            <!-- Data Fim -->
+            <div id="campo_data_fim" class="<?= ($filters['periodo'] ?? '') === 'personalizado' || !empty($filters['data_fim']) ? '' : 'hidden' ?>">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Fim</label>
+                <input type="date" id="data_fim" name="data_fim" value="<?= htmlspecialchars($filters['data_fim'] ?? '') ?>" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
             </div>
 
             <div>
@@ -81,22 +115,22 @@
                     <option value="todos" <?= ($filters['por_pagina'] ?? '') == 'todos' ? 'selected' : '' ?>>Todos</option>
                 </select>
             </div>
+        </div>
 
-            <div class="flex items-end">
-                <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg transition-all shadow-lg">
-                    <span class="flex items-center justify-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-                        </svg>
-                        Filtrar
-                    </span>
-                </button>
-            </div>
+        <div class="flex justify-end mt-4">
+            <button type="submit" class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg transition-all shadow-lg">
+                <span class="flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                    </svg>
+                    Filtrar
+                </span>
+            </button>
         </div>
     </form>
 
     <!-- Filtros Ativos -->
-    <?php 
+    <?php
     $filtrosAtivos = [];
     if (!empty($filters['origem'])) $filtrosAtivos[] = 'Origem: ' . ucfirst($filters['origem']);
     if (!empty($filters['status'])) $filtrosAtivos[] = 'Status: ' . ucfirst($filters['status']);
@@ -105,6 +139,37 @@
         $filtrosAtivos[] = 'Status WooCommerce: ' . $statusLabel;
     }
     if (!empty($filters['numero_pedido'])) $filtrosAtivos[] = 'Pedido: ' . $filters['numero_pedido'];
+
+    // Filtros de período
+    $periodoLabels = [
+        'hoje' => 'Hoje',
+        'ontem' => 'Ontem',
+        'esta_semana' => 'Esta semana',
+        'semana_passada' => 'Semana passada',
+        'este_mes' => 'Este mês',
+        'mes_passado' => 'Mês passado',
+        'personalizado' => 'Período personalizado'
+    ];
+    if (!empty($filters['periodo']) && isset($periodoLabels[$filters['periodo']])) {
+        $filtrosAtivos[] = 'Período: ' . $periodoLabels[$filters['periodo']];
+    }
+    if (!empty($filters['data_inicio']) || !empty($filters['data_fim'])) {
+        $periodoTexto = 'Data: ';
+        if (!empty($filters['data_inicio'])) {
+            $periodoTexto .= date('d/m/Y', strtotime($filters['data_inicio']));
+        } else {
+            $periodoTexto .= 'início';
+        }
+        $periodoTexto .= ' até ';
+        if (!empty($filters['data_fim'])) {
+            $periodoTexto .= date('d/m/Y', strtotime($filters['data_fim']));
+        } else {
+            $periodoTexto .= 'hoje';
+        }
+        if (empty($filters['periodo']) || $filters['periodo'] === 'personalizado') {
+            $filtrosAtivos[] = $periodoTexto;
+        }
+    }
     ?>
     
     <?php if (!empty($filtrosAtivos)): ?>
@@ -540,7 +605,89 @@ function alterarStatusMassa() {
 // Inicializar estado ao carregar página
 document.addEventListener('DOMContentLoaded', function() {
     atualizarSelecao();
+
+    // Verificar se há período pré-definido ao carregar
+    const periodoSelect = document.getElementById('periodo_predefinido');
+    if (periodoSelect && periodoSelect.value) {
+        aplicarPeriodoPredefinido(periodoSelect.value);
+    }
 });
+
+// ===== FUNÇÕES DE FILTRO DE PERÍODO =====
+
+function aplicarPeriodoPredefinido(periodo) {
+    const campoDataInicio = document.getElementById('campo_data_inicio');
+    const campoDataFim = document.getElementById('campo_data_fim');
+    const inputDataInicio = document.getElementById('data_inicio');
+    const inputDataFim = document.getElementById('data_fim');
+
+    if (!periodo || periodo === '') {
+        // Limpar datas e esconder campos
+        if (inputDataInicio) inputDataInicio.value = '';
+        if (inputDataFim) inputDataFim.value = '';
+        if (campoDataInicio) campoDataInicio.classList.add('hidden');
+        if (campoDataFim) campoDataFim.classList.add('hidden');
+        return;
+    }
+
+    if (periodo === 'personalizado') {
+        // Mostrar campos de data para edição manual
+        if (campoDataInicio) campoDataInicio.classList.remove('hidden');
+        if (campoDataFim) campoDataFim.classList.remove('hidden');
+        return;
+    }
+
+    // Calcular datas baseadas no período selecionado
+    const hoje = new Date();
+    const dataInicio = new Date();
+    const dataFim = new Date();
+
+    switch (periodo) {
+        case 'hoje':
+            // Data início = hoje, Data fim = hoje
+            break;
+        case 'ontem':
+            dataInicio.setDate(hoje.getDate() - 1);
+            dataFim.setDate(hoje.getDate() - 1);
+            break;
+        case 'esta_semana':
+            // Domingo desta semana
+            const diaSemana = hoje.getDay();
+            dataInicio.setDate(hoje.getDate() - diaSemana);
+            break;
+        case 'semana_passada':
+            // Domingo da semana passada até sábado
+            const diaAtual = hoje.getDay();
+            dataInicio.setDate(hoje.getDate() - diaAtual - 7);
+            dataFim.setDate(hoje.getDate() - diaAtual - 1);
+            break;
+        case 'este_mes':
+            // Primeiro dia do mês atual
+            dataInicio.setDate(1);
+            break;
+        case 'mes_passado':
+            // Primeiro dia do mês passado até último dia do mês passado
+            dataInicio.setMonth(hoje.getMonth() - 1, 1);
+            dataFim.setMonth(hoje.getMonth(), 0);
+            break;
+    }
+
+    // Formatar datas para YYYY-MM-DD
+    const formatarData = (data) => {
+        const ano = data.getFullYear();
+        const mes = String(data.getMonth() + 1).padStart(2, '0');
+        const dia = String(data.getDate()).padStart(2, '0');
+        return `${ano}-${mes}-${dia}`;
+    };
+
+    // Preencher os campos de data
+    if (inputDataInicio) inputDataInicio.value = formatarData(dataInicio);
+    if (inputDataFim) inputDataFim.value = formatarData(dataFim);
+
+    // Esconder os campos de data (já estão preenchidos automaticamente)
+    if (campoDataInicio) campoDataInicio.classList.add('hidden');
+    if (campoDataFim) campoDataFim.classList.add('hidden');
+}
 </script>
 
 <?php
