@@ -2085,10 +2085,47 @@ class WooCommerceService
             
             return $clienteId;
         } catch (\Exception $e) {
-            \App\Models\LogSistema::error('WooCommerce', 'buscarOuCriarCliente', 
-                "Erro ao criar cliente: " . $e->getMessage(), 
+            // Se deu erro de duplicidade, busca o cliente existente
+            if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                $db = \App\Core\Database::getInstance()->getConnection();
+                $clienteExistente = null;
+
+                // Tenta buscar por CPF/CNPJ primeiro
+                if (!empty($cpfCnpj)) {
+                    $sql = "SELECT id FROM clientes WHERE cpf_cnpj = :cpf_cnpj AND empresa_id = :empresa_id LIMIT 1";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute(['cpf_cnpj' => $cpfCnpj, 'empresa_id' => $empresaId]);
+                    $clienteExistente = $stmt->fetch(\PDO::FETCH_ASSOC);
+                }
+
+                // Se não encontrou por CPF/CNPJ, tenta por email
+                if (!$clienteExistente && !empty($email)) {
+                    $sql = "SELECT id FROM clientes WHERE email = :email AND empresa_id = :empresa_id AND ativo = 1 LIMIT 1";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute(['email' => $email, 'empresa_id' => $empresaId]);
+                    $clienteExistente = $stmt->fetch(\PDO::FETCH_ASSOC);
+                }
+
+                // Se não encontrou por email, tenta por nome
+                if (!$clienteExistente && !empty($nome)) {
+                    $sql = "SELECT id FROM clientes WHERE nome_razao_social = :nome AND empresa_id = :empresa_id AND ativo = 1 LIMIT 1";
+                    $stmt = $db->prepare($sql);
+                    $stmt->execute(['nome' => $nome, 'empresa_id' => $empresaId]);
+                    $clienteExistente = $stmt->fetch(\PDO::FETCH_ASSOC);
+                }
+
+                if ($clienteExistente) {
+                    \App\Models\LogSistema::info('WooCommerce', 'buscarOuCriarCliente',
+                        "Cliente já existia (Duplicate entry) -> ID #{$clienteExistente['id']}",
+                        ['nome' => $nome, 'email' => $email, 'cpf_cnpj' => $cpfCnpj]);
+                    return $clienteExistente['id'];
+                }
+            }
+
+            \App\Models\LogSistema::error('WooCommerce', 'buscarOuCriarCliente',
+                "Erro ao criar cliente: " . $e->getMessage(),
                 ['nome' => $nome, 'email' => $email, 'trace' => $e->getTraceAsString()]);
-            
+
             // NÃO retorna fallback 1. Lança exceção para parar e avisar
             throw new \Exception("Falha ao criar cliente '{$nome}': " . $e->getMessage());
         }
