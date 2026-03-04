@@ -165,7 +165,7 @@ class Cliente extends Model
                 return $cliente;
             }
         }
-        
+
         // Se tem codigo_cliente, tenta buscar por ele
         if (!empty($data['codigo_cliente'])) {
             $cliente = $this->findByCodigoCliente($data['codigo_cliente'], $empresaId);
@@ -173,21 +173,42 @@ class Cliente extends Model
                 return $cliente;
             }
         }
-        
+
         // Se não encontrou, cria novo cliente
         $data['empresa_id'] = $empresaId;
-        
+
         // Define valores padrão
         $data['tipo'] = $data['tipo'] ?? $this->detectarTipo($data['cpf_cnpj'] ?? '');
         $data['nome_razao_social'] = $data['nome_razao_social'] ?? $data['nome'] ?? 'Cliente API';
         $data['ativo'] = 1;
-        
-        $id = $this->create($data);
-        
-        if ($id) {
-            return $this->findById($id);
+
+        try {
+            $id = $this->create($data);
+
+            if ($id) {
+                return $this->findById($id);
+            }
+        } catch (\PDOException $e) {
+            // Se deu erro de duplicidade no codigo_cliente, busca o cliente existente
+            if (strpos($e->getMessage(), 'Duplicate entry') !== false && strpos($e->getMessage(), 'idx_codigo_cliente_empresa') !== false) {
+                if (!empty($data['codigo_cliente'])) {
+                    $cliente = $this->findByCodigoCliente($data['codigo_cliente'], $empresaId);
+                    if ($cliente) {
+                        return $cliente;
+                    }
+                }
+                // Se não conseguiu buscar por codigo_cliente, tenta por CPF/CNPJ novamente
+                if (!empty($data['cpf_cnpj'])) {
+                    $cliente = $this->findByCpfCnpj($data['cpf_cnpj'], $empresaId);
+                    if ($cliente) {
+                        return $cliente;
+                    }
+                }
+            }
+            // Re-lança a exceção se não conseguiu tratar
+            throw $e;
         }
-        
+
         return null;
     }
     
