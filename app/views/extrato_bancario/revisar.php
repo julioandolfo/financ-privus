@@ -55,12 +55,73 @@ $empresasJson = json_encode($empresas ?? []);
                 $temPadrao = !empty($padrao);
                 $zIndex = 1000 - $index; // Z-index decrescente para cada card
                 ?>
-                <div class="card-extrato bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-visible relative"
+                <?php
+                $contasSugeridas = $transacao['contas_sugeridas'] ?? [];
+                $temContasSugeridas = !empty($contasSugeridas);
+                ?>
+                <div class="card-extrato bg-white dark:bg-gray-800 rounded-xl shadow-lg border <?= $temContasSugeridas ? 'border-orange-400 dark:border-orange-500 ring-2 ring-orange-100 dark:ring-orange-900/30' : 'border-gray-200 dark:border-gray-700' ?> overflow-visible relative"
                      style="z-index: <?= $zIndex ?>;"
-                     x-data="{ expanded: false, temRateio: <?= ($padrao && $padrao['tem_rateio']) ? 'true' : 'false' ?>, rateios: [] }">
-                    
+                     data-index="<?= $index ?>"
+                     x-data="{ expanded: false, temRateio: <?= ($padrao && $padrao['tem_rateio']) ? 'true' : 'false' ?>, rateios: [], modoVincular: <?= $temContasSugeridas ? 'true' : 'false' ?> }">
+
+                    <!-- Alerta de Contas Sugeridas -->
+                    <?php if ($temContasSugeridas): ?>
+                    <div class="bg-orange-50 dark:bg-orange-900/20 border-b border-orange-200 dark:border-orange-800 p-3">
+                        <div class="flex items-start gap-2">
+                            <svg class="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-orange-800 dark:text-orange-300">
+                                    <?= count($contasSugeridas) ?> conta(s) a pagar encontrada(s) com mesmo valor
+                                </p>
+                                <p class="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                                    Você pode vincular este pagamento a uma conta já cadastrada
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Lista de Contas Sugeridas -->
+                        <div class="mt-3 space-y-2">
+                            <?php foreach ($contasSugeridas as $contaSugerida): ?>
+                            <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded border border-orange-200 dark:border-orange-800">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                                        <?= htmlspecialchars($contaSugerida['descricao']) ?>
+                                    </p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        Venc: <?= date('d/m/Y', strtotime($contaSugerida['data_vencimento'])) ?> |
+                                        Forn: <?= htmlspecialchars($contaSugerida['fornecedor_nome'] ?? 'N/A') ?> |
+                                        Cat: <?= htmlspecialchars($contaSugerida['categoria_nome'] ?? 'N/A') ?>
+                                    </p>
+                                </div>
+                                <button type="button"
+                                        @click="vincularPagamento(<?= $index ?>, <?= $contaSugerida['id'] ?>, '<?= $transacao['data'] ?>')"
+                                        class="ml-2 px-3 py-1.5 text-xs bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    Vincular
+                                </button>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <!-- Opção de Cadastrar Nova -->
+                        <div class="mt-3 pt-3 border-t border-orange-200 dark:border-orange-800">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox"
+                                       x-model="modoVincular"
+                                       class="w-4 h-4 rounded text-orange-600"
+                                       checked>
+                                <span class="text-sm text-orange-700 dark:text-orange-300">Vincular a conta existente (desmarque para cadastrar nova)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
                     <!-- Linha Principal -->
-                    <div class="p-4">
+                    <div class="p-4" x-show="!modoVincular || !<?= $temContasSugeridas ? 'true' : 'false' ?>">
                         <!-- Linha Superior: Checkbox + Informações + Valor + Ações -->
                         <div class="flex items-start gap-3 mb-3">
                             <!-- Checkbox -->
@@ -537,6 +598,10 @@ $empresasJson = json_encode($empresas ?? []);
                         </div>
                     </div>
                 </div>
+                <!-- Fechar x-show quando houver contas sugeridas -->
+                <?php if ($temContasSugeridas): ?>
+                </div>
+                <?php endif; ?>
             <?php endforeach; ?>
         </div>
         
@@ -626,7 +691,7 @@ function extratoRevisarForm() {
         
         async excluirLinha(index) {
             if (!confirm('Deseja realmente excluir esta linha?')) return;
-            
+
             try {
                 const response = await fetch('/extrato-bancario/excluir-linha', {
                     method: 'POST',
@@ -635,7 +700,21 @@ function extratoRevisarForm() {
                 });
                 const data = await response.json();
                 if (data.success) {
-                    location.reload();
+                    // Remover o card da DOM sem recarregar a página
+                    const card = document.querySelector(`[data-index="${index}"]`);
+                    if (card) {
+                        card.remove();
+                    } else {
+                        // Fallback: tentar encontrar pelo checkbox ou estrutura
+                        const checkbox = document.querySelector(`input[name="transacoes[${index}][selecionada]"]`);
+                        if (checkbox) {
+                            const cardElement = checkbox.closest('.card-extrato');
+                            if (cardElement) {
+                                cardElement.remove();
+                            }
+                        }
+                    }
+                    this.updateSelectedCount();
                 }
             } catch (error) {
                 alert('Erro ao excluir: ' + error.message);
@@ -644,23 +723,23 @@ function extratoRevisarForm() {
         
         async salvarPadrao(index) {
             const card = document.querySelector(`[data-index="${index}"]`) || document.querySelectorAll('.bg-white.dark\\:bg-gray-800.rounded-xl')[index];
-            
+
             const formData = new FormData();
             formData.append('indice', index);
             formData.append('empresa_id', <?= $empresaId ?>);
-            
+
             // Pegar valores dos selects
             const categoriaSelect = document.getElementById(`categoria_${index}`);
             const fornecedorSelect = document.getElementById(`fornecedor_${index}`);
             const centroSelect = document.getElementById(`centro_custo_${index}`);
             const contaSelect = document.getElementById(`conta_bancaria_${index}`);
             const formaSelect = document.getElementById(`forma_pagamento_${index}`);
-            
+
             if (!categoriaSelect || !categoriaSelect.value) {
                 alert('Selecione uma categoria antes de salvar o padrão');
                 return;
             }
-            
+
             formData.append('categoria_id', categoriaSelect.tomselect?.getValue() || categoriaSelect.value || '');
             formData.append('fornecedor_id', fornecedorSelect?.tomselect?.getValue() || fornecedorSelect?.value || '');
             formData.append('centro_custo_id', centroSelect?.tomselect?.getValue() || centroSelect?.value || '');
@@ -668,10 +747,10 @@ function extratoRevisarForm() {
             formData.append('forma_pagamento_id', formaSelect?.tomselect?.getValue() || formaSelect?.value || '');
             formData.append('tem_rateio', '0');
             formData.append('observacoes', '');
-            
+
             const descricaoInput = document.getElementById(`descricao_conta_${index}`);
             formData.append('descricao_conta', descricaoInput?.value?.trim() || '');
-            
+
             try {
                 const response = await fetch('/extrato-bancario/salvar-padrao', {
                     method: 'POST',
@@ -685,6 +764,39 @@ function extratoRevisarForm() {
                 }
             } catch (error) {
                 alert('Erro ao salvar padrão: ' + error.message);
+            }
+        },
+
+        async vincularPagamento(index, contaId, dataPagamento) {
+            if (!confirm('Deseja vincular este pagamento à conta selecionada? A conta será marcada como PAGA.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/extrato-bancario/vincular-pagamento', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        indice: index,
+                        conta_id: contaId,
+                        data_pagamento: dataPagamento
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Remover o card da DOM
+                    const card = document.querySelector(`[data-index="${index}"]`);
+                    if (card) {
+                        card.remove();
+                    }
+                    this.updateSelectedCount();
+                    alert('Pagamento vinculado com sucesso!');
+                } else {
+                    alert('Erro: ' + (data.error || 'Erro ao vincular pagamento'));
+                }
+            } catch (error) {
+                alert('Erro ao vincular pagamento: ' + error.message);
             }
         },
         

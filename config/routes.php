@@ -159,6 +159,7 @@ return [
     'POST /extrato-bancario/excluir-linha' => ['handler' => 'ExtratoBancarioController@excluirLinha', 'middleware' => ['AuthMiddleware']],
     'POST /extrato-bancario/salvar-padrao' => ['handler' => 'ExtratoBancarioController@salvarPadrao', 'middleware' => ['AuthMiddleware']],
     'POST /extrato-bancario/cadastrar' => ['handler' => 'ExtratoBancarioController@cadastrar', 'middleware' => ['AuthMiddleware']],
+    'POST /extrato-bancario/vincular-pagamento' => ['handler' => 'ExtratoBancarioController@vincularPagamento', 'middleware' => ['AuthMiddleware']],
     
     // Contas a Receber (protegido) - Rotas específicas primeiro
     'GET /contas-receber' => ['handler' => 'ContaReceberController@index', 'middleware' => ['AuthMiddleware']],

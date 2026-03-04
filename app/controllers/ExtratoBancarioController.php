@@ -160,7 +160,14 @@ class ExtratoBancarioController extends Controller
                 $transacao['padrao'] = $padrao;
                 $transacao['tipo_padrao_encontrado'] = $tipoPadraoEncontrado;
                 $transacao['selecionada'] = true; // Por padrão, todas selecionadas
-                
+
+                // Buscar contas pendentes com mesmo valor para sugerir vínculo
+                $transacao['contas_sugeridas'] = $this->contaPagarModel->findPendentesByValor(
+                    $empresaId,
+                    $transacao['valor'],
+                    0.01 // Tolerância de 1 centavo
+                );
+
                 $transacoesComPadroes[] = $transacao;
             }
             
@@ -307,6 +314,43 @@ class ExtratoBancarioController extends Controller
         return $response->json(['success' => true, 'message' => 'Padrão salvo com sucesso']);
     }
     
+    /**
+     * Vincula transação do extrato a uma conta a pagar existente (marca como paga)
+     */
+    public function vincularPagamento(Request $request, Response $response)
+    {
+        $usuarioId = $_SESSION['usuario_id'] ?? null;
+        if (!$usuarioId) {
+            return $response->json(['success' => false, 'error' => 'Usuário não autenticado'], 401);
+        }
+
+        $indice = (int)$request->post('indice');
+        $contaId = (int)$request->post('conta_id');
+        $dataPagamento = $request->post('data_pagamento');
+
+        if (!isset($_SESSION['extrato_transacoes'][$indice])) {
+            return $response->json(['success' => false, 'error' => 'Transação do extrato não encontrada'], 404);
+        }
+
+        $transacao = $_SESSION['extrato_transacoes'][$indice];
+
+        // Vincular pagamento à conta existente
+        $sucesso = $this->contaPagarModel->vincularPagamento($contaId, $dataPagamento, $transacao['valor']);
+
+        if ($sucesso) {
+            // Remover transação da sessão (já foi processada)
+            unset($_SESSION['extrato_transacoes'][$indice]);
+            $_SESSION['extrato_transacoes'] = array_values($_SESSION['extrato_transacoes']);
+
+            return $response->json([
+                'success' => true,
+                'message' => 'Pagamento vinculado com sucesso!'
+            ]);
+        }
+
+        return $response->json(['success' => false, 'error' => 'Erro ao vincular pagamento'], 500);
+    }
+
     /**
      * Cadastrar todas as transações selecionadas em massa
      */

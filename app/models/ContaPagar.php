@@ -928,6 +928,56 @@ class ContaPagar extends Model
     {
         return $this->db;
     }
+
+    /**
+     * Busca contas pendentes por valor exato (para vinculação com extrato)
+     */
+    public function findPendentesByValor($empresaId, $valor, $tolerancia = 0.01)
+    {
+        $sql = "SELECT cp.*,
+                       e.nome_fantasia as empresa_nome,
+                       f.nome_razao_social as fornecedor_nome,
+                       c.nome as categoria_nome
+                FROM {$this->table} cp
+                JOIN empresas e ON cp.empresa_id = e.id
+                LEFT JOIN fornecedores f ON cp.fornecedor_id = f.id
+                JOIN categorias_financeiras c ON cp.categoria_id = c.id
+                WHERE cp.empresa_id = ?
+                  AND cp.status IN ('pendente', 'vencido', 'parcial')
+                  AND cp.deleted_at IS NULL
+                  AND ABS(cp.valor_total - ?) <= ?
+                ORDER BY cp.data_vencimento ASC
+                LIMIT 5";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$empresaId, $valor, $tolerancia]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Vincula pagamento a uma conta existente (marca como paga)
+     */
+    public function vincularPagamento($contaId, $dataPagamento, $valorPago = null)
+    {
+        $conta = $this->findById($contaId);
+        if (!$conta) {
+            return false;
+        }
+
+        // Se não informou valor, usa o valor total da conta
+        if ($valorPago === null) {
+            $valorPago = $conta['valor_total'];
+        }
+
+        $sql = "UPDATE {$this->table} SET
+                valor_pago = ?,
+                data_pagamento = ?,
+                status = 'pago'
+                WHERE id = ?";
+
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$valorPago, $dataPagamento, $contaId]);
+    }
     
     /**
      * SOFT DELETE - Marca registro como deletado sem remover do banco
