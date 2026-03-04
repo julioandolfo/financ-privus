@@ -158,7 +158,7 @@ class Cliente extends Model
      */
     public function findOrCreateByCpfCnpj($data, $empresaId)
     {
-        // Se tem CPF/CNPJ, tenta buscar primeiro
+        // Se tem CPF/CNPJ, tenta buscar primeiro (ativos)
         if (!empty($data['cpf_cnpj'])) {
             $cliente = $this->findByCpfCnpj($data['cpf_cnpj'], $empresaId);
             if ($cliente) {
@@ -166,7 +166,7 @@ class Cliente extends Model
             }
         }
 
-        // Se tem codigo_cliente, tenta buscar por ele
+        // Se tem codigo_cliente, tenta buscar por ele (ativos)
         if (!empty($data['codigo_cliente'])) {
             $cliente = $this->findByCodigoCliente($data['codigo_cliente'], $empresaId);
             if ($cliente) {
@@ -174,7 +174,43 @@ class Cliente extends Model
             }
         }
 
-        // Se não encontrou, cria novo cliente
+        // Busca incluindo inativos antes de tentar criar (evita violação de índice único)
+        if (!empty($data['codigo_cliente'])) {
+            $sql = "SELECT * FROM {$this->table} WHERE codigo_cliente = :codigo_cliente AND empresa_id = :empresa_id LIMIT 1";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['codigo_cliente' => $data['codigo_cliente'], 'empresa_id' => $empresaId]);
+            $clienteInativo = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if ($clienteInativo) {
+                if (empty($clienteInativo['ativo']) || $clienteInativo['ativo'] == 0) {
+                    $sqlUpdate = "UPDATE {$this->table} SET ativo = 1 WHERE id = :id";
+                    $stmtUpdate = $this->db->prepare($sqlUpdate);
+                    $stmtUpdate->execute(['id' => $clienteInativo['id']]);
+                    $clienteInativo['ativo'] = 1;
+                }
+                return $clienteInativo;
+            }
+        }
+
+        if (!empty($data['cpf_cnpj'])) {
+            $cpfCnpjLimpo = preg_replace('/[^0-9]/', '', $data['cpf_cnpj']);
+            $sql = "SELECT * FROM {$this->table}
+                    WHERE REPLACE(REPLACE(REPLACE(REPLACE(cpf_cnpj, '.', ''), '-', ''), '/', ''), ' ', '') = :cpf_cnpj
+                    AND empresa_id = :empresa_id LIMIT 1";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['cpf_cnpj' => $cpfCnpjLimpo, 'empresa_id' => $empresaId]);
+            $clienteInativo = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if ($clienteInativo) {
+                if (empty($clienteInativo['ativo']) || $clienteInativo['ativo'] == 0) {
+                    $sqlUpdate = "UPDATE {$this->table} SET ativo = 1 WHERE id = :id";
+                    $stmtUpdate = $this->db->prepare($sqlUpdate);
+                    $stmtUpdate->execute(['id' => $clienteInativo['id']]);
+                    $clienteInativo['ativo'] = 1;
+                }
+                return $clienteInativo;
+            }
+        }
+
+        // Se não encontrou (nem ativo nem inativo), cria novo cliente
         $data['empresa_id'] = $empresaId;
 
         // Define valores padrão
@@ -194,36 +230,46 @@ class Cliente extends Model
 
             // Se deu erro de duplicidade (SQLSTATE 23000 = integrity constraint violation)
             if ($e->getCode() == '23000' || strpos($e->getMessage(), 'Duplicate entry') !== false) {
-                error_log("[Cliente::findOrCreateByCpfCnpj] Detectado erro de duplicidade. Buscando cliente existente...");
+                error_log("[Cliente::findOrCreateByCpfCnpj] Detectado erro de duplicidade. Buscando cliente existente (incluindo inativos)...");
 
-                // Tenta buscar por codigo_cliente primeiro
+                $cliente = null;
+
+                // Busca SEM filtro de ativo para encontrar clientes inativos também
                 if (!empty($data['codigo_cliente'])) {
-                    $cliente = $this->findByCodigoCliente($data['codigo_cliente'], $empresaId);
-                    if ($cliente) {
-                        error_log("[Cliente::findOrCreateByCpfCnpj] Cliente encontrado por codigo_cliente: {$cliente['id']}");
-                        return $cliente;
-                    }
+                    $sql = "SELECT * FROM {$this->table} WHERE codigo_cliente = :codigo_cliente AND empresa_id = :empresa_id LIMIT 1";
+                    $stmt = $this->db->prepare($sql);
+                    $stmt->execute(['codigo_cliente' => $data['codigo_cliente'], 'empresa_id' => $empresaId]);
+                    $cliente = $stmt->fetch(\PDO::FETCH_ASSOC);
                 }
 
-                // Se não conseguiu buscar por codigo_cliente, tenta por CPF/CNPJ novamente
-                if (!empty($data['cpf_cnpj'])) {
-                    $cliente = $this->findByCpfCnpj($data['cpf_cnpj'], $empresaId);
-                    if ($cliente) {
-                        error_log("[Cliente::findOrCreateByCpfCnpj] Cliente encontrado por cpf_cnpj: {$cliente['id']}");
-                        return $cliente;
-                    }
+                if (!$cliente && !empty($data['cpf_cnpj'])) {
+                    $cpfCnpjLimpo = preg_replace('/[^0-9]/', '', $data['cpf_cnpj']);
+                    $sql = "SELECT * FROM {$this->table}
+                            WHERE REPLACE(REPLACE(REPLACE(REPLACE(cpf_cnpj, '.', ''), '-', ''), '/', ''), ' ', '') = :cpf_cnpj
+                            AND empresa_id = :empresa_id LIMIT 1";
+                    $stmt = $this->db->prepare($sql);
+                    $stmt->execute(['cpf_cnpj' => $cpfCnpjLimpo, 'empresa_id' => $empresaId]);
+                    $cliente = $stmt->fetch(\PDO::FETCH_ASSOC);
                 }
 
-                // Se não conseguiu buscar por nenhum dos dois, tenta por email
-                if (!empty($data['email'])) {
-                    $sql = "SELECT * FROM {$this->table} WHERE email = :email AND empresa_id = :empresa_id AND ativo = 1 LIMIT 1";
+                if (!$cliente && !empty($data['email'])) {
+                    $sql = "SELECT * FROM {$this->table} WHERE email = :email AND empresa_id = :empresa_id LIMIT 1";
                     $stmt = $this->db->prepare($sql);
                     $stmt->execute(['email' => $data['email'], 'empresa_id' => $empresaId]);
-                    $cliente = $stmt->fetch(PDO::FETCH_ASSOC);
-                    if ($cliente) {
-                        error_log("[Cliente::findOrCreateByCpfCnpj] Cliente encontrado por email: {$cliente['id']}");
-                        return $cliente;
+                    $cliente = $stmt->fetch(\PDO::FETCH_ASSOC);
+                }
+
+                if ($cliente) {
+                    // Reativar cliente se estava inativo
+                    if (empty($cliente['ativo']) || $cliente['ativo'] == 0) {
+                        error_log("[Cliente::findOrCreateByCpfCnpj] Cliente {$cliente['id']} estava inativo, reativando...");
+                        $sqlUpdate = "UPDATE {$this->table} SET ativo = 1 WHERE id = :id";
+                        $stmtUpdate = $this->db->prepare($sqlUpdate);
+                        $stmtUpdate->execute(['id' => $cliente['id']]);
+                        $cliente['ativo'] = 1;
                     }
+                    error_log("[Cliente::findOrCreateByCpfCnpj] Cliente encontrado (id: {$cliente['id']})");
+                    return $cliente;
                 }
 
                 error_log("[Cliente::findOrCreateByCpfCnpj] Não foi possível encontrar cliente existente após erro de duplicidade");
