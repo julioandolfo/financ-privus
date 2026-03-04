@@ -189,22 +189,46 @@ class Cliente extends Model
                 return $this->findById($id);
             }
         } catch (\PDOException $e) {
-            // Se deu erro de duplicidade no codigo_cliente, busca o cliente existente
-            if (strpos($e->getMessage(), 'Duplicate entry') !== false && strpos($e->getMessage(), 'idx_codigo_cliente_empresa') !== false) {
+            // Log para debug
+            error_log("[Cliente::findOrCreateByCpfCnpj] PDOException: " . $e->getMessage());
+
+            // Se deu erro de duplicidade (SQLSTATE 23000 = integrity constraint violation)
+            if ($e->getCode() == '23000' || strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                error_log("[Cliente::findOrCreateByCpfCnpj] Detectado erro de duplicidade. Buscando cliente existente...");
+
+                // Tenta buscar por codigo_cliente primeiro
                 if (!empty($data['codigo_cliente'])) {
                     $cliente = $this->findByCodigoCliente($data['codigo_cliente'], $empresaId);
                     if ($cliente) {
+                        error_log("[Cliente::findOrCreateByCpfCnpj] Cliente encontrado por codigo_cliente: {$cliente['id']}");
                         return $cliente;
                     }
                 }
+
                 // Se não conseguiu buscar por codigo_cliente, tenta por CPF/CNPJ novamente
                 if (!empty($data['cpf_cnpj'])) {
                     $cliente = $this->findByCpfCnpj($data['cpf_cnpj'], $empresaId);
                     if ($cliente) {
+                        error_log("[Cliente::findOrCreateByCpfCnpj] Cliente encontrado por cpf_cnpj: {$cliente['id']}");
                         return $cliente;
                     }
                 }
+
+                // Se não conseguiu buscar por nenhum dos dois, tenta por email
+                if (!empty($data['email'])) {
+                    $sql = "SELECT * FROM {$this->table} WHERE email = :email AND empresa_id = :empresa_id AND ativo = 1 LIMIT 1";
+                    $stmt = $this->db->prepare($sql);
+                    $stmt->execute(['email' => $data['email'], 'empresa_id' => $empresaId]);
+                    $cliente = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($cliente) {
+                        error_log("[Cliente::findOrCreateByCpfCnpj] Cliente encontrado por email: {$cliente['id']}");
+                        return $cliente;
+                    }
+                }
+
+                error_log("[Cliente::findOrCreateByCpfCnpj] Não foi possível encontrar cliente existente após erro de duplicidade");
             }
+
             // Re-lança a exceção se não conseguiu tratar
             throw $e;
         }
