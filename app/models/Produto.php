@@ -38,8 +38,10 @@ class Produto extends Model
         
         // Filtro por código ou nome
         if (isset($filters['busca']) && $filters['busca'] !== '' && $filters['busca'] !== null) {
-            $sql .= " AND (p.codigo LIKE :busca OR p.nome LIKE :busca)";
-            $params['busca'] = '%' . $filters['busca'] . '%';
+            $sql .= " AND (p.codigo LIKE :busca1 OR p.nome LIKE :busca2)";
+            $busca = '%' . $filters['busca'] . '%';
+            $params['busca1'] = $busca;
+            $params['busca2'] = $busca;
         }
         
         // Filtro por categoria
@@ -384,8 +386,10 @@ class Produto extends Model
         
         // Aplicar os mesmos filtros do findAll
         if (isset($filters['busca']) && $filters['busca'] !== '' && $filters['busca'] !== null) {
-            $sql .= " AND (p.codigo LIKE :busca OR p.nome LIKE :busca)";
-            $params['busca'] = '%' . $filters['busca'] . '%';
+            $sql .= " AND (p.codigo LIKE :busca1 OR p.nome LIKE :busca2)";
+            $busca = '%' . $filters['busca'] . '%';
+            $params['busca1'] = $busca;
+            $params['busca2'] = $busca;
         }
         
         if (isset($filters['categoria_id']) && $filters['categoria_id'] !== '' && $filters['categoria_id'] !== null) {
@@ -438,8 +442,10 @@ class Produto extends Model
         $params = ['empresa_id' => $empresaId];
         
         if (!empty($busca)) {
-            $sql .= " AND (codigo LIKE :busca OR nome LIKE :busca)";
-            $params['busca'] = '%' . $busca . '%';
+            $sql .= " AND (codigo LIKE :busca1 OR nome LIKE :busca2)";
+            $buscaVal = '%' . $busca . '%';
+            $params['busca1'] = $buscaVal;
+            $params['busca2'] = $buscaVal;
         }
         
         $sql .= " ORDER BY nome ASC LIMIT 50";

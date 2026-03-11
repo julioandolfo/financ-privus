@@ -57,8 +57,11 @@ class Fornecedor extends Model
         }
         
         if (!empty($filters['busca'])) {
-            $sql .= " AND (nome_razao_social LIKE :busca OR cpf_cnpj LIKE :busca OR email LIKE :busca)";
-            $params['busca'] = '%' . $filters['busca'] . '%';
+            $sql .= " AND (nome_razao_social LIKE :busca1 OR cpf_cnpj LIKE :busca2 OR email LIKE :busca3)";
+            $busca = '%' . $filters['busca'] . '%';
+            $params['busca1'] = $busca;
+            $params['busca2'] = $busca;
+            $params['busca3'] = $busca;
         }
         
         if (!empty($filters['tipo_pessoa'])) {
@@ -97,8 +100,11 @@ class Fornecedor extends Model
         }
         
         if (!empty($filters['busca'])) {
-            $sql .= " AND (nome_razao_social LIKE :busca OR cpf_cnpj LIKE :busca OR email LIKE :busca)";
-            $params['busca'] = '%' . $filters['busca'] . '%';
+            $sql .= " AND (nome_razao_social LIKE :busca1 OR cpf_cnpj LIKE :busca2 OR email LIKE :busca3)";
+            $busca = '%' . $filters['busca'] . '%';
+            $params['busca1'] = $busca;
+            $params['busca2'] = $busca;
+            $params['busca3'] = $busca;
         }
         
         if (!empty($filters['tipo_pessoa'])) {
