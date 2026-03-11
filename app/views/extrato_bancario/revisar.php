@@ -44,7 +44,7 @@ $empresasJson = json_encode($empresas ?? []);
     </div>
     
     <!-- Formulário de Cadastro em Massa -->
-    <form id="cadastrarForm" method="POST" action="/extrato-bancario/cadastrar" @submit.prevent="submitForm">
+    <form id="cadastrarForm" method="POST" action="/extrato-bancario/cadastrar" @submit.prevent="submitForm" novalidate>
         <input type="hidden" name="empresa_id" value="<?= $empresaId ?>">
         
         <!-- Cards de Transações -->
@@ -300,7 +300,6 @@ $empresasJson = json_encode($empresas ?? []);
                                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Categoria *</label>
                                 <select name="transacoes[<?= $index ?>][categoria_id]" 
                                         id="categoria_<?= $index ?>"
-                                        required
                                         data-placeholder="Selecione a categoria..."
                                         class="select-search w-full">
                                     <option value="">Selecione a categoria...</option>
@@ -336,7 +335,6 @@ $empresasJson = json_encode($empresas ?? []);
                                 <input type="date" 
                                        name="transacoes[<?= $index ?>][data_vencimento]" 
                                        value="<?= $transacao['data'] ?>"
-                                       required
                                        class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                             </div>
                         </div>
@@ -853,7 +851,30 @@ function extratoRevisarForm() {
                 alert('Selecione pelo menos uma transação para cadastrar');
                 return;
             }
-            
+
+            // Validar campos obrigatórios apenas nos cards visíveis (não em modo vincular)
+            const erros = [];
+            document.querySelectorAll('.card-extrato').forEach((card, i) => {
+                const checkbox = card.querySelector('.row-checkbox');
+                if (!checkbox || !checkbox.checked) return;
+
+                // Ignorar cards em modo vincular (seção principal oculta)
+                const secaoPrincipal = card.querySelector('.p-4');
+                if (secaoPrincipal && secaoPrincipal.style.display === 'none') return;
+
+                const categoriaSelect = card.querySelector('[id^="categoria_"]');
+                const categoriaVal = categoriaSelect?.tomselect?.getValue() || categoriaSelect?.value || '';
+                if (!categoriaVal) {
+                    const index = card.dataset.index ?? i;
+                    erros.push(`Transação #${parseInt(index) + 1}: selecione uma Categoria`);
+                }
+            });
+
+            if (erros.length > 0) {
+                alert('Corrija os campos obrigatórios antes de continuar:\n\n' + erros.join('\n'));
+                return;
+            }
+
             if (!confirm(`Deseja cadastrar ${this.selectedCount} transação(ões)?`)) {
                 return;
             }
