@@ -84,25 +84,68 @@ $empresasJson = json_encode($empresas ?? []);
                         <!-- Lista de Contas Sugeridas -->
                         <div class="mt-3 space-y-2">
                             <?php foreach ($contasSugeridas as $contaSugerida): ?>
-                            <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded border border-orange-200 dark:border-orange-800">
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                                        <?= htmlspecialchars($contaSugerida['descricao']) ?>
-                                    </p>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                                        Venc: <?= date('d/m/Y', strtotime($contaSugerida['data_vencimento'])) ?> |
-                                        Forn: <?= htmlspecialchars($contaSugerida['fornecedor_nome'] ?? 'N/A') ?> |
-                                        Cat: <?= htmlspecialchars($contaSugerida['categoria_nome'] ?? 'N/A') ?>
-                                    </p>
+                            <?php
+                                $statusConta = $contaSugerida['status'] ?? 'pendente';
+                                $statusClass = match($statusConta) {
+                                    'vencido'  => 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
+                                    'parcial'  => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400',
+                                    default    => 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
+                                };
+                                $statusLabel = match($statusConta) {
+                                    'vencido'  => 'Vencido',
+                                    'parcial'  => 'Parcial',
+                                    default    => 'Pendente',
+                                };
+                                $valorConta   = (float)($contaSugerida['valor_total'] ?? 0);
+                                $valorPago    = (float)($contaSugerida['valor_pago']  ?? 0);
+                                $valorRestante = $valorConta - $valorPago;
+                            ?>
+                            <div class="bg-white dark:bg-gray-800 p-3 rounded border border-orange-200 dark:border-orange-800">
+                                <div class="flex items-start justify-between gap-3">
+                                    <!-- Dados da conta -->
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                                <?= htmlspecialchars($contaSugerida['descricao']) ?>
+                                            </p>
+                                            <span class="px-1.5 py-0.5 rounded text-xs font-medium <?= $statusClass ?>">
+                                                <?= $statusLabel ?>
+                                            </span>
+                                        </div>
+                                        <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                            <span>Venc: <strong class="text-gray-700 dark:text-gray-300"><?= date('d/m/Y', strtotime($contaSugerida['data_vencimento'])) ?></strong></span>
+                                            <?php if (!empty($contaSugerida['fornecedor_nome'])): ?>
+                                            <span>Forn: <strong class="text-gray-700 dark:text-gray-300"><?= htmlspecialchars($contaSugerida['fornecedor_nome']) ?></strong></span>
+                                            <?php endif; ?>
+                                            <span>Cat: <strong class="text-gray-700 dark:text-gray-300"><?= htmlspecialchars($contaSugerida['categoria_nome'] ?? 'N/A') ?></strong></span>
+                                            <?php if (!empty($contaSugerida['empresa_nome'])): ?>
+                                            <span>Empresa: <strong class="text-gray-700 dark:text-gray-300"><?= htmlspecialchars($contaSugerida['empresa_nome']) ?></strong></span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+
+                                    <!-- Valor + Botão -->
+                                    <div class="flex items-center gap-3 flex-shrink-0">
+                                        <div class="text-right">
+                                            <p class="text-sm font-bold text-gray-900 dark:text-gray-100">
+                                                R$ <?= number_format($valorConta, 2, ',', '.') ?>
+                                            </p>
+                                            <?php if ($statusConta === 'parcial' && $valorPago > 0): ?>
+                                            <p class="text-xs text-yellow-600 dark:text-yellow-400">
+                                                Restam R$ <?= number_format($valorRestante, 2, ',', '.') ?>
+                                            </p>
+                                            <?php endif; ?>
+                                        </div>
+                                        <button type="button"
+                                                @click="vincularPagamento(<?= $index ?>, <?= $contaSugerida['id'] ?>, '<?= $transacao['data'] ?>')"
+                                                class="px-3 py-1.5 text-xs bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors flex items-center gap-1 whitespace-nowrap">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                            Vincular
+                                        </button>
+                                    </div>
                                 </div>
-                                <button type="button"
-                                        @click="vincularPagamento(<?= $index ?>, <?= $contaSugerida['id'] ?>, '<?= $transacao['data'] ?>')"
-                                        class="ml-2 px-3 py-1.5 text-xs bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors flex items-center gap-1">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                    Vincular
-                                </button>
                             </div>
                             <?php endforeach; ?>
                         </div>
