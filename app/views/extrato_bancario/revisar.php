@@ -598,10 +598,6 @@ $empresasJson = json_encode($empresas ?? []);
                         </div>
                     </div>
                 </div>
-                <!-- Fechar x-show quando houver contas sugeridas -->
-                <?php if ($temContasSugeridas): ?>
-                </div>
-                <?php endif; ?>
             <?php endforeach; ?>
         </div>
         
