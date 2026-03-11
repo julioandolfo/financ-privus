@@ -62,7 +62,7 @@ $empresasJson = json_encode($empresas ?? []);
                 <div class="card-extrato bg-white dark:bg-gray-800 rounded-xl shadow-lg border <?= $temContasSugeridas ? 'border-orange-400 dark:border-orange-500 ring-2 ring-orange-100 dark:ring-orange-900/30' : 'border-gray-200 dark:border-gray-700' ?> overflow-visible relative"
                      style="z-index: <?= $zIndex ?>;"
                      data-index="<?= $index ?>"
-                     x-data="{ expanded: false, temRateio: <?= ($padrao && $padrao['tem_rateio']) ? 'true' : 'false' ?>, rateios: [], modoVincular: <?= $temContasSugeridas ? 'true' : 'false' ?> }">
+                     x-data="extratoCardData(<?= ($padrao && $padrao['tem_rateio']) ? 'true' : 'false' ?>, <?= $temContasSugeridas ? 'true' : 'false' ?>)">
 
                     <!-- Alerta de Contas Sugeridas -->
                     <?php if ($temContasSugeridas): ?>
@@ -644,6 +644,42 @@ $empresasJson = json_encode($empresas ?? []);
 </div>
 
 <script>
+function extratoCardData(temRateioInit, modoVincularInit) {
+    return {
+        expanded: false,
+        temRateio: temRateioInit,
+        rateios: [],
+        modoVincular: modoVincularInit,
+
+        adicionarRateio() {
+            this.rateios.push({
+                empresa_id: '',
+                valor: 0,
+                percentual: 0,
+                data_competencia: '<?= date('Y-m-d') ?>'
+            });
+        },
+
+        removerRateio(index) {
+            this.rateios.splice(index, 1);
+        },
+
+        calcularPercentual(index, valorTotal) {
+            if (valorTotal > 0 && this.rateios[index]) {
+                this.rateios[index].percentual = ((this.rateios[index].valor / valorTotal) * 100).toFixed(2);
+            }
+        },
+
+        calcularTotalRateio() {
+            return this.rateios.reduce((sum, r) => sum + parseFloat(r.valor || 0), 0);
+        },
+
+        calcularPercentualTotal() {
+            return this.rateios.reduce((sum, r) => sum + parseFloat(r.percentual || 0), 0);
+        }
+    };
+}
+
 function extratoRevisarForm() {
     return {
         selectedCount: <?= count($transacoes) ?>,
@@ -660,33 +696,6 @@ function extratoRevisarForm() {
         
         updateSelectedCount() {
             this.selectedCount = document.querySelectorAll('.row-checkbox:checked').length;
-        },
-        
-        adicionarRateio() {
-            this.rateios.push({
-                empresa_id: '',
-                valor: 0,
-                percentual: 0,
-                data_competencia: '<?= date('Y-m-d') ?>'
-            });
-        },
-        
-        removerRateio(index) {
-            this.rateios.splice(index, 1);
-        },
-        
-        calcularPercentual(index, valorTotal) {
-            if (valorTotal > 0 && this.rateios[index]) {
-                this.rateios[index].percentual = ((this.rateios[index].valor / valorTotal) * 100).toFixed(2);
-            }
-        },
-        
-        calcularTotalRateio() {
-            return this.rateios.reduce((sum, r) => sum + parseFloat(r.valor || 0), 0);
-        },
-        
-        calcularPercentualTotal() {
-            return this.rateios.reduce((sum, r) => sum + parseFloat(r.percentual || 0), 0);
         },
         
         async excluirLinha(index) {
