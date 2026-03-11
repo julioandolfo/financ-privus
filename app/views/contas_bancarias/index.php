@@ -78,22 +78,40 @@
                         $diferenca = $saldoReal - $saldoCalc;
                         $temApi = !empty($conta['tem_conexao_api']);
                     ?>
+                        <?php $isCarteira = $conta['banco_codigo'] === '000'; ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                    <?= htmlspecialchars($conta['banco_nome']) ?>
+                                <div class="flex items-center gap-2">
+                                    <?php if ($isCarteira): ?>
+                                        <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                                        </svg>
+                                    <?php endif; ?>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                        <?= htmlspecialchars($conta['banco_nome']) ?>
+                                    </div>
                                 </div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">
-                                    Cód. <?= htmlspecialchars($conta['banco_codigo']) ?>
-                                    <?php if ($temApi): ?>
-                                        <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                            API
+                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 <?= $isCarteira ? 'ml-6' : '' ?>">
+                                    <?php if ($isCarteira): ?>
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                            Carteira
                                         </span>
+                                    <?php else: ?>
+                                        Cód. <?= htmlspecialchars($conta['banco_codigo']) ?>
+                                        <?php if ($temApi): ?>
+                                            <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                                API
+                                            </span>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                                <?= htmlspecialchars($conta['agencia']) ?> / <?= htmlspecialchars($conta['conta']) ?>
+                                <?php if ($isCarteira): ?>
+                                    <span class="text-gray-400 dark:text-gray-500 italic text-xs">—</span>
+                                <?php else: ?>
+                                    <?= htmlspecialchars($conta['agencia']) ?> / <?= htmlspecialchars($conta['conta']) ?>
+                                <?php endif; ?>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 <?php 
@@ -106,9 +124,15 @@
                                 $colorClass = $tipoColors[$conta['tipo_conta']] ?? $tipoColors['corrente'];
                                 $label = $tipoLabels[$conta['tipo_conta']] ?? 'Corrente';
                                 ?>
-                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full <?= $colorClass ?>">
-                                    <?= $label ?>
-                                </span>
+                                <?php if ($isCarteira): ?>
+                                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                                        Carteira
+                                    </span>
+                                <?php else: ?>
+                                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full <?= $colorClass ?>">
+                                        <?= $label ?>
+                                    </span>
+                                <?php endif; ?>
                             </td>
                             <!-- Saldo Real (API ou calculado, o que estiver disponível) -->
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-bold <?= $saldoReal >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' ?>">

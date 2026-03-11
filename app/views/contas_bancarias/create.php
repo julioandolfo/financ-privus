@@ -1,3 +1,6 @@
+<?php
+$isCarteira = ($this->session->get('old')['banco_codigo'] ?? '') === '000';
+?>
 <div class="max-w-4xl mx-auto">
     <!-- Header -->
     <div class="mb-8">
@@ -15,6 +18,35 @@
 
     <!-- Formulário -->
     <form method="POST" action="<?= $this->baseUrl('/contas-bancarias') ?>" class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
+
+        <!-- Toggle Banco / Carteira -->
+        <div class="mb-8">
+            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Tipo de Cadastro</label>
+            <div class="grid grid-cols-2 gap-4 max-w-md">
+                <button type="button" id="btn-banco"
+                        onclick="setTipoCadastro('banco')"
+                        class="flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/>
+                    </svg>
+                    <span class="text-sm font-semibold">Banco Tradicional</span>
+                </button>
+                <button type="button" id="btn-carteira"
+                        onclick="setTipoCadastro('carteira')"
+                        class="flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                    <span class="text-sm font-semibold">Carteira</span>
+                </button>
+            </div>
+            <!-- Info carteira -->
+            <div id="info-carteira" class="hidden mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl">
+                <p class="text-sm text-amber-800 dark:text-amber-300">
+                    <strong>Carteira</strong> representa dinheiro em espécie ou caixa físico. Os campos bancários serão preenchidos automaticamente.
+                </p>
+            </div>
+        </div>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <!-- Empresa -->
@@ -38,8 +70,8 @@
                 <?php endif; ?>
             </div>
 
-            <!-- Banco Código -->
-            <div>
+            <!-- Banco Código (oculto para Carteira) -->
+            <div id="row-banco-codigo">
                 <label for="banco_codigo" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Código do Banco *
                 </label>
@@ -58,7 +90,7 @@
 
             <!-- Banco Nome -->
             <div>
-                <label for="banco_nome" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <label id="label-banco-nome" for="banco_nome" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Nome do Banco *
                 </label>
                 <input type="text" 
@@ -74,8 +106,8 @@
                 <?php endif; ?>
             </div>
 
-            <!-- Agência -->
-            <div>
+            <!-- Agência (oculto para Carteira) -->
+            <div id="row-agencia">
                 <label for="agencia" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Agência *
                 </label>
@@ -94,7 +126,7 @@
 
             <!-- Conta -->
             <div>
-                <label for="conta" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <label id="label-conta" for="conta" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Número da Conta *
                 </label>
                 <input type="text" 
@@ -110,8 +142,8 @@
                 <?php endif; ?>
             </div>
 
-            <!-- Tipo de Conta -->
-            <div>
+            <!-- Tipo de Conta (oculto para Carteira) -->
+            <div id="row-tipo-conta">
                 <label for="tipo_conta" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Tipo de Conta *
                 </label>
@@ -174,6 +206,94 @@
         </div>
     </form>
 </div>
+
+<script>
+function setTipoCadastro(tipo) {
+    const isCarteira = tipo === 'carteira';
+
+    // Botões
+    const btnBanco    = document.getElementById('btn-banco');
+    const btnCarteira = document.getElementById('btn-carteira');
+
+    const ativoBanco    = 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300';
+    const inativoBanco  = 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-400';
+
+    const ativoCarteira   = 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300';
+    const inativoCarteira = 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-400';
+
+    btnBanco.className    = 'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ' + (isCarteira ? inativoBanco : ativoBanco);
+    btnCarteira.className = 'flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ' + (isCarteira ? ativoCarteira : inativoCarteira);
+
+    // Info
+    document.getElementById('info-carteira').classList.toggle('hidden', !isCarteira);
+
+    // Campos banco_codigo e agencia
+    const rowBancoCodigo = document.getElementById('row-banco-codigo');
+    const rowAgencia     = document.getElementById('row-agencia');
+    const rowTipoConta   = document.getElementById('row-tipo-conta');
+
+    const bancoCodigo = document.getElementById('banco_codigo');
+    const bancoNome   = document.getElementById('banco_nome');
+    const agencia     = document.getElementById('agencia');
+    const conta       = document.getElementById('conta');
+    const tipoConta   = document.getElementById('tipo_conta');
+
+    const labelBancoNome = document.getElementById('label-banco-nome');
+    const labelConta     = document.getElementById('label-conta');
+
+    if (isCarteira) {
+        // Oculta campos não relevantes
+        rowBancoCodigo.classList.add('hidden');
+        rowAgencia.classList.add('hidden');
+        rowTipoConta.classList.add('hidden');
+
+        // Preenche campos automáticos
+        bancoCodigo.value    = '000';
+        bancoCodigo.required = false;
+        agencia.value        = 'N/A';
+        agencia.required     = false;
+        tipoConta.value      = 'corrente';
+        tipoConta.required   = false;
+
+        // Ajusta banco_nome
+        if (!bancoNome.value || bancoNome.value === '') {
+            bancoNome.value = 'Carteira';
+        }
+        labelBancoNome.textContent = 'Nome da Carteira *';
+        bancoNome.placeholder      = 'Ex: Carteira, Caixa Matriz, Fundo Fixo';
+
+        // Ajusta conta
+        labelConta.textContent = 'Identificador *';
+        conta.placeholder      = 'Ex: Caixa Principal, Caixa Filial 01';
+    } else {
+        // Mostra todos os campos
+        rowBancoCodigo.classList.remove('hidden');
+        rowAgencia.classList.remove('hidden');
+        rowTipoConta.classList.remove('hidden');
+
+        // Restaura campos automáticos se eram da Carteira
+        if (bancoCodigo.value === '000') bancoCodigo.value = '';
+        if (agencia.value === 'N/A') agencia.value = '';
+        if (bancoNome.value === 'Carteira') bancoNome.value = '';
+
+        bancoCodigo.required = true;
+        agencia.required     = true;
+        tipoConta.required   = true;
+
+        labelBancoNome.textContent = 'Nome do Banco *';
+        bancoNome.placeholder      = 'Ex: Banco do Brasil, Itaú, Bradesco';
+
+        labelConta.textContent = 'Número da Conta *';
+        conta.placeholder      = 'Ex: 12345-6';
+    }
+}
+
+// Estado inicial
+document.addEventListener('DOMContentLoaded', function () {
+    const isCarteira = <?= $isCarteira ? 'true' : 'false' ?>;
+    setTipoCadastro(isCarteira ? 'carteira' : 'banco');
+});
+</script>
 
 <?php 
 $this->session->delete('old');

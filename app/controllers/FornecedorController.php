@@ -23,7 +23,8 @@ class FornecedorController extends Controller
             $filters = [
                 'empresa_id' => $empresaId,
                 'busca' => $request->get('busca'),
-                'tipo_pessoa' => $request->get('tipo_pessoa')
+                'tipo_pessoa' => $request->get('tipo_pessoa'),
+                'incluir_inativos' => $request->get('incluir_inativos') === '1'
             ];
             
             // Se for AJAX, retorna todos sem paginação
@@ -232,7 +233,7 @@ class FornecedorController extends Controller
             if (!empty($errors)) {
                 $this->session->set('errors', $errors);
                 $this->session->set('old', $data);
-                $response->redirect("/fornecedores/edit/{$id}");
+                $response->redirect("/fornecedores/{$id}/edit");
                 return;
             }
             
@@ -259,7 +260,7 @@ class FornecedorController extends Controller
         } catch (\Exception $e) {
             $_SESSION['error'] = 'Erro ao atualizar fornecedor: ' . $e->getMessage();
             $this->session->set('old', $data ?? []);
-            $response->redirect("/fornecedores/edit/{$id}");
+            $response->redirect("/fornecedores/{$id}/edit");
         }
     }
 

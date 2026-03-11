@@ -48,7 +48,10 @@ class Fornecedor extends Model
      */
     public function findAllWithFilters($filters = [])
     {
-        $sql = "SELECT * FROM {$this->table} WHERE ativo = 1";
+        $incluirInativos = !empty($filters['incluir_inativos']);
+        $sql = $incluirInativos
+            ? "SELECT * FROM {$this->table} WHERE 1=1"
+            : "SELECT * FROM {$this->table} WHERE ativo = 1";
         $params = [];
         
         if (!empty($filters['empresa_id'])) {
@@ -91,7 +94,10 @@ class Fornecedor extends Model
      */
     public function countWithFilters($filters = [])
     {
-        $sql = "SELECT COUNT(*) as total FROM {$this->table} WHERE ativo = 1";
+        $incluirInativos = !empty($filters['incluir_inativos']);
+        $sql = $incluirInativos
+            ? "SELECT COUNT(*) as total FROM {$this->table} WHERE 1=1"
+            : "SELECT COUNT(*) as total FROM {$this->table} WHERE ativo = 1";
         $params = [];
         
         if (!empty($filters['empresa_id'])) {

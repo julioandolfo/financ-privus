@@ -36,17 +36,24 @@
                     </p>
                 </div>
 
-                <!-- Banco -->
+                <?php $isCarteira = $contaBancaria['banco_codigo'] === '000'; ?>
+
+                <!-- Banco / Carteira -->
                 <div>
-                    <label class="block text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Banco</label>
+                    <label class="block text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">
+                        <?= $isCarteira ? 'Carteira' : 'Banco' ?>
+                    </label>
                     <p class="text-lg font-medium text-gray-900 dark:text-gray-100">
                         <?= htmlspecialchars($contaBancaria['banco_nome']) ?>
                     </p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                        Código: <?= htmlspecialchars($contaBancaria['banco_codigo']) ?>
-                    </p>
+                    <?php if (!$isCarteira): ?>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Código: <?= htmlspecialchars($contaBancaria['banco_codigo']) ?>
+                        </p>
+                    <?php endif; ?>
                 </div>
 
+                <?php if (!$isCarteira): ?>
                 <!-- Agência -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Agência</label>
@@ -54,10 +61,13 @@
                         <?= htmlspecialchars($contaBancaria['agencia']) ?>
                     </p>
                 </div>
+                <?php endif; ?>
 
-                <!-- Conta -->
+                <!-- Conta / Identificador -->
                 <div>
-                    <label class="block text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">Número da Conta</label>
+                    <label class="block text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">
+                        <?= $isCarteira ? 'Identificador' : 'Número da Conta' ?>
+                    </label>
                     <p class="text-lg font-medium text-gray-900 dark:text-gray-100">
                         <?= htmlspecialchars($contaBancaria['conta']) ?>
                     </p>
@@ -80,9 +90,15 @@
                     $colorClass = $tipoColors[$contaBancaria['tipo_conta']] ?? $tipoColors['corrente'];
                     $label = $tipoLabels[$contaBancaria['tipo_conta']] ?? 'Corrente';
                     ?>
-                    <span class="inline-flex px-4 py-2 text-sm font-semibold rounded-full <?= $colorClass ?>">
-                        <?= $label ?>
-                    </span>
+                    <?php if ($isCarteira): ?>
+                        <span class="inline-flex px-4 py-2 text-sm font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                            Carteira
+                        </span>
+                    <?php else: ?>
+                        <span class="inline-flex px-4 py-2 text-sm font-semibold rounded-full <?= $colorClass ?>">
+                            <?= $label ?>
+                        </span>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Status -->

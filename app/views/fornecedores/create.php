@@ -244,7 +244,12 @@
                        id="ativo" 
                        name="ativo" 
                        value="1"
-                       <?= ($this->session->get('old')['ativo'] ?? '1') ? 'checked' : '' ?>
+                       <?php
+                       $oldAtivo = $this->session->get('old');
+                       // Se não há dados antigos (primeiro carregamento), padrão é ativo
+                       // Se há dados antigos, respeita o valor do campo ativo
+                       echo ($oldAtivo === null || !empty($oldAtivo['ativo'])) ? 'checked' : '';
+                       ?>
                        class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2">
                 <label for="ativo" class="text-sm font-semibold text-gray-700 dark:text-gray-300">
                     Fornecedor Ativo

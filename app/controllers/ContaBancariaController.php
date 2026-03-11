@@ -216,6 +216,7 @@ class ContaBancariaController extends Controller
             $errors['conta'] = 'O número da conta é obrigatório';
         } else {
             // Verifica se já existe conta com mesma agência e número
+            // Para Carteira (banco_codigo = '000'), a verificação usa banco_codigo + conta
             $this->contaBancariaModel = new ContaBancaria();
             $existing = $this->contaBancariaModel->findByAgenciaConta(
                 $data['agencia'], 
@@ -223,7 +224,10 @@ class ContaBancariaController extends Controller
                 $data['empresa_id']
             );
             if ($existing && (!$id || $existing['id'] != $id)) {
-                $errors['conta'] = 'Já existe uma conta com esta agência e número para esta empresa';
+                $isCarteira = ($data['banco_codigo'] ?? '') === '000';
+                $errors['conta'] = $isCarteira
+                    ? 'Já existe uma Carteira com este identificador para esta empresa'
+                    : 'Já existe uma conta com esta agência e número para esta empresa';
             }
         }
         

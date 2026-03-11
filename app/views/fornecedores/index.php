@@ -48,8 +48,17 @@
                 </div>
                 
                 <div class="flex items-end gap-2">
-                    <button type="submit" class="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Filtrar</button>
-                    <a href="<?= $this->baseUrl('/fornecedores') ?>" class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">Limpar</a>
+                    <div class="flex flex-col gap-2 flex-1">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="incluir_inativos" value="1" <?= ($filters['incluir_inativos'] ?? '') === '1' ? 'checked' : '' ?>
+                                   class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Incluir inativos</span>
+                        </label>
+                        <div class="flex gap-2">
+                            <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">Filtrar</button>
+                            <a href="<?= $this->baseUrl('/fornecedores') ?>" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm">Limpar</a>
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>
@@ -134,6 +143,8 @@
                                                 <span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
                                                 Inativo
                                             </span>
+                                            <a href="<?= $this->baseUrl('/fornecedores/' . $fornecedor['id'] . '/edit') ?>" 
+                                               class="block mt-1 text-xs text-blue-500 hover:underline">Ativar</a>
                                         <?php endif; ?>
                                     </td>
                                     <td class="px-6 py-4">
