@@ -320,8 +320,8 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
 
     <!-- Tabela de Contas -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
-         x-data="{ selecionados: [], showCategoriaModal: false, showBaixaModal: false }"
-         x-init="$watch('selecionados.length', v => { if (v === 0) { showCategoriaModal = false; showBaixaModal = false; } })">
+         x-data="{ selecionados: [], showCategoriaModal: false, showBaixaModal: false, showEditarDataModal: false, tipoData: 'manual' }"
+         x-init="$watch('selecionados.length', v => { if (v === 0) { showCategoriaModal = false; showBaixaModal = false; showEditarDataModal = false; } })">
         <!-- Barra de ações em massa -->
         <div x-show="selecionados.length > 0" x-cloak x-transition
              class="sticky top-0 z-10 bg-red-600 dark:bg-red-700 px-6 py-3 flex items-center justify-between gap-4">
@@ -333,6 +333,13 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
                     </svg>
                     Dar Baixa
+                </button>
+                <button type="button" @click="showEditarDataModal = true"
+                        class="px-4 py-2 bg-white text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    Editar Data
                 </button>
                 <button type="button" @click="showCategoriaModal = true"
                         class="px-4 py-2 bg-white text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors flex items-center gap-2">
@@ -378,6 +385,56 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                     </div>
                     <div class="flex justify-end gap-2">
                         <button type="button" @click="showCategoriaModal = false"
+                                class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Aplicar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal Editar Data de Pagamento em Massa -->
+        <div x-show="showEditarDataModal" x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+             @keydown.escape.window="showEditarDataModal = false">
+            <div @click.self="showEditarDataModal = false" class="absolute inset-0"></div>
+            <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-md w-full">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Editar Data de Pagamento</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Atualizar a data de pagamento das contas selecionadas.</p>
+                <form method="POST" action="/contas-pagar/atualizar-data-massa">
+                    <?php
+                    $urlParams = array_filter($filters ?? [], fn($v) => $v !== '' && $v !== null);
+                    foreach ($urlParams as $k => $v):
+                        if (!is_array($v)):
+                    ?><input type="hidden" name="<?= htmlspecialchars($k) ?>" value="<?= htmlspecialchars($v) ?>"><?php
+                        endif;
+                    endforeach;
+                    ?>
+                    <template x-for="id in selecionados" :key="id">
+                        <input type="hidden" :name="'ids[]'" :value="id">
+                    </template>
+                    <input type="hidden" name="tipo_data" :value="tipoData">
+                    <div class="space-y-4 mb-6">
+                        <div class="flex flex-col gap-3">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de data</label>
+                            <label class="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                   :class="tipoData === 'manual' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''">
+                                <input type="radio" x-model="tipoData" value="manual" class="text-red-600 focus:ring-red-500">
+                                <span class="text-sm text-gray-700 dark:text-gray-300 font-medium">Inserir data manualmente</span>
+                            </label>
+                            <label class="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                   :class="tipoData === 'vencimento' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : ''">
+                                <input type="radio" x-model="tipoData" value="vencimento" class="text-red-600 focus:ring-red-500">
+                                <span class="text-sm text-gray-700 dark:text-gray-300 font-medium">Usar data de vencimento de cada conta</span>
+                            </label>
+                        </div>
+                        <div x-show="tipoData === 'manual'" x-transition>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data de Pagamento</label>
+                            <input type="date" name="data_pagamento_massa" :required="tipoData === 'manual'" value="<?= date('Y-m-d') ?>"
+                                   class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" @click="showEditarDataModal = false"
                                 class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancelar</button>
                         <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Aplicar</button>
                     </div>

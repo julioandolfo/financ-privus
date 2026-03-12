@@ -482,6 +482,16 @@ class ContaPagar extends Model
         $stmt = $this->db->prepare($sql);
         return $stmt->execute([$valorPago, $dataPagamento, $status, $id]);
     }
+
+    /**
+     * Atualiza apenas a data de pagamento
+     */
+    public function atualizarDataPagamento($id, $dataPagamento)
+    {
+        $sql = "UPDATE {$this->table} SET data_pagamento = ? WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$dataPagamento, $id]);
+    }
     
     /**
      * Cancela uma conta a pagar

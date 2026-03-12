@@ -510,6 +510,16 @@ class ContaReceber extends Model
         $stmt = $this->db->prepare($sql);
         return $stmt->execute([$valorRecebido, $dataRecebimento, $status, $id]);
     }
+
+    /**
+     * Atualiza apenas a data de recebimento
+     */
+    public function atualizarDataRecebimento($id, $dataRecebimento)
+    {
+        $sql = "UPDATE {$this->table} SET data_recebimento = ? WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$dataRecebimento, $id]);
+    }
     
     /**
      * Cancela uma conta a receber

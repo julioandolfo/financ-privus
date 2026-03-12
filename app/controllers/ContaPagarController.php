@@ -239,6 +239,71 @@ class ContaPagarController extends Controller
     }
 
     /**
+     * Atualizar data de pagamento em massa
+     */
+    public function atualizarDataMassa(Request $request, Response $response)
+    {
+        $ids = $request->post('ids', []);
+        $tipoData = $request->post('tipo_data', 'manual');
+        $dataManual = $request->post('data_pagamento_massa');
+
+        if (empty($ids)) {
+            $_SESSION['error'] = 'Selecione pelo menos uma conta.';
+            $response->redirect('/contas-pagar?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'tipo_data', 'data_pagamento_massa']))));
+            return;
+        }
+
+        if ($tipoData === 'manual' && empty($dataManual)) {
+            $_SESSION['error'] = 'Informe a data de pagamento.';
+            $response->redirect('/contas-pagar?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'tipo_data', 'data_pagamento_massa']))));
+            return;
+        }
+
+        $contaPagarModel = new ContaPagar();
+        $atualizadas = 0;
+        $ignoradas = 0;
+
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if (!$id) continue;
+
+            $conta = $contaPagarModel->findById($id);
+            if (!$conta) {
+                $ignoradas++;
+                continue;
+            }
+
+            $data = $tipoData === 'vencimento'
+                ? $conta['data_vencimento']
+                : $dataManual;
+
+            if (empty($data)) {
+                $ignoradas++;
+                continue;
+            }
+
+            if ($contaPagarModel->atualizarDataPagamento($id, $data)) {
+                $atualizadas++;
+            } else {
+                $ignoradas++;
+            }
+        }
+
+        $redirectParams = array_diff_key($request->all(), array_flip(['ids', 'tipo_data', 'data_pagamento_massa']));
+
+        if ($atualizadas === 0) {
+            $_SESSION['error'] = "Nenhuma data foi atualizada." . ($ignoradas > 0 ? " {$ignoradas} conta(s) não encontrada(s)." : '');
+        } else {
+            $msg = "Data de pagamento atualizada em {$atualizadas} conta(s).";
+            if ($ignoradas > 0) {
+                $msg .= " {$ignoradas} não atualizada(s).";
+            }
+            $_SESSION['success'] = $msg;
+        }
+        $response->redirect('/contas-pagar?' . http_build_query($redirectParams));
+    }
+
+    /**
      * Efetuar baixa (pagamento) em massa
      */
     public function efetuarBaixaMassa(Request $request, Response $response)
@@ -283,7 +348,8 @@ class ContaPagarController extends Controller
                 $ignoradas++;
                 continue;
             }
-            if ((int)($conta['empresa_id'] ?? 0) !== $empresaIdContaBancaria) {
+            // Só verifica empresa quando a conta bancária tem empresa definida
+            if ($empresaIdContaBancaria > 0 && (int)($conta['empresa_id'] ?? 0) !== $empresaIdContaBancaria) {
                 $ignoradas++;
                 continue;
             }
@@ -299,7 +365,12 @@ class ContaPagarController extends Controller
                 $status = 'pago';
                 
                 $dadosAntes = $conta;
-                $contaPagarModel->atualizarPagamento($id, $valorPago, $dataPagamento, $status);
+                $result = $contaPagarModel->atualizarPagamento($id, $valorPago, $dataPagamento, $status);
+                
+                if (!$result) {
+                    $erros[] = "Conta #{$id}: falha ao atualizar no banco de dados.";
+                    continue;
+                }
                 
                 \App\Models\Auditoria::registrar(
                     'contas_pagar',
@@ -330,15 +401,25 @@ class ContaPagarController extends Controller
             }
         }
         
-        $msg = "{$atualizadas} conta(s) paga(s) com sucesso.";
-        if ($ignoradas > 0) {
-            $msg .= " {$ignoradas} ignorada(s) (já pagas ou de outra empresa).";
+        $redirectParams = array_diff_key($request->all(), array_flip(['ids', 'data_pagamento', 'forma_pagamento_id', 'conta_bancaria_id']));
+
+        if ($atualizadas === 0 && empty($erros)) {
+            $msg = "Nenhuma conta foi baixada.";
+            if ($ignoradas > 0) {
+                $msg .= " {$ignoradas} já paga(s) ou de outra empresa.";
+            }
+            $_SESSION['error'] = $msg;
+        } else {
+            $msg = "{$atualizadas} conta(s) paga(s) com sucesso.";
+            if ($ignoradas > 0) {
+                $msg .= " {$ignoradas} ignorada(s) (já pagas ou de outra empresa).";
+            }
+            if (!empty($erros)) {
+                $msg .= " Erros: " . implode('; ', array_slice($erros, 0, 3));
+            }
+            $_SESSION['success'] = $msg;
         }
-        if (!empty($erros)) {
-            $msg .= " Erros: " . implode('; ', array_slice($erros, 0, 3));
-        }
-        $_SESSION['success'] = $msg;
-        $response->redirect('/contas-pagar?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'data_pagamento', 'forma_pagamento_id', 'conta_bancaria_id']))));
+        $response->redirect('/contas-pagar?' . http_build_query($redirectParams));
     }
 
     public function create(Request $request, Response $response)

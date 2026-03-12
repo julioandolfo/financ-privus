@@ -253,6 +253,71 @@ class ContaReceberController extends Controller
     }
 
     /**
+     * Atualizar data de recebimento em massa
+     */
+    public function atualizarDataMassa(Request $request, Response $response)
+    {
+        $ids = $request->post('ids', []);
+        $tipoData = $request->post('tipo_data', 'manual');
+        $dataManual = $request->post('data_recebimento_massa');
+
+        if (empty($ids)) {
+            $_SESSION['error'] = 'Selecione pelo menos uma conta.';
+            $response->redirect('/contas-receber?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'tipo_data', 'data_recebimento_massa']))));
+            return;
+        }
+
+        if ($tipoData === 'manual' && empty($dataManual)) {
+            $_SESSION['error'] = 'Informe a data de recebimento.';
+            $response->redirect('/contas-receber?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'tipo_data', 'data_recebimento_massa']))));
+            return;
+        }
+
+        $contaReceberModel = new ContaReceber();
+        $atualizadas = 0;
+        $ignoradas = 0;
+
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if (!$id) continue;
+
+            $conta = $contaReceberModel->findById($id);
+            if (!$conta) {
+                $ignoradas++;
+                continue;
+            }
+
+            $data = $tipoData === 'vencimento'
+                ? $conta['data_vencimento']
+                : $dataManual;
+
+            if (empty($data)) {
+                $ignoradas++;
+                continue;
+            }
+
+            if ($contaReceberModel->atualizarDataRecebimento($id, $data)) {
+                $atualizadas++;
+            } else {
+                $ignoradas++;
+            }
+        }
+
+        $redirectParams = array_diff_key($request->all(), array_flip(['ids', 'tipo_data', 'data_recebimento_massa']));
+
+        if ($atualizadas === 0) {
+            $_SESSION['error'] = "Nenhuma data foi atualizada." . ($ignoradas > 0 ? " {$ignoradas} conta(s) não encontrada(s)." : '');
+        } else {
+            $msg = "Data de recebimento atualizada em {$atualizadas} conta(s).";
+            if ($ignoradas > 0) {
+                $msg .= " {$ignoradas} não atualizada(s).";
+            }
+            $_SESSION['success'] = $msg;
+        }
+        $response->redirect('/contas-receber?' . http_build_query($redirectParams));
+    }
+
+    /**
      * Efetuar baixa (recebimento) em massa
      */
     public function efetuarBaixaMassa(Request $request, Response $response)
@@ -283,6 +348,7 @@ class ContaReceberController extends Controller
         
         $atualizadas = 0;
         $ignoradas = 0;
+        $ignoradasParcelas = 0;
         $erros = [];
         
         foreach ($ids as $id) {
@@ -298,13 +364,14 @@ class ContaReceberController extends Controller
                 $ignoradas++;
                 continue;
             }
-            if ((int)($conta['empresa_id'] ?? 0) !== $empresaIdContaBancaria) {
+            // Só verifica empresa quando a conta bancária tem empresa definida
+            if ($empresaIdContaBancaria > 0 && (int)($conta['empresa_id'] ?? 0) !== $empresaIdContaBancaria) {
                 $ignoradas++;
                 continue;
             }
             $parcelas = $parcelaModel->findByContaReceber($id);
             if (!empty($parcelas)) {
-                $ignoradas++;
+                $ignoradasParcelas++;
                 continue;
             }
             
@@ -319,7 +386,12 @@ class ContaReceberController extends Controller
                 $status = 'recebido';
                 
                 $dadosAntes = $conta;
-                $contaReceberModel->atualizarRecebimento($id, $valorRecebido, $dataRecebimento, $status);
+                $result = $contaReceberModel->atualizarRecebimento($id, $valorRecebido, $dataRecebimento, $status);
+                
+                if (!$result) {
+                    $erros[] = "Conta #{$id}: falha ao atualizar no banco de dados.";
+                    continue;
+                }
                 
                 \App\Models\Auditoria::registrar(
                     'contas_receber',
@@ -350,15 +422,31 @@ class ContaReceberController extends Controller
             }
         }
         
-        $msg = "{$atualizadas} conta(s) recebida(s) com sucesso.";
-        if ($ignoradas > 0) {
-            $msg .= " {$ignoradas} ignorada(s) (já recebidas, com parcelas ou de outra empresa).";
+        $redirectParams = array_diff_key($request->all(), array_flip(['ids', 'data_recebimento', 'forma_recebimento_id', 'conta_bancaria_id']));
+
+        if ($atualizadas === 0 && empty($erros)) {
+            $msg = "Nenhuma conta foi baixada.";
+            if ($ignoradas > 0) {
+                $msg .= " {$ignoradas} já recebida(s) ou de outra empresa.";
+            }
+            if ($ignoradasParcelas > 0) {
+                $msg .= " {$ignoradasParcelas} ignorada(s) por possuírem parcelas (faça a baixa individualmente).";
+            }
+            $_SESSION['error'] = $msg;
+        } else {
+            $msg = "{$atualizadas} conta(s) recebida(s) com sucesso.";
+            if ($ignoradas > 0) {
+                $msg .= " {$ignoradas} ignorada(s) (já recebidas ou de outra empresa).";
+            }
+            if ($ignoradasParcelas > 0) {
+                $msg .= " {$ignoradasParcelas} ignorada(s) por possuírem parcelas.";
+            }
+            if (!empty($erros)) {
+                $msg .= " Erros: " . implode('; ', array_slice($erros, 0, 3));
+            }
+            $_SESSION['success'] = $msg;
         }
-        if (!empty($erros)) {
-            $msg .= " Erros: " . implode('; ', array_slice($erros, 0, 3));
-        }
-        $_SESSION['success'] = $msg;
-        $response->redirect('/contas-receber?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'data_recebimento', 'forma_recebimento_id', 'conta_bancaria_id']))));
+        $response->redirect('/contas-receber?' . http_build_query($redirectParams));
     }
 
     public function create(Request $request, Response $response)
