@@ -343,12 +343,10 @@ class ContaReceberController extends Controller
         
         $empresaIdContaBancaria = (int)($contaBancaria['empresa_id'] ?? 0);
         $contaReceberModel = new ContaReceber();
-        $parcelaModel = new ParcelaReceber();
         $movimentacaoService = new MovimentacaoService();
         
         $atualizadas = 0;
         $ignoradas = 0;
-        $ignoradasParcelas = 0;
         $erros = [];
         
         foreach ($ids as $id) {
@@ -367,11 +365,6 @@ class ContaReceberController extends Controller
             // Só verifica empresa quando a conta bancária tem empresa definida
             if ($empresaIdContaBancaria > 0 && (int)($conta['empresa_id'] ?? 0) !== $empresaIdContaBancaria) {
                 $ignoradas++;
-                continue;
-            }
-            $parcelas = $parcelaModel->findByContaReceber($id);
-            if (!empty($parcelas)) {
-                $ignoradasParcelas++;
                 continue;
             }
             
@@ -429,17 +422,11 @@ class ContaReceberController extends Controller
             if ($ignoradas > 0) {
                 $msg .= " {$ignoradas} já recebida(s) ou de outra empresa.";
             }
-            if ($ignoradasParcelas > 0) {
-                $msg .= " {$ignoradasParcelas} ignorada(s) por possuírem parcelas (faça a baixa individualmente).";
-            }
             $_SESSION['error'] = $msg;
         } else {
             $msg = "{$atualizadas} conta(s) recebida(s) com sucesso.";
             if ($ignoradas > 0) {
                 $msg .= " {$ignoradas} ignorada(s) (já recebidas ou de outra empresa).";
-            }
-            if ($ignoradasParcelas > 0) {
-                $msg .= " {$ignoradasParcelas} ignorada(s) por possuírem parcelas.";
             }
             if (!empty($erros)) {
                 $msg .= " Erros: " . implode('; ', array_slice($erros, 0, 3));
