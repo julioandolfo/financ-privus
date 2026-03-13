@@ -39,6 +39,12 @@ class ContaReceber extends Model
                        pv.status_origem as pedido_status_woo,
                        CASE 
                            WHEN cr.status IN ('pendente', 'parcial') AND cr.data_vencimento < CURDATE() THEN 'vencido'
+                           WHEN cr.status IN ('pendente', 'parcial') AND (
+                               SELECT COUNT(*) FROM parcelas_receber
+                               WHERE conta_receber_id = cr.id
+                                 AND status NOT IN ('recebido', 'cancelado')
+                                 AND data_vencimento < CURDATE()
+                           ) > 0 THEN 'vencido'
                            ELSE cr.status
                        END as status,
                        (SELECT COUNT(*) FROM rateios_recebimentos WHERE conta_receber_id = cr.id) > 0 as tem_rateio,
@@ -100,7 +106,15 @@ class ContaReceber extends Model
         // Filtro por status
         if (isset($filters['status'])) {
             if ($filters['status'] == 'vencido') {
-                $sql .= " AND cr.status IN ('pendente', 'parcial') AND cr.data_vencimento < CURDATE()";
+                $sql .= " AND cr.status IN ('pendente', 'parcial') AND (
+                    cr.data_vencimento < CURDATE()
+                    OR EXISTS (
+                        SELECT 1 FROM parcelas_receber pr
+                        WHERE pr.conta_receber_id = cr.id
+                          AND pr.status NOT IN ('recebido', 'cancelado')
+                          AND pr.data_vencimento < CURDATE()
+                    )
+                )";
             } else {
                 $sql .= " AND cr.status = ?";
                 $params[] = $filters['status'];
@@ -873,7 +887,15 @@ class ContaReceber extends Model
         
         if (isset($filters['status'])) {
             if ($filters['status'] == 'vencido') {
-                $sql .= " AND cr.status IN ('pendente', 'parcial') AND cr.data_vencimento < CURDATE()";
+                $sql .= " AND cr.status IN ('pendente', 'parcial') AND (
+                    cr.data_vencimento < CURDATE()
+                    OR EXISTS (
+                        SELECT 1 FROM parcelas_receber pr
+                        WHERE pr.conta_receber_id = cr.id
+                          AND pr.status NOT IN ('recebido', 'cancelado')
+                          AND pr.data_vencimento < CURDATE()
+                    )
+                )";
             } else {
                 $sql .= " AND cr.status = ?";
                 $params[] = $filters['status'];
