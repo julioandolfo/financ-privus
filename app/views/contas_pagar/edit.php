@@ -227,6 +227,11 @@ $meses = [
 
             <!-- Rateio entre Empresas (conta) -->
             <div class="mb-8">
+                <?php if (isset($errors['rateios'])): ?>
+                    <div class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl">
+                        <p class="text-sm text-red-600 dark:text-red-400 font-medium"><?= htmlspecialchars($errors['rateios']) ?></p>
+                    </div>
+                <?php endif; ?>
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Rateio entre Empresas</h2>
                     <label class="flex items-center space-x-2 cursor-pointer">
