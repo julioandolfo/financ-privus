@@ -18,6 +18,7 @@ use App\Models\PedidoItem;
 use App\Models\TransacaoPendente;
 use includes\services\RateioService;
 use includes\services\MovimentacaoService;
+use App\Models\LogSistema;
 
 class ContaReceberController extends Controller
 {
@@ -548,13 +549,29 @@ class ContaReceberController extends Controller
             
             // Se tem rateio, salva os rateios
             $temRateio = !empty($data['tem_rateio']) && $data['tem_rateio'] != '0';
+            
+            LogSistema::debug('ContaReceber', 'store_rateio_check', 'Verificando rateio no store', [
+                'conta_id' => $contaReceberId,
+                'tem_rateio_raw' => $data['tem_rateio'] ?? 'NAO_ENVIADO',
+                'tem_rateio_parsed' => $temRateio,
+                'rateios_presentes' => isset($data['rateios']),
+                'rateios_count' => isset($data['rateios']) ? count($data['rateios']) : 0,
+                'rateios_data' => $data['rateios'] ?? 'VAZIO',
+            ]);
+            
             if ($temRateio && !empty($data['rateios'])) {
                 $this->rateioService = new RateioService();
                 
                 // Valida rateios
                 $errosRateio = $this->rateioService->validarRateios($data['rateios'], $data['valor_total']);
+                
+                LogSistema::debug('ContaReceber', 'store_rateio_validacao', 'Resultado da validação de rateios', [
+                    'conta_id' => $contaReceberId,
+                    'valor_total' => $data['valor_total'],
+                    'erros' => $errosRateio,
+                ]);
+                
                 if (!empty($errosRateio)) {
-                    // Remove a conta criada
                     $this->contaReceberModel->cancelar($contaReceberId);
                     
                     $this->session->set('errors', ['rateios' => implode(', ', $errosRateio)]);
@@ -566,11 +583,35 @@ class ContaReceberController extends Controller
                 // Salva rateios
                 $this->rateioModel = new RateioRecebimento();
                 $rateiosPreparados = $this->rateioService->prepararParaSalvar($data['rateios'], $_SESSION['usuario_id']);
+                
+                LogSistema::debug('ContaReceber', 'store_rateio_preparados', 'Rateios preparados para salvar', [
+                    'conta_id' => $contaReceberId,
+                    'rateios_preparados' => $rateiosPreparados,
+                ]);
+                
                 $resultado = $this->rateioModel->saveBatch($contaReceberId, $rateiosPreparados, $_SESSION['usuario_id']);
+                
+                LogSistema::debug('ContaReceber', 'store_rateio_resultado', 'Resultado do saveBatch', [
+                    'conta_id' => $contaReceberId,
+                    'resultado' => $resultado,
+                ]);
                 
                 if ($resultado) {
                     $this->contaReceberModel->atualizarRateio($contaReceberId, 1);
+                    LogSistema::info('ContaReceber', 'store_rateio_ok', 'Rateio salvo com sucesso', [
+                        'conta_id' => $contaReceberId,
+                    ]);
+                } else {
+                    LogSistema::error('ContaReceber', 'store_rateio_falha', 'Falha ao salvar rateio - saveBatch retornou false', [
+                        'conta_id' => $contaReceberId,
+                    ]);
                 }
+            } else {
+                LogSistema::debug('ContaReceber', 'store_rateio_skip', 'Rateio não ativado ou sem dados', [
+                    'conta_id' => $contaReceberId,
+                    'temRateio' => $temRateio,
+                    'has_rateios' => !empty($data['rateios']),
+                ]);
             }
             
             // Se marcou como já recebido, registra o recebimento
@@ -613,6 +654,10 @@ class ContaReceberController extends Controller
             $response->redirect('/contas-receber');
             
         } catch (\Exception $e) {
+            LogSistema::error('ContaReceber', 'store_exception', 'Exceção ao criar conta a receber', [
+                'erro' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             $_SESSION['error'] = 'Erro ao criar conta a receber: ' . $e->getMessage();
             $this->session->set('old', $data ?? []);
             $response->redirect('/contas-receber/create');
@@ -809,11 +854,28 @@ class ContaReceberController extends Controller
             
             // Atualiza rateios se necessário
             $temRateio = !empty($data['tem_rateio']) && $data['tem_rateio'] != '0';
+            
+            LogSistema::debug('ContaReceber', 'update_rateio_check', 'Verificando rateio no update', [
+                'conta_id' => $id,
+                'tem_rateio_raw' => $data['tem_rateio'] ?? 'NAO_ENVIADO',
+                'tem_rateio_parsed' => $temRateio,
+                'rateios_presentes' => isset($data['rateios']),
+                'rateios_count' => isset($data['rateios']) ? count($data['rateios']) : 0,
+                'rateios_data' => $data['rateios'] ?? 'VAZIO',
+            ]);
+            
             if ($temRateio && !empty($data['rateios'])) {
                 $this->rateioService = new RateioService();
                 
                 // Valida rateios
                 $errosRateio = $this->rateioService->validarRateios($data['rateios'], $data['valor_total']);
+                
+                LogSistema::debug('ContaReceber', 'update_rateio_validacao', 'Resultado da validação de rateios', [
+                    'conta_id' => $id,
+                    'valor_total' => $data['valor_total'],
+                    'erros' => $errosRateio,
+                ]);
+                
                 if (!empty($errosRateio)) {
                     $this->session->set('errors', ['rateios' => implode(', ', $errosRateio)]);
                     $this->session->set('old', $data);
@@ -824,13 +886,31 @@ class ContaReceberController extends Controller
                 // Salva rateios
                 $this->rateioModel = new RateioRecebimento();
                 $rateiosPreparados = $this->rateioService->prepararParaSalvar($data['rateios'], $_SESSION['usuario_id']);
+                
+                LogSistema::debug('ContaReceber', 'update_rateio_preparados', 'Rateios preparados para salvar', [
+                    'conta_id' => $id,
+                    'rateios_preparados' => $rateiosPreparados,
+                ]);
+                
                 $resultado = $this->rateioModel->saveBatch($id, $rateiosPreparados, $_SESSION['usuario_id']);
                 
                 if ($resultado) {
                     $this->contaReceberModel->atualizarRateio($id, 1);
+                    LogSistema::info('ContaReceber', 'update_rateio_ok', 'Rateio atualizado com sucesso', [
+                        'conta_id' => $id,
+                    ]);
+                } else {
+                    LogSistema::error('ContaReceber', 'update_rateio_falha', 'Falha ao salvar rateio - saveBatch retornou false', [
+                        'conta_id' => $id,
+                    ]);
                 }
             } else {
-                // Remove rateios se desmarcou
+                LogSistema::debug('ContaReceber', 'update_rateio_removido', 'Rateio desativado ou sem dados - removendo', [
+                    'conta_id' => $id,
+                    'temRateio' => $temRateio,
+                    'has_rateios' => !empty($data['rateios']),
+                ]);
+                
                 $this->rateioModel = new RateioRecebimento();
                 $this->rateioModel->deleteByContaReceber($id);
                 $this->contaReceberModel->atualizarRateio($id, 0);
@@ -840,6 +920,11 @@ class ContaReceberController extends Controller
             $response->redirect('/contas-receber');
             
         } catch (\Exception $e) {
+            LogSistema::error('ContaReceber', 'update_exception', 'Exceção ao atualizar conta a receber', [
+                'conta_id' => $id,
+                'erro' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             $_SESSION['error'] = 'Erro ao atualizar conta a receber: ' . $e->getMessage();
             $this->session->set('old', $data ?? []);
             $response->redirect("/contas-receber/{$id}/edit");

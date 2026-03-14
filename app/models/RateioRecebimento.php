@@ -3,6 +3,7 @@ namespace App\Models;
 
 use App\Core\Model;
 use App\Core\Database;
+use App\Models\LogSistema;
 use PDO;
 
 /**
@@ -67,22 +68,51 @@ class RateioRecebimento extends Model
     public function saveBatch($contaReceberId, $rateios, $usuarioId)
     {
         try {
+            LogSistema::debug('RateioRecebimento', 'saveBatch_inicio', 'Iniciando saveBatch', [
+                'conta_receber_id' => $contaReceberId,
+                'qtd_rateios' => count($rateios),
+                'usuario_id' => $usuarioId,
+                'rateios' => $rateios,
+            ]);
+            
             $this->db->beginTransaction();
             
             $this->deleteByContaReceber($contaReceberId);
             
-            foreach ($rateios as $rateio) {
+            foreach ($rateios as $index => $rateio) {
                 $rateio['conta_receber_id'] = $contaReceberId;
                 $rateio['usuario_cadastro_id'] = $usuarioId;
-                $this->create($rateio);
+                
+                LogSistema::debug('RateioRecebimento', 'saveBatch_insert', "Inserindo rateio #{$index}", [
+                    'conta_receber_id' => $contaReceberId,
+                    'rateio_data' => $rateio,
+                ]);
+                
+                $result = $this->create($rateio);
+                
+                if (!$result) {
+                    throw new \Exception("Falha ao inserir rateio #{$index} - create retornou false");
+                }
             }
             
             $this->db->commit();
+            
+            LogSistema::info('RateioRecebimento', 'saveBatch_ok', 'saveBatch concluído com sucesso', [
+                'conta_receber_id' => $contaReceberId,
+                'qtd_inseridos' => count($rateios),
+            ]);
+            
             return true;
             
         } catch (\Exception $e) {
             $this->db->rollBack();
-            error_log("Erro ao salvar rateios recebimento: " . $e->getMessage());
+            
+            LogSistema::error('RateioRecebimento', 'saveBatch_erro', 'Erro no saveBatch: ' . $e->getMessage(), [
+                'conta_receber_id' => $contaReceberId,
+                'erro' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
             return false;
         }
     }

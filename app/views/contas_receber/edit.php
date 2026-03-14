@@ -220,8 +220,8 @@ $old = $this->session->get('old') ?? [];
                                 </div>
                                 <div class="w-24">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">%</label>
-                                    <input type="number" :name="'rateios[' + index + '][percentual]'" x-model="rateio.percentual" step="0.01" readonly
-                                           class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 text-gray-900 dark:text-gray-100">
+                                    <input type="number" :name="'rateios[' + index + '][percentual]'" x-model="rateio.percentual" step="0.01" @input="calcularValor(index)"
+                                           class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                                 </div>
                                 <div class="flex-1">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Competência</label>
@@ -362,6 +362,12 @@ function contaReceberForm() {
             const vt = parseFloat(this.valorTotal) || 0;
             if (vt > 0 && this.rateios[index]) {
                 this.rateios[index].percentual = (parseFloat(this.rateios[index].valor || 0) / vt * 100).toFixed(2);
+            }
+        },
+        calcularValor(index) {
+            const vt = parseFloat(this.valorTotal) || 0;
+            if (vt > 0 && this.rateios[index]) {
+                this.rateios[index].valor = (parseFloat(this.rateios[index].percentual || 0) / 100 * vt).toFixed(2);
             }
         },
         atualizarRateios() {
