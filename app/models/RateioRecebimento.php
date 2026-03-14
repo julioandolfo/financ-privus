@@ -45,8 +45,8 @@ class RateioRecebimento extends Model
         
         // Insere novos rateios
         $sql = "INSERT INTO {$this->table} 
-                (conta_receber_id, empresa_id, valor_rateio, percentual, data_competencia, usuario_id, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, NOW())";
+                (conta_receber_id, empresa_id, valor_rateio, percentual, data_competencia, observacoes, usuario_cadastro_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $this->db->prepare($sql);
         
@@ -57,6 +57,7 @@ class RateioRecebimento extends Model
                 $rateio['valor_rateio'],
                 $rateio['percentual'],
                 $rateio['data_competencia'],
+                $rateio['observacoes'] ?? null,
                 $usuarioId
             ]);
         }
