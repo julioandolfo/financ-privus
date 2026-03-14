@@ -311,11 +311,15 @@ class ContaPagarController extends Controller
     {
         $ids = $request->post('ids', []);
         $dataPagamento = $request->post('data_pagamento');
+        $tipoBaixaData = $request->post('tipo_data_baixa', 'manual');
         $formaPagamentoId = $request->post('forma_pagamento_id');
         $contaBancariaId = $request->post('conta_bancaria_id');
-        
-        if (empty($ids) || !$dataPagamento || !$formaPagamentoId || !$contaBancariaId) {
-            $_SESSION['error'] = 'Selecione contas e preencha data, forma de pagamento e conta bancária.';
+
+        // Data é obrigatória apenas no modo manual
+        $dataObrigatoria = ($tipoBaixaData !== 'vencimento') && !$dataPagamento;
+
+        if (empty($ids) || $dataObrigatoria || !$formaPagamentoId || !$contaBancariaId) {
+            $_SESSION['error'] = 'Selecione contas e preencha forma de pagamento e conta bancária.';
             $response->redirect('/contas-pagar?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'data_pagamento', 'forma_pagamento_id', 'conta_bancaria_id']))));
             return;
         }
@@ -360,13 +364,22 @@ class ContaPagarController extends Controller
                 $ignoradas++;
                 continue;
             }
+
+            $dataEfetiva = ($tipoBaixaData === 'vencimento')
+                ? $conta['data_vencimento']
+                : $dataPagamento;
+
+            if (empty($dataEfetiva)) {
+                $erros[] = "Conta #{$id}: data de vencimento não encontrada.";
+                continue;
+            }
             
             try {
                 $valorPago = floatval($conta['valor_pago'] ?? 0) + $valorRestante;
                 $status = 'pago';
                 
                 $dadosAntes = $conta;
-                $result = $contaPagarModel->atualizarPagamento($id, $valorPago, $dataPagamento, $status);
+                $result = $contaPagarModel->atualizarPagamento($id, $valorPago, $dataEfetiva, $status);
                 
                 if (!$result) {
                     $erros[] = "Conta #{$id}: falha ao atualizar no banco de dados.";
@@ -389,7 +402,7 @@ class ContaPagarController extends Controller
                     'conta_bancaria_id' => $contaBancariaId,
                     'descricao' => "Pagamento: " . ($conta['descricao'] ?? ''),
                     'valor' => $valorRestante,
-                    'data_movimento' => $dataPagamento,
+                    'data_movimento' => $dataEfetiva,
                     'data_competencia' => $conta['data_competencia'],
                     'forma_pagamento_id' => $formaPagamentoId,
                     'observacoes' => 'Baixa em massa'

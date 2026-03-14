@@ -325,11 +325,15 @@ class ContaReceberController extends Controller
     {
         $ids = $request->post('ids', []);
         $dataRecebimento = $request->post('data_recebimento');
+        $tipoBaixaData = $request->post('tipo_data_baixa', 'manual');
         $formaRecebimentoId = $request->post('forma_recebimento_id');
         $contaBancariaId = $request->post('conta_bancaria_id');
-        
-        if (empty($ids) || !$dataRecebimento || !$formaRecebimentoId || !$contaBancariaId) {
-            $_SESSION['error'] = 'Selecione contas e preencha data, forma de recebimento e conta bancária.';
+
+        // Data é obrigatória apenas no modo manual
+        $dataObrigatoria = ($tipoBaixaData !== 'vencimento') && !$dataRecebimento;
+
+        if (empty($ids) || $dataObrigatoria || !$formaRecebimentoId || !$contaBancariaId) {
+            $_SESSION['error'] = 'Selecione contas e preencha forma de recebimento e conta bancária.';
             $response->redirect('/contas-receber?' . http_build_query(array_diff_key($request->all(), array_flip(['ids', 'data_recebimento', 'forma_recebimento_id', 'conta_bancaria_id']))));
             return;
         }
@@ -374,13 +378,22 @@ class ContaReceberController extends Controller
                 $ignoradas++;
                 continue;
             }
+
+            $dataEfetiva = ($tipoBaixaData === 'vencimento')
+                ? $conta['data_vencimento']
+                : $dataRecebimento;
+
+            if (empty($dataEfetiva)) {
+                $erros[] = "Conta #{$id}: data de vencimento não encontrada.";
+                continue;
+            }
             
             try {
                 $valorRecebido = floatval($conta['valor_recebido'] ?? 0) + $valorRestante;
                 $status = 'recebido';
                 
                 $dadosAntes = $conta;
-                $result = $contaReceberModel->atualizarRecebimento($id, $valorRecebido, $dataRecebimento, $status);
+                $result = $contaReceberModel->atualizarRecebimento($id, $valorRecebido, $dataEfetiva, $status);
                 
                 if (!$result) {
                     $erros[] = "Conta #{$id}: falha ao atualizar no banco de dados.";
@@ -403,7 +416,7 @@ class ContaReceberController extends Controller
                     'conta_bancaria_id' => $contaBancariaId,
                     'descricao' => "Recebimento: " . ($conta['descricao'] ?? ''),
                     'valor_recebido' => $valorRestante,
-                    'data_recebimento' => $dataRecebimento,
+                    'data_recebimento' => $dataEfetiva,
                     'data_competencia' => $conta['data_competencia'],
                     'forma_recebimento_id' => $formaRecebimentoId,
                     'observacoes' => 'Baixa em massa'
