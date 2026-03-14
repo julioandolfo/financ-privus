@@ -319,12 +319,54 @@ $old = $this->session->get('old') ?? [];
             </div>
 
             <!-- Botões -->
-            <div class="flex items-center justify-end space-x-4">
-                <a href="/contas-receber/<?= $conta['id'] ?>" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium">
+            <div class="flex items-center justify-between">
+                <button type="button" onclick="document.getElementById('modalExcluirConta').classList.remove('hidden')"
+                        class="px-5 py-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-xl hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors font-medium flex items-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    <span>Excluir Conta</span>
+                </button>
+                <div class="flex items-center space-x-4">
+                    <a href="/contas-receber/<?= $conta['id'] ?>" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all font-medium shadow-lg">
+                        Atualizar Conta a Receber
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Excluir Conta -->
+<div id="modalExcluirConta" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="document.getElementById('modalExcluirConta').classList.add('hidden')"></div>
+    <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md p-6">
+        <div class="flex items-center space-x-3 mb-4">
+            <div class="p-2 bg-red-100 dark:bg-red-900/30 rounded-xl">
+                <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Excluir Conta a Receber</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Esta acao pode ser revertida em Registros Deletados</p>
+            </div>
+        </div>
+        <form method="POST" action="/contas-receber/<?= $conta['id'] ?>/delete">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Motivo da exclusao</label>
+                <textarea name="motivo" rows="2" required
+                          class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500"
+                          placeholder="Informe o motivo da exclusao..."></textarea>
+            </div>
+            <div class="flex items-center justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('modalExcluirConta').classList.add('hidden')"
+                        class="px-5 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium">
                     Cancelar
-                </a>
-                <button type="submit" class="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all font-medium shadow-lg">
-                    Atualizar Conta a Receber
+                </button>
+                <button type="submit"
+                        class="px-5 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    <span>Confirmar Exclusao</span>
                 </button>
             </div>
         </form>
