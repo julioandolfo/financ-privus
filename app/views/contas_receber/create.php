@@ -159,7 +159,8 @@ $old = $this->session->get('old') ?? [];
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Rateio entre Empresas</h2>
                     <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" name="tem_rateio" value="1" x-model="temRateio" @change="toggleRateio"
+                        <input type="hidden" name="tem_rateio" :value="temRateio ? '1' : '0'">
+                        <input type="checkbox" x-model="temRateio" @change="toggleRateio"
                                class="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500">
                         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Ativar Rateio</span>
                     </label>

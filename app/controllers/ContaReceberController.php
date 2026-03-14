@@ -547,7 +547,8 @@ class ContaReceberController extends Controller
             );
             
             // Se tem rateio, salva os rateios
-            if (isset($data['tem_rateio']) && $data['tem_rateio'] == 1 && !empty($data['rateios'])) {
+            $temRateio = !empty($data['tem_rateio']) && $data['tem_rateio'] != '0';
+            if ($temRateio && !empty($data['rateios'])) {
                 $this->rateioService = new RateioService();
                 
                 // Valida rateios
@@ -565,10 +566,11 @@ class ContaReceberController extends Controller
                 // Salva rateios
                 $this->rateioModel = new RateioRecebimento();
                 $rateiosPreparados = $this->rateioService->prepararParaSalvar($data['rateios'], $_SESSION['usuario_id']);
-                $this->rateioModel->saveBatch($contaReceberId, $rateiosPreparados, $_SESSION['usuario_id']);
+                $resultado = $this->rateioModel->saveBatch($contaReceberId, $rateiosPreparados, $_SESSION['usuario_id']);
                 
-                // Atualiza flag de rateio
-                $this->contaReceberModel->atualizarRateio($contaReceberId, 1);
+                if ($resultado) {
+                    $this->contaReceberModel->atualizarRateio($contaReceberId, 1);
+                }
             }
             
             // Se marcou como já recebido, registra o recebimento
@@ -806,7 +808,8 @@ class ContaReceberController extends Controller
             );
             
             // Atualiza rateios se necessário
-            if (isset($data['tem_rateio']) && $data['tem_rateio'] == 1 && !empty($data['rateios'])) {
+            $temRateio = !empty($data['tem_rateio']) && $data['tem_rateio'] != '0';
+            if ($temRateio && !empty($data['rateios'])) {
                 $this->rateioService = new RateioService();
                 
                 // Valida rateios
@@ -821,10 +824,11 @@ class ContaReceberController extends Controller
                 // Salva rateios
                 $this->rateioModel = new RateioRecebimento();
                 $rateiosPreparados = $this->rateioService->prepararParaSalvar($data['rateios'], $_SESSION['usuario_id']);
-                $this->rateioModel->saveBatch($id, $rateiosPreparados, $_SESSION['usuario_id']);
+                $resultado = $this->rateioModel->saveBatch($id, $rateiosPreparados, $_SESSION['usuario_id']);
                 
-                // Atualiza flag de rateio
-                $this->contaReceberModel->atualizarRateio($id, 1);
+                if ($resultado) {
+                    $this->contaReceberModel->atualizarRateio($id, 1);
+                }
             } else {
                 // Remove rateios se desmarcou
                 $this->rateioModel = new RateioRecebimento();

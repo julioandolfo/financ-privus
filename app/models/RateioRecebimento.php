@@ -36,33 +36,55 @@ class RateioRecebimento extends Model
     }
     
     /**
-     * Salva múltiplos rateios
+     * Cria um novo rateio
      */
-    public function saveBatch($contaReceberId, $rateios, $usuarioId)
+    public function create($data)
     {
-        // Remove rateios existentes
-        $this->deleteByContaReceber($contaReceberId);
-        
-        // Insere novos rateios
         $sql = "INSERT INTO {$this->table} 
-                (conta_receber_id, empresa_id, valor_rateio, percentual, data_competencia, observacoes, usuario_cadastro_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?)";
+                (conta_receber_id, empresa_id, valor_rateio, percentual, 
+                 data_competencia, observacoes, usuario_cadastro_id) 
+                VALUES 
+                (?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $this->db->prepare($sql);
         
-        foreach ($rateios as $rateio) {
-            $stmt->execute([
-                $contaReceberId,
-                $rateio['empresa_id'],
-                $rateio['valor_rateio'],
-                $rateio['percentual'],
-                $rateio['data_competencia'],
-                $rateio['observacoes'] ?? null,
-                $usuarioId
-            ]);
-        }
+        $success = $stmt->execute([
+            $data['conta_receber_id'],
+            $data['empresa_id'],
+            $data['valor_rateio'],
+            $data['percentual'],
+            $data['data_competencia'],
+            $data['observacoes'] ?? null,
+            $data['usuario_cadastro_id']
+        ]);
         
-        return true;
+        return $success ? $this->db->lastInsertId() : false;
+    }
+    
+    /**
+     * Salva múltiplos rateios de uma vez
+     */
+    public function saveBatch($contaReceberId, $rateios, $usuarioId)
+    {
+        try {
+            $this->db->beginTransaction();
+            
+            $this->deleteByContaReceber($contaReceberId);
+            
+            foreach ($rateios as $rateio) {
+                $rateio['conta_receber_id'] = $contaReceberId;
+                $rateio['usuario_cadastro_id'] = $usuarioId;
+                $this->create($rateio);
+            }
+            
+            $this->db->commit();
+            return true;
+            
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            error_log("Erro ao salvar rateios recebimento: " . $e->getMessage());
+            return false;
+        }
     }
     
     /**
