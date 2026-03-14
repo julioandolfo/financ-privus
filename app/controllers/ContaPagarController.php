@@ -15,6 +15,7 @@ use App\Models\ContaBancaria;
 use App\Models\TransacaoPendente;
 use includes\services\RateioService;
 use includes\services\MovimentacaoService;
+use App\Models\LogSistema;
 
 class ContaPagarController extends Controller
 {
@@ -533,13 +534,29 @@ class ContaPagarController extends Controller
             );
             
             // Se tem rateio, salva os rateios
-            if (isset($data['tem_rateio']) && $data['tem_rateio'] == 1 && !empty($data['rateios'])) {
+            $temRateio = !empty($data['tem_rateio']) && $data['tem_rateio'] != '0';
+            
+            LogSistema::debug('ContaPagar', 'store_rateio_check', 'Verificando rateio no store', [
+                'conta_id' => $contaPagarId,
+                'tem_rateio_raw' => $data['tem_rateio'] ?? 'NAO_ENVIADO',
+                'tem_rateio_parsed' => $temRateio,
+                'rateios_presentes' => isset($data['rateios']),
+                'rateios_count' => isset($data['rateios']) ? count($data['rateios']) : 0,
+                'rateios_data' => $data['rateios'] ?? 'VAZIO',
+            ]);
+            
+            if ($temRateio && !empty($data['rateios'])) {
                 $this->rateioService = new RateioService();
                 
-                // Valida rateios
                 $errosRateio = $this->rateioService->validarRateios($data['rateios'], $data['valor_total']);
+                
+                LogSistema::debug('ContaPagar', 'store_rateio_validacao', 'Resultado da validação', [
+                    'conta_id' => $contaPagarId,
+                    'valor_total' => $data['valor_total'],
+                    'erros' => $errosRateio,
+                ]);
+                
                 if (!empty($errosRateio)) {
-                    // Remove a conta criada
                     $this->contaPagarModel->cancelar($contaPagarId);
                     
                     $this->session->set('errors', ['rateios' => implode(', ', $errosRateio)]);
@@ -548,13 +565,32 @@ class ContaPagarController extends Controller
                     return;
                 }
                 
-                // Salva rateios
                 $this->rateioModel = new RateioPagamento();
                 $rateiosPreparados = $this->rateioService->prepararParaSalvar($data['rateios'], $_SESSION['usuario_id']);
-                $this->rateioModel->saveBatch($contaPagarId, $rateiosPreparados, $_SESSION['usuario_id']);
                 
-                // Atualiza flag de rateio
-                $this->contaPagarModel->atualizarRateio($contaPagarId, 1);
+                LogSistema::debug('ContaPagar', 'store_rateio_preparados', 'Rateios preparados para salvar', [
+                    'conta_id' => $contaPagarId,
+                    'rateios_preparados' => $rateiosPreparados,
+                ]);
+                
+                $resultado = $this->rateioModel->saveBatch($contaPagarId, $rateiosPreparados, $_SESSION['usuario_id']);
+                
+                if ($resultado) {
+                    $this->contaPagarModel->atualizarRateio($contaPagarId, 1);
+                    LogSistema::info('ContaPagar', 'store_rateio_ok', 'Rateio salvo com sucesso', [
+                        'conta_id' => $contaPagarId,
+                    ]);
+                } else {
+                    LogSistema::error('ContaPagar', 'store_rateio_falha', 'Falha ao salvar rateio - saveBatch retornou false', [
+                        'conta_id' => $contaPagarId,
+                    ]);
+                }
+            } else {
+                LogSistema::debug('ContaPagar', 'store_rateio_skip', 'Rateio não ativado ou sem dados', [
+                    'conta_id' => $contaPagarId,
+                    'temRateio' => $temRateio,
+                    'has_rateios' => !empty($data['rateios']),
+                ]);
             }
             
             // Se marcou como já pago, registra o pagamento
@@ -617,6 +653,10 @@ class ContaPagarController extends Controller
             $response->redirect('/contas-pagar');
             
         } catch (\Exception $e) {
+            LogSistema::error('ContaPagar', 'store_exception', 'Exceção ao criar conta a pagar', [
+                'erro' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             $_SESSION['error'] = 'Erro ao criar conta a pagar: ' . $e->getMessage();
             $this->session->set('old', $data ?? []);
             $response->redirect('/contas-pagar/create');
@@ -760,11 +800,28 @@ class ContaPagarController extends Controller
             );
             
             // Atualiza rateios se necessário
-            if (isset($data['tem_rateio']) && $data['tem_rateio'] == 1 && !empty($data['rateios'])) {
+            $temRateio = !empty($data['tem_rateio']) && $data['tem_rateio'] != '0';
+            
+            LogSistema::debug('ContaPagar', 'update_rateio_check', 'Verificando rateio no update', [
+                'conta_id' => $id,
+                'tem_rateio_raw' => $data['tem_rateio'] ?? 'NAO_ENVIADO',
+                'tem_rateio_parsed' => $temRateio,
+                'rateios_presentes' => isset($data['rateios']),
+                'rateios_count' => isset($data['rateios']) ? count($data['rateios']) : 0,
+                'rateios_data' => $data['rateios'] ?? 'VAZIO',
+            ]);
+            
+            if ($temRateio && !empty($data['rateios'])) {
                 $this->rateioService = new RateioService();
                 
-                // Valida rateios
                 $errosRateio = $this->rateioService->validarRateios($data['rateios'], $data['valor_total']);
+                
+                LogSistema::debug('ContaPagar', 'update_rateio_validacao', 'Resultado da validação', [
+                    'conta_id' => $id,
+                    'valor_total' => $data['valor_total'],
+                    'erros' => $errosRateio,
+                ]);
+                
                 if (!empty($errosRateio)) {
                     $this->session->set('errors', ['rateios' => implode(', ', $errosRateio)]);
                     $this->session->set('old', $data);
@@ -772,15 +829,33 @@ class ContaPagarController extends Controller
                     return;
                 }
                 
-                // Salva rateios
                 $this->rateioModel = new RateioPagamento();
                 $rateiosPreparados = $this->rateioService->prepararParaSalvar($data['rateios'], $_SESSION['usuario_id']);
-                $this->rateioModel->saveBatch($id, $rateiosPreparados, $_SESSION['usuario_id']);
                 
-                // Atualiza flag de rateio
-                $this->contaPagarModel->atualizarRateio($id, 1);
+                LogSistema::debug('ContaPagar', 'update_rateio_preparados', 'Rateios preparados para salvar', [
+                    'conta_id' => $id,
+                    'rateios_preparados' => $rateiosPreparados,
+                ]);
+                
+                $resultado = $this->rateioModel->saveBatch($id, $rateiosPreparados, $_SESSION['usuario_id']);
+                
+                if ($resultado) {
+                    $this->contaPagarModel->atualizarRateio($id, 1);
+                    LogSistema::info('ContaPagar', 'update_rateio_ok', 'Rateio atualizado com sucesso', [
+                        'conta_id' => $id,
+                    ]);
+                } else {
+                    LogSistema::error('ContaPagar', 'update_rateio_falha', 'Falha ao salvar rateio - saveBatch retornou false', [
+                        'conta_id' => $id,
+                    ]);
+                }
             } else {
-                // Remove rateios se desmarcou
+                LogSistema::debug('ContaPagar', 'update_rateio_removido', 'Rateio desativado ou sem dados - removendo', [
+                    'conta_id' => $id,
+                    'temRateio' => $temRateio,
+                    'has_rateios' => !empty($data['rateios']),
+                ]);
+                
                 $this->rateioModel = new RateioPagamento();
                 $this->rateioModel->deleteByContaPagar($id);
                 $this->contaPagarModel->atualizarRateio($id, 0);
@@ -790,6 +865,11 @@ class ContaPagarController extends Controller
             $response->redirect('/contas-pagar');
             
         } catch (\Exception $e) {
+            LogSistema::error('ContaPagar', 'update_exception', 'Exceção ao atualizar conta a pagar', [
+                'conta_id' => $id,
+                'erro' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             $_SESSION['error'] = 'Erro ao atualizar conta a pagar: ' . $e->getMessage();
             $this->session->set('old', $data ?? []);
             $response->redirect("/contas-pagar/{$id}/edit");
@@ -1025,6 +1105,63 @@ class ContaPagarController extends Controller
             $this->session->set('old', $data ?? []);
             $response->redirect("/contas-pagar/{$id}?acao=baixar");
         }
+    }
+
+    /**
+     * Deletar contas em massa (soft delete)
+     */
+    public function deletarMassa(Request $request, Response $response)
+    {
+        $ids = $request->post('ids', []);
+        $motivo = $request->post('motivo', 'Exclusão em massa pelo usuário');
+        
+        if (empty($ids)) {
+            $_SESSION['error'] = 'Selecione pelo menos uma conta para deletar.';
+            $response->redirect('/contas-pagar');
+            return;
+        }
+        
+        $contaPagarModel = new ContaPagar();
+        $deletadas = 0;
+        $erros = 0;
+        
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if (!$id) continue;
+            
+            try {
+                $conta = $contaPagarModel->findById($id);
+                if (!$conta) {
+                    $erros++;
+                    continue;
+                }
+                
+                $contaPagarModel->softDelete($id, $motivo);
+                $deletadas++;
+            } catch (\Exception $e) {
+                $erros++;
+                LogSistema::error('ContaPagar', 'deletar_massa_erro', "Erro ao deletar conta #{$id}", [
+                    'conta_id' => $id,
+                    'erro' => $e->getMessage(),
+                ]);
+            }
+        }
+        
+        if ($deletadas > 0) {
+            $_SESSION['success'] = "{$deletadas} conta(s) deletada(s) com sucesso! (É possível restaurar em Registros Deletados)";
+        }
+        if ($erros > 0) {
+            $_SESSION['error'] = ($deletadas > 0 ? '' : '') . "{$erros} conta(s) não puderam ser deletadas.";
+        }
+        
+        LogSistema::info('ContaPagar', 'deletar_massa', "Exclusão em massa: {$deletadas} deletadas, {$erros} erros", [
+            'ids' => $ids,
+            'motivo' => $motivo,
+            'deletadas' => $deletadas,
+            'erros' => $erros,
+        ]);
+        
+        $response->redirect('/contas-pagar');
     }
 
     protected function validate($data, $id = null)

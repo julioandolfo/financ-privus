@@ -1386,6 +1386,63 @@ class ContaReceberController extends Controller
         }
     }
 
+    /**
+     * Deletar contas em massa (soft delete)
+     */
+    public function deletarMassa(Request $request, Response $response)
+    {
+        $ids = $request->post('ids', []);
+        $motivo = $request->post('motivo', 'Exclusão em massa pelo usuário');
+        
+        if (empty($ids)) {
+            $_SESSION['error'] = 'Selecione pelo menos uma conta para deletar.';
+            $response->redirect('/contas-receber');
+            return;
+        }
+        
+        $contaReceberModel = new ContaReceber();
+        $deletadas = 0;
+        $erros = 0;
+        
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if (!$id) continue;
+            
+            try {
+                $conta = $contaReceberModel->findById($id);
+                if (!$conta) {
+                    $erros++;
+                    continue;
+                }
+                
+                $contaReceberModel->softDelete($id, $motivo);
+                $deletadas++;
+            } catch (\Exception $e) {
+                $erros++;
+                LogSistema::error('ContaReceber', 'deletar_massa_erro', "Erro ao deletar conta #{$id}", [
+                    'conta_id' => $id,
+                    'erro' => $e->getMessage(),
+                ]);
+            }
+        }
+        
+        if ($deletadas > 0) {
+            $_SESSION['success'] = "{$deletadas} conta(s) deletada(s) com sucesso! (É possível restaurar em Registros Deletados)";
+        }
+        if ($erros > 0) {
+            $_SESSION['error'] = ($deletadas > 0 ? '' : '') . "{$erros} conta(s) não puderam ser deletadas.";
+        }
+        
+        LogSistema::info('ContaReceber', 'deletar_massa', "Exclusão em massa: {$deletadas} deletadas, {$erros} erros", [
+            'ids' => $ids,
+            'motivo' => $motivo,
+            'deletadas' => $deletadas,
+            'erros' => $erros,
+        ]);
+        
+        $response->redirect('/contas-receber');
+    }
+
     protected function validate($data, $id = null)
     {
         $errors = [];

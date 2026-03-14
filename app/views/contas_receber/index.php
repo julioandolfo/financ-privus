@@ -329,8 +329,8 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
 
     <!-- Tabela de Contas -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden" 
-         x-data="{ selecionados: [], showCategoriaModal: false, showBaixaModal: false, showEditarDataModal: false, tipoData: 'manual' }"
-         x-init="$watch('selecionados.length', v => { if (v === 0) { showCategoriaModal = false; showBaixaModal = false; showEditarDataModal = false; } })">
+         x-data="{ selecionados: [], showCategoriaModal: false, showBaixaModal: false, showEditarDataModal: false, showDeleteModal: false, tipoData: 'manual', motivoExclusao: 'Exclusão em massa pelo usuário' }"
+         x-init="$watch('selecionados.length', v => { if (v === 0) { showCategoriaModal = false; showBaixaModal = false; showEditarDataModal = false; showDeleteModal = false; } })">
         <!-- Barra de ações em massa -->
         <div x-show="selecionados.length > 0" x-cloak x-transition
              class="sticky top-0 z-10 bg-green-600 dark:bg-green-700 px-6 py-3 flex items-center justify-between gap-4">
@@ -357,10 +357,47 @@ $empresasAtivas = $modoConsolidacao ? count(empresasConsolidacao()) : 1;
                     </svg>
                     Alterar Categoria
                 </button>
+                <button type="button" @click="showDeleteModal = true"
+                        class="px-4 py-2 bg-white text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    Deletar
+                </button>
                 <button type="button" @click="selecionados = []"
                         class="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors">
                     Desmarcar
                 </button>
+            </div>
+        </div>
+
+        <!-- Modal deletar em massa -->
+        <div x-show="showDeleteModal" x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+             @keydown.escape.window="showDeleteModal = false">
+            <div @click.self="showDeleteModal = false" class="absolute inset-0"></div>
+            <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 max-w-md w-full">
+                <h3 class="text-lg font-bold text-red-600 dark:text-red-400 mb-2">Deletar contas selecionadas</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Você está prestes a deletar <strong x-text="selecionados.length"></strong> conta(s).
+                    Elas serão movidas para <strong>Registros Deletados</strong> e poderão ser restauradas.
+                </p>
+                <form method="POST" action="/contas-receber/deletar-massa">
+                    <template x-for="id in selecionados" :key="id">
+                        <input type="hidden" :name="'ids[]'" :value="id">
+                    </template>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Motivo da exclusão</label>
+                        <input type="text" name="motivo" x-model="motivoExclusao"
+                               class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                               placeholder="Informe o motivo...">
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" @click="showDeleteModal = false"
+                                class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Confirmar Exclusão</button>
+                    </div>
+                </form>
             </div>
         </div>
 
