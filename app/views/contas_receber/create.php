@@ -214,6 +214,13 @@ $old = $this->session->get('old') ?? [];
                             (<span x-text="totalPercentual.toFixed(2)"></span>%)
                         </p>
                     </div>
+                    <div class="mt-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                            <strong class="text-gray-700 dark:text-gray-300">Como funciona o rateio:</strong>
+                            Distribua o valor desta conta entre uma ou mais empresas. Você pode preencher o <strong>Valor</strong> (o percentual será calculado automaticamente) ou preencher o <strong>%</strong> (o valor será calculado). 
+                            O rateio pode ser parcial — não é obrigatório distribuir 100% do valor total. A soma dos valores não pode exceder o valor da conta.
+                        </p>
+                    </div>
                 </div>
             </div>
 

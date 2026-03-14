@@ -62,19 +62,15 @@ class RateioService
             }
         }
         
-        // Validar soma dos valores
-        $diferenca = abs($somaValores - $valorTotal);
-        if ($diferenca > 0.01) { // Tolerância de 1 centavo para arredondamentos
+        // Validar soma dos valores (permite rateio parcial, mas não pode exceder o total)
+        if ($somaValores > ($valorTotal + 0.01)) {
             $erros[] = "A soma dos valores rateados (R$ " . number_format($somaValores, 2, ',', '.') . 
-                       ") não é igual ao valor total (R$ " . number_format($valorTotal, 2, ',', '.') . ")";
+                       ") excede o valor total (R$ " . number_format($valorTotal, 2, ',', '.') . ")";
         }
         
-        // Validar soma dos percentuais (se informados)
-        if ($somaPercentuais > 0) {
-            $diferencaPercentual = abs($somaPercentuais - 100);
-            if ($diferencaPercentual > 0.01) {
-                $erros[] = "A soma dos percentuais ({$somaPercentuais}%) deve ser igual a 100%";
-            }
+        // Validar soma dos percentuais (permite parcial, mas não pode exceder 100%)
+        if ($somaPercentuais > 100.01) {
+            $erros[] = "A soma dos percentuais (" . number_format($somaPercentuais, 2) . "%) não pode exceder 100%";
         }
         
         return $erros;
