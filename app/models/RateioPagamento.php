@@ -66,14 +66,14 @@ class RateioPagamento extends Model
      */
     public function saveBatch($contaPagarId, $rateios, $usuarioId)
     {
+        LogSistema::debug('RateioPagamento', 'saveBatch_inicio', 'Iniciando saveBatch', [
+            'conta_pagar_id' => $contaPagarId,
+            'qtd_rateios' => count($rateios),
+            'usuario_id' => $usuarioId,
+            'rateios' => $rateios,
+        ]);
+        
         try {
-            LogSistema::debug('RateioPagamento', 'saveBatch_inicio', 'Iniciando saveBatch', [
-                'conta_pagar_id' => $contaPagarId,
-                'qtd_rateios' => count($rateios),
-                'usuario_id' => $usuarioId,
-                'rateios' => $rateios,
-            ]);
-            
             $this->db->beginTransaction();
             
             $this->deleteByContaPagar($contaPagarId);
@@ -81,11 +81,6 @@ class RateioPagamento extends Model
             foreach ($rateios as $index => $rateio) {
                 $rateio['conta_pagar_id'] = $contaPagarId;
                 $rateio['usuario_cadastro_id'] = $usuarioId;
-                
-                LogSistema::debug('RateioPagamento', 'saveBatch_insert', "Inserindo rateio #{$index}", [
-                    'conta_pagar_id' => $contaPagarId,
-                    'rateio_data' => $rateio,
-                ]);
                 
                 $result = $this->create($rateio);
                 
@@ -104,7 +99,9 @@ class RateioPagamento extends Model
             return true;
             
         } catch (\Exception $e) {
-            $this->db->rollBack();
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
             
             LogSistema::error('RateioPagamento', 'saveBatch_erro', 'Erro no saveBatch: ' . $e->getMessage(), [
                 'conta_pagar_id' => $contaPagarId,
