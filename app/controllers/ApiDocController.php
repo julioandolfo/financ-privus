@@ -404,6 +404,42 @@ class ApiDocController extends Controller
                             ]
                         ],
                         [
+                            'method' => 'PATCH',
+                            'endpoint' => '/api/v1/contas-receber/{id}/status',
+                            'description' => '🆕 Alterar status de uma conta a receber, com opção de propagar para todas as parcelas',
+                            'params' => [
+                                ['name' => 'id', 'type' => 'integer', 'required' => true, 'description' => 'ID da conta a receber'],
+                            ],
+                            'body' => [
+                                'status' => ['type' => 'string', 'required' => true, 'description' => 'Novo status: pendente, recebido ou cancelado'],
+                                'atualizar_parcelas' => ['type' => 'boolean', 'required' => false, 'description' => 'Se 1/true, propaga o status para todas as parcelas. Padrão: 0 (não propaga)'],
+                            ],
+                            'response' => [
+                                'success' => true,
+                                'message' => 'Status atualizado com sucesso',
+                                'conta' => [
+                                    'id' => 10,
+                                    'descricao' => 'Venda #123',
+                                    'valor_total' => 1000.00,
+                                    'valor_recebido' => 0.00,
+                                    'status_anterior' => 'pendente',
+                                    'status_atual' => 'cancelado',
+                                    'data_recebimento' => null
+                                ],
+                                'parcelas_atualizadas' => 3
+                            ],
+                            'notes' => [
+                                'pendente: zera valor_recebido e data_recebimento',
+                                'recebido: define valor_recebido = valor_total e data_recebimento = hoje',
+                                'cancelado: zera valor_recebido e data_recebimento',
+                                'Com atualizar_parcelas=1, todas as parcelas recebem o mesmo status',
+                            ],
+                            'example' => [
+                                'status' => 'cancelado',
+                                'atualizar_parcelas' => 1
+                            ]
+                        ],
+                        [
                             'method' => 'POST',
                             'endpoint' => '/api/v1/contas-receber',
                             'description' => 'Cria uma nova conta a receber SIMPLES (sem parcelas)',

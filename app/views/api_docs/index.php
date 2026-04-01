@@ -88,6 +88,7 @@
                         'POST': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
                         'PUT': 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
                         'DELETE': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+                        'PATCH': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
                     };
                     return colors[method] || 'bg-gray-100 text-gray-800';
                 }
@@ -685,7 +686,7 @@ print(data)</code></pre>
                                             $curlExample .= "  '{$baseUrlSafe}{$method['endpoint']}' \\\n";
                                             $curlExample .= "  -H 'Authorization: Bearer SEU_TOKEN_AQUI' \\\n";
                                             $curlExample .= "  -H 'Content-Type: application/json'";
-                                            if (in_array($method['method'], ['POST', 'PUT']) && !empty($method['example'])) {
+                                            if (in_array($method['method'], ['POST', 'PUT', 'PATCH']) && !empty($method['example'])) {
                                                 $jsonData = json_encode($method['example'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                                                 $curlExample .= " \\\n  -d '" . addslashes($jsonData) . "'";
                                             }
