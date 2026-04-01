@@ -582,6 +582,68 @@ DELETE /api/v1/contas-receber/{id}
 
 ---
 
+## 🔄 Alterar Status de Conta a Receber
+
+```http
+PATCH /api/v1/contas-receber/{id}/status
+Content-Type: application/json
+
+{
+    "status": "cancelado",
+    "atualizar_parcelas": 1
+}
+```
+
+**Campos:**
+- 🔴 `status` (string, obrigatório): Novo status. Valores aceitos: `pendente`, `recebido`, `cancelado`
+- ⚪ `atualizar_parcelas` (boolean, opcional): Se `1` ou `true`, propaga o status para todas as parcelas da conta. Padrão: `0` (não propaga)
+
+**Comportamento por status:**
+
+| Status | Conta | Parcelas (se `atualizar_parcelas=1`) |
+|--------|-------|--------------------------------------|
+| `pendente` | Zera valor_recebido e data_recebimento | Zera valor_recebido e data_recebimento de cada parcela |
+| `recebido` | Define valor_recebido = valor_total, data_recebimento = hoje | Define valor_recebido = valor_parcela, data_recebimento = hoje |
+| `cancelado` | Zera valor_recebido e data_recebimento | Cancela cada parcela e zera valores |
+
+**Resposta de Sucesso:**
+```json
+{
+    "success": true,
+    "message": "Status atualizado com sucesso",
+    "conta": {
+        "id": 10,
+        "descricao": "Venda #123",
+        "valor_total": 1000.00,
+        "valor_recebido": 0.00,
+        "status_anterior": "pendente",
+        "status_atual": "cancelado",
+        "data_recebimento": null
+    },
+    "parcelas_atualizadas": 3
+}
+```
+
+**Exemplos de uso:**
+
+Cancelar conta e suas parcelas:
+```bash
+curl -X PATCH "https://seudominio.com/api/v1/contas-receber/10/status" \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "cancelado", "atualizar_parcelas": 1}'
+```
+
+Marcar conta como recebida (sem alterar parcelas individualmente):
+```bash
+curl -X PATCH "https://seudominio.com/api/v1/contas-receber/10/status" \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "recebido", "atualizar_parcelas": 0}'
+```
+
+---
+
 ## 📋 Parcelas de Contas a Receber
 
 ### Listar Parcelas de uma Conta

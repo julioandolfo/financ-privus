@@ -2148,6 +2148,112 @@ class ApiRestController extends Controller
     }
     
     /**
+     * Alterar status de uma conta a receber (com opção de propagar para parcelas)
+     * PATCH /api/v1/contas-receber/{id}/status
+     */
+    public function contasReceberUpdateStatus(Request $request, Response $response, $id)
+    {
+        $token = $this->authenticate($request, $response);
+
+        $contaReceberModel = new ContaReceber();
+        $conta = $contaReceberModel->findById($id);
+
+        if (!$conta || ($token['empresa_id'] && $conta['empresa_id'] != $token['empresa_id'])) {
+            $data = ['success' => false, 'error' => 'Conta a receber não encontrada'];
+            $this->logSuccess($request, 404, $data);
+            return $response->json($data, 404);
+        }
+
+        // Não permite alterar contas excluídas
+        if (!empty($conta['deleted_at'])) {
+            $data = ['success' => false, 'error' => 'Conta a receber foi excluída e não pode ter o status alterado'];
+            $this->logSuccess($request, 400, $data);
+            return $response->json($data, 400);
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        if (empty($input['status'])) {
+            $data = ['success' => false, 'error' => 'O campo "status" é obrigatório. Valores aceitos: pendente, recebido, cancelado'];
+            $this->logSuccess($request, 400, $data);
+            return $response->json($data, 400);
+        }
+
+        $statusPermitidos = ['pendente', 'recebido', 'cancelado'];
+        $novoStatus = strtolower(trim($input['status']));
+
+        if (!in_array($novoStatus, $statusPermitidos)) {
+            $data = ['success' => false, 'error' => 'Status inválido. Valores aceitos: ' . implode(', ', $statusPermitidos)];
+            $this->logSuccess($request, 400, $data);
+            return $response->json($data, 400);
+        }
+
+        $atualizarParcelas = isset($input['atualizar_parcelas']) ? (bool)$input['atualizar_parcelas'] : false;
+        $statusAnterior = $conta['status'];
+
+        // Atualizar status da conta
+        if ($novoStatus === 'pendente') {
+            $contaReceberModel->atualizarRecebimento($id, 0, null, 'pendente');
+        } elseif ($novoStatus === 'recebido') {
+            $valorTotal = floatval($conta['valor_total']);
+            $contaReceberModel->atualizarRecebimento($id, $valorTotal, date('Y-m-d'), 'recebido');
+        } elseif ($novoStatus === 'cancelado') {
+            $contaReceberModel->atualizarRecebimento($id, 0, null, 'cancelado');
+        }
+
+        // Atualizar parcelas se solicitado
+        $parcelasAtualizadas = 0;
+        if ($atualizarParcelas) {
+            $parcelaModel = new ParcelaReceber();
+            $parcelas = $parcelaModel->findByContaReceber($id);
+
+            foreach ($parcelas as $parcela) {
+                if ($novoStatus === 'pendente') {
+                    $parcelaModel->update($parcela['id'], [
+                        'status' => 'pendente',
+                        'valor_recebido' => 0,
+                        'data_recebimento' => null
+                    ]);
+                } elseif ($novoStatus === 'recebido') {
+                    $parcelaModel->update($parcela['id'], [
+                        'status' => 'recebido',
+                        'valor_recebido' => $parcela['valor_parcela'],
+                        'data_recebimento' => date('Y-m-d')
+                    ]);
+                } elseif ($novoStatus === 'cancelado') {
+                    $parcelaModel->update($parcela['id'], [
+                        'status' => 'cancelado',
+                        'valor_recebido' => 0,
+                        'data_recebimento' => null
+                    ]);
+                }
+                $parcelasAtualizadas++;
+            }
+        }
+
+        // Buscar dados atualizados
+        $contaAtualizada = $contaReceberModel->findById($id);
+
+        $responseData = [
+            'success' => true,
+            'message' => 'Status atualizado com sucesso',
+            'conta' => [
+                'id' => intval($contaAtualizada['id']),
+                'descricao' => $contaAtualizada['descricao'],
+                'valor_total' => floatval($contaAtualizada['valor_total']),
+                'valor_recebido' => floatval($contaAtualizada['valor_recebido']),
+                'status_anterior' => $statusAnterior,
+                'status_atual' => $contaAtualizada['status'],
+                'data_recebimento' => $contaAtualizada['data_recebimento']
+            ],
+            'parcelas_atualizadas' => $parcelasAtualizadas
+        ];
+
+        $this->logSuccess($request, 200, $responseData);
+        $response->json($responseData);
+    }
+
+    /**
      * Atualiza o status da conta a receber baseado nas parcelas
      */
     private function atualizarStatusContaPorParcelas($contaId)

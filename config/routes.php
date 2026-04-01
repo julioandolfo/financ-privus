@@ -400,6 +400,9 @@ return [
     'GET /api/v1/formas-pagamento' => ['handler' => 'ApiRestController@formasPagamentoIndex', 'middleware' => ['ApiAuthMiddleware']],
     'GET /api/v1/formas-pagamento/{id}' => ['handler' => 'ApiRestController@formasPagamentoShow', 'middleware' => ['ApiAuthMiddleware']],
     
+    // Alterar Status de Contas a Receber (com opção de propagar para parcelas)
+    'PATCH /api/v1/contas-receber/{id}/status' => ['handler' => 'ApiRestController@contasReceberUpdateStatus', 'middleware' => ['ApiAuthMiddleware']],
+
     // Parcelas de Contas a Receber
     'GET /api/v1/contas-receber/{id}/parcelas' => ['handler' => 'ApiRestController@parcelasReceberIndex', 'middleware' => ['ApiAuthMiddleware']],
     'GET /api/v1/parcelas-receber/{id}' => ['handler' => 'ApiRestController@parcelasReceberShow', 'middleware' => ['ApiAuthMiddleware']],
