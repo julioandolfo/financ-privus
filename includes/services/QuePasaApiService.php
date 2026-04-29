@@ -5,12 +5,18 @@ namespace Includes\Services;
  * Wrapper HTTP para a QuePasa API (v4).
  * Doc: https://whats.autoprivus.com.br/swagger/index.html
  *
- * Diferenças relevantes vs Evolution:
- *  - Autenticação via header `X-QUEPASA-USER: <usuario>` (o usuário é o
- *    identificador do bot — não usa Bearer token nem instance no path).
- *  - Envio de texto: `POST /send` com `{ chatId, text }`.
- *  - Status: `GET /info` (com X-QUEPASA-USER válido retorna detalhes do bot).
- *  - QR Code: `GET /scan`.
+ * Estratégia de autenticação (defensiva): envia o MESMO valor armazenado em
+ * `api_key` em três lugares simultaneamente para cobrir todas as configurações
+ * possíveis do servidor QuePasa:
+ *   - Header `X-QUEPASA-USER: <valor>`        (modo usuário)
+ *   - Header `Authorization: Bearer <valor>`  (modo Bearer token)
+ *   - Query string `?token=<valor>` em endpoints que exigem token explícito
+ *     (ex: `/scan`, conhecido por retornar "missing token" quando ausente)
+ *
+ * Endpoints utilizados:
+ *   - POST /send          envio de texto `{ chatId, text }`
+ *   - GET  /health        estado da conexão (campo `state`)
+ *   - GET  /scan          QR code para parear
  */
 class QuePasaApiService implements WhatsAppApiServiceInterface
 {
@@ -66,10 +72,21 @@ class QuePasaApiService implements WhatsAppApiServiceInterface
 
     private function request(string $method, string $endpoint, $body = null): array
     {
+        // Endpoints conhecidos por exigir o token na query string
+        $endpointsComTokenNaQuery = ['/scan', '/paircode'];
         $url = $this->baseUrl . $endpoint;
+        if (\in_array($endpoint, $endpointsComTokenNaQuery, true)) {
+            $sep = strpos($endpoint, '?') === false ? '?' : '&';
+            $url .= $sep . 'token=' . urlencode($this->usuario);
+        }
 
+        // Envia em 3 lugares para cobrir as variações do servidor QuePasa:
+        //  - Header X-QUEPASA-USER
+        //  - Header Authorization: Bearer
+        //  - (Já incluído acima) ?token=<valor> em endpoints que exigem
         $headers = [
             'X-QUEPASA-USER: ' . $this->usuario,
+            'Authorization: Bearer ' . $this->usuario,
             'Content-Type: application/json',
             'Accept: application/json',
         ];

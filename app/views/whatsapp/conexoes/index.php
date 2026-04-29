@@ -133,7 +133,7 @@ function abrirQrCode(id) {
                 }
                 html = `<p class="text-red-600 font-semibold">${j.error || 'Erro desconhecido'}${httpInfo}</p>${extra}`;
                 if (j.provider === 'quepasa') {
-                    html += `<p class="text-xs text-gray-500 mt-3">Dica: o endpoint <code>/scan</code> requer um bot já registrado. Verifique se o usuário (X-QUEPASA-USER) está cadastrado no servidor QuePasa e se o bot já foi inicializado.</p>`;
+                    html += `<p class="text-xs text-gray-500 mt-3">Dica: o sistema envia o mesmo valor como X-QUEPASA-USER, Authorization Bearer e <code>?token=</code>. Se ainda falhar, confirme com o admin do servidor QuePasa se o bot existe para esse identificador e qual o formato esperado (e-mail / WID / token).</p>`;
                 }
             } else {
                 html = `<pre class="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded overflow-auto">${JSON.stringify(body, null, 2)}</pre>`;
