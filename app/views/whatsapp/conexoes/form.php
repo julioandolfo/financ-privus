@@ -42,7 +42,7 @@ $providerAtual = $val('provider', 'evolution');
                             <?php if ($key === 'evolution'): ?>
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Self-hosted. Usa <code>apikey</code> + nome da instância.</p>
                             <?php elseif ($key === 'quepasa'): ?>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">QuePasa v4. Usa <code>Bearer token</code> (1 token = 1 bot).</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">QuePasa v4. Autentica via <code>X-QUEPASA-USER</code> (usuário do bot).</p>
                             <?php endif; ?>
                         </div>
                     </label>
@@ -73,10 +73,13 @@ $providerAtual = $val('provider', 'evolution');
         <div>
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
                 <span x-show="provider === 'evolution'">API Key <?= $isEdit ? '(deixe em branco para manter)' : '*' ?></span>
-                <span x-show="provider === 'quepasa'">Bearer Token <?= $isEdit ? '(deixe em branco para manter)' : '*' ?></span>
+                <span x-show="provider === 'quepasa'">Usuário (X-QUEPASA-USER) <?= $isEdit ? '(deixe em branco para manter)' : '*' ?></span>
             </label>
             <input type="password" name="api_key" <?= $isEdit ? '' : 'required' ?> value="<?= htmlspecialchars($val('api_key_decrypted')) ?>" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded-lg font-mono" autocomplete="new-password">
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Armazenado criptografado (AES-256-CBC).</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <span x-show="provider === 'evolution'">Armazenado criptografado (AES-256-CBC).</span>
+                <span x-show="provider === 'quepasa'">Identificador do bot enviado no header <code>X-QUEPASA-USER</code>. Armazenado criptografado.</span>
+            </p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -118,6 +121,6 @@ $providerAtual = $val('provider', 'evolution');
     <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-sm text-blue-800 dark:text-blue-200">
         <p class="font-semibold mb-1">💡 Dicas por provedor</p>
         <p x-show="provider === 'evolution'" class="text-xs">A Evolution requer <code>base_url</code> + <code>instance_name</code> + API key. O <em>QR Code</em> está em <code>/instance/connect/{instance}</code>.</p>
-        <p x-show="provider === 'quepasa'" class="text-xs">QuePasa: a URL padrão da nossa instância é <code>https://whats.autoprivus.com.br</code>. O Bearer token é o identificador do bot — não há instance name. QR em <code>/scan</code>.</p>
+        <p x-show="provider === 'quepasa'" class="text-xs">QuePasa: a URL padrão da nossa instância é <code>https://whats.autoprivus.com.br</code>. Autenticação só por <code>X-QUEPASA-USER</code> (usuário do bot) — não há Bearer token nem instance. QR em <code>/scan</code>.</p>
     </div>
 </div>

@@ -234,7 +234,7 @@
                         <p class="font-semibold mb-2">Como funciona:</p>
                         <ul class="space-y-1 text-xs text-gray-300">
                             <li>• Suporta <strong>Evolution API</strong> (apikey + instance)</li>
-                            <li>• Suporta <strong>QuePasa API</strong> (Bearer token)</li>
+                            <li>• Suporta <strong>QuePasa API</strong> (X-QUEPASA-USER)</li>
                             <li>• Define regras (contas atrasadas, a vencer, resumos)</li>
                             <li>• Envia para múltiplos números no horário configurado</li>
                             <li>• Suporta filtros por categoria, centro, valor</li>

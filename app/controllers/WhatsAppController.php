@@ -236,7 +236,11 @@ class WhatsAppController extends Controller
         if ($provider === 'evolution' && empty($data['instance_name'])) {
             $errors['instance_name'] = 'Instance name é obrigatório para Evolution';
         }
-        if (!$isUpdate && empty($data['api_key'])) $errors['api_key'] = 'API key/token é obrigatório';
+        if (!$isUpdate && empty($data['api_key'])) {
+            $errors['api_key'] = $provider === 'quepasa'
+                ? 'Usuário (X-QUEPASA-USER) é obrigatório'
+                : 'API key é obrigatória';
+        }
         return $errors;
     }
 

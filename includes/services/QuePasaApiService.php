@@ -6,22 +6,26 @@ namespace Includes\Services;
  * Doc: https://whats.autoprivus.com.br/swagger/index.html
  *
  * Diferenças relevantes vs Evolution:
- *  - Autenticação por Bearer token: `Authorization: Bearer <token>`.
- *  - Não existe `instance` no path. Cada token corresponde a um bot.
+ *  - Autenticação via header `X-QUEPASA-USER: <usuario>` (o usuário é o
+ *    identificador do bot — não usa Bearer token nem instance no path).
  *  - Envio de texto: `POST /send` com `{ chatId, text }`.
- *  - Status: `GET /info` (token válido retorna detalhes do bot).
+ *  - Status: `GET /info` (com X-QUEPASA-USER válido retorna detalhes do bot).
  *  - QR Code: `GET /scan`.
  */
 class QuePasaApiService implements WhatsAppApiServiceInterface
 {
     private $baseUrl;
-    private $token;
+    private $usuario;
     private $timeout;
 
-    public function __construct(string $baseUrl, string $token, int $timeout = 15)
+    /**
+     * @param string $baseUrl URL da QuePasa (ex: https://whats.autoprivus.com.br)
+     * @param string $usuario Usuário do bot (header X-QUEPASA-USER)
+     */
+    public function __construct(string $baseUrl, string $usuario, int $timeout = 15)
     {
         $this->baseUrl = rtrim($baseUrl, '/');
-        $this->token = $token;
+        $this->usuario = $usuario;
         $this->timeout = $timeout;
     }
 
@@ -63,7 +67,7 @@ class QuePasaApiService implements WhatsAppApiServiceInterface
         $url = $this->baseUrl . $endpoint;
 
         $headers = [
-            'Authorization: Bearer ' . $this->token,
+            'X-QUEPASA-USER: ' . $this->usuario,
             'Content-Type: application/json',
             'Accept: application/json',
         ];
