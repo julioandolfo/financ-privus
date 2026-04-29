@@ -183,7 +183,7 @@
             <!-- Footer com Ações -->
             <div class="bg-gray-50 dark:bg-gray-900/50 px-8 py-4 border-t border-gray-200 dark:border-gray-700">
                 <div class="flex justify-between items-center">
-                    <form method="POST" action="<?= $this->baseUrl('/usuarios/delete/' . $usuario['id']) ?>" 
+                    <form method="POST" action="<?= $this->baseUrl('/usuarios/' . $usuario['id'] . '/delete') ?>"
                           onsubmit="return confirm('⚠️ Tem certeza que deseja excluir este usuário?\n\nEsta ação não pode ser desfeita!')">
                         <button type="submit" 
                                 class="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
