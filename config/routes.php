@@ -290,13 +290,49 @@ return [
     
     'GET /integracoes/{id}' => ['handler' => 'IntegracaoController@show', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/{id}/sincronizar' => ['handler' => 'IntegracaoController@sincronizar', 'middleware' => ['AuthMiddleware']],
+    'POST /integracoes/{id}/intervalo' => ['handler' => 'IntegracaoController@atualizarIntervalo', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/{id}/delete' => ['handler' => 'IntegracaoController@destroy', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/{id}/toggle' => ['handler' => 'IntegracaoController@toggleStatus', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/testar-woocommerce' => ['handler' => 'IntegracaoController@testarWooCommerce', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/testar-banco-dados' => ['handler' => 'IntegracaoController@testarBancoDados', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/testar-api' => ['handler' => 'IntegracaoController@testarApi', 'middleware' => ['AuthMiddleware']],
     'POST /integracoes/testar-webmanibr' => ['handler' => 'IntegracaoController@testarWebmaniBR', 'middleware' => ['AuthMiddleware']],
-    
+
+    // ========================================
+    // WhatsApp · Evolution API + Regras de Relatório
+    // ========================================
+    // Dashboard
+    'GET /whatsapp' => ['handler' => 'WhatsAppController@index', 'middleware' => ['AuthMiddleware']],
+
+    // Conexões Evolution
+    'GET /whatsapp/conexoes' => ['handler' => 'WhatsAppController@conexoesIndex', 'middleware' => ['AuthMiddleware']],
+    'GET /whatsapp/conexoes/create' => ['handler' => 'WhatsAppController@conexaoCreate', 'middleware' => ['AuthMiddleware']],
+    'POST /whatsapp/conexoes' => ['handler' => 'WhatsAppController@conexaoStore', 'middleware' => ['AuthMiddleware']],
+    'GET /whatsapp/conexoes/{id}/edit' => ['handler' => 'WhatsAppController@conexaoEdit', 'middleware' => ['AuthMiddleware']],
+    'POST /whatsapp/conexoes/{id}' => ['handler' => 'WhatsAppController@conexaoUpdate', 'middleware' => ['AuthMiddleware']],
+    'POST /whatsapp/conexoes/{id}/delete' => ['handler' => 'WhatsAppController@conexaoDelete', 'middleware' => ['AuthMiddleware']],
+    'POST /whatsapp/conexoes/{id}/testar' => ['handler' => 'WhatsAppController@conexaoTestar', 'middleware' => ['AuthMiddleware']],
+    'GET /whatsapp/conexoes/{id}/qrcode' => ['handler' => 'WhatsAppController@conexaoQrcode', 'middleware' => ['AuthMiddleware']],
+
+    // Regras
+    'GET /whatsapp/regras' => ['handler' => 'WhatsAppController@regrasIndex', 'middleware' => ['AuthMiddleware']],
+    'GET /whatsapp/regras/create' => ['handler' => 'WhatsAppController@regraCreate', 'middleware' => ['AuthMiddleware']],
+    'POST /whatsapp/regras' => ['handler' => 'WhatsAppController@regraStore', 'middleware' => ['AuthMiddleware']],
+    'GET /whatsapp/regras/{id}/edit' => ['handler' => 'WhatsAppController@regraEdit', 'middleware' => ['AuthMiddleware']],
+    'GET /whatsapp/regras/{id}/envios' => ['handler' => 'WhatsAppController@regraEnvios', 'middleware' => ['AuthMiddleware']],
+    'GET /whatsapp/regras/{id}/preview' => ['handler' => 'WhatsAppController@regraPreview', 'middleware' => ['AuthMiddleware']],
+    'GET /whatsapp/regras/{id}' => ['handler' => 'WhatsAppController@regraShow', 'middleware' => ['AuthMiddleware']],
+    'POST /whatsapp/regras/{id}/delete' => ['handler' => 'WhatsAppController@regraDelete', 'middleware' => ['AuthMiddleware']],
+    'POST /whatsapp/regras/{id}/toggle' => ['handler' => 'WhatsAppController@regraToggle', 'middleware' => ['AuthMiddleware']],
+    'POST /whatsapp/regras/{id}/executar' => ['handler' => 'WhatsAppController@regraExecutar', 'middleware' => ['AuthMiddleware']],
+    'POST /whatsapp/regras/{id}/testar' => ['handler' => 'WhatsAppController@regraTestar', 'middleware' => ['AuthMiddleware']],
+    'POST /whatsapp/regras/{id}' => ['handler' => 'WhatsAppController@regraUpdate', 'middleware' => ['AuthMiddleware']],
+
+    // Destinatários (aninhado)
+    'POST /whatsapp/regras/{regraId}/destinatarios' => ['handler' => 'WhatsAppController@destinatarioStore', 'middleware' => ['AuthMiddleware']],
+    'POST /whatsapp/regras/{regraId}/destinatarios/{id}/delete' => ['handler' => 'WhatsAppController@destinatarioDelete', 'middleware' => ['AuthMiddleware']],
+    'POST /whatsapp/regras/{regraId}/destinatarios/{id}' => ['handler' => 'WhatsAppController@destinatarioUpdate', 'middleware' => ['AuthMiddleware']],
+
     // Rotas de NF-e
     'GET /nfes' => ['handler' => 'NFeController@index', 'middleware' => ['AuthMiddleware']],
     'GET /nfes/{id}' => ['handler' => 'NFeController@show', 'middleware' => ['AuthMiddleware']],

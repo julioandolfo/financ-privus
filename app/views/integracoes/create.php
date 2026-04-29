@@ -213,5 +213,45 @@
                 </svg>
             </div>
         </a>
+
+        <!-- WhatsApp / Evolution API -->
+        <a href="<?= $this->baseUrl('/whatsapp') ?>"
+           class="group bg-white dark:bg-gray-800 rounded-2xl p-8 border-2 border-gray-200 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-500 transition-all shadow-lg hover:shadow-2xl transform hover:-translate-y-1">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-16 h-16 bg-green-500 dark:bg-green-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                    </svg>
+                </div>
+                <div class="relative group/tooltip">
+                    <button type="button" onclick="event.preventDefault(); event.stopPropagation();" class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors">
+                        <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </button>
+                    <div class="invisible group-hover/tooltip:visible opacity-0 group-hover/tooltip:opacity-100 absolute right-0 top-10 w-72 bg-gray-900 dark:bg-gray-950 text-white text-sm rounded-xl p-4 shadow-2xl z-50 transition-all duration-200">
+                        <div class="absolute -top-2 right-3 w-4 h-4 bg-gray-900 dark:bg-gray-950 transform rotate-45"></div>
+                        <p class="font-semibold mb-2">Como funciona:</p>
+                        <ul class="space-y-1 text-xs text-gray-300">
+                            <li>• Conecta sua instância da Evolution API</li>
+                            <li>• Define regras (contas atrasadas, a vencer, resumos)</li>
+                            <li>• Envia para múltiplos números no horário configurado</li>
+                            <li>• Suporta filtros por categoria, centro, valor</li>
+                            <li>• Templates editáveis com Markdown</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">WhatsApp (Evolution)</h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">
+                Envia relatórios financeiros automáticos via WhatsApp para números específicos, com regras agendadas e filtros configuráveis.
+            </p>
+            <div class="flex items-center text-green-600 dark:text-green-400 font-semibold">
+                Acessar painel
+                <svg class="w-5 h-5 ml-2 group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                </svg>
+            </div>
+        </a>
     </div>
 </div>

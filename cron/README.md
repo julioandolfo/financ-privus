@@ -89,7 +89,25 @@
 
 ---
 
-### 5. **Limpeza do Sistema** (`limpeza_sistema.php`)
+### 5. **Relatórios WhatsApp** (`enviar_relatorios_whatsapp.php`)
+**Função:** Envia relatórios financeiros configurados via Evolution API (WhatsApp), respeitando as regras agendadas em `/whatsapp/regras`.
+
+**Frequência Recomendada:** A cada 5 minutos
+**Comando:**
+```bash
+*/5 * * * * /usr/bin/php /caminho/completo/para/projeto/cron/enviar_relatorios_whatsapp.php >> /var/log/cron_whatsapp.log 2>&1
+```
+
+**O que faz:**
+- Busca regras ativas com `proxima_execucao <= NOW()`
+- Gera o relatório (contas a pagar atrasadas, a receber, resumo diário, fluxo de caixa, etc.)
+- Envia para cada destinatário ativo via Evolution API
+- Registra log em `whatsapp_relatorio_envios`
+- Recalcula `proxima_execucao` da regra
+
+---
+
+### 6. **Limpeza do Sistema** (`limpeza_sistema.php`)
 **Função:** Remove dados antigos e otimiza o banco de dados.
 
 **Frequência Recomendada:** Diário às 02:00  
@@ -134,6 +152,9 @@ crontab -e
 
 # Limpeza do Sistema (diário às 02:00)
 0 2 * * * /usr/bin/php /var/www/financeiro/cron/limpeza_sistema.php >> /var/log/financeiro/cron_limpeza.log 2>&1
+
+# Relatórios WhatsApp (a cada 5 minutos)
+*/5 * * * * /usr/bin/php /var/www/financeiro/cron/enviar_relatorios_whatsapp.php >> /var/log/financeiro/cron_whatsapp.log 2>&1
 ```
 
 3. **Salvar e sair** (Ctrl+X, depois Y, depois Enter)
