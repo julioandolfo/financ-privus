@@ -28,7 +28,8 @@
                     <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-600 dark:text-gray-400 uppercase text-xs">
                         <tr>
                             <th class="px-6 py-3 text-left">Nome</th>
-                            <th class="px-6 py-3 text-left">Instance</th>
+                            <th class="px-6 py-3 text-left">Provedor</th>
+                            <th class="px-6 py-3 text-left">Instance / Token</th>
                             <th class="px-6 py-3 text-left">URL</th>
                             <th class="px-6 py-3 text-left">Empresa</th>
                             <th class="px-6 py-3 text-left">Status</th>
@@ -44,7 +45,13 @@
                                         <span class="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Inativo</span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="px-6 py-3 font-mono text-gray-700 dark:text-gray-300"><?= htmlspecialchars($c['instance_name']) ?></td>
+                                <td class="px-6 py-3">
+                                    <?php $providerLabel = $c['provider'] === 'quepasa' ? 'QuePasa' : 'Evolution'; ?>
+                                    <span class="px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"><?= $providerLabel ?></span>
+                                </td>
+                                <td class="px-6 py-3 font-mono text-gray-700 dark:text-gray-300 text-xs">
+                                    <?= $c['provider'] === 'quepasa' ? '<span class="text-gray-400">— token —</span>' : htmlspecialchars($c['instance_name'] ?? '') ?>
+                                </td>
                                 <td class="px-6 py-3 text-gray-700 dark:text-gray-300 truncate max-w-xs"><?= htmlspecialchars($c['base_url']) ?></td>
                                 <td class="px-6 py-3 text-gray-700 dark:text-gray-300"><?= $c['empresa_id'] ? '#' . $c['empresa_id'] : '— global —' ?></td>
                                 <td class="px-6 py-3">

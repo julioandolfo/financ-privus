@@ -71,16 +71,20 @@ class EvolutionConfig extends Model
 
     public function create(array $data)
     {
+        $provider = $data['provider'] ?? 'evolution';
+        $instance = $provider === 'quepasa' ? null : ($data['instance_name'] ?? null);
+
         $sql = "INSERT INTO {$this->table}
-                (empresa_id, nome, base_url, instance_name, api_key, webhook_url, numero_remetente, ativo)
+                (empresa_id, nome, provider, base_url, instance_name, api_key, webhook_url, numero_remetente, ativo)
                 VALUES
-                (:empresa_id, :nome, :base_url, :instance_name, :api_key, :webhook_url, :numero_remetente, :ativo)";
+                (:empresa_id, :nome, :provider, :base_url, :instance_name, :api_key, :webhook_url, :numero_remetente, :ativo)";
         $stmt = $this->db->prepare($sql);
         $ok = $stmt->execute([
             'empresa_id' => $data['empresa_id'] ?? null,
             'nome' => $data['nome'],
+            'provider' => $provider,
             'base_url' => rtrim($data['base_url'], '/'),
-            'instance_name' => $data['instance_name'],
+            'instance_name' => $instance,
             'api_key' => $this->encrypt($data['api_key']),
             'webhook_url' => $data['webhook_url'] ?? null,
             'numero_remetente' => $data['numero_remetente'] ?? null,
@@ -94,15 +98,19 @@ class EvolutionConfig extends Model
         $fields = [];
         $params = ['id' => $id];
 
-        $allowed = ['empresa_id','nome','base_url','instance_name','webhook_url','numero_remetente','ativo'];
+        $allowed = ['empresa_id','nome','provider','base_url','instance_name','webhook_url','numero_remetente','ativo'];
+        $providerNovo = $data['provider'] ?? null;
         foreach ($allowed as $f) {
-            if (array_key_exists($f, $data)) {
+            if (\array_key_exists($f, $data)) {
                 $value = $data[$f];
-                if ($f === 'base_url' && is_string($value)) {
+                if ($f === 'base_url' && \is_string($value)) {
                     $value = rtrim($value, '/');
                 }
                 if ($f === 'ativo') {
                     $value = !empty($value) ? 1 : 0;
+                }
+                if ($f === 'instance_name' && $providerNovo === 'quepasa') {
+                    $value = null;
                 }
                 $fields[] = "{$f} = :{$f}";
                 $params[$f] = $value;

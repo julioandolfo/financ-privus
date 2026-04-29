@@ -96,16 +96,20 @@
                     ?>
                     <div class="px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30">
                         <div>
-                            <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-3 flex-wrap">
                                 <span class="font-semibold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($c['nome']) ?></span>
+                                <?php $providerLabel = ($c['provider'] ?? 'evolution') === 'quepasa' ? 'QuePasa' : 'Evolution'; ?>
+                                <span class="px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"><?= $providerLabel ?></span>
                                 <span class="px-2 py-0.5 text-xs rounded-full <?= $statusCor ?>"><?= htmlspecialchars($c['status_conexao']) ?></span>
                                 <?php if (!$c['ativo']): ?>
                                     <span class="px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Inativo</span>
                                 <?php endif; ?>
                             </div>
                             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                <span class="font-mono"><?= htmlspecialchars($c['instance_name']) ?></span>
-                                · <?= htmlspecialchars($c['base_url']) ?>
+                                <?php if (($c['provider'] ?? 'evolution') === 'evolution' && !empty($c['instance_name'])): ?>
+                                    <span class="font-mono"><?= htmlspecialchars($c['instance_name']) ?></span> ·
+                                <?php endif; ?>
+                                <?= htmlspecialchars($c['base_url']) ?>
                                 <?php if ($c['ultima_verificacao']): ?>
                                     · checado <?= date('d/m H:i', strtotime($c['ultima_verificacao'])) ?>
                                 <?php endif; ?>

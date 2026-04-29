@@ -11,7 +11,7 @@ use App\Models\WhatsAppRelatorioEnvio;
 use App\Models\Empresa;
 use App\Models\CategoriaFinanceira;
 use App\Models\CentroCusto;
-use Includes\Services\EvolutionApiService;
+use Includes\Services\WhatsAppApiFactory;
 use Includes\Services\RelatorioWhatsAppService;
 
 class WhatsAppController extends Controller
@@ -75,10 +75,11 @@ class WhatsAppController extends Controller
     {
         $empresas = $this->empresaModel->findAll(['ativo' => 1]);
         return $this->render('whatsapp/conexoes/form', [
-            'title' => 'Nova Conexão Evolution',
+            'title' => 'Nova Conexão WhatsApp',
             'conexao' => null,
             'empresas' => $empresas,
-            'empresaIdSessao' => $this->empresaIdSessao()
+            'empresaIdSessao' => $this->empresaIdSessao(),
+            'providers' => WhatsAppApiFactory::providers()
         ]);
     }
 
@@ -93,11 +94,13 @@ class WhatsAppController extends Controller
         }
 
         try {
+            $provider = $data['provider'] ?? 'evolution';
             $id = $this->evolutionModel->create([
                 'empresa_id' => !empty($data['empresa_id']) ? (int)$data['empresa_id'] : null,
                 'nome' => trim($data['nome']),
+                'provider' => $provider,
                 'base_url' => trim($data['base_url']),
-                'instance_name' => trim($data['instance_name']),
+                'instance_name' => $provider === 'quepasa' ? null : trim((string)($data['instance_name'] ?? '')),
                 'api_key' => trim($data['api_key']),
                 'webhook_url' => $data['webhook_url'] ?? null,
                 'numero_remetente' => $data['numero_remetente'] ?? null,
@@ -123,10 +126,11 @@ class WhatsAppController extends Controller
         }
         $empresas = $this->empresaModel->findAll(['ativo' => 1]);
         return $this->render('whatsapp/conexoes/form', [
-            'title' => 'Editar Conexão Evolution',
+            'title' => 'Editar Conexão WhatsApp',
             'conexao' => $conexao,
             'empresas' => $empresas,
-            'empresaIdSessao' => $this->empresaIdSessao()
+            'empresaIdSessao' => $this->empresaIdSessao(),
+            'providers' => WhatsAppApiFactory::providers()
         ]);
     }
 
@@ -141,11 +145,13 @@ class WhatsAppController extends Controller
         }
 
         try {
+            $provider = $data['provider'] ?? 'evolution';
             $update = [
                 'empresa_id' => !empty($data['empresa_id']) ? (int)$data['empresa_id'] : null,
                 'nome' => trim($data['nome']),
+                'provider' => $provider,
                 'base_url' => trim($data['base_url']),
-                'instance_name' => trim($data['instance_name']),
+                'instance_name' => $provider === 'quepasa' ? null : trim((string)($data['instance_name'] ?? '')),
                 'webhook_url' => $data['webhook_url'] ?? null,
                 'numero_remetente' => $data['numero_remetente'] ?? null,
                 'ativo' => $data['ativo'] ?? 0
@@ -179,20 +185,21 @@ class WhatsAppController extends Controller
         if (!$conexao) {
             return $response->json(['ok' => false, 'error' => 'Conexão não encontrada'], 404);
         }
-        $svc = new EvolutionApiService($conexao['base_url'], $conexao['instance_name'], $conexao['api_key_decrypted']);
+        $svc = WhatsAppApiFactory::fromConfig($conexao);
         $resp = $svc->verificarConexao();
-        $estado = EvolutionApiService::extrairEstado($resp);
+        $provider = $conexao['provider'] ?? 'evolution';
+        $estado = WhatsAppApiFactory::extrairEstado($provider, $resp);
 
         $statusDb = 'erro';
         if (!empty($resp['ok'])) {
-            if ($estado === 'open') $statusDb = 'conectado';
-            elseif (in_array($estado, ['connecting', 'close', null], true)) $statusDb = 'desconectado';
+            $statusDb = WhatsAppApiFactory::mapearStatusDb($provider, $estado);
         }
         $this->evolutionModel->atualizarStatus($id, $statusDb, isset($resp['raw']) ? substr((string)$resp['raw'], 0, 5000) : null);
 
         return $response->json([
             'ok' => $resp['ok'] ?? false,
             'status_http' => $resp['status'] ?? 0,
+            'provider' => $provider,
             'estado' => $estado,
             'status_db' => $statusDb,
             'error' => $resp['error'] ?? null,
@@ -206,10 +213,11 @@ class WhatsAppController extends Controller
         if (!$conexao) {
             return $response->json(['ok' => false, 'error' => 'Conexão não encontrada'], 404);
         }
-        $svc = new EvolutionApiService($conexao['base_url'], $conexao['instance_name'], $conexao['api_key_decrypted']);
+        $svc = WhatsAppApiFactory::fromConfig($conexao);
         $resp = $svc->gerarQrCode();
         return $response->json([
             'ok' => $resp['ok'] ?? false,
+            'provider' => $conexao['provider'] ?? 'evolution',
             'body' => $resp['body'] ?? null,
             'error' => $resp['error'] ?? null
         ]);
@@ -218,10 +226,17 @@ class WhatsAppController extends Controller
     private function validarConexao(array $data, $isUpdate = false)
     {
         $errors = [];
+        $providers = array_keys(WhatsAppApiFactory::providers());
+        $provider = $data['provider'] ?? 'evolution';
+        if (!\in_array($provider, $providers, true)) {
+            $errors['provider'] = 'Provider inválido';
+        }
         if (empty($data['nome'])) $errors['nome'] = 'Nome é obrigatório';
         if (empty($data['base_url']) || !filter_var($data['base_url'], FILTER_VALIDATE_URL)) $errors['base_url'] = 'URL inválida';
-        if (empty($data['instance_name'])) $errors['instance_name'] = 'Instance name é obrigatório';
-        if (!$isUpdate && empty($data['api_key'])) $errors['api_key'] = 'API key é obrigatória';
+        if ($provider === 'evolution' && empty($data['instance_name'])) {
+            $errors['instance_name'] = 'Instance name é obrigatório para Evolution';
+        }
+        if (!$isUpdate && empty($data['api_key'])) $errors['api_key'] = 'API key/token é obrigatório';
         return $errors;
     }
 

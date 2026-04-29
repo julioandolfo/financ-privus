@@ -11,10 +11,13 @@ $val = function ($field, $default = '') use ($conexao, $old) {
 };
 $action = $isEdit ? $this->baseUrl("/whatsapp/conexoes/{$conexao['id']}") : $this->baseUrl('/whatsapp/conexoes');
 ?>
-<div class="max-w-3xl mx-auto">
+<?php
+$providerAtual = $val('provider', 'evolution');
+?>
+<div class="max-w-3xl mx-auto" x-data="{ provider: '<?= htmlspecialchars($providerAtual) ?>' }">
     <a href="<?= $this->baseUrl('/whatsapp/conexoes') ?>" class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">← Voltar</a>
     <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2 mb-6">
-        <?= $isEdit ? 'Editar Conexão' : 'Nova Conexão Evolution API' ?>
+        <?= $isEdit ? 'Editar Conexão' : 'Nova Conexão WhatsApp' ?>
     </h1>
 
     <?php if (!empty($errors)): ?>
@@ -26,28 +29,54 @@ $action = $isEdit ? $this->baseUrl("/whatsapp/conexoes/{$conexao['id']}") : $thi
     <?php endif; ?>
 
     <form method="POST" action="<?= $action ?>" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-5">
+
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Provedor *</label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <?php foreach ($providers as $key => $label): ?>
+                    <label class="flex items-start gap-3 p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:border-emerald-500 transition"
+                           :class="provider === '<?= $key ?>' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/10' : ''">
+                        <input type="radio" name="provider" value="<?= $key ?>" x-model="provider" class="mt-1 text-emerald-600 focus:ring-emerald-500">
+                        <div>
+                            <p class="font-semibold text-gray-900 dark:text-gray-100"><?= htmlspecialchars($label) ?></p>
+                            <?php if ($key === 'evolution'): ?>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Self-hosted. Usa <code>apikey</code> + nome da instância.</p>
+                            <?php elseif ($key === 'quepasa'): ?>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">QuePasa v4. Usa <code>Bearer token</code> (1 token = 1 bot).</p>
+                            <?php endif; ?>
+                        </div>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
         <div>
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Nome da conexão *</label>
             <input type="text" name="nome" required value="<?= htmlspecialchars($val('nome')) ?>" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" placeholder="Ex: WhatsApp Empresa Principal">
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">URL Evolution API *</label>
-                <input type="url" name="base_url" required value="<?= htmlspecialchars($val('base_url')) ?>" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded-lg" placeholder="https://evo.exemplo.com">
+            <div :class="provider === 'quepasa' ? 'md:col-span-2' : ''">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    <span x-show="provider === 'evolution'">URL Evolution API *</span>
+                    <span x-show="provider === 'quepasa'">URL QuePasa API *</span>
+                </label>
+                <input type="url" name="base_url" required value="<?= htmlspecialchars($val('base_url')) ?>" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded-lg"
+                    :placeholder="provider === 'quepasa' ? 'https://whats.autoprivus.com.br' : 'https://evo.exemplo.com'">
             </div>
-            <div>
+            <div x-show="provider === 'evolution'">
                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Instance Name *</label>
-                <input type="text" name="instance_name" required value="<?= htmlspecialchars($val('instance_name')) ?>" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded-lg font-mono" placeholder="financeiro-empresa-1">
+                <input type="text" name="instance_name" :required="provider === 'evolution'" value="<?= htmlspecialchars($val('instance_name')) ?>" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded-lg font-mono" placeholder="financeiro-empresa-1">
             </div>
         </div>
 
         <div>
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                API Key <?= $isEdit ? '(deixe em branco para manter a atual)' : '*' ?>
+                <span x-show="provider === 'evolution'">API Key <?= $isEdit ? '(deixe em branco para manter)' : '*' ?></span>
+                <span x-show="provider === 'quepasa'">Bearer Token <?= $isEdit ? '(deixe em branco para manter)' : '*' ?></span>
             </label>
             <input type="password" name="api_key" <?= $isEdit ? '' : 'required' ?> value="<?= htmlspecialchars($val('api_key_decrypted')) ?>" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded-lg font-mono" autocomplete="new-password">
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Armazenada criptografada (AES-256-CBC).</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Armazenado criptografado (AES-256-CBC).</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -85,4 +114,10 @@ $action = $isEdit ? $this->baseUrl("/whatsapp/conexoes/{$conexao['id']}") : $thi
             <a href="<?= $this->baseUrl('/whatsapp/conexoes') ?>" class="px-6 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold rounded-xl">Cancelar</a>
         </div>
     </form>
+
+    <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-sm text-blue-800 dark:text-blue-200">
+        <p class="font-semibold mb-1">💡 Dicas por provedor</p>
+        <p x-show="provider === 'evolution'" class="text-xs">A Evolution requer <code>base_url</code> + <code>instance_name</code> + API key. O <em>QR Code</em> está em <code>/instance/connect/{instance}</code>.</p>
+        <p x-show="provider === 'quepasa'" class="text-xs">QuePasa: a URL padrão da nossa instância é <code>https://whats.autoprivus.com.br</code>. O Bearer token é o identificador do bot — não há instance name. QR em <code>/scan</code>.</p>
+    </div>
 </div>

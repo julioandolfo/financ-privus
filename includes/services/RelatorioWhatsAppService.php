@@ -88,11 +88,7 @@ class RelatorioWhatsAppService
 
         $mensagem = $this->renderizarTemplate($regra, $dados);
 
-        $svc = new EvolutionApiService(
-            $evolution['base_url'],
-            $evolution['instance_name'],
-            $evolution['api_key_decrypted']
-        );
+        $svc = WhatsAppApiFactory::fromConfig($evolution);
 
         $enviados = 0;
         $falhas = 0;
@@ -157,11 +153,7 @@ class RelatorioWhatsAppService
             'tipo_envio' => 'teste',
         ]);
 
-        $svc = new EvolutionApiService(
-            $evolution['base_url'],
-            $evolution['instance_name'],
-            $evolution['api_key_decrypted']
-        );
+        $svc = WhatsAppApiFactory::fromConfig($evolution);
         $resp = $svc->enviarTexto(WhatsAppRelatorioDestinatario::normalizarNumero($numero), $mensagem);
 
         if (!empty($resp['ok'])) {

@@ -13,7 +13,7 @@ namespace Includes\Services;
  * Construa o serviço com a config de uma row de `evolution_config`:
  *   $svc = new EvolutionApiService($config['base_url'], $config['instance_name'], $apiKeyDecrypted);
  */
-class EvolutionApiService
+class EvolutionApiService implements WhatsAppApiServiceInterface
 {
     private $baseUrl;
     private $instance;
@@ -28,14 +28,19 @@ class EvolutionApiService
         $this->timeout = (int)$timeout;
     }
 
+    public function getProvider(): string
+    {
+        return 'evolution';
+    }
+
     /**
      * Envia uma mensagem de texto via WhatsApp.
      *
      * @param string $numero Número em E.164 sem '+' (ex: 5511999999999)
      * @param string $mensagem Texto a enviar
-     * @return array { ok: bool, status: int, body: array, error: string|null }
+     * @return array Padronizado: ok, status, body, raw, error
      */
-    public function enviarTexto($numero, $mensagem)
+    public function enviarTexto(string $numero, string $mensagem): array
     {
         $endpoint = "/message/sendText/" . rawurlencode($this->instance);
         $payload = [
@@ -54,10 +59,8 @@ class EvolutionApiService
 
     /**
      * Verifica o estado da conexão da instância.
-     *
-     * @return array
      */
-    public function verificarConexao()
+    public function verificarConexao(): array
     {
         $endpoint = "/instance/connectionState/" . rawurlencode($this->instance);
         return $this->request('GET', $endpoint);
@@ -65,10 +68,8 @@ class EvolutionApiService
 
     /**
      * Solicita o QR code para conectar a instância.
-     *
-     * @return array
      */
-    public function gerarQrCode()
+    public function gerarQrCode(): array
     {
         $endpoint = "/instance/connect/" . rawurlencode($this->instance);
         return $this->request('GET', $endpoint);
