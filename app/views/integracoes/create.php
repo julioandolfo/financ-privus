@@ -214,7 +214,7 @@
             </div>
         </a>
 
-        <!-- WhatsApp / Evolution API -->
+        <!-- WhatsApp · Evolution + QuePasa -->
         <a href="<?= $this->baseUrl('/whatsapp') ?>"
            class="group bg-white dark:bg-gray-800 rounded-2xl p-8 border-2 border-gray-200 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-500 transition-all shadow-lg hover:shadow-2xl transform hover:-translate-y-1">
             <div class="flex justify-between items-start mb-4">
@@ -233,7 +233,8 @@
                         <div class="absolute -top-2 right-3 w-4 h-4 bg-gray-900 dark:bg-gray-950 transform rotate-45"></div>
                         <p class="font-semibold mb-2">Como funciona:</p>
                         <ul class="space-y-1 text-xs text-gray-300">
-                            <li>• Conecta sua instância da Evolution API</li>
+                            <li>• Suporta <strong>Evolution API</strong> (apikey + instance)</li>
+                            <li>• Suporta <strong>QuePasa API</strong> (Bearer token)</li>
                             <li>• Define regras (contas atrasadas, a vencer, resumos)</li>
                             <li>• Envia para múltiplos números no horário configurado</li>
                             <li>• Suporta filtros por categoria, centro, valor</li>
@@ -242,9 +243,9 @@
                     </div>
                 </div>
             </div>
-            <h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">WhatsApp (Evolution)</h3>
+            <h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">WhatsApp (Evolution / QuePasa)</h3>
             <p class="text-gray-600 dark:text-gray-400 mb-4">
-                Envia relatórios financeiros automáticos via WhatsApp para números específicos, com regras agendadas e filtros configuráveis.
+                Envia relatórios financeiros automáticos via WhatsApp para números específicos. Suporta <strong>Evolution API</strong> e <strong>QuePasa API</strong> (escolhido por conexão), com regras agendadas e filtros.
             </p>
             <div class="flex items-center text-green-600 dark:text-green-400 font-semibold">
                 Acessar painel

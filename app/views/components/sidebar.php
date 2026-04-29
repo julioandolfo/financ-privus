@@ -224,7 +224,7 @@ $menuItems = [
                 'active' => $isActive('/extrato-api')
             ],
             [
-                'title' => 'WhatsApp (Evolution)',
+                'title' => 'WhatsApp (Evolution / QuePasa)',
                 'path' => '/whatsapp',
                 'active' => $isActive('/whatsapp')
             ],

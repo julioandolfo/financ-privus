@@ -20,7 +20,10 @@
                 💬 WhatsApp · Relatórios Automáticos
             </h1>
             <p class="text-gray-600 dark:text-gray-400 mt-2">
-                Envie relatórios financeiros via WhatsApp (Evolution API) com regras agendadas
+                Envie relatórios financeiros via WhatsApp com regras agendadas — suporta
+                <span class="px-1.5 py-0.5 text-xs rounded bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">Evolution API</span>
+                e
+                <span class="px-1.5 py-0.5 text-xs rounded bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">QuePasa API</span>
             </p>
         </div>
         <div class="flex flex-wrap gap-3">
