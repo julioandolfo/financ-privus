@@ -225,6 +225,15 @@ class QuePasaApiService implements WhatsAppApiServiceInterface
             }
         }
 
+        // 5) Sinal de saúde da QuePasa: /health retorna `success: true` quando
+        //    o servidor considera o bot operante. Tratamos como `connected`.
+        if (isset($body['success']) && $body['success'] === true) {
+            return 'connected';
+        }
+        if (isset($body['success']) && $body['success'] === false) {
+            return 'disconnected';
+        }
+
         return null;
     }
 }

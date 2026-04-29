@@ -89,6 +89,9 @@
             <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Conectar instância</h3>
             <button onclick="fecharQrCode()" class="text-gray-500 hover:text-gray-700">✕</button>
         </div>
+        <div id="qrStatusWrap" class="text-center mb-3">
+            <div id="qrStatus"></div>
+        </div>
         <div id="qrContent" class="text-center">
             <p class="text-sm text-gray-500 dark:text-gray-400">Carregando QR Code…</p>
         </div>
@@ -96,6 +99,11 @@
 </div>
 
 <script>
+let qrPollInterval = null;
+let qrPollAttempts = 0;
+const QR_POLL_INTERVAL_MS = 3000;
+const QR_POLL_MAX_ATTEMPTS = 60; // ~3 min
+
 function testarConexao(id, btn) {
     btn.disabled = true; const orig = btn.innerText; btn.innerText = '…';
     fetch('<?= $this->baseUrl("/whatsapp/conexoes/") ?>' + id + '/testar', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
@@ -103,9 +111,50 @@ function testarConexao(id, btn) {
         .then(j => { alert(j.ok ? `OK · estado=${j.estado || '?'}` : `Falha: ${j.error || 'erro'}`); location.reload(); })
         .finally(() => { btn.disabled = false; btn.innerText = orig; });
 }
+
+function iniciarPollingConexao(id) {
+    pararPollingConexao();
+    qrPollAttempts = 0;
+    qrPollInterval = setInterval(() => {
+        qrPollAttempts++;
+        if (qrPollAttempts > QR_POLL_MAX_ATTEMPTS) {
+            pararPollingConexao();
+            return;
+        }
+        fetch('<?= $this->baseUrl("/whatsapp/conexoes/") ?>' + id + '/testar', {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(j => {
+            // Atualiza badge de status se modal ainda aberto
+            const status = document.getElementById('qrStatus');
+            if (status) {
+                const estado = j.estado || '?';
+                const conectado = j.status_db === 'conectado';
+                status.innerHTML = conectado
+                    ? `<span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">✓ Conectado (${estado})</span>`
+                    : `<span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">⏳ Aguardando pareamento (${estado})…</span>`;
+            }
+            if (j.status_db === 'conectado') {
+                pararPollingConexao();
+                document.getElementById('qrContent').innerHTML =
+                    '<div class="py-6"><p class="text-3xl mb-2">✅</p><p class="font-semibold text-green-700 dark:text-green-400">Conectado com sucesso!</p><p class="text-xs text-gray-500 mt-2">Atualizando lista…</p></div>';
+                setTimeout(() => location.reload(), 1500);
+            }
+        })
+        .catch(() => { /* ignora — tenta de novo */ });
+    }, QR_POLL_INTERVAL_MS);
+}
+function pararPollingConexao() {
+    if (qrPollInterval) { clearInterval(qrPollInterval); qrPollInterval = null; }
+}
+
 function abrirQrCode(id) {
     document.getElementById('qrModal').classList.remove('hidden');
     document.getElementById('qrContent').innerHTML = '<p class="text-sm text-gray-500">Carregando…</p>';
+    document.getElementById('qrStatusWrap').dataset.id = id;
+    document.getElementById('qrStatus').innerHTML = '';
     fetch('<?= $this->baseUrl("/whatsapp/conexoes/") ?>' + id + '/qrcode')
         .then(r => r.json())
         .then(j => {
@@ -119,11 +168,14 @@ function abrirQrCode(id) {
                 null;
             const code = body.code || (body.qrcode && body.qrcode.code) || body.urlCode || null;
             let html = '';
+            let mostrouQr = false;
             if (base64) {
                 const src = String(base64).startsWith('data:') ? base64 : 'data:image/png;base64,' + base64;
                 html = `<img src="${src}" class="mx-auto max-w-full"/><p class="text-xs text-gray-500 mt-3">Escaneie no WhatsApp</p>`;
+                mostrouQr = true;
             } else if (code) {
                 html = `<pre class="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded overflow-auto">${code}</pre>`;
+                mostrouQr = true;
             } else if (!j.ok) {
                 // 4xx/5xx — mostra erro + corpo da resposta
                 const httpInfo = j.status_http ? ` (HTTP ${j.status_http})` : '';
@@ -139,8 +191,14 @@ function abrirQrCode(id) {
                 html = `<pre class="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded overflow-auto">${JSON.stringify(body, null, 2)}</pre>`;
             }
             document.getElementById('qrContent').innerHTML = html;
+            if (mostrouQr) {
+                iniciarPollingConexao(id);
+            }
         })
         .catch(e => { document.getElementById('qrContent').innerHTML = `<p class="text-red-600">${e.message}</p>`; });
 }
-function fecharQrCode() { document.getElementById('qrModal').classList.add('hidden'); }
+function fecharQrCode() {
+    pararPollingConexao();
+    document.getElementById('qrModal').classList.add('hidden');
+}
 </script>
