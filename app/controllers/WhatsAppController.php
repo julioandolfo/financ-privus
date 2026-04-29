@@ -95,12 +95,15 @@ class WhatsAppController extends Controller
 
         try {
             $provider = $data['provider'] ?? 'evolution';
+            $instanceName = trim((string)($data['instance_name'] ?? ''));
             $id = $this->evolutionModel->create([
                 'empresa_id' => !empty($data['empresa_id']) ? (int)$data['empresa_id'] : null,
                 'nome' => trim($data['nome']),
                 'provider' => $provider,
                 'base_url' => trim($data['base_url']),
-                'instance_name' => $provider === 'quepasa' ? null : trim((string)($data['instance_name'] ?? '')),
+                // QuePasa: instance_name = WID do bot (opcional)
+                // Evolution: instance_name = nome da instância (obrigatório)
+                'instance_name' => $instanceName !== '' ? $instanceName : null,
                 'api_key' => trim($data['api_key']),
                 'webhook_url' => $data['webhook_url'] ?? null,
                 'numero_remetente' => $data['numero_remetente'] ?? null,
@@ -146,12 +149,14 @@ class WhatsAppController extends Controller
 
         try {
             $provider = $data['provider'] ?? 'evolution';
+            $instanceName = trim((string)($data['instance_name'] ?? ''));
             $update = [
                 'empresa_id' => !empty($data['empresa_id']) ? (int)$data['empresa_id'] : null,
                 'nome' => trim($data['nome']),
                 'provider' => $provider,
                 'base_url' => trim($data['base_url']),
-                'instance_name' => $provider === 'quepasa' ? null : trim((string)($data['instance_name'] ?? '')),
+                // QuePasa: WID do bot (opcional). Evolution: nome da instância.
+                'instance_name' => $instanceName !== '' ? $instanceName : null,
                 'webhook_url' => $data['webhook_url'] ?? null,
                 'numero_remetente' => $data['numero_remetente'] ?? null,
                 'ativo' => $data['ativo'] ?? 0

@@ -56,7 +56,7 @@ $providerAtual = $val('provider', 'evolution');
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div :class="provider === 'quepasa' ? 'md:col-span-2' : ''">
+            <div>
                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
                     <span x-show="provider === 'evolution'">URL Evolution API *</span>
                     <span x-show="provider === 'quepasa'">URL QuePasa API *</span>
@@ -64,9 +64,16 @@ $providerAtual = $val('provider', 'evolution');
                 <input type="url" name="base_url" required value="<?= htmlspecialchars($val('base_url')) ?>" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded-lg"
                     :placeholder="provider === 'quepasa' ? 'https://whats.autoprivus.com.br' : 'https://evo.exemplo.com'">
             </div>
-            <div x-show="provider === 'evolution'">
-                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Instance Name *</label>
-                <input type="text" name="instance_name" :required="provider === 'evolution'" value="<?= htmlspecialchars($val('instance_name')) ?>" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded-lg font-mono" placeholder="financeiro-empresa-1">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    <span x-show="provider === 'evolution'">Instance Name *</span>
+                    <span x-show="provider === 'quepasa'">WID / Token do bot <span class="text-gray-400 font-normal">(opcional)</span></span>
+                </label>
+                <input type="text" name="instance_name" :required="provider === 'evolution'" value="<?= htmlspecialchars($val('instance_name')) ?>" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded-lg font-mono"
+                    :placeholder="provider === 'quepasa' ? '5511999999999 (WID do bot)' : 'financeiro-empresa-1'">
+                <p x-show="provider === 'quepasa'" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Use quando seu usuário tem mais de um bot. O WID identifica qual bot enviar a mensagem (resolve <em>"whatsapp server was not found"</em>).
+                </p>
             </div>
         </div>
 

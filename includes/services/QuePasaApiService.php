@@ -22,16 +22,20 @@ class QuePasaApiService implements WhatsAppApiServiceInterface
 {
     private $baseUrl;
     private $usuario;
+    private $bot;
     private $timeout;
 
     /**
-     * @param string $baseUrl URL da QuePasa (ex: https://whats.autoprivus.com.br)
-     * @param string $usuario Usuário do bot (header X-QUEPASA-USER)
+     * @param string      $baseUrl URL da QuePasa (ex: https://whats.autoprivus.com.br)
+     * @param string      $usuario Identificador para o header X-QUEPASA-USER
+     * @param string|null $bot     WID/token do bot específico. Se ausente, usa $usuario
+     *                             também como token (suficiente para usuários com 1 bot).
      */
-    public function __construct(string $baseUrl, string $usuario, int $timeout = 15)
+    public function __construct(string $baseUrl, string $usuario, ?string $bot = null, int $timeout = 15)
     {
         $this->baseUrl = rtrim($baseUrl, '/');
         $this->usuario = $usuario;
+        $this->bot = !empty($bot) ? $bot : $usuario;
         $this->timeout = $timeout;
     }
 
@@ -45,6 +49,8 @@ class QuePasaApiService implements WhatsAppApiServiceInterface
         $payload = [
             'chatId' => $this->formatChatId($numero),
             'text' => $mensagem,
+            // 'from' identifica o bot remetente em servidores QuePasa multi-tenant
+            'from' => $this->bot,
         ];
         return $this->request('POST', '/send', $payload);
     }
@@ -72,21 +78,23 @@ class QuePasaApiService implements WhatsAppApiServiceInterface
 
     private function request(string $method, string $endpoint, $body = null): array
     {
-        // Endpoints conhecidos por exigir o token na query string
+        // Endpoints conhecidos por exigir o token (WID do bot) na query string
         $endpointsComTokenNaQuery = ['/scan', '/paircode'];
         $url = $this->baseUrl . $endpoint;
         if (\in_array($endpoint, $endpointsComTokenNaQuery, true)) {
             $sep = strpos($endpoint, '?') === false ? '?' : '&';
-            $url .= $sep . 'token=' . urlencode($this->usuario);
+            $url .= $sep . 'token=' . urlencode($this->bot);
         }
 
-        // Envia em 3 lugares para cobrir as variações do servidor QuePasa:
-        //  - Header X-QUEPASA-USER
-        //  - Header Authorization: Bearer
-        //  - (Já incluído acima) ?token=<valor> em endpoints que exigem
+        // Estratégia de auth:
+        //  - X-QUEPASA-USER:    sempre o usuário (autentica)
+        //  - Authorization:     Bearer com o WID do bot (identifica qual bot usar
+        //                       em endpoints como /send que exigem servidor específico)
+        //  - X-QUEPASA-TOKEN:   redundância para implementações que usam esse header
         $headers = [
             'X-QUEPASA-USER: ' . $this->usuario,
-            'Authorization: Bearer ' . $this->usuario,
+            'Authorization: Bearer ' . $this->bot,
+            'X-QUEPASA-TOKEN: ' . $this->bot,
             'Content-Type: application/json',
             'Accept: application/json',
         ];

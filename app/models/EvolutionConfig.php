@@ -72,7 +72,12 @@ class EvolutionConfig extends Model
     public function create(array $data)
     {
         $provider = $data['provider'] ?? 'evolution';
-        $instance = $provider === 'quepasa' ? null : ($data['instance_name'] ?? null);
+        // QuePasa: instance_name é opcional (WID do bot quando informado).
+        // Evolution: obrigatório.
+        $instance = $data['instance_name'] ?? null;
+        if ($instance === '') {
+            $instance = null;
+        }
 
         $sql = "INSERT INTO {$this->table}
                 (empresa_id, nome, provider, base_url, instance_name, api_key, webhook_url, numero_remetente, ativo)
@@ -99,7 +104,6 @@ class EvolutionConfig extends Model
         $params = ['id' => $id];
 
         $allowed = ['empresa_id','nome','provider','base_url','instance_name','webhook_url','numero_remetente','ativo'];
-        $providerNovo = $data['provider'] ?? null;
         foreach ($allowed as $f) {
             if (\array_key_exists($f, $data)) {
                 $value = $data[$f];
@@ -109,7 +113,8 @@ class EvolutionConfig extends Model
                 if ($f === 'ativo') {
                     $value = !empty($value) ? 1 : 0;
                 }
-                if ($f === 'instance_name' && $providerNovo === 'quepasa') {
+                // instance_name vazio vira NULL (válido p/ QuePasa, fallback genérico)
+                if ($f === 'instance_name' && ($value === '' || $value === false)) {
                     $value = null;
                 }
                 $fields[] = "{$f} = :{$f}";

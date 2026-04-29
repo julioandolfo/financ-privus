@@ -27,7 +27,9 @@ class WhatsAppApiFactory
 
         switch ($provider) {
             case 'quepasa':
-                return new QuePasaApiService($baseUrl, $token, $timeout);
+                // No QuePasa, $instance_name é o WID/token do bot (opcional).
+                // Se vazio, o serviço usa o próprio $token como bot.
+                return new QuePasaApiService($baseUrl, $token, $instance ?: null, $timeout);
 
             case 'evolution':
             default:
