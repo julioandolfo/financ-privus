@@ -525,8 +525,30 @@
                 </div>
 
                 <div>
-                    <dt class="text-sm font-semibold text-gray-600 dark:text-gray-400">Intervalo</dt>
-                    <dd class="mt-1 text-gray-900 dark:text-gray-100"><?= $integracao['intervalo_sincronizacao'] ?> minutos</dd>
+                    <dt class="text-sm font-semibold text-gray-600 dark:text-gray-400">Intervalo de Sincronização</dt>
+                    <dd class="mt-1">
+                        <form method="POST" action="<?= $this->baseUrl('/integracoes/' . $integracao['id'] . '/intervalo') ?>" class="flex items-center gap-2">
+                            <input type="number"
+                                   name="intervalo_sincronizacao"
+                                   value="<?= (int) $integracao['intervalo_sincronizacao'] ?>"
+                                   min="5"
+                                   max="1440"
+                                   required
+                                   class="w-24 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm">
+                            <span class="text-sm text-gray-600 dark:text-gray-400">minutos</span>
+                            <button type="submit"
+                                    class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                                    onclick="return confirm('Atualizar o intervalo de sincronização?')">
+                                Salvar
+                            </button>
+                        </form>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Mín. 5 / Máx. 1440 (24h)</p>
+                        <?php if (!empty($integracao['proxima_sincronizacao'])): ?>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Próxima execução: <?= date('d/m/Y H:i', strtotime($integracao['proxima_sincronizacao'])) ?>
+                            </p>
+                        <?php endif; ?>
+                    </dd>
                 </div>
             </dl>
         </div>

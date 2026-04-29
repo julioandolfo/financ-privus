@@ -130,7 +130,15 @@ class ConfiguracaoController extends Controller
         // Precisamos reverter isso para as chaves (ex: ia_insights_dashboard_habilitado -> ia.insights_dashboard_habilitado)
         $this->log("Convertendo underscores de volta para pontos...");
         $dataCorrigido = [];
-        $mapeamento = [$grupo . '_' => $grupo . '.', 'ia_' => 'ia.', 'api_' => 'api.'];
+        // Mapeamentos: prefixo no $_POST (com underscore) → prefixo real da chave (com ponto).
+        // Note que algumas chaves usam prefixo no singular mesmo quando o grupo está no plural
+        // (ex.: grupo=integracoes mas chaves começam com `integracao.`).
+        $mapeamento = [
+            $grupo . '_' => $grupo . '.',
+            'ia_' => 'ia.',
+            'api_' => 'api.',
+            'integracao_' => 'integracao.'
+        ];
         
         foreach ($data as $key => $value) {
             $novaChave = $key;

@@ -1,7 +1,10 @@
 <?php
 /**
  * CRON: Sincronização de Integrações (WooCommerce, Banco de Dados, etc)
- * Frequência: A cada 15 minutos
+ * Frequência recomendada do cron do SO: a cada 1-5 minutos
+ * O agendamento real respeita o campo `intervalo_sincronizacao` de cada integração
+ * (configurável pela UI). Roda apenas as integrações cuja proxima_sincronizacao já chegou.
+ *
  * Comando: php /caminho/para/projeto/cron/integracoes.php
  */
 
@@ -13,9 +16,9 @@ EnvLoader::load();
 require_once APP_ROOT . '/app/core/Database.php';
 require_once APP_ROOT . '/app/core/Model.php';
 require_once APP_ROOT . '/app/models/IntegracaoConfig.php';
+require_once APP_ROOT . '/app/models/IntegracaoWooCommerce.php';
 require_once APP_ROOT . '/app/models/IntegracaoLog.php';
 
-use App\Core\Database;
 use App\Models\IntegracaoConfig;
 use App\Models\IntegracaoLog;
 
@@ -24,95 +27,75 @@ echo "[" . date('Y-m-d H:i:s') . "] Iniciando sincronização de integrações..
 try {
     $integracaoModel = new IntegracaoConfig();
     $logModel = new IntegracaoLog();
-    
-    // Buscar todas as integrações ativas
-    $db = Database::getInstance()->getConnection();
-    $sql = "SELECT * FROM integracoes_config WHERE ativo = 1";
-    $stmt = $db->query($sql);
-    $integracoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    echo "Encontradas " . count($integracoes) . " integrações ativas\n";
-    
+
+    // findParaSincronizar() retorna apenas integrações ativas cujo proxima_sincronizacao
+    // já chegou (NULL ou <= NOW). O intervalo é configurado pelo usuário.
+    $integracoes = $integracaoModel->findParaSincronizar();
+
+    echo "Encontradas " . count($integracoes) . " integrações para sincronizar agora\n";
+
     foreach ($integracoes as $integracao) {
-        echo "\n[Integração #{$integracao['id']}] Tipo: {$integracao['tipo']} - Empresa: {$integracao['empresa_id']}\n";
-        
+        echo "\n[Integração #{$integracao['id']}] Tipo: {$integracao['tipo']} - Empresa: {$integracao['empresa_id']} - Intervalo: {$integracao['intervalo_sincronizacao']} min\n";
+
         try {
-            $config = json_decode($integracao['configuracoes'], true);
-            $sucesso = false;
-            $mensagem = '';
-            
             switch ($integracao['tipo']) {
                 case 'woocommerce':
-                    // Lógica de sincronização WooCommerce
-                    if (!empty($config['url']) && !empty($config['consumer_key'])) {
-                        require_once APP_ROOT . '/includes/services/WooCommerceService.php';
-                        $wc = new \includes\services\WooCommerceService(
-                            $config['url'],
-                            $config['consumer_key'],
-                            $config['consumer_secret']
-                        );
-                        
-                        // Sincronizar pedidos
-                        $pedidos = $wc->getPedidos(['per_page' => 50]);
-                        echo "  Encontrados " . count($pedidos) . " pedidos\n";
-                        
-                        $sucesso = true;
-                        $mensagem = count($pedidos) . " pedidos sincronizados";
+                    require_once APP_ROOT . '/includes/services/WooCommerceService.php';
+                    $wc = new \includes\services\WooCommerceService();
+
+                    // sincronizar() já cuida de:
+                    //  - puxar produtos novos/atualizados (sincronizarProdutos)
+                    //  - puxar pedidos novos/atualizados e criar contas a receber (sincronizarPedidos)
+                    //  - registrar log de sucesso/aviso/erro
+                    //  - atualizar ultima_sincronizacao e proxima_sincronizacao
+                    $resultado = $wc->sincronizar($integracao['id']);
+
+                    if ($resultado['sucesso']) {
+                        $r = $resultado['resultados'];
+                        echo "  ✓ {$r['produtos']} produto(s), {$r['pedidos']} pedido(s)\n";
+                        if (!empty($r['erros'])) {
+                            echo "  ! " . count($r['erros']) . " erro(s) durante a sincronização\n";
+                        }
+                    } else {
+                        echo "  ✗ Erro: " . ($resultado['erro'] ?? 'desconhecido') . "\n";
                     }
                     break;
-                    
+
                 case 'banco_dados':
-                    // Lógica de sincronização Banco de Dados
-                    if (!empty($config['tipo_bd']) && !empty($config['host'])) {
-                        require_once APP_ROOT . '/includes/services/IntegracaoBancoDadosService.php';
-                        $bdService = new \includes\services\IntegracaoBancoDadosService();
-                        
-                        $conexao = $bdService->conectar($config);
-                        if ($conexao) {
-                            echo "  Conexão estabelecida com sucesso\n";
-                            $sucesso = true;
-                            $mensagem = "Conexão BD estabelecida";
+                    if (!empty($integracao['configuracoes'])) {
+                        $config = json_decode($integracao['configuracoes'], true);
+                        if (!empty($config['tipo_bd']) && !empty($config['host'])) {
+                            require_once APP_ROOT . '/includes/services/IntegracaoBancoDadosService.php';
+                            $bdService = new \includes\services\IntegracaoBancoDadosService();
+                            $conexao = $bdService->conectar($config);
+                            if ($conexao) {
+                                echo "  ✓ Conexão BD estabelecida\n";
+                                $logModel->create($integracao['id'], IntegracaoLog::TIPO_SUCESSO, 'Conexão BD estabelecida');
+                            }
                         }
                     }
+                    // Atualiza próxima sincronização para respeitar o intervalo configurado
+                    $proxima = date('Y-m-d H:i:s', strtotime("+{$integracao['intervalo_sincronizacao']} minutes"));
+                    $integracaoModel->updateUltimaSincronizacao($integracao['id'], $proxima);
                     break;
-                    
+
                 case 'webhook':
-                    // Webhooks são acionados por eventos, não por CRON
-                    echo "  Webhook (acionado por eventos)\n";
-                    continue 2;
-                    
+                    echo "  Webhook (acionado por eventos) — pulando\n";
+                    break;
+
                 case 'api':
-                    // APIs são chamadas sob demanda
-                    echo "  API (chamada sob demanda)\n";
-                    continue 2;
+                    echo "  API (chamada sob demanda) — pulando\n";
+                    break;
             }
-            
-            // Registrar log
-            $logModel->registrar(
-                $integracao['id'],
-                $sucesso ? 'sucesso' : 'erro',
-                $sucesso ? $mensagem : 'Erro na sincronização',
-                null
-            );
-            
-            echo "  ✓ Sincronizado com sucesso\n";
-            
         } catch (Exception $e) {
             echo "  ✗ Erro: " . $e->getMessage() . "\n";
-            
-            // Registrar erro no log
-            $logModel->registrar(
-                $integracao['id'],
-                'erro',
-                $e->getMessage(),
-                null
-            );
+            $logModel->create($integracao['id'], IntegracaoLog::TIPO_ERRO, $e->getMessage());
         }
     }
-    
-    echo "\n[" . date('Y-m-d H:i:s') . "] Sincronização de integrações concluída!\n";
-    
+
+    echo "\n[" . date('Y-m-d H:i:s') . "] Sincronização concluída!\n";
+
 } catch (Exception $e) {
-    echo "[ERRO] " . $e->getMessage() . "\n";
+    echo "[ERRO FATAL] " . $e->getMessage() . "\n";
     exit(1);
 }

@@ -344,6 +344,41 @@ class IntegracaoController extends Controller
     }
     
     /**
+     * Atualiza o intervalo de sincronização da integração (em minutos)
+     * POST /integracoes/{id}/intervalo
+     */
+    public function atualizarIntervalo(Request $request, Response $response, $id)
+    {
+        $integracao = $this->integracaoModel->findById($id);
+
+        if (!$integracao) {
+            $_SESSION['error'] = 'Integração não encontrada.';
+            return $response->redirect('/integracoes');
+        }
+
+        $data = $request->all();
+        $intervalo = (int) ($data['intervalo_sincronizacao'] ?? 0);
+
+        if ($intervalo < 5 || $intervalo > 1440) {
+            $_SESSION['error'] = 'Intervalo deve estar entre 5 e 1440 minutos.';
+            return $response->redirect('/integracoes/' . $id);
+        }
+
+        if ($this->integracaoModel->updateIntervalo($id, $intervalo)) {
+            $this->logModel->create(
+                $id,
+                IntegracaoLog::TIPO_SUCESSO,
+                "Intervalo de sincronização alterado para {$intervalo} minutos"
+            );
+            $_SESSION['success'] = "Intervalo atualizado para {$intervalo} minutos.";
+        } else {
+            $_SESSION['error'] = 'Erro ao atualizar intervalo.';
+        }
+
+        return $response->redirect('/integracoes/' . $id);
+    }
+
+    /**
      * Teste de conexão WooCommerce
      */
     public function testarWooCommerce(Request $request, Response $response)

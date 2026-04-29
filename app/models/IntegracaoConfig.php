@@ -145,6 +145,27 @@ class IntegracaoConfig extends Model
     }
     
     /**
+     * Atualiza apenas o intervalo de sincronização e recalcula a próxima execução
+     */
+    public function updateIntervalo($id, $intervaloMinutos)
+    {
+        // proxima_sincronizacao = (ultima_sincronizacao OU agora) + novo intervalo.
+        // Se ultima_sincronizacao for NULL, usa NOW() para que a próxima rodada
+        // do cron respeite o intervalo recém-configurado.
+        $sql = "UPDATE {$this->table} SET
+                    intervalo_sincronizacao = :intervalo,
+                    proxima_sincronizacao = DATE_ADD(COALESCE(ultima_sincronizacao, NOW()), INTERVAL :intervalo2 MINUTE)
+                WHERE id = :id";
+
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            'id' => $id,
+            'intervalo' => $intervaloMinutos,
+            'intervalo2' => $intervaloMinutos
+        ]);
+    }
+
+    /**
      * Busca integrações que precisam sincronizar
      */
     public function findParaSincronizar()
