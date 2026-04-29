@@ -317,6 +317,7 @@ return [
     // Regras
     'GET /whatsapp/regras' => ['handler' => 'WhatsAppController@regrasIndex', 'middleware' => ['AuthMiddleware']],
     'GET /whatsapp/regras/create' => ['handler' => 'WhatsAppController@regraCreate', 'middleware' => ['AuthMiddleware']],
+    'POST /whatsapp/regras/gerar-template' => ['handler' => 'WhatsAppController@regraGerarTemplate', 'middleware' => ['AuthMiddleware']],
     'POST /whatsapp/regras' => ['handler' => 'WhatsAppController@regraStore', 'middleware' => ['AuthMiddleware']],
     'GET /whatsapp/regras/{id}/edit' => ['handler' => 'WhatsAppController@regraEdit', 'middleware' => ['AuthMiddleware']],
     'GET /whatsapp/regras/{id}/envios' => ['handler' => 'WhatsAppController@regraEnvios', 'middleware' => ['AuthMiddleware']],

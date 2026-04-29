@@ -212,7 +212,13 @@ $action = $isEdit ? $this->baseUrl("/whatsapp/regras/{$regra['id']}") : $this->b
 
         <!-- Bloco 4: Mensagem -->
         <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
-            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">✏️ Mensagem</h2>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">✏️ Mensagem</h2>
+                <button type="button" onclick="gerarTemplateIA(this)"
+                    class="px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all">
+                    ✨ Gerar com IA
+                </button>
+            </div>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
                 Variáveis disponíveis:
                 <code class="px-2 py-0.5 bg-gray-100 dark:bg-gray-900 rounded text-xs">{empresa}</code>
@@ -222,9 +228,9 @@ $action = $isEdit ? $this->baseUrl("/whatsapp/regras/{$regra['id']}") : $this->b
                 <code class="px-2 py-0.5 bg-gray-100 dark:bg-gray-900 rounded text-xs">{lista}</code>
                 <code class="px-2 py-0.5 bg-gray-100 dark:bg-gray-900 rounded text-xs">{data}</code>
                 <code class="px-2 py-0.5 bg-gray-100 dark:bg-gray-900 rounded text-xs">{hora}</code>
-                — deixe em branco para usar o template padrão do tipo.
+                — deixe em branco para usar o template padrão do tipo, ou clique em <strong>✨ Gerar com IA</strong>.
             </p>
-            <textarea name="template_mensagem" rows="6"
+            <textarea name="template_mensagem" id="template_mensagem" rows="6"
                 class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded-lg font-mono text-sm"
                 placeholder="*🔴 {titulo}*&#10;_{empresa}_ · {data}&#10;&#10;*{total} contas* totalizando *{valor_total}*&#10;&#10;{lista}"><?= htmlspecialchars($val('template_mensagem')) ?></textarea>
 
@@ -285,6 +291,42 @@ function regraForm() {
         }
     };
 }
+async function gerarTemplateIA(btn) {
+    const form = btn.closest('form');
+    if (!form) return;
+    const fd = new FormData(form);
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Gerando…';
+
+    try {
+        const r = await fetch('<?= $this->baseUrl('/whatsapp/regras/gerar-template') ?>', {
+            method: 'POST',
+            body: fd,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const j = await r.json();
+        if (j.ok && j.template) {
+            const ta = document.getElementById('template_mensagem');
+            const atual = (ta.value || '').trim();
+            if (atual && !confirm('Substituir o template atual pelo gerado pela IA?')) {
+                return;
+            }
+            ta.value = j.template;
+            ta.style.transition = 'background-color 0.4s';
+            ta.style.backgroundColor = 'rgba(167, 139, 250, 0.15)';
+            setTimeout(() => { ta.style.backgroundColor = ''; }, 1200);
+        } else {
+            alert('Erro ao gerar template: ' + (j.error || 'desconhecido'));
+        }
+    } catch (e) {
+        alert('Erro: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+    }
+}
+
 let destIdx = 1;
 function addDestinatario() {
     const box = document.getElementById('destinatariosBox');

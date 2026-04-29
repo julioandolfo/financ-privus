@@ -72,6 +72,8 @@
                                     <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-3 text-right whitespace-nowrap">
+                                    <button type="button" onclick="abrirTesteRapido(<?= $r['id'] ?>, '<?= htmlspecialchars(addslashes($r['nome']), ENT_QUOTES) ?>')"
+                                        class="text-sm text-blue-600 hover:text-blue-700 font-semibold mr-3">🧪 Testar agora</button>
                                     <form method="POST" action="<?= $this->baseUrl("/whatsapp/regras/{$r['id']}/toggle") ?>" class="inline">
                                         <button class="text-sm text-yellow-600 hover:text-yellow-700 font-semibold mr-3"><?= $r['ativo'] ? 'Pausar' : 'Ativar' ?></button>
                                     </form>
@@ -86,3 +88,88 @@
         </div>
     <?php endif; ?>
 </div>
+
+<!-- Modal: Enviar Teste Agora -->
+<div id="testeModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">🧪 Enviar teste agora</h3>
+            <button onclick="fecharTesteRapido()" class="text-gray-500 hover:text-gray-700">✕</button>
+        </div>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            Regra: <span id="testeRegraNome" class="font-semibold"></span>
+        </p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Gera o relatório com os dados de agora e envia para o número informado. Não altera o agendamento.</p>
+        <input id="testeNumero" type="text" placeholder="5511999999999"
+            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 rounded-lg font-mono mb-3">
+        <div id="testeResultado" class="hidden mb-3 p-3 rounded-lg text-sm"></div>
+        <div class="flex gap-2 justify-end">
+            <button onclick="fecharTesteRapido()" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold rounded-lg">Cancelar</button>
+            <button id="testeEnviarBtn" onclick="enviarTesteRapido()" class="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-lg">Enviar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let testeRegraId = null;
+function abrirTesteRapido(id, nome) {
+    testeRegraId = id;
+    document.getElementById('testeRegraNome').textContent = nome;
+    document.getElementById('testeNumero').value = '';
+    document.getElementById('testeResultado').classList.add('hidden');
+    document.getElementById('testeModal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('testeNumero').focus(), 50);
+}
+function fecharTesteRapido() {
+    document.getElementById('testeModal').classList.add('hidden');
+    testeRegraId = null;
+}
+async function enviarTesteRapido() {
+    if (!testeRegraId) return;
+    const numero = document.getElementById('testeNumero').value.replace(/\D/g, '');
+    const result = document.getElementById('testeResultado');
+    if (numero.length < 10) {
+        result.className = 'mb-3 p-3 rounded-lg text-sm bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300';
+        result.textContent = 'Número inválido. Use o formato 5511999999999.';
+        result.classList.remove('hidden');
+        return;
+    }
+    const btn = document.getElementById('testeEnviarBtn');
+    const orig = btn.innerText;
+    btn.disabled = true; btn.innerText = 'Enviando…';
+    result.classList.add('hidden');
+
+    try {
+        const fd = new FormData();
+        fd.append('numero', numero);
+        const r = await fetch('<?= $this->baseUrl('/whatsapp/regras/') ?>' + testeRegraId + '/testar', {
+            method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const j = await r.json();
+        if (j.ok) {
+            result.className = 'mb-3 p-3 rounded-lg text-sm bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300';
+            result.textContent = '✅ Mensagem enviada com sucesso!';
+        } else {
+            result.className = 'mb-3 p-3 rounded-lg text-sm bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300';
+            result.textContent = '❌ ' + (j.error || 'Erro desconhecido');
+        }
+        result.classList.remove('hidden');
+    } catch (e) {
+        result.className = 'mb-3 p-3 rounded-lg text-sm bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300';
+        result.textContent = '❌ ' + e.message;
+        result.classList.remove('hidden');
+    } finally {
+        btn.disabled = false; btn.innerText = orig;
+    }
+}
+// Enter envia
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !document.getElementById('testeModal').classList.contains('hidden')) {
+        e.preventDefault();
+        enviarTesteRapido();
+    }
+    if (e.key === 'Escape' && !document.getElementById('testeModal').classList.contains('hidden')) {
+        fecharTesteRapido();
+    }
+});
+</script>

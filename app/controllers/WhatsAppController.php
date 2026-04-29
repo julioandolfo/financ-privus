@@ -412,6 +412,59 @@ class WhatsAppController extends Controller
         }
     }
 
+    /**
+     * Gera template de mensagem via OpenAI baseado no estado atual do formulário.
+     * Aceita os mesmos campos do form (tipo_relatorio, frequencia, filtros, nome).
+     * Não exige regra salva — funciona durante criação.
+     */
+    public function regraGerarTemplate(Request $request, Response $response)
+    {
+        $data = $request->all();
+        $payload = [
+            'tipo_relatorio' => $data['tipo_relatorio'] ?? 'contas_pagar_atrasadas',
+            'nome' => $data['nome'] ?? '',
+            'frequencia' => $data['frequencia'] ?? 'diaria',
+            'filtros' => [],
+        ];
+        foreach (['dias_atraso_min','dias_atraso_max','dias_vencer','dias_janela','valor_min','valor_max'] as $f) {
+            if (isset($data[$f]) && $data[$f] !== '') {
+                $payload['filtros'][$f] = $data[$f];
+            }
+        }
+
+        // Tenta gerar amostra real do relatório se temos empresa_id (mais contexto p/ IA)
+        $exemplo = null;
+        if (!empty($data['empresa_id'])) {
+            try {
+                $svc = new RelatorioWhatsAppService();
+                $regraTmp = array_merge($payload, [
+                    'empresa_id' => (int)$data['empresa_id'],
+                    'limite_itens_lista' => 5,
+                    'incluir_lista_detalhada' => 1,
+                ]);
+                $exemplo = $svc->gerarDadosRelatorio($regraTmp);
+            } catch (\Throwable $e) {
+                $exemplo = null;
+            }
+        }
+
+        try {
+            $svc = new RelatorioWhatsAppService();
+            $template = $svc->gerarTemplateIA($payload, $exemplo);
+            return $response->json([
+                'ok' => true,
+                'template' => $template,
+                'sample' => $exemplo ? [
+                    'titulo' => $exemplo['titulo'] ?? null,
+                    'total' => $exemplo['total'] ?? 0,
+                    'valor_total' => $exemplo['valor_total'] ?? 0,
+                ] : null
+            ]);
+        } catch (\Throwable $e) {
+            return $response->json(['ok' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
     public function regraTestar(Request $request, Response $response, $id)
     {
         $numero = trim((string)$request->post('numero', ''));

@@ -554,6 +554,75 @@ class RelatorioWhatsAppService
         return implode("\n", $linhas);
     }
 
+    /**
+     * Gera um template de mensagem WhatsApp via OpenAI baseado no tipo, filtros e dados.
+     *
+     * @param array $dadosRegra dados parciais da regra (tipo_relatorio, filtros, nome, frequencia, ...)
+     * @param array|null $exemploRelatorio dados gerados (para o prompt ter contexto real). Opcional.
+     * @return string template Markdown WhatsApp com variáveis {empresa}, {titulo}, {total}, {valor_total}, {lista}, {data}
+     * @throws \Exception se OpenAI não configurada ou falhar
+     */
+    public function gerarTemplateIA(array $dadosRegra, ?array $exemploRelatorio = null): string
+    {
+        if (!\includes\services\OpenAIService::isConfigured()) {
+            throw new \Exception('OpenAI não configurada. Configure a chave em Configurações → API.');
+        }
+
+        $tipo = $dadosRegra['tipo_relatorio'] ?? 'contas_pagar_atrasadas';
+        $tipoLabel = WhatsAppRelatorioRegra::TIPOS[$tipo] ?? $tipo;
+        $frequencia = $dadosRegra['frequencia'] ?? 'diaria';
+        $nome = $dadosRegra['nome'] ?? '';
+        $filtros = $dadosRegra['filtros'] ?? [];
+
+        $systemPrompt = "Você é um assistente especialista em comunicação financeira via WhatsApp. "
+            . "Gera templates de mensagem CONCISOS, profissionais e adequados à formatação do WhatsApp "
+            . "(*negrito*, _itálico_, ~tachado~, `monoespaçado`, e emojis quando apropriado). "
+            . "Use no máximo 3-4 linhas antes da lista de itens. "
+            . "Sempre que possível inclua um emoji no início e formate valores em destaque.";
+
+        $prompt = "Crie um TEMPLATE de mensagem WhatsApp para um relatório financeiro automático.\n\n";
+        $prompt .= "**Tipo de relatório:** {$tipoLabel}\n";
+        $prompt .= "**Nome da regra:** " . ($nome ?: '—') . "\n";
+        $prompt .= "**Frequência:** {$frequencia}\n";
+
+        if (!empty($filtros)) {
+            $prompt .= "**Filtros:** " . json_encode($filtros, JSON_UNESCAPED_UNICODE) . "\n";
+        }
+
+        $prompt .= "\nVariáveis OBRIGATÓRIAS que você deve incluir literalmente no template (entre chaves):\n";
+        $prompt .= "- `{empresa}` — nome da empresa\n";
+        $prompt .= "- `{data}` — data atual\n";
+        $prompt .= "- `{total}` — quantidade de contas\n";
+        $prompt .= "- `{valor_total}` — valor total formatado em R\$\n";
+        $prompt .= "- `{lista}` — lista detalhada (será preenchida automaticamente)\n\n";
+
+        $prompt .= "Variáveis opcionais: `{titulo}`, `{hora}`, `{regra}`.\n\n";
+
+        if ($exemploRelatorio) {
+            $prompt .= "**Exemplo de dados que serão preenchidos:**\n";
+            $prompt .= "- empresa: " . ($exemploRelatorio['empresa_nome'] ?? '—') . "\n";
+            $prompt .= "- titulo: " . ($exemploRelatorio['titulo'] ?? '—') . "\n";
+            $prompt .= "- total: " . ($exemploRelatorio['total'] ?? 0) . "\n";
+            $prompt .= "- valor_total: R$ " . number_format($exemploRelatorio['valor_total'] ?? 0, 2, ',', '.') . "\n\n";
+        }
+
+        $prompt .= "REGRAS:\n";
+        $prompt .= "1. Retorne APENAS o template, sem aspas, sem markdown extra fora da formatação WhatsApp.\n";
+        $prompt .= "2. Use *asterisco* para negrito (formatação WhatsApp), nunca **dois asteriscos**.\n";
+        $prompt .= "3. Inclua pelo menos 1 emoji adequado ao tipo (ex: 🔴 atraso, 💸 pagar, 💰 receber, 📊 resumo, 📈 fluxo).\n";
+        $prompt .= "4. Use {lista} no final, separada por linha em branco.\n";
+        $prompt .= "5. Tom profissional mas amigável. Português do Brasil.\n";
+        $prompt .= "6. Máximo 6 linhas antes da {lista}.\n";
+
+        $resposta = \includes\services\OpenAIService::chat($prompt, $systemPrompt);
+
+        // Limpa wrappers comuns que a IA às vezes adiciona
+        $resposta = trim($resposta);
+        $resposta = preg_replace('/^```(?:markdown|text|whatsapp)?\n?/m', '', $resposta);
+        $resposta = preg_replace('/\n?```$/m', '', $resposta);
+        return trim($resposta);
+    }
+
     private function templatePadrao($tipo)
     {
         switch ($tipo) {
