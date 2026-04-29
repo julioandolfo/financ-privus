@@ -45,7 +45,9 @@ class QuePasaApiService implements WhatsAppApiServiceInterface
 
     public function verificarConexao(): array
     {
-        return $this->request('GET', '/info');
+        // /health expõe o campo `state` (WhatsappConnectionState) — mais confiável
+        // que /info, que retorna apenas metadados da aplicação.
+        return $this->request('GET', '/health');
     }
 
     public function gerarQrCode(): array
@@ -154,25 +156,58 @@ class QuePasaApiService implements WhatsAppApiServiceInterface
     }
 
     /**
-     * Helper para extrair o estado da conexão a partir de /info ou /health.
-     * Possíveis valores típicos: 'ready', 'connecting', 'disconnected'.
+     * Estados conhecidos do WhatsappConnectionState (QuePasa):
+     *   initialized, disconnected, disconnecting, connecting, connected,
+     *   ready, failed, statechanged.
+     *
+     * Prioridade de busca:
+     *   1. body.state                  (resposta de /health)
+     *   2. body.items[*].state         (servidores agregados)
+     *   3. body.bot.state              (legado)
+     *   4. body.status (se reconhecido como estado de conexão)
      */
     public static function extrairEstado(array $resposta): ?string
     {
         $body = $resposta['body'] ?? null;
-        if (!is_array($body)) return null;
+        if (!\is_array($body)) return null;
 
-        // Tentativas comuns na resposta do QuePasa
-        if (!empty($body['status']) && is_string($body['status'])) {
-            return strtolower($body['status']);
+        // 1) /health: campo state direto
+        if (isset($body['state']) && \is_string($body['state']) && $body['state'] !== '') {
+            return strtolower($body['state']);
         }
+
+        // 2) /health pode trazer items[].state
+        if (!empty($body['items']) && \is_array($body['items'])) {
+            foreach ($body['items'] as $it) {
+                if (\is_array($it) && !empty($it['state']) && \is_string($it['state'])) {
+                    return strtolower($it['state']);
+                }
+            }
+        }
+
+        // 3) Legado: bot.state ou data.state
         $bot = $body['bot'] ?? $body['data'] ?? null;
-        if (is_array($bot) && !empty($bot['state'])) {
+        if (\is_array($bot) && !empty($bot['state']) && \is_string($bot['state'])) {
             return strtolower($bot['state']);
         }
-        if (is_array($bot) && isset($bot['verified'])) {
+        if (\is_array($bot) && isset($bot['verified'])) {
             return $bot['verified'] ? 'ready' : 'connecting';
         }
+
+        // 4) Fallback: body.status, mas só se for um estado de conexão conhecido
+        if (!empty($body['status']) && \is_string($body['status'])) {
+            $s = strtolower($body['status']);
+            $estadosConhecidos = [
+                'ready','connected','open','verified',
+                'connecting','starting','initialized',
+                'disconnected','close','closed','disconnecting',
+                'failed','offline','statechanged',
+            ];
+            if (\in_array($s, $estadosConhecidos, true)) {
+                return $s;
+            }
+        }
+
         return null;
     }
 }

@@ -110,16 +110,31 @@ function abrirQrCode(id) {
         .then(r => r.json())
         .then(j => {
             const body = j.body || {};
-            const base64 = body.base64 || body.qrcode?.base64 || (body.qrcode && body.qrcode.base64);
-            const code = body.code || body.qrcode?.code;
+            // Captura base64/code em vários formatos comuns
+            const base64 =
+                body.base64 ||
+                (body.qrcode && body.qrcode.base64) ||
+                body.qr ||
+                (body.data && body.data.base64) ||
+                null;
+            const code = body.code || (body.qrcode && body.qrcode.code) || body.urlCode || null;
             let html = '';
             if (base64) {
-                const src = base64.startsWith('data:') ? base64 : 'data:image/png;base64,' + base64;
+                const src = String(base64).startsWith('data:') ? base64 : 'data:image/png;base64,' + base64;
                 html = `<img src="${src}" class="mx-auto max-w-full"/><p class="text-xs text-gray-500 mt-3">Escaneie no WhatsApp</p>`;
             } else if (code) {
                 html = `<pre class="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded overflow-auto">${code}</pre>`;
-            } else if (j.error) {
-                html = `<p class="text-red-600">${j.error}</p>`;
+            } else if (!j.ok) {
+                // 4xx/5xx — mostra erro + corpo da resposta
+                const httpInfo = j.status_http ? ` (HTTP ${j.status_http})` : '';
+                let extra = '';
+                if (body && Object.keys(body).length) {
+                    extra = `<details class="mt-3 text-left"><summary class="cursor-pointer text-xs text-gray-500">Detalhes da resposta</summary><pre class="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded overflow-auto mt-2">${JSON.stringify(body, null, 2)}</pre></details>`;
+                }
+                html = `<p class="text-red-600 font-semibold">${j.error || 'Erro desconhecido'}${httpInfo}</p>${extra}`;
+                if (j.provider === 'quepasa') {
+                    html += `<p class="text-xs text-gray-500 mt-3">Dica: o endpoint <code>/scan</code> requer um bot já registrado. Verifique se o usuário (X-QUEPASA-USER) está cadastrado no servidor QuePasa e se o bot já foi inicializado.</p>`;
+                }
             } else {
                 html = `<pre class="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded overflow-auto">${JSON.stringify(body, null, 2)}</pre>`;
             }

@@ -217,6 +217,7 @@ class WhatsAppController extends Controller
         $resp = $svc->gerarQrCode();
         return $response->json([
             'ok' => $resp['ok'] ?? false,
+            'status_http' => $resp['status'] ?? 0,
             'provider' => $conexao['provider'] ?? 'evolution',
             'body' => $resp['body'] ?? null,
             'error' => $resp['error'] ?? null
