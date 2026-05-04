@@ -5,6 +5,10 @@
  */
 
 return [
+    // Cron HTTP endpoints (sem middleware — protegido por token via env CRON_TOKEN)
+    'GET /cron/integracoes' => ['handler' => 'CronController@integracoes', 'middleware' => []],
+    'GET /cron/whatsapp' => ['handler' => 'CronController@whatsapp', 'middleware' => []],
+
     // Autenticação (sem middleware)
     'GET /login' => ['handler' => 'AuthController@loginForm', 'middleware' => []],
     'POST /login' => ['handler' => 'AuthController@login', 'middleware' => []],

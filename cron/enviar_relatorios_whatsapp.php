@@ -25,8 +25,11 @@ require_once APP_ROOT . '/app/models/WhatsAppRelatorioRegra.php';
 require_once APP_ROOT . '/app/models/WhatsAppRelatorioDestinatario.php';
 require_once APP_ROOT . '/app/models/WhatsAppRelatorioEnvio.php';
 
-// Services
+// Services (interface primeiro, depois implementações, depois a factory que usa todas)
+require_once APP_ROOT . '/includes/services/WhatsAppApiServiceInterface.php';
 require_once APP_ROOT . '/includes/services/EvolutionApiService.php';
+require_once APP_ROOT . '/includes/services/QuePasaApiService.php';
+require_once APP_ROOT . '/includes/services/WhatsAppApiFactory.php';
 require_once APP_ROOT . '/includes/services/RelatorioWhatsAppService.php';
 
 date_default_timezone_set($_ENV['APP_TIMEZONE'] ?? 'America/Sao_Paulo');
